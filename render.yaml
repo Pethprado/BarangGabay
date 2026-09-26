@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: baranggabay
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_NAME
+        value: BarangGabay
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_TIMEZONE
+        value: Asia/Manila
+      - key: APP_URL
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        value: baranggabay
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRY
+        value: "3600"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: TTS_PROVIDER
+        sync: false
+      - key: TTS_API_KEY
+        sync: false
+      - key: TTS_REGION
+        value: southeastasia
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        value: no-reply@baranggabay.ph
+      - key: MAIL_FROM_NAME
+        value: BarangGabay - Barangay Bayogo
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false

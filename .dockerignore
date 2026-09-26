@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.env.*
+vendor/
+tests/
+phpunit.xml*
+.phpunit.result.cache
+composer.phar
+.claude/
+Claude outputs/
+storage/logs/*.log
+storage/backups/*.sql
+storage/backups/*.sql.gz
