@@ -1,0 +1,30 @@
+<svg width="100%" viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>BarangGabay</title>
+<!-- Same mark as logo-lockup-light.svg, recoloured for placement on DARK
+     surfaces (admin sidebar, dark-mode navbar, the dark footer): cream/gold
+     wordmark instead of dark ink. -->
+<defs>
+  <linearGradient id="hexGradD" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#a3311c"/>
+    <stop offset="100%" stop-color="#7b1e22"/>
+  </linearGradient>
+</defs>
+
+<polygon points="55,8 95,8 115,42 95,76 55,76 35,42" fill="url(#hexGradD)"/>
+<polygon points="57,11 93,11 111,42 93,73 57,73 39,42" fill="none" stroke="#e2b955" stroke-width="1.2" opacity="0.75"/>
+<polygon points="61,17 89,17 105,42 89,67 61,67 45,42" fill="none" stroke="#e2b955" stroke-width="0.6" opacity="0.4"/>
+
+<circle cx="75" cy="42" r="22" fill="#1a1210"/>
+<circle cx="75" cy="42" r="20" fill="none" stroke="#e2b955" stroke-width="1.5"/>
+<text x="75" y="53" text-anchor="middle" font-family="Georgia,serif" font-size="28" font-weight="700" fill="#e2b955">B</text>
+
+<rect x="40" y="62" width="70" height="13" rx="2" fill="#e2b955"/>
+<text x="75" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="6" font-weight="700" fill="#1a1210" letter-spacing="1">BARANGGABAY</text>
+
+<text x="130" y="38" font-family="Georgia,serif" font-size="36" font-weight="700" fill="#fdf8ee" letter-spacing="-0.5">Barang</text>
+<text x="130" y="72" font-family="Georgia,serif" font-size="36" font-weight="700" fill="#e2b955" letter-spacing="-0.5">Gabay</text>
+
+<rect x="130" y="80" width="280" height="1.5" rx="1" fill="#e2b955" opacity="0.3"/>
+<text x="130" y="96" font-family="Arial,sans-serif" font-size="11" fill="#e6d9c8" opacity="0.85" letter-spacing="2">BARANGAY COMMUNITY PORTAL</text>
+<text x="130" y="112" font-family="Arial,sans-serif" font-size="10" fill="#c3b2a0" opacity="0.7" letter-spacing="1">Bayogo · Madrid · Surigao del Sur</text>
+</svg>

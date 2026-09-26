@@ -1,0 +1,10 @@
+vendor/
+.env
+public/uploads/
+
+# Database dumps contain password hashes — never commit them.
+storage/backups/*.sql
+storage/backups/*.sql.gz
+storage/logs/*.log
+.phpunit.result.cache
+composer.phar

@@ -1,0 +1,17 @@
+DirectoryIndex index.php public/index.php
+
+RewriteEngine On
+RewriteBase /BarangGabay/
+
+# Let requests that already target public/ pass through
+RewriteRule ^public/ - [L]
+
+# Serve uploaded files from public/uploads/ via the /uploads/ URL prefix.
+# Files are stored in public/uploads/ but the stored path is /uploads/...
+# Without this rule the front controller would receive the request and 404.
+RewriteRule ^(uploads\/.+)$ public/$1 [L]
+
+# Route everything else through the front controller
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ public/index.php [QSA,L]

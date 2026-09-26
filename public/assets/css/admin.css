@@ -1,0 +1,2037 @@
+﻿/* ============================================================
+   BarangGabay — Admin Panel Stylesheet
+   ============================================================ */
+
+/* ── Custom properties — Global e-Gov palette (v3), mirrors main.css ── */
+:root {
+    /* Sidebar — deep navy instead of forest green */
+    --sb-bg:          #0a1120;
+    --sb-bg-mid:      #101a30;
+    --sb-hover:       rgba(255, 255, 255, 0.06);
+    --sb-active:      #1652f0;
+    --sb-active-glow: rgba(22, 82, 240, 0.35);
+    --sb-text:        #9db3d9;
+    --sb-text-bright: #ffffff;
+    --sb-width:       260px;
+    --sb-border:      rgba(255, 255, 255, 0.07);
+
+    /* Top bar — the two colours follow the shared surface and border, so
+       they no longer need a dark override of their own. */
+    --tb-bg:          var(--surface-card);
+    --tb-height:      64px;
+    --tb-border:      var(--border);
+
+    /* Content */
+    --content-bg:     var(--surface-page);
+
+    /* Brand, surfaces, text and borders come from tokens.css, which the
+       layout loads first. They used to be restated here AND in main.css,
+       and the copies had drifted apart — --surface-muted was #f8fbf9 here
+       and #f1f5f9 there, --text-primary was a greenish #1c2b1e here and a
+       slate #0f172a there, for the same intended colours. */
+    /* Back-compat aliases so every existing var(--brand-green) call site re-themes automatically */
+    --brand-green: var(--brand-primary);
+    --brand-gold:  var(--brand-secondary);
+
+    /* Status comes from tokens.css, with dark values — see the note there. */
+
+    /* Shared — radii now come from tokens.css (--radius-sm/md/lg). */
+    --transition:     all 0.2s ease;
+    --shadow-sm:      0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-md:      0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+    --shadow-sidebar: 6px 0 24px rgba(0,0,0,.18);
+    --t-theme:        0.25s ease;
+}
+
+/* ── Dark mode — OS default ──────────────────────────────────── */
+/* Surfaces, text, borders and brand are handled by tokens.css in both dark
+   blocks. What remains here is only the status tinting, which is specific
+   to the admin panel.
+
+   This also repairs a real asymmetry: the OS-preference block below used to
+   omit --border and --surface-page while the toggle block set them. Anyone
+   whose device was in dark mode but who had never touched the toggle got
+   light-grey #e2e8f0 borders drawn on dark panels. Declaring these in one
+   shared place makes that class of bug impossible rather than merely fixed. */
+/* No dark block remains here at all: every value this panel themes now
+   lives in tokens.css, declared once for light and overridden once for
+   dark, with both dark paths kept in step by DesignTokensTest. */
+
+/* ── Base reset ────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+    background: var(--content-bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color var(--t-theme), color var(--t-theme);
+}
+@media (prefers-reduced-motion: reduce) {
+    body { transition: none; }
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+
+.admin-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;               /* top:0 left:0 bottom:0 */
+    width: var(--sb-width);
+    background: linear-gradient(180deg, var(--sb-bg) 0%, var(--sb-bg-mid) 100%);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 1040;
+    box-shadow: var(--shadow-sidebar);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Thin scrollbar */
+.admin-sidebar::-webkit-scrollbar            { width: 3px; }
+.admin-sidebar::-webkit-scrollbar-track      { background: transparent; }
+.admin-sidebar::-webkit-scrollbar-thumb      { background: rgba(255,255,255,.12); border-radius: 3px; }
+.admin-sidebar::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,.22); }
+
+/* Off-screen on mobile */
+.sidebar-hidden { transform: translateX(calc(-1 * var(--sb-width))); }
+
+/* ── Mobile overlay ────────────────────────────────────────── */
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 1039;
+}
+
+/* ── Brand / logo strip ────────────────────────────────────── */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 16px;
+    min-height: 76px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    background: linear-gradient(135deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.10) 100%);
+    flex-shrink: 0;
+    position: relative;
+}
+.sidebar-brand::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 16px;
+    right: 16px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(91,141,239,0.35), transparent);
+}
+
+.sidebar-brand-icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: block;
+    object-fit: contain;
+    background: none;
+    border: none;
+    border-radius: 0;
+    filter: drop-shadow(0 0 8px rgba(91,141,239,0.45)) drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+    transition: filter 0.25s ease;
+}
+.sidebar-brand:hover .sidebar-brand-icon {
+    filter: drop-shadow(0 0 14px rgba(91,141,239,0.65)) drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+}
+
+/* Fallback icon box (shown if SVG fails to load) */
+.sidebar-brand-icon-fallback {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--action-solid), var(--action-solid-hover));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: #5eead4;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.12);
+}
+
+.sidebar-brand-text { min-width: 0; }
+
+.brand-name {
+    display: block;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.brand-sub {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: rgba(134,239,172,0.55);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.4;
+}
+
+.sidebar-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,.4);
+    font-size: 1rem;
+    padding: 5px 6px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    line-height: 1;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+.sidebar-close:hover { color: var(--sb-text-bright); background: rgba(255,255,255,.1); }
+
+/* ── Navigation container ──────────────────────────────────── */
+.sidebar-nav {
+    flex: 1;
+    padding: 8px 0 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.sidebar-nav::-webkit-scrollbar { display: none; }
+
+/* Section labels */
+.nav-section-label {
+    margin: 0;
+    padding: 14px 18px 4px;
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(159, 201, 175, 0.38);
+    user-select: none;
+}
+.nav-section-label:first-child { padding-top: 8px; }
+
+/* ── Sidebar link (shared base for <a> and accordion <button>) */
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    margin: 1px 8px;
+    width: calc(100% - 16px);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--sb-text);
+    font-size: 0.855rem;
+    font-weight: 500;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: var(--transition);
+    /* Reset button defaults */
+    background: none;
+    border: none;
+    text-align: left;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.sidebar-link:hover,
+.sidebar-link:focus-visible {
+    background: var(--sb-hover);
+    color: var(--sb-text-bright);
+    outline: none;
+}
+.sidebar-link:hover .nav-icon { color: var(--sb-text-bright); }
+
+.sidebar-link.active {
+    background: var(--sb-active);
+    color: var(--sb-text-bright);
+    box-shadow: 0 2px 10px var(--sb-active-glow);
+    font-weight: 600;
+}
+.sidebar-link.active .nav-icon { color: var(--sb-text-bright); }
+
+/* Icon */
+.nav-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+    width: 18px;
+    text-align: center;
+    color: rgba(159, 201, 175, 0.6);
+    transition: var(--transition);
+}
+
+/* Accordion caret */
+.accordion-arrow {
+    font-size: 0.72rem;
+    flex-shrink: 0;
+    transition: transform 0.22s ease;
+    color: rgba(159, 201, 175, 0.45);
+}
+.accordion-arrow.rotated { transform: rotate(180deg); }
+
+/* ── Sub-menu ─────────────────────────────────────────────── */
+.sidebar-sub {
+    padding: 2px 8px 4px 46px;
+}
+
+.sidebar-sub-link {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    margin: 1px 0;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: rgba(159, 201, 175, 0.65);
+    font-size: 0.82rem;
+    transition: var(--transition);
+}
+.sidebar-sub-link i { font-size: 0.72rem; flex-shrink: 0; }
+.sidebar-sub-link:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--sb-text-bright);
+}
+.sidebar-sub-link.active { color: #7dd3a8; font-weight: 600; }
+
+/* ── Pending badge in sidebar ─────────────────────────────── */
+.sidebar-badge {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: var(--brand-secondary-dark);
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 20px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* ── Sidebar footer ───────────────────────────────────────── */
+.sidebar-footer {
+    padding: 10px 10px 14px;
+    border-top: 1px solid var(--sb-border);
+    flex-shrink: 0;
+}
+
+.sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 6px;
+    border-radius: var(--radius-md);
+    margin-bottom: 8px;
+}
+
+.sidebar-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--brand-green) 0%, var(--brand-gold) 100%);
+    color: #ffffff;
+    font-size: 0.825rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.1);
+}
+
+.sidebar-user-info { min-width: 0; }
+
+.sidebar-user-name {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--sb-text-bright);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 148px;
+}
+
+.sidebar-user-role {
+    margin: 0;
+    font-size: 0.68rem;
+    color: rgba(159, 201, 175, 0.55);
+    text-transform: capitalize;
+}
+
+.sidebar-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--radius-md);
+    color: rgba(159, 201, 175, 0.75);
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: var(--transition);
+}
+.sidebar-logout:hover {
+    background: rgba(220, 53, 69, 0.18);
+    border-color: rgba(220, 53, 69, 0.35);
+    color: #ff9292;
+}
+
+/* ============================================================
+   MAIN AREA
+   ============================================================ */
+
+.admin-main {
+    margin-left: var(--sb-width);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--content-bg);
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Top bar ──────────────────────────────────────────────── */
+.admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    background: var(--tb-bg);
+    height: var(--tb-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    border-bottom: 1px solid var(--tb-border);
+    box-shadow: var(--shadow-sm);
+    gap: 12px;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+}
+
+.topbar-hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: none;
+    border: 1px solid #dee2e6;
+    border-radius: var(--radius-md);
+    font-size: 1.3rem;
+    color: #4a5568;
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+    line-height: 1;
+    padding: 0;
+}
+.topbar-hamburger:hover { background: #f0faf4; border-color: #adb5bd; color: var(--text-primary); }
+
+.topbar-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.topbar-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--tb-border);
+    background: none;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.topbar-icon-btn:hover { background: var(--brand-primary-light); border-color: var(--brand-green); color: var(--brand-green); }
+
+.topbar-username {
+    font-size: 0.845rem;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.topbar-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 13px;
+    border: 1px solid #dee2e6;
+    border-radius: var(--radius-md);
+    color: #4a5568;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: var(--transition);
+    background: none;
+}
+.topbar-logout:hover { border-color: #dc3545; color: #dc3545; background: rgba(220,53,69,.05); }
+
+/* ── Role badge ──────────────────────────────────────────── */
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+.role-admin      { background: #d4edda; color: #155724; }
+.role-staff      { background: #d1ecf1; color: #0c5460; }
+.role-superadmin { background: #fff3cd; color: #856404; }
+.role-resident   { background: #f8d7da; color: #721c24; }
+
+/* ── Pending verification banner ─────────────────────────── */
+.pending-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 11px 1.5rem;
+    background: #fff8e1;
+    border-bottom: 2px solid #ffc107;
+    font-size: 0.855rem;
+    color: #664d03;
+}
+
+.pending-banner-body {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.pending-banner-body .bi { font-size: 1rem; flex-shrink: 0; color: #d97706; }
+.pending-banner strong   { font-weight: 700; }
+
+.pending-banner-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--brand-green);
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 0.855rem;
+    transition: var(--transition);
+}
+.pending-banner-link:hover { text-decoration: underline; color: var(--brand-primary-dark); }
+
+/* ── Flash messages strip ────────────────────────────────── */
+.admin-flash {
+    padding: 1rem 1.5rem 0;
+}
+.admin-flash .alert { border-radius: var(--radius-lg); margin-bottom: 0; }
+
+/* ── Page content ────────────────────────────────────────── */
+.admin-content {
+    flex: 1;
+    padding: 1.75rem 1.5rem 2.5rem;
+}
+
+/* ============================================================
+   COMMON ADMIN PAGE COMPONENTS
+   ============================================================ */
+
+/* Section card */
+.admin-card {
+    background: var(--surface-card);
+    border: 1px solid var(--tb-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.admin-card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--tb-border);
+    background: var(--surface-muted, #f8fbf9);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.admin-card-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.admin-card-body { padding: 1.25rem; }
+
+/* Safety net: some pages put content straight inside .admin-card without the
+   .admin-card-header/.admin-card-body wrapper divs that normally supply its
+   padding (.admin-card itself has none, plus overflow:hidden), so headings
+   and text sit flush against — and can get visually clipped by — the card's
+   rounded edges. Pad any .admin-card that lacks that wrapper structure —
+   except the deliberate "p-0" edge-to-edge table-container pattern, which
+   intentionally holds only a .table-responsive with its own cell padding. */
+.admin-card:not(.p-0):not(:has(> .admin-card-header)):not(:has(> .admin-card-body)) {
+    padding: 1.25rem;
+}
+
+/* Stat cards */
+.stat-card {
+    background: var(--surface-card);
+    border: 1px solid var(--tb-border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+.stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+/* ── Clickable stat card ─────────────────────────────────────────────────
+   The whole card is the target, not a small link inside it. Anchors carry
+   their own colour and underline defaults, so those are reset — the card
+   must look identical to a static one until you point at it. */
+.stat-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+.stat-card-link:hover {
+    text-decoration: none;
+    color: inherit;
+    border-color: var(--brand-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+/* Keyboard users get the same affordance, and a ring they can actually see. */
+.stat-card-link:focus-visible {
+    outline: 3px solid var(--brand-primary);
+    outline-offset: 2px;
+    border-color: var(--brand-primary);
+}
+.stat-card-urgent { border-color: #ffc107; }
+.stat-card-urgent:hover,
+.stat-card-urgent:focus-visible { border-color: #d97706; outline-color: #d97706; }
+
+/* The "open this list" line. Sits where the old inner link did, but it is
+   text inside the card's own anchor rather than a second target. */
+.stat-card-action {
+    display: inline-flex;
+    align-items: center;
+    gap: .1rem;
+    margin-top: .35rem;
+    font-size: .73rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+}
+.stat-card-action-urgent { color: #d97706; }
+.stat-card-action .bi { font-size: 1rem; transition: transform .15s ease; }
+.stat-card-link:hover .stat-card-action .bi { transform: translateX(2px); }
+
+@media (prefers-reduced-motion: reduce) {
+    .stat-card-link:hover { transform: none; }
+    .stat-card-link:hover .stat-card-action .bi { transform: none; }
+}
+
+/* A stat card that is also the active filter. Ringed rather than merely
+   tinted, so which subset is on screen survives a greyscale print and does
+   not rely on colour alone. */
+.stat-card-selected {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 2px var(--brand-primary) inset;
+}
+
+/* ── Filter state ────────────────────────────────────────────────────────
+   Says which subset is showing and how to leave it. Without it a list of
+   three rows out of eleven reads as "the other eight are gone". */
+.filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .3rem .7rem;
+    border-radius: 999px;
+    background: var(--brand-primary-light, #e8effe);
+    color: var(--brand-primary);
+    font-size: .76rem;
+    font-weight: 700;
+}
+.filter-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: .76rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+}
+.filter-clear:hover { color: var(--text-primary); text-decoration: underline; }
+.filter-clear:focus-visible,
+.filter-chip:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+    border-radius: .35rem;
+}
+
+/* Chip row — the events list's own filter control. */
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .35rem .75rem;
+    border: 1px solid var(--tb-border);
+    border-radius: 999px;
+    background: var(--surface-card);
+    color: var(--text-secondary);
+    font-size: .78rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+.filter-chip:hover { background: var(--surface-muted); color: var(--text-primary); text-decoration: none; }
+.filter-chip.is-active {
+    background: var(--action-solid);
+    border-color: var(--action-solid);
+    color: var(--text-on-action);
+}
+.filter-chip-count {
+    font-size: .7rem;
+    font-weight: 800;
+    padding: 0 .35rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, .08);
+}
+.filter-chip.is-active .filter-chip-count { background: rgba(255, 255, 255, .25); }
+
+.stat-card-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6c757d;
+    margin: 0 0 6px;
+}
+
+.stat-card-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+    margin: 0 0 4px;
+}
+
+.stat-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+/* Stat icon colour variants */
+.stat-icon-green  { background: #d4edda; color: #155724; }
+.stat-icon-blue   { background: #d1ecf1; color: #0c5460; }
+.stat-icon-yellow { background: #fff3cd; color: #856404; }
+.stat-icon-red    { background: #f8d7da; color: #721c24; }
+
+/* Data tables */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.855rem;
+}
+.admin-table th {
+    background: var(--surface-muted);
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    padding: 10px 14px;
+    border-bottom: 2px solid var(--tb-border);
+    white-space: nowrap;
+}
+.admin-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--tb-border);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+.admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table tbody tr:hover td { background: var(--surface-muted); }
+
+/* ── Barangay button ─────────────────────────────────────── */
+.btn-barangay {
+    background: var(--action-solid);
+    color: var(--text-on-action);
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 8px 18px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+}
+.btn-barangay:hover { background: var(--action-solid-hover); color: var(--text-on-action); box-shadow: 0 4px 12px rgba(22,82,240,.3); }
+
+/* ── Urgency / status indicators ─────────────────────────── */
+.urgency-normal    { border-left: 3px solid #6c757d; }
+.urgency-important { border-left: 3px solid #ffc107; }
+.urgency-urgent    { border-left: 3px solid #dc3545; }
+
+.ai-summary-box {
+    background: #f0faf4;
+    border: 1px solid #c3e6cb;
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+}
+
+/* ============================================================
+   RESPONSIVE — MOBILE
+   ============================================================ */
+
+@media (max-width: 991.98px) {
+    .admin-main { margin-left: 0; }
+
+    .admin-sidebar.sidebar-hidden {
+        transform: translateX(calc(-1 * var(--sb-width)));
+    }
+
+    .admin-content { padding: 1.25rem 1rem 2rem; }
+
+    .admin-topbar { padding: 0 1rem; }
+    .pending-banner { padding: 10px 1rem; }
+    .admin-flash { padding: 0.75rem 1rem 0; }
+}
+
+@media (max-width: 575.98px) {
+    .topbar-title    { font-size: 0.925rem; }
+    .stat-card-value { font-size: 1.6rem; }
+    .admin-content   { padding: 1rem .75rem 2rem; }
+    .admin-card-body { padding: 1rem; }
+    .stat-card       { padding: 1rem; }
+    .btn-barangay    { padding: 7px 13px; font-size: .82rem; }
+}
+
+/* ============================================================
+   EXTENDED STYLES — Micro-interactions, Charts, Print
+   ============================================================ */
+
+/* ── Gradient stat icon backgrounds ───────────────────────── */
+.stat-icon-green  { background: linear-gradient(135deg,#d4edda 0%,#b7dfc3 100%); color: #155724; }
+.stat-icon-blue   { background: linear-gradient(135deg,#d1ecf1 0%,#aad4db 100%); color: #0c5460; }
+.stat-icon-yellow { background: linear-gradient(135deg,#fff3cd 0%,#ffe082 100%); color: #856404; }
+.stat-icon-red    { background: linear-gradient(135deg,#f8d7da 0%,#f5b8be 100%); color: #721c24; }
+.stat-icon-purple { background: linear-gradient(135deg,#e2d9f3 0%,#c8b7e8 100%); color: #5a1e9e; }
+
+/* ── Button loading state ─────────────────────────────────── */
+@keyframes admin-spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+.btn-loading {
+    color: transparent !important;
+    pointer-events: none;
+    cursor: not-allowed;
+    position: relative;
+}
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: .9rem;
+    height: .9rem;
+    border: 2px solid rgba(255,255,255,.35);
+    border-top-color: rgba(255,255,255,.9);
+    border-radius: 50%;
+    animation: admin-spin .6s linear infinite;
+    transform: translate(-50%,-50%);
+}
+
+/* ── Enhanced form field focus ────────────────────────────── */
+.form-control:focus,
+.form-select:focus,
+textarea.form-control:focus {
+    border-color: var(--brand-green) !important;
+    box-shadow: 0 0 0 3px rgba(22,82,240,.12) !important;
+    outline: none;
+}
+
+/* Floating label focus animation helper */
+.field-group {
+    position: relative;
+}
+.field-group .field-label {
+    position: absolute;
+    top: .6rem;
+    left: .75rem;
+    font-size: .82rem;
+    color: #94a3b8;
+    pointer-events: none;
+    transition: top .15s ease, font-size .15s ease, color .15s ease;
+}
+.field-group input:focus ~ .field-label,
+.field-group input:not(:placeholder-shown) ~ .field-label {
+    top: -.55rem;
+    font-size: .68rem;
+    color: var(--brand-green);
+    background: #fff;
+    padding: 0 4px;
+}
+
+/* ── Toast slide-in (admin flash area upgrades) ───────────── */
+@keyframes admin-toast-in {
+    from { opacity: 0; transform: translateX(calc(100% + 1rem)); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+.admin-toast-slide { animation: admin-toast-in .3s cubic-bezier(.4,0,.2,1) both; }
+
+/* Alert slide-down */
+@keyframes admin-alert-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.admin-flash .alert { animation: admin-alert-in .25s ease both; }
+
+/* ── Chart container card ─────────────────────────────────── */
+.chart-container {
+    position: relative;
+    min-height: 200px;
+    width: 100%;
+}
+.chart-container canvas { max-width: 100%; }
+
+/* ── Striped data table variant ───────────────────────────── */
+.admin-table-striped tbody tr:nth-child(even) td {
+    background: #fafcfb;
+}
+
+/* ── Inline action button group ───────────────────────────── */
+.btn-group-action { display: inline-flex; gap: 4px; align-items: center; }
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--tb-border);
+    background: #fff;
+    color: #4a5568;
+    font-size: .78rem;
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    flex-shrink: 0;
+}
+.btn-action:hover              { background: #f0faf4; border-color: #a8d5b5; color: var(--brand-green); }
+/* .btn-action-danger uses the base .btn-action styles above; only :hover differs */
+.btn-action-danger:hover       { background: #fdf2f2; border-color: #f5c6cb; color: #dc3545; }
+.btn-action-warning:hover      { background: #fff8e6; border-color: #fcd34d; color: #d97706; }
+
+/* ── Image upload preview ─────────────────────────────────── */
+.upload-preview-img {
+    width: 100%;
+    max-height: 180px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--tb-border);
+    display: block;
+}
+
+.drop-zone {
+    border: 2px dashed var(--tb-border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    background: var(--surface-muted);
+}
+.drop-zone:hover,
+.drop-zone.drag-active {
+    border-color: var(--brand-green);
+    background: var(--brand-primary-light);
+}
+.drop-zone.has-file { border-style: solid; border-color: #c3e6cb; }
+
+/* ── Confirmation modal ────────────────────────────────────── */
+.confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.48);
+    backdrop-filter: blur(3px);
+    z-index: 9050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: admin-overlay-in .2s ease;
+}
+@keyframes admin-overlay-in { from{opacity:0} to{opacity:1} }
+
+.confirm-box {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 64px rgba(0,0,0,.2);
+    width: 100%;
+    max-width: 400px;
+    overflow: hidden;
+    animation: admin-modal-up .25s cubic-bezier(.4,0,.2,1) both;
+}
+@keyframes admin-modal-up {
+    from { transform: translateY(12px) scale(.97); opacity: 0; }
+    to   { transform: translateY(0)    scale(1);   opacity: 1; }
+}
+
+/* ── Pagination ────────────────────────────────────────────── */
+.admin-pagination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.admin-pagination a,
+.admin-pagination span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: var(--radius-md);
+    font-size: .82rem;
+    font-weight: 500;
+    border: 1px solid var(--tb-border);
+    background: #fff;
+    color: #4a5568;
+    text-decoration: none;
+    transition: var(--transition);
+}
+.admin-pagination a:hover { background: #f0faf4; border-color: #a8d5b5; color: var(--brand-green); }
+.admin-pagination .current { background: var(--brand-green); border-color: var(--brand-green); color: #fff; font-weight: 700; }
+
+/* ── Status badge helper ────────────────────────────────────── */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+/* Per-post translation state in the announcements list. Small, because it
+   sits three-to-a-cell and must not compete with the status badge next to it.
+   Colour alone never carries the meaning — every chip states ✓ or ✗ in text,
+   so it survives a colour-blind reader and a black-and-white printout. */
+.lang-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    margin-right: 3px;
+    border-radius: 20px;
+    font-size: .64rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+    white-space: nowrap;
+}
+.lang-chip-yes { background: #d4edda; color: #14532d; }
+.lang-chip-no  { background: #fee2e2; color: #991b1b; }
+.lang-chip .bi { font-size: .62rem; opacity: .75; }
+
+.status-published { background: #d4edda; color: #155724; }
+.status-draft     { background: #f1f5f9; color: #475569; }
+.status-archived  { background: #e2e8f0; color: #374151; }
+.status-pending   { background: #fff3cd; color: #856404; }
+.status-verified  { background: #d4edda; color: #155724; }
+.status-suspended { background: #f8d7da; color: #721c24; }
+.status-upcoming  { background: #dbeafe; color: #1d4ed8; }
+.status-ongoing   { background: #d1fae5; color: #065f46; }
+.status-completed { background: #e2e8f0; color: #374151; }
+.status-cancelled { background: #f8d7da; color: #991b1b; }
+.status-active    { background: #d4edda; color: #155724; }
+.status-repealed  { background: #f8d7da; color: #721c24; }
+
+/* ── Print styles (admin) ──────────────────────────────────── */
+@media print {
+    .admin-sidebar,
+    .admin-topbar,
+    .pending-banner,
+    .admin-flash,
+    .btn-barangay,
+    .btn-action,
+    .btn-group-action,
+    .no-print { display: none !important; }
+
+    .admin-main  { margin-left: 0 !important; }
+    .admin-content { padding: 0 !important; }
+
+    .admin-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        page-break-inside: avoid;
+    }
+
+    body { background: #fff !important; color: #000; font-size: 10pt; }
+
+    .admin-table th,
+    .admin-table td { border: 1px solid #ccc; padding: 6px 8px; }
+    .admin-table thead { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* ── Enhanced mobile (additions to existing breakpoints) ──── */
+@media (max-width: 991.98px) {
+    .stat-card { min-width: 0; }
+    .stat-card-value { font-size: 1.75rem; }
+    .admin-table { font-size: .8rem; }
+    .admin-table th,
+    .admin-table td { padding: 8px 10px; }
+}
+
+@media (max-width: 480px) {
+    .admin-card-header { flex-wrap: wrap; }
+    .admin-card-title  { font-size: .875rem; }
+    .stat-card-label   { font-size: .68rem; }
+    .stat-card-value   { font-size: 1.4rem; }
+    .topbar-username   { display: none; }
+    .role-badge        { display: none; }
+    .btn-barangay      { padding: 6px 11px; font-size: .8rem; }
+}
+
+/* ── Touch target minimum (mobile usability) ──────────────── */
+@media (max-width: 768px) {
+    .btn-barangay,
+    .btn-action,
+    input[type="submit"],
+    button {
+        min-height: 44px;
+    }
+    .btn-action { width: 36px; height: 36px; }
+}
+
+/* ── Focus visible (keyboard nav) ─────────────────────────── */
+.btn-barangay:focus-visible,
+.btn-action:focus-visible,
+.sidebar-link:focus-visible {
+    outline: 3px solid var(--brand-gold);
+    outline-offset: 2px;
+}
+
+/* ================================================================
+   BarangGabay Admin — PREMIUM LAYER (v2)
+   Modern civic-tech polish: glass topbar, gradient accents,
+   scroll-reveal, animated stat cards. Mirrors main.css's premium
+   design language so resident + admin feel like one product.
+   ================================================================ */
+
+:root {
+    --brand-gradient:      linear-gradient(135deg, var(--brand-primary) 0%, #5b8def 100%);
+    --brand-gradient-gold: linear-gradient(135deg, var(--brand-secondary) 0%, #2dd4bf 100%);
+    --glow-green:          0 0 0 4px rgba(22,82,240,.10);
+    --glow-gold:           0 0 0 4px rgba(13,148,136,.16);
+}
+
+/* ── Scroll-reveal (fade-up) — wired by admin.js IntersectionObserver ── */
+.fade-up {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity .55s ease, transform .55s ease;
+}
+.fade-up.visible { opacity: 1; transform: translateY(0); }
+.fade-up-delay-1 { transition-delay: .06s; }
+.fade-up-delay-2 { transition-delay: .12s; }
+.fade-up-delay-3 { transition-delay: .18s; }
+.fade-up-delay-4 { transition-delay: .24s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .fade-up { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Glass topbar on scroll ──────────────────────────────────── */
+.admin-topbar {
+    transition: background-color .25s ease, box-shadow .25s ease, backdrop-filter .25s ease;
+}
+.admin-topbar.scrolled {
+    background: rgba(255,255,255,.86);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    box-shadow: 0 6px 24px rgba(15,64,35,.10);
+}
+:root[data-theme="dark"] .admin-topbar.scrolled {
+    background: rgba(19,27,44,.86);
+    box-shadow: 0 6px 24px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .admin-topbar.scrolled {
+        background: rgba(19,27,44,.86);
+        box-shadow: 0 6px 24px rgba(0,0,0,.35);
+    }
+}
+
+/* ── Stat cards: gradient accent + lift + icon glow ─────────── */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+}
+.stat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: var(--brand-gradient);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .45s cubic-bezier(.4,0,.2,1);
+}
+.stat-card:hover::before { transform: scaleX(1); }
+.stat-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+}
+.stat-card[data-accent="gold"]::before { background: var(--brand-gradient-gold); }
+
+.stat-card-icon {
+    transition: transform .35s cubic-bezier(.4,0,.2,1), box-shadow .35s ease;
+}
+.stat-card:hover .stat-card-icon {
+    transform: scale(1.08) rotate(-4deg);
+}
+.stat-icon-yellow { position: relative; }
+.stat-icon-yellow::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    box-shadow: var(--glow-gold);
+    animation: admin-pulse-glow 2.4s ease-in-out infinite;
+}
+@keyframes admin-pulse-glow {
+    0%, 100% { opacity: .55; }
+    50%      { opacity: 1; }
+}
+
+/* ── Animated count-up value (see admin.js) ─────────────────── */
+[data-countup] { font-variant-numeric: tabular-nums; }
+
+/* ── Sidebar active link: sliding accent + soft pulse ───────── */
+.sidebar-link {
+    position: relative;
+}
+.sidebar-link.active::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    border-radius: 0 3px 3px 0;
+    background: var(--brand-gold);
+}
+
+/* ── Activity feed: staggered entrance ──────────────────────── */
+.activity-item {
+    animation: admin-item-in .4s ease both;
+}
+.activity-item:nth-child(1) { animation-delay: .02s; }
+.activity-item:nth-child(2) { animation-delay: .06s; }
+.activity-item:nth-child(3) { animation-delay: .10s; }
+.activity-item:nth-child(4) { animation-delay: .14s; }
+.activity-item:nth-child(5) { animation-delay: .18s; }
+.activity-item:nth-child(n+6) { animation-delay: .22s; }
+@keyframes admin-item-in {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+.activity-icon { transition: transform .25s ease; }
+.activity-item:hover .activity-icon { transform: scale(1.12); }
+
+/* ── Quick action buttons: playful hover ────────────────────── */
+.quick-action-btn .qa-icon {
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease;
+}
+.quick-action-btn:hover .qa-icon {
+    transform: scale(1.1) rotate(-6deg);
+    box-shadow: 0 6px 16px rgba(22,82,240,.35);
+}
+.quick-action-btn { transition: background .2s ease, border-color .2s ease, transform .2s ease; }
+.quick-action-btn:hover { transform: translateX(2px); }
+
+/* ── Chart card badges: subtle success pop ──────────────────── */
+#regChartBadge, #catChartBadge {
+    transition: background-color .3s ease, color .3s ease;
+}
+
+/* ── Urgent pulse — mirrors main.css so status badges marked
+   "Urgent" read as urgent everywhere, not just on the resident side. */
+@keyframes admin-urgent-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.45); }
+    70%      { box-shadow: 0 0 0 7px rgba(220,38,38,0); }
+}
+.badge-urgent-pulse { animation: admin-urgent-pulse 1.8s cubic-bezier(.66,0,0,1) infinite; }
+
+/* ── "Live" indicator dot (topbar / recent activity) ────────── */
+.live-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 rgba(34,197,94,.5);
+    animation: admin-live-ping 1.8s cubic-bezier(0.66, 0, 0, 1) infinite;
+}
+@keyframes admin-live-ping {
+    0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.55); }
+    70%  { box-shadow: 0 0 0 7px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stat-icon-yellow::after,
+    .live-dot,
+    .activity-item,
+    .badge-urgent-pulse { animation: none !important; }
+}
+
+/* ================================================================
+   DARK-MODE RETROFIT LAYER
+   Admin views lean on Bootstrap's own utility classes (.text-muted,
+   .bg-light, .text-dark, table borders, form controls) which are fixed
+   colors that don't react to the theme toggle — same root cause as the
+   equivalent block in main.css. This remaps the Bootstrap classes this
+   admin panel actually uses onto the theme tokens whenever dark mode
+   is active, so admin pages stay readable without a per-page rewrite.
+   ================================================================ */
+:root[data-theme="dark"] .text-muted,
+:root[data-theme="dark"] .form-text                                  { color: var(--text-secondary) !important; }
+:root[data-theme="dark"] .text-dark,
+:root[data-theme="dark"] .text-secondary                             { color: var(--text-primary) !important; }
+:root[data-theme="dark"] .bg-white,
+:root[data-theme="dark"] .bg-light                                   { background-color: var(--surface-card) !important; }
+:root[data-theme="dark"] .card                                       { background-color: var(--surface-card); color: var(--text-primary); border-color: var(--tb-border); }
+:root[data-theme="dark"] .card-header,
+:root[data-theme="dark"] .card-footer                                { background-color: var(--surface-muted); border-color: var(--tb-border); }
+:root[data-theme="dark"] .border,
+:root[data-theme="dark"] .border-top,
+:root[data-theme="dark"] .border-bottom,
+:root[data-theme="dark"] .border-start,
+:root[data-theme="dark"] .border-end                                 { border-color: var(--tb-border) !important; }
+/* Bootstrap 5.3 sets the `border` SHORTHAND on .form-control from its own
+   --bs-border-color. A longhand border-color here loses to it, so the inputs
+   kept a light #dee2e6 edge on dark backgrounds — !important, as used by the
+   other rules in this layer, is what actually sticks. */
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select,
+:root[data-theme="dark"] .form-control:disabled,
+:root[data-theme="dark"] .form-select:disabled                       { background-color: var(--surface-muted) !important; color: var(--text-primary) !important; border-color: var(--tb-border) !important; }
+:root[data-theme="dark"] .form-control::placeholder,
+:root[data-theme="dark"] .form-select::placeholder                   { color: var(--text-muted) !important; opacity: 1; }
+:root[data-theme="dark"] .breadcrumb-item.active                     { color: var(--text-muted); }
+:root[data-theme="dark"] .badge.text-bg-light                        { background-color: var(--surface-muted) !important; color: var(--text-secondary) !important; }
+:root[data-theme="dark"] .print-only                                 { color: #000; }
+:root[data-theme="dark"] .topbar-username                            { color: var(--text-primary); }
+:root[data-theme="dark"] .topbar-hamburger,
+:root[data-theme="dark"] .topbar-logout                              { border-color: var(--tb-border); color: var(--text-secondary); }
+:root[data-theme="dark"] .topbar-hamburger:hover                     { background: var(--surface-muted); border-color: var(--text-muted); color: var(--text-primary); }
+
+/* Bootstrap 5.3 tables/modals drive their colors through CSS custom properties
+   (--bs-table-bg, --bs-*) rather than plain classes — overriding just .table's
+   text color (as before) left every row's actual background stuck white. */
+:root[data-theme="dark"] .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--text-primary);
+    --bs-table-striped-bg: rgba(255,255,255,.03);
+    --bs-table-hover-bg: rgba(255,255,255,.05);
+    --bs-table-hover-color: var(--text-primary);
+    --bs-table-border-color: var(--tb-border);
+    color: var(--text-primary);
+}
+:root[data-theme="dark"] .table-light {
+    --bs-table-bg: var(--surface-muted) !important;
+    --bs-table-color: var(--text-secondary) !important;
+}
+:root[data-theme="dark"] .modal-content {
+    background-color: var(--surface-card);
+    color: var(--text-primary);
+}
+:root[data-theme="dark"] .modal-header,
+:root[data-theme="dark"] .modal-footer {
+    border-color: var(--tb-border);
+}
+:root[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .text-muted,
+    :root:not([data-theme="light"]) .form-text                                  { color: var(--text-secondary) !important; }
+    :root:not([data-theme="light"]) .text-dark,
+    :root:not([data-theme="light"]) .text-secondary                             { color: var(--text-primary) !important; }
+    :root:not([data-theme="light"]) .bg-white,
+    :root:not([data-theme="light"]) .bg-light                                   { background-color: var(--surface-card) !important; }
+    :root:not([data-theme="light"]) .card                                       { background-color: var(--surface-card); color: var(--text-primary); border-color: var(--tb-border); }
+    :root:not([data-theme="light"]) .card-header,
+    :root:not([data-theme="light"]) .card-footer                                { background-color: var(--surface-muted); border-color: var(--tb-border); }
+    :root:not([data-theme="light"]) .border,
+    :root:not([data-theme="light"]) .border-top,
+    :root:not([data-theme="light"]) .border-bottom,
+    :root:not([data-theme="light"]) .border-start,
+    :root:not([data-theme="light"]) .border-end                                 { border-color: var(--tb-border) !important; }
+    :root:not([data-theme="light"]) .form-control,
+    :root:not([data-theme="light"]) .form-select                                { background-color: var(--surface-muted) !important; color: var(--text-primary) !important; border-color: var(--tb-border) !important; }
+    :root:not([data-theme="light"]) .form-control::placeholder                   { color: var(--text-muted) !important; opacity: 1; }
+    :root:not([data-theme="light"]) .badge.text-bg-light                        { background-color: var(--surface-muted) !important; color: var(--text-secondary) !important; }
+    :root:not([data-theme="light"]) .topbar-username                            { color: var(--text-primary); }
+    :root:not([data-theme="light"]) .topbar-hamburger,
+    :root:not([data-theme="light"]) .topbar-logout                              { border-color: var(--tb-border); color: var(--text-secondary); }
+    :root:not([data-theme="light"]) .topbar-hamburger:hover                     { background: var(--surface-muted); border-color: var(--text-muted); color: var(--text-primary); }
+    :root:not([data-theme="light"]) .table {
+        --bs-table-bg: transparent;
+        --bs-table-color: var(--text-primary);
+        --bs-table-striped-bg: rgba(255,255,255,.03);
+        --bs-table-hover-bg: rgba(255,255,255,.05);
+        --bs-table-hover-color: var(--text-primary);
+        --bs-table-border-color: var(--tb-border);
+        color: var(--text-primary);
+    }
+    :root:not([data-theme="light"]) .table-light {
+        --bs-table-bg: var(--surface-muted) !important;
+        --bs-table-color: var(--text-secondary) !important;
+    }
+    :root:not([data-theme="light"]) .modal-content {
+        background-color: var(--surface-card);
+        color: var(--text-primary);
+    }
+    :root:not([data-theme="light"]) .modal-header,
+    :root:not([data-theme="light"]) .modal-footer {
+        border-color: var(--tb-border);
+    }
+    :root:not([data-theme="light"]) .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+}
+
+/* ── Voice narration status (create/edit forms) ──────────────────────────
+   One row per language so staff can see at a glance which tracks exist,
+   which an edit has left out of date, and which have no text to read.
+   State is never carried by colour alone — every chip spells out what it
+   is, because "the amber one" is not something you can act on. */
+.voice-gen-grid { display: grid; gap: .4rem; }
+.voice-gen-row {
+    display: grid;
+    grid-template-columns: 6.5rem auto 1fr auto;
+    align-items: center;
+    gap: .6rem;
+    padding: .45rem .6rem;
+    border: 1px solid var(--border);
+    border-radius: .6rem;
+    background: var(--surface-card);
+}
+.voice-gen-lang   { font-size: .8rem; font-weight: 700; color: var(--text-primary); }
+.voice-gen-detail {
+    font-size: .72rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.voice-gen-state {
+    font-size: .7rem;
+    font-weight: 700;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.voice-state-ok    { background: #dcfce7; color: #15803d; }
+.voice-state-stale { background: #fef3c7; color: #92400e; }
+.voice-state-none  { background: var(--surface-muted); color: var(--text-secondary); }
+.voice-state-off   { background: var(--surface-muted); color: var(--text-muted); }
+
+/* Manobo text state in the list views. Three states, each spelled out —
+   "missing" is the one that matters, because that post's MN Listen button
+   does nothing for residents until somebody types the translation. */
+.manobo-state {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    font-size: .62rem;
+    font-weight: 700;
+    padding: .1rem .5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.manobo-state-manual  { background: #dcfce7; color: #15803d; }
+.manobo-state-auto    { background: #fef3c7; color: #92400e; }
+.manobo-state-missing { background: #f1f5f9; color: #64748b; border: 1px dashed #cbd5e1; }
+
+/* Marks a post in the admin list whose Manobo audio is still the generated
+   approximation — the barangay's worklist for getting a real speaker to
+   record it. */
+.voice-approx-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    font-size: .68rem;
+    font-weight: 700;
+    padding: .1rem .45rem;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #92400e;
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .voice-gen-row    { grid-template-columns: 1fr auto; }
+    .voice-gen-detail { grid-column: 1 / -1; }
+    .voice-gen-why    { grid-column: 1 / -1; }
+}
+
+/* Why a language has no audio, beside what it has.
+   "Unavailable" covered three different problems with three different
+   fixes and showed them identically. */
+.voice-gen-why {
+    grid-column: 1 / -1;
+    margin: .2rem 0 0;
+    font-size: .74rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+.voice-gen-fix { display: block; color: var(--text-muted); }
+.voice-gen-why code {
+    display: inline-block;
+    margin-top: .15rem;
+    padding: .1rem .4rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface-muted);
+    color: var(--brand-primary);
+    font-size: .7rem;
+    font-weight: 700;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LANGUAGE BADGES AND THEIR DETAIL PANEL
+   ══════════════════════════════════════════════════════════════════════
+   Four states, and the two that need action are the ones that must look
+   different at a glance across a table of twenty rows. "Missing" is the
+   loudest because it is the post whose MN button does nothing for a
+   resident; "machine" is quieter because it works, it is just unreviewed.
+   ══════════════════════════════════════════════════════════════════════ */
+.lang-badges {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: .25rem;
+}
+.lang-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: .15rem .5rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill, 999px);
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    white-space: nowrap;
+    background: var(--surface-muted);
+    color: var(--text-secondary);
+}
+/* button resets — these are real buttons so they are keyboard-reachable. */
+button.lang-chip { cursor: pointer; font-family: inherit; }
+button.lang-chip:focus-visible {
+    outline: var(--focus-ring-width) solid var(--brand-primary);
+    outline-offset: 2px;
+}
+
+.lang-chip--source  { background: var(--surface-muted); color: var(--text-secondary); }
+.lang-chip--manual  { background: var(--status-success-bg); color: var(--status-success); }
+.lang-chip--machine { background: var(--status-warning-bg); color: var(--status-warning); }
+.lang-chip--missing { background: var(--status-danger-bg);  color: var(--status-danger); }
+
+button.lang-chip--machine:hover,
+button.lang-chip--missing:hover { border-color: currentColor; }
+
+/* ── The single detail panel ─────────────────────────────────────────── */
+.lang-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1040;
+    background: rgba(8,14,34,.45);
+}
+.lang-panel {
+    position: fixed;
+    z-index: 1050;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(30rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+    padding: 1.15rem 1.25rem 1.25rem;
+    border-radius: var(--radius-lg);
+    background: var(--surface-card);
+    box-shadow: var(--shadow-modal);
+}
+.lang-panel__head {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin-bottom: .75rem;
+}
+.lang-panel__chip {
+    padding: .15rem .5rem;
+    border-radius: var(--radius-pill, 999px);
+    font-size: .7rem;
+    font-weight: 800;
+}
+.lang-panel__state {
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.lang-panel__close {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: .9rem;
+}
+.lang-panel__close:hover { color: var(--text-primary); }
+
+.lang-panel__post {
+    margin: 0 0 1rem;
+    padding-bottom: .75rem;
+    border-bottom: 1px solid var(--border);
+    font-size: .82rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+.lang-panel__label {
+    margin: 0 0 .2rem;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.lang-panel__reason,
+.lang-panel__fix {
+    margin: 0 0 .9rem;
+    font-size: .88rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+.lang-panel__env {
+    margin: -.5rem 0 .9rem;
+}
+.lang-panel__env code {
+    display: inline-block;
+    padding: .25rem .5rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface-muted);
+    color: var(--brand-primary);
+    font-size: .8rem;
+    font-weight: 700;
+}
+.lang-panel__raw {
+    margin-bottom: 1rem;
+    font-size: .78rem;
+    color: var(--text-secondary);
+}
+.lang-panel__raw summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+.lang-panel__raw p { margin: .5rem 0 0; line-height: 1.55; }
+.lang-panel__tries { color: var(--text-muted); }
+
+.lang-panel__act {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+    padding-top: .9rem;
+    border-top: 1px solid var(--border);
+}
+.lang-panel__cancel {
+    border: 0;
+    background: none;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.lang-panel__cancel:hover { text-decoration: underline; }
+
+/* No global [x-cloak] rule in this stylesheet, so the panel would flash
+   before Alpine boots. Scoped the way main.css scopes .voice-reader. */
+.lang-panel[x-cloak],
+.lang-panel-backdrop[x-cloak],
+.lang-panel [x-cloak] { display: none !important; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   TRANSLATION HEALTH PAGE
+   ══════════════════════════════════════════════════════════════════════
+   Providers first, because most of what is wrong further down traces back
+   to one of three variables being unset — and each is a two-minute fix
+   that went unmade for weeks only because nothing said it out loud.
+   ══════════════════════════════════════════════════════════════════════ */
+.th-providers {
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+.th-provider {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    padding: .75rem .85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-muted);
+}
+.th-provider--down {
+    border-color: var(--status-warning);
+    background: var(--status-warning-bg);
+}
+.th-provider__dot {
+    flex: 0 0 auto;
+    width: .6rem;
+    height: .6rem;
+    margin-top: .3rem;
+    border-radius: 50%;
+    background: var(--status-success);
+}
+.th-provider--down .th-provider__dot { background: var(--status-warning); }
+
+.th-provider__name {
+    margin: 0;
+    font-size: .85rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+.th-provider__state,
+.th-provider__fix {
+    margin: .15rem 0 0;
+    font-size: .76rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+.th-provider__fix { color: var(--text-muted); }
+.th-provider__env { margin: .3rem 0 0; }
+.th-provider__env code {
+    display: inline-block;
+    padding: .1rem .4rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface-card);
+    color: var(--brand-primary);
+    font-size: .72rem;
+    font-weight: 700;
+}
+
+.th-counts {
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+.th-count {
+    padding: .85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-card);
+}
+.th-count__n {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text-primary);
+}
+.th-count__l {
+    display: block;
+    margin-top: .15rem;
+    font-size: .72rem;
+    color: var(--text-secondary);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   TRANSLATION PLAN  (create / edit form)
+   ══════════════════════════════════════════════════════════════════════
+   Advice, not an alarm. It sits on the form every time anyone writes a
+   post, so it has to read as a reference card — the two things that ARE
+   warnings (a source-language mismatch, a post over the cap) are the only
+   parts allowed to shout.
+   ══════════════════════════════════════════════════════════════════════ */
+.tp-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .4rem;
+    padding: .35rem 0;
+    font-size: .82rem;
+}
+.tp-row__label {
+    min-width: 6.5rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+.tp-row__value { font-weight: 700; color: var(--text-primary); }
+.tp-how        { font-size: .75rem; color: var(--text-muted); }
+
+.tp-warn {
+    margin: .5rem 0 .25rem;
+    padding: .6rem .75rem;
+    border-radius: var(--radius-md);
+    background: var(--status-warning-bg);
+    color: var(--status-warning);
+    font-size: .78rem;
+    line-height: 1.55;
+    font-weight: 600;
+}
+
+.tp-langs {
+    margin-top: .9rem;
+    padding-top: .75rem;
+    border-top: 1px solid var(--border);
+}
+.tp-lang {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    padding: .45rem 0;
+}
+.tp-lang__body { min-width: 0; }
+.tp-lang__will {
+    margin: 0;
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.tp-lang__why,
+.tp-lang__fix {
+    margin: .15rem 0 0;
+    font-size: .76rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+.tp-lang__env { margin: .25rem 0 0; }
+.tp-lang__env code {
+    display: inline-block;
+    padding: .1rem .4rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface-muted);
+    color: var(--brand-primary);
+    font-size: .72rem;
+    font-weight: 700;
+}
+
+/* Same reason as the detail panel: no global [x-cloak] rule here, so the
+   warnings would flash on every form load before Alpine boots. */
+.translation-plan [x-cloak] { display: none !important; }
+
+/* ── The same information, laid out, on the edit form ────────────────
+   A table row has space for a chip; an edit form has space for the
+   reason and the fix in full, and the person reading it there is about
+   to act on one of them. */
+.lang-status-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-card);
+    padding: 1rem 1.1rem;
+}
+.lang-status-card__title {
+    margin: 0 0 .85rem;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.lang-status-row {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    padding: .7rem 0;
+    border-top: 1px solid var(--border);
+}
+.lang-status-row:first-of-type { border-top: 0; padding-top: 0; }
+
+.lang-status-row__body { flex: 1 1 auto; min-width: 0; }
+.lang-status-row__state {
+    margin: 0;
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.lang-status-row__reason,
+.lang-status-row__fix {
+    margin: .2rem 0 0;
+    font-size: .78rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+.lang-status-row__env { margin: .35rem 0 0; }
+.lang-status-row__env code {
+    display: inline-block;
+    padding: .15rem .45rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface-muted);
+    color: var(--brand-primary);
+    font-size: .75rem;
+    font-weight: 700;
+}
+.lang-status-row__btn {
+    flex: 0 0 auto;
+    align-self: center;
+    padding: .35rem .75rem;
+    border: 1px solid var(--brand-primary);
+    border-radius: var(--radius-md);
+    background: none;
+    font-size: .76rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.lang-status-row__btn:hover {
+    background: var(--action-solid);
+    border-color: var(--action-solid);
+    color: var(--text-on-action);
+}
+.lang-status-row__btn:focus-visible {
+    outline: var(--focus-ring-width) solid var(--brand-primary);
+    outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SAFETY CHECK-IN TOGGLE  (announcement form)
+   ══════════════════════════════════════════════════════════════════════
+   A control used twice a year, during a storm, by someone in a hurry. It
+   was a bare checkbox at the foot of the purok block and could not be
+   found — so it is framed, iconed, and it changes colour once armed, the
+   way a switch with consequences should.
+   ══════════════════════════════════════════════════════════════════════ */
+.safety-toggle {
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.1rem 1.1rem;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--text-muted);
+    border-radius: var(--radius-lg);
+    background: var(--surface-muted);
+}
+/* Armed: this advisory IS running a head count. */
+.safety-toggle--on {
+    border-color: var(--status-danger);
+    border-left-color: var(--status-danger);
+    background: var(--status-danger-bg);
+}
+
+.safety-toggle__head {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    margin-bottom: .75rem;
+}
+.safety-toggle__icon {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: var(--radius-md);
+    background: var(--surface-card);
+    color: var(--text-muted);
+    font-size: 1.1rem;
+}
+.safety-toggle--on .safety-toggle__icon { color: var(--status-danger); }
+
+.safety-toggle__title {
+    margin: 0 0 .1rem;
+    font-size: .95rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+.safety-toggle__sub,
+.safety-toggle__help {
+    margin: 0;
+    font-size: .78rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+.safety-toggle__help { margin-top: .5rem; }
+
+.safety-toggle__check .form-check-label {
+    font-size: .875rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.safety-toggle__check .form-check-input {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: .12rem;
+}
+.safety-toggle__check .form-check-input:checked {
+    background-color: var(--status-danger);
+    border-color: var(--status-danger);
+}
+
+.safety-toggle__where {
+    margin: .7rem 0 0;
+    font-size: .76rem;
+    color: var(--text-secondary);
+}
+.safety-toggle__where a {
+    font-weight: 700;
+    color: var(--brand-primary);
+    text-decoration: none;
+}
+.safety-toggle__where a:hover { text-decoration: underline; }

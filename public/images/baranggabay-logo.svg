@@ -1,0 +1,40 @@
+<svg width="100%" viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>BarangGabay Premium Logo</title>
+<defs>
+  <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#166534"/>
+    <stop offset="100%" stop-color="#14532d"/>
+  </linearGradient>
+</defs>
+
+<!-- Glowing hex shield -->
+<polygon points="55,8 95,8 115,42 95,76 55,76 35,42" fill="url(#hexGrad)"/>
+<polygon points="57,11 93,11 111,42 93,73 57,73 39,42" fill="none" stroke="#fbbf24" stroke-width="1.2" opacity="0.6"/>
+<polygon points="61,17 89,17 105,42 89,67 61,67 45,42" fill="none" stroke="#fbbf24" stroke-width="0.6" opacity="0.3"/>
+
+<!-- Leaf accents -->
+<path d="M48,18 Q38,28 43,40 Q51,30 54,18 Z" fill="#4ade80" opacity="0.8"/>
+<path d="M40,25 Q32,36 37,47" fill="none" stroke="#4ade80" stroke-width="1" opacity="0.5"/>
+<path d="M102,18 Q112,28 107,40 Q99,30 96,18 Z" fill="#4ade80" opacity="0.8"/>
+<path d="M110,25 Q118,36 113,47" fill="none" stroke="#4ade80" stroke-width="1" opacity="0.5"/>
+
+<!-- Inner circle -->
+<circle cx="75" cy="42" r="22" fill="#0f3d1c"/>
+<circle cx="75" cy="42" r="20" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
+
+<!-- B letter -->
+<text x="75" y="53" text-anchor="middle" font-family="Georgia,serif" font-size="28" font-weight="700" fill="#fbbf24">B</text>
+
+<!-- Gold banner -->
+<rect x="40" y="62" width="70" height="13" rx="2" fill="#fbbf24"/>
+<text x="75" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="6" font-weight="700" fill="#14532d" letter-spacing="1">BARANGGABAY</text>
+
+<!-- Wordmark -->
+<text x="130" y="38" font-family="Georgia,serif" font-size="36" font-weight="700" fill="#166534" letter-spacing="-0.5">Barang</text>
+<text x="130" y="72" font-family="Georgia,serif" font-size="36" font-weight="700" fill="#d97706" letter-spacing="-0.5">Gabay</text>
+
+<!-- Subtitle -->
+<rect x="130" y="80" width="280" height="1.5" rx="1" fill="#166534" opacity="0.2"/>
+<text x="130" y="96" font-family="Arial,sans-serif" font-size="11" fill="#166534" opacity="0.65" letter-spacing="2">BARANGAY COMMUNITY PORTAL</text>
+<text x="130" y="112" font-family="Arial,sans-serif" font-size="10" fill="#166534" opacity="0.4" letter-spacing="1">Bayogo · Madrid · Surigao del Sur</text>
+</svg>

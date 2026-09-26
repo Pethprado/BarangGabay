@@ -1,0 +1,41 @@
+manobo,english,tagalog,part_of_speech,category,notes,source
+a'baga,shoulder,balikat,n.,body,"Attested. Written without the stress mark as ""abaga"" elsewhere in the same source; both spellings refer to the same word.",SIL-FM-T1
+'abiy,lip,labi,n.,body,"Attested. The iy spelling is a long i sound.",SIL-FM-T1
+mata,eye,mata,n.,body,"Attested as Manobo. Inherited from Proto-Austronesian *maCa, so the same form appears across many Philippine languages including Tagalog.",WIKT
+agid-id,"dirt on the body",libag,n.,body,"Attested. The dash marks a glottal stop after a consonant, so it is part of the spelling and not a hyphen.",SIL-FM-1.2
+bakà,jaw,panga,n.,body,"Attested. The final grave accent marks a glottal stop. Contrasts with baka ""cow"" — see that entry.",SIL-FM-1.2
+baka,cow,baka,n.,animals,"Attested. Minimal pair with bakà ""jaw"": same letters, but this one has no final glottal stop. Loan sharing a form with Tagalog baka.",SIL-FM-1.2
+a-ae,"to pant (of a wild boar)","humingal (ng baboy-ramo)",v.,animals,"Attested but very narrow in meaning. The dash marks a glottal stop between vowels. Unlikely to be useful in a barangay context; included because it is directly sourced.",SIL-FM-1.2
+o'nom,six,anim,num.,numbers,"Attested. One of only two numerals recoverable from the accessible source.",SIL-FM-T1
+dadu'wa,two,dalawa,num.,numbers,"Attested. Appears to be a reduplicated form of a root ""duwa""; the plain root was not visible in the accessible source.",SIL-FM-T2
+i'nay,mother!,inay!,voc.,family,"Attested, and marked in the source as a form used to address a mother directly rather than to refer to one. The plain noun ""mother"" was not visible in the accessible source.",SIL-FM-T1
+'ubu,cough,ubo,n.,health,Attested.,SIL-FM-T1
+hi'lu,poison,lason,n.,health,"Attested. Minimal pair with 'hilu ""thread"" — the only difference is which syllable is stressed.",SIL-FM-1.3
+'hilu,thread,sinulid,n.,household,"Attested. Minimal pair with hi'lu ""poison"" — the only difference is which syllable is stressed.",SIL-FM-1.3
+hi'ngow,"to be drunk",malasing,v.,health,Attested.,SIL-FM-T2
+ti'yahù,"to cry",umiyak,v.,health,"Attested. The final grave accent marks a glottal stop.",SIL-FM-T2
+a'lédyik,allergic,alerdyi,adj.,health,"Attested, but the source gives it as a borrowed word used to demonstrate the j sound. Not native vocabulary.",SIL-FM-T2
+wo'hig,water,tubig,n.,nature,Attested.,SIL-FM-T2
+gu'yangan,forest,gubat,n.,nature,Attested.,SIL-FM-T2
+so'dà,"viand, food eaten with rice",ulam,n.,food,"Attested. The final grave accent marks a glottal stop.",SIL-FM-T2
+baaw,"food taken along on a journey",baon,n.,food,"Attested. Pronounced ba-aw; the glottal stop between the vowels is not written.",SIL-FM-1.2
+ma'mà,"betel nut chew",nganga,n.,food,"Attested. The final grave accent marks a glottal stop.",SIL-FM-T2
+ri'pulyu,cabbage,repolyu,n.,food,"Attested, but a Spanish-derived loan rather than native vocabulary.",SIL-FM-T2
+'aehu,pestle,"halo (pambayo)",n.,household,"Attested. The ae spelling is a distinct vowel of Manobo.",SIL-FM-T1
+'kambue,"a kind of basket","isang uri ng basket",n.,household,"Attested, but the source does not say which kind of basket. The ue spelling is a distinct vowel of Manobo.",SIL-FM-T1
+'ngadan,name,pangalan,n.,civic,Attested.,SIL-FM-T2
+'yukos,male,lalaki,n.,person,Attested.,SIL-FM-T2
+ni'pis,thin,manipis,adj.,descriptive,Attested.,SIL-FM-T2
+'panow,"to walk",maglakad,v.,everyday,Attested.,SIL-FM-T2
+'baktas,"to hike",magbaktas,v.,everyday,Attested.,SIL-FM-T2
+'yaguy,"to run",tumakbo,v.,everyday,"Attested as a root. The source uses it to show how affixes attach — see miglinaguy.",SIL-FM-2
+miglinaguy,"is running",tumatakbo,v.,everyday,"Attested as an inflected form of 'yaguy, not a separate root. mig- marks a begun action and the infix -in- marks a continuing one; the root's y becomes l before i. Source sentence: miglinaguy a ""I am running"".",SIL-FM-2
+bo'goy,"to give",magbigay,v.,everyday,"Attested as a root. With the paN- prefix it becomes pamogoy, because b changes to m after a nasal prefix.",SIL-FM-2
+'tabak,"to answer",sumagot,v.,everyday,"Attested as a root. With the paN- prefix it becomes panabak, because t changes to n after a nasal prefix.",SIL-FM-2
+'kabò,"to clothe",damitan,v.,everyday,"Attested as a root. With the paN- prefix it becomes pangabò, because k changes to ng after a nasal prefix. Final grave accent marks a glottal stop.",SIL-FM-2
+la'ba,"to launder",maglaba,v.,everyday,"Attested. Shares a form with Tagalog laba.",SIL-FM-T2
+'kanta,"to sing",kumanta,v.,everyday,"Attested. Shares a form with Tagalog/Cebuano kanta, ultimately a Spanish loan.",SIL-FM-T2
+ja'bu,"to spill",matapon,v.,everyday,"Attested. Manobo j is pronounced like English j.",SIL-FM-T2
+sed,inside,loob,prep.,grammar,Attested.,SIL-FM-T1
+meydu'on,"there is",mayroon,exis.,grammar,"Attested. Existential word.",SIL-FM-T1
+a,I,ako,pro.,grammar,"Attested only inside the example sentence miglinaguy a ""I am running"", where it follows the verb. Listed separately because it is a distinct word, but its full pronoun set was not visible in the accessible source.",SIL-FM-2

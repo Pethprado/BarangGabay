@@ -1,0 +1,967 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   BarangGabay — SYSTEM THEME (Manobo-inspired earth palette)
+   ═══════════════════════════════════════════════════════════════════════
+
+   WHAT THIS FILE IS
+   ──────────────────
+   The landing page redesign (landing.css) proved out a warm, local palette
+   scoped to one page. This file takes the SAME concrete colour values and
+   applies them everywhere: login, resident pages, and the admin panel —
+   by overriding the custom properties tokens.css and admin.css already
+   declare, plus the handful of places main.css/admin.css hardcoded a raw
+   hex instead of a variable.
+
+   LOAD ORDER (this is what makes the override strategy work):
+     1. Bootstrap (CDN)
+     2. tokens.css   — the old blue/indigo defaults
+     3. main.css / admin.css — component structure, some of it hardcoded
+     4. THIS FILE    — loaded LAST, so its declarations win the cascade
+                        without editing tokens.css/main.css/admin.css itself.
+   A page that only loads tokens.css (login, the 2FA screens) still
+   re-themes correctly, because those pages already point their own local
+   --brand / --ink / --surface names at tokens.css's vars with var() — and
+   var() resolves where a property is USED, not where the variable was
+   first declared.
+
+   ON THE PATTERNS AND THE LOGO
+   ─────────────────────────────
+   The woven/zigzag geometry below (.theme-band, .theme-teeth, the card
+   top-border) is the SAME kind of thing as landing.css's bands: ORIGINAL
+   ABSTRACT geometry — diamonds, triangles, repeating chevrons — built with
+   CSS gradients. It is NOT Manobo design, is not derived from any Manobo
+   textile, emblem or clan motif, and must never be described as such. See
+   landing.css's header and public/images/README.md for the fuller version
+   of this rule; it applies here identically.
+
+   The BarangGabay logomark itself (the hex-shield "B" monogram) is a
+   generic corporate mark with no cultural imagery in it at all — recolouring
+   it from blue to maroon/gold (logo-lockup-light.svg / -dark.svg) is a
+   colour change, not a cultural claim, so none of the above applies to it.
+
+   ═══════════════════════════════════════════════════════════════════════
+   QUICK CLASS GUIDE — for pages you build next
+   ═══════════════════════════════════════════════════════════════════════
+   Buttons     .btn-theme .btn-theme-primary / -secondary / -danger
+               modifiers: .btn-theme-sm / .btn-theme-lg
+   Cards       .card-theme > .card-theme__body   (zigzag gold top edge)
+   Forms       .form-control/.form-select/.form-label already re-themed —
+               use them as-is. Non-Bootstrap pages: .form-theme wraps the
+               same look (label, input, .form-theme__error).
+   Tables      .table-theme (cream stripes, maroon header, hover) — or
+               plain Bootstrap .table, already re-themed.
+   Badges      .pill-theme + .pill-theme--pending / --approved / --rejected
+               / --active
+   Alerts      .alert-theme + .alert-theme--info / --success / --warning
+               / --danger      Toasts: .toast-theme (same modifiers)
+   Modals      Bootstrap .modal-content — already re-themed (maroon accent
+               under the header).
+   Sidebar     .admin-sidebar / .sidebar-link (already built, already
+               re-themed — reuse it, don't rebuild it).
+   Topbar      .admin-topbar (already re-themed to cream).
+   Stat cards  .stat-card / .stat-card-value (already re-themed to a big
+               gold number) — or the neutral alias .stat-theme /
+               .stat-theme__value for a page outside the admin layout.
+   Pagination  .admin-pagination — or the alias .pagination-theme.
+   Tabs        .tabs-theme > .tabs-theme__item(.is-active)
+   Breadcrumbs .breadcrumbs-theme > .breadcrumbs-theme__item(.is-active)
+   Empty state .empty-state > .empty-state__icon/__title/__text/__action
+   Patterns    .theme-band / .theme-band--light (thin divider strip),
+               .theme-teeth (a row of triangles) — sparingly, never behind
+               body text.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   1. PALETTE — overrides tokens.css (+ admin.css's own hardcoded :root)
+   ═══════════════════════════════════════════════════════════════════════
+   Every value below is reused verbatim from landing.css, which already
+   measured each one — see theme_palette.php in this project's working
+   notes for the full set of pairs actually used here, all >= 4.5:1. */
+:root {
+    /* ── Fonts ─────────────────────────────────────────────────────── */
+    --font-heading: 'Bitter', Georgia, 'Times New Roman', serif;
+    --font-body:    'Inter', 'Segoe UI', system-ui, sans-serif;
+
+    /* ── Motif colours (global; landing's --l-* tokens are scoped to
+         .landing and are not reachable from the rest of the app) ──── */
+    --motif-gold:      #c8992e;   /* decoration only — 2.38:1, never text */
+    --motif-gold-ink:  #7a5c11;   /* the gold that MAY carry text */
+    --motif-gold-night:#e2b955;   /* gold on a dark ground */
+    --motif-maroon-dk: #5e161a;
+    --motif-night:     #241b18;
+    --motif-night-2:   #3a2a22;
+
+    /* ── Surfaces — cream content, dark brown panels (rule: dashboards
+         stay light for all-day readability; dark stays for sidebar,
+         login and headers only) ───────────────────────────────────── */
+    --surface-page:     #faf4e8;
+    --surface-card:     #fffdf8;
+    --surface-raised:   #fffdf8;
+    --surface-muted:    #f1e6d2;
+    --surface-input:    #fdf9ef;
+
+    --surface-panel:    var(--motif-night);
+    --surface-panel-2:  var(--motif-night-2);
+
+    /* ── Text ──────────────────────────────────────────────────────── */
+    --text-primary:     #1a1512;   /* 17.81:1 on --surface-card */
+    --text-secondary:   #4a3f38;   /* 10.03:1 */
+    --text-muted:       #6b5d52;   /*  6.24:1 */
+
+    --text-on-panel:        #fdf8ee;   /* 15.93:1 on --surface-panel */
+    --text-on-panel-soft:   #e6d9c8;   /* 12.15:1 */
+    --text-on-panel-faint:  #c3b2a0;   /*  8.19:1 */
+
+    /* ── Brand — text/link colour. A gold LOOKS right here, but raw gold
+         (--motif-gold) is 2.38:1 and unusable for text, so the ink-shade
+         of gold carries words instead; raw gold stays for borders/fills. */
+    --brand-primary:        var(--motif-gold-ink);   /* 6.14:1 on card */
+    --brand-primary-dark:   #5a430d;                 /* 9.21:1 — hover  */
+    --brand-primary-light:  #f6ecd2;                 /* pale gold wash  */
+    --brand-secondary:      #2f5d3a;                 /* earthy green, 7.52:1 */
+    --brand-secondary-dark: #1f3f27;
+    --brand-secondary-light:#e3ede4;
+
+    /* ── Actions — solid fill, carries white text. Fixed across themes
+         on purpose (see tokens.css's own rule + DesignTokensTest, which
+         this file follows even though it only scans tokens.css itself). */
+    --action-solid:       #7b1e22;   /* deep maroon — white on it 10.24:1 */
+    --action-solid-hover: var(--motif-maroon-dk);   /* white on it 13.08:1 */
+    --text-on-action:     #ffffff;
+
+    /* ── Role accents ──────────────────────────────────────────────── */
+    --role-resident:    var(--motif-gold-ink);
+    --role-staff:       #2f5d3a;
+    --role-admin:       #7b1e22;
+    --role-system:      #4a3f38;
+
+    /* ── Status — success/warning/danger/info pulled into the same
+         earthy family, each measured against card AND its own tint. ── */
+    --status-success:    #3f6b34;
+    --status-warning:    #8a5a12;
+    --status-danger:     #a3311c;
+    --status-info:       #5b5240;
+
+    --status-success-bg: #e6ecdf;
+    --status-warning-bg: #f5e8d0;
+    --status-danger-bg:  #f6ded7;
+    --status-info-bg:    #ece7dd;
+
+    /* ── Lines and focus ───────────────────────────────────────────── */
+    --border:           #e4d7c2;
+    --border-strong:    #cdbb9c;
+    --focus-ring:       rgba(123,30,34,.40);   /* maroon, visible on cream and dark alike */
+    --focus-ring-width: 3px;
+
+    /* ── Shape (kept from tokens.css) + one addition ─────────────────── */
+    --radius-pill: 999px;
+
+    /* ── Depth — same shadow scale, warmed from slate-grey to a brown tint */
+    --shadow-card:  0 1px 2px rgba(36,27,24,.08), 0 2px 8px rgba(36,27,24,.06);
+    --shadow-lift:  0 6px 18px rgba(36,27,24,.12);
+    --shadow-modal: 0 28px 70px rgba(20,15,13,.50), 0 4px 18px rgba(20,15,13,.28);
+
+    /* ── admin.css's OWN hardcoded sidebar vars (not sourced from
+         tokens.css, so they need a direct override here) ─────────────
+         The sidebar is a constant dark panel in both themes already —
+         same idea as --surface-panel — so one override, no dark variant. */
+    --sb-bg:          var(--motif-night);
+    --sb-bg-mid:      var(--motif-night-2);
+    --sb-hover:       rgba(253,248,238,.08);
+    --sb-active:      var(--motif-gold);          /* "gold active item" */
+    --sb-active-glow: rgba(200,153,46,.35);
+    --sb-text:        var(--text-on-panel-faint);
+    --sb-text-bright: var(--text-on-panel);
+
+    /* admin.css's premium-layer gradients (hardcode a blue literal
+       blended with a token, so a var-only override upstream can't reach
+       them — redeclared whole here). */
+    --brand-gradient:      linear-gradient(135deg, #7b1e22 0%, #a3311c 100%);
+    --brand-gradient-gold: linear-gradient(135deg, #c8992e 0%, #7a5c11 100%);
+    --glow-green:          0 0 0 4px rgba(123,30,34,.14);
+    --glow-gold:           0 0 0 4px rgba(200,153,46,.18);
+
+    /* main.css's hand-rolled Tailwind-style colour utilities
+       (.text-blue-700 / .bg-blue-100 and their hover variants). */
+    --tw-blue-700:     var(--motif-gold-ink);
+    --tw-bg-blue-100:  var(--brand-primary-light);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DARK MODE — mirrors tokens.css's own two-block pattern (explicit
+   toggle + OS preference) so the existing dark/light switch keeps working,
+   just repainted warm instead of navy. Both blocks are kept identical by
+   hand, the same discipline DesignTokensTest enforces on tokens.css itself.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] {
+    --surface-page:     #1c1512;
+    --surface-card:     var(--motif-night);
+    --surface-raised:   #2d2320;
+    --surface-muted:    #2d2320;
+    --surface-input:    #2d2320;
+
+    --text-primary:     #fdf8ee;   /* 15.93:1 on dark card */
+    --text-secondary:   #e6d9c8;   /* 12.15:1 */
+    --text-muted:       #c3b2a0;   /*  8.19:1 */
+
+    --brand-primary:        var(--motif-gold-night);  /* 9.08:1 on dark card */
+    --brand-primary-dark:   #f0cd7a;
+    --brand-primary-light:  #3a2f1a;
+    --brand-secondary:      #6fae7e;                  /* 6.45:1 on dark card */
+    --brand-secondary-light:#1f3324;
+
+    --role-resident:    var(--motif-gold-night);
+    --role-staff:       #6fae7e;
+    --role-admin:       #e2907c;   /* lightened maroon — pure maroon is
+                                       too dark to read as TEXT on a dark
+                                       ground; the action fill itself
+                                       (--action-solid) does not change */
+    --role-system:      #c3b2a0;
+
+    --border:           #3d2f28;
+    --border-strong:    #4e3c33;
+    --focus-ring:       rgba(226,185,85,.45);
+
+    --status-success:    #9bc78a;
+    --status-warning:    #e0b25c;
+    --status-danger:     #e2907c;
+    --status-info:       #cbbfa0;
+
+    --status-success-bg: rgba(63,107,52,.22);
+    --status-warning-bg: rgba(138,90,18,.24);
+    --status-danger-bg:  rgba(163,49,28,.22);
+    --status-info-bg:    rgba(91,82,64,.30);
+
+    --shadow-card:  0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.30);
+    --shadow-lift:  0 6px 18px rgba(0,0,0,.45);
+
+    --tw-blue-700:     var(--motif-gold-night);
+    --tw-bg-blue-100:  rgba(226,185,85,.16);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --surface-page:     #1c1512;
+        --surface-card:     var(--motif-night);
+        --surface-raised:   #2d2320;
+        --surface-muted:    #2d2320;
+        --surface-input:    #2d2320;
+
+        --text-primary:     #fdf8ee;
+        --text-secondary:   #e6d9c8;
+        --text-muted:       #c3b2a0;
+
+        --brand-primary:        var(--motif-gold-night);
+        --brand-primary-dark:   #f0cd7a;
+        --brand-primary-light:  #3a2f1a;
+        --brand-secondary:      #6fae7e;
+        --brand-secondary-light:#1f3324;
+
+        --role-resident:    var(--motif-gold-night);
+        --role-staff:       #6fae7e;
+        --role-admin:       #e2907c;
+        --role-system:      #c3b2a0;
+
+        --border:           #3d2f28;
+        --border-strong:    #4e3c33;
+        --focus-ring:       rgba(226,185,85,.45);
+
+        --status-success:    #9bc78a;
+        --status-warning:    #e0b25c;
+        --status-danger:     #e2907c;
+        --status-info:       #cbbfa0;
+
+        --status-success-bg: rgba(63,107,52,.22);
+        --status-warning-bg: rgba(138,90,18,.24);
+        --status-danger-bg:  rgba(163,49,28,.22);
+        --status-info-bg:    rgba(91,82,64,.30);
+
+        --shadow-card:  0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.30);
+        --shadow-lift:  0 6px 18px rgba(0,0,0,.45);
+
+        --tw-blue-700:     var(--motif-gold-night);
+        --tw-bg-blue-100:  rgba(226,185,85,.16);
+    }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   2. THE SIDEBAR'S ACTIVE ITEM — gold fill needs dark ink, not white
+   ═══════════════════════════════════════════════════════════════════════
+   .sidebar-link.active in admin.css paints --sb-text-bright (near-white)
+   as its text colour. That was correct on a blue fill; on the gold fill
+   this file gives --sb-active, white-on-gold measures ~2:1 — a real AA
+   failure, not a cosmetic one. Dark ink on gold measures 6.94:1. */
+.sidebar-link.active,
+.sidebar-link.active .nav-icon {
+    color: var(--text-primary) !important;
+}
+.sidebar-link.active::before {
+    /* the little left-edge accent bar — was --brand-gold (now green via
+       admin.css's alias); a maroon sliver reads better against a gold fill */
+    background: var(--action-solid) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   3. LITERAL HARDCODED COLOURS — main.css / admin.css set these as raw
+      hex on specific selectors rather than through a variable, so no
+      amount of :root overriding above reaches them. Redeclared whole.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* main.css: the shared "premium" hero/footer panels used across resident
+   pages (announcements, events, home) outside the landing page itself. */
+.hero-premium {
+    background: linear-gradient(135deg, var(--motif-night) 0%, var(--motif-maroon-dk) 55%, #2f5d3a 100%) !important;
+}
+.hero-premium::before {
+    background-image:
+        radial-gradient(circle at 20% 20%, rgba(200,153,46,.18), transparent 55%),
+        radial-gradient(circle at 80% 80%, rgba(47,93,58,.16), transparent 55%) !important;
+}
+.hero-badge,
+.hero-title .highlight {
+    color: var(--motif-gold-night) !important;
+}
+
+.btn-primary-premium {
+    background: linear-gradient(135deg, var(--action-solid), var(--action-solid-hover)) !important;
+}
+.btn-primary-premium:hover {
+    box-shadow: 0 12px 30px rgba(123,30,34,.4) !important;
+}
+
+.card-premium:hover {
+    border-color: rgba(123,30,34,.18) !important;
+}
+
+.footer-premium {
+    background: linear-gradient(180deg, var(--motif-night) 0%, #140f0d 100%) !important;
+}
+.footer-premium .footer-link:hover {
+    color: var(--motif-gold-night) !important;
+}
+
+::-webkit-scrollbar-thumb         { background: rgba(123,30,34,.20) !important; }
+::-webkit-scrollbar-thumb:hover   { background: rgba(123,30,34,.38) !important; }
+:root {
+    scrollbar-color: rgba(123,30,34,.30) transparent;
+    --shadow-accent: 0 4px 20px rgba(123,30,34,.25);
+    --shadow-brand:  0 4px 20px rgba(123,30,34,.25);
+}
+.navbar-premium { border-bottom: 1px solid rgba(123,30,34,.08) !important; }
+.btn-login:hover { box-shadow: 0 8px 25px rgba(123,30,34,.35) !important; }
+
+/* main.css's navbar keeps a cold slate-navy tint in dark mode
+   (rgba(19,27,44,...)) left over from the old palette — warmed to match
+   the rest of dark mode's brown surfaces. */
+:root[data-theme="dark"] .navbar-premium { background: rgba(36,27,24,.92) !important; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .navbar-premium { background: rgba(36,27,24,.92) !important; }
+}
+
+/* admin.css sidebar brand strip: a blue glow drop-shadow and gradient
+   line around the logo image, plus a mint fallback-icon colour. */
+.sidebar-brand-icon              { filter: drop-shadow(0 0 8px rgba(200,153,46,.45)) drop-shadow(0 2px 6px rgba(0,0,0,.5)) !important; }
+.sidebar-brand:hover .sidebar-brand-icon { filter: drop-shadow(0 0 14px rgba(200,153,46,.65)) drop-shadow(0 2px 8px rgba(0,0,0,.5)) !important; }
+.sidebar-brand::after            { background: linear-gradient(90deg, transparent, rgba(200,153,46,.35), transparent) !important; }
+.sidebar-brand-icon-fallback     { color: var(--motif-gold-night) !important; }
+
+/* admin.css's glass topbar-on-scroll effect, dark mode variant. */
+:root[data-theme="dark"] .admin-topbar.scrolled { background: rgba(36,27,24,.86) !important; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .admin-topbar.scrolled { background: rgba(36,27,24,.86) !important; }
+}
+
+/* admin.css literals */
+.btn-barangay:hover { box-shadow: 0 4px 12px rgba(123,30,34,.30) !important; }
+.form-control:focus,
+.form-select:focus,
+textarea.form-control:focus {
+    box-shadow: 0 0 0 3px rgba(123,30,34,.16) !important;
+}
+.quick-action-btn:hover .qa-icon { box-shadow: 0 6px 16px rgba(123,30,34,.35) !important; }
+.status-upcoming { background: var(--status-info-bg) !important; color: var(--status-info) !important; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   4. TYPOGRAPHY — warm serif headings, sans body (same pairing as landing)
+   ═══════════════════════════════════════════════════════════════════════ */
+h1, h2, h3,
+.topbar-title, .admin-card-title,
+.stat-card-value, .stat-theme__value,
+.card-theme h3, .card-theme__title {
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+}
+.stat-card-value, .stat-theme__value {
+    /* the "100+ Verified Residents" look — a big gold number */
+    color: var(--brand-primary);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   5. WOVEN / ZIGZAG PATTERN — reusable, original abstract geometry
+   ═══════════════════════════════════════════════════════════════════════
+   Same technique as landing.css's .l-band, exposed globally (landing's
+   own --l-* tokens are scoped to .landing and unreachable elsewhere).
+   USE SPARINGLY — section dividers and card edges, never behind body text
+   or a form field: the texture costs contrast. */
+.theme-band {
+    height: 8px;
+    background-color: var(--action-solid);
+    background-image:
+        repeating-linear-gradient(135deg, var(--motif-gold) 0 6px, transparent 6px 18px),
+        repeating-linear-gradient(45deg,  var(--motif-gold) 0 6px, transparent 6px 18px);
+    background-size: 18px 18px, 18px 18px;
+}
+.theme-band--light {
+    background-color: var(--surface-page);
+    background-image:
+        repeating-linear-gradient(135deg, var(--action-solid) 0 5px, transparent 5px 16px),
+        repeating-linear-gradient(45deg,  var(--motif-gold)   0 5px, transparent 5px 16px);
+    background-size: 16px 16px, 16px 16px;
+}
+.theme-teeth {
+    height: 10px;
+    background-image:
+        linear-gradient(135deg, var(--action-solid) 25%, transparent 25%),
+        linear-gradient(225deg, var(--action-solid) 25%, transparent 25%);
+    background-size: 14px 10px;
+    background-repeat: repeat-x;
+    opacity: .9;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   6. BUTTONS
+   ═══════════════════════════════════════════════════════════════════════ */
+.btn-theme {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding: .55rem 1.2rem;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: .875rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.btn-theme:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring); outline-offset: 2px; }
+
+.btn-theme-primary {
+    background: var(--action-solid);
+    color: var(--text-on-action);
+}
+.btn-theme-primary:hover { background: var(--action-solid-hover); color: var(--text-on-action); box-shadow: var(--shadow-lift); transform: translateY(-1px); }
+
+.btn-theme-secondary {
+    background: transparent;
+    border-color: var(--motif-gold);
+    color: var(--brand-primary);
+}
+.btn-theme-secondary:hover { background: var(--brand-primary-light); border-color: var(--brand-primary); }
+
+.btn-theme-danger {
+    background: var(--status-danger);
+    color: #ffffff;
+}
+.btn-theme-danger:hover { background: #7e2515; }
+
+.btn-theme-sm { padding: .35rem .85rem; font-size: .78rem; }
+.btn-theme-lg { padding: .75rem 1.6rem; font-size: .95rem; }
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-theme-primary:hover { transform: none; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   7. CARDS — cream body, woven gold top edge
+   ═══════════════════════════════════════════════════════════════════════ */
+.card-theme {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+.card-theme::before {
+    content: '';
+    display: block;
+    height: 6px;
+    background-image:
+        repeating-linear-gradient(135deg, var(--motif-gold) 0 5px, transparent 5px 14px),
+        repeating-linear-gradient(45deg,  var(--action-solid) 0 5px, transparent 5px 14px);
+    background-size: 14px 14px, 14px 14px;
+}
+.card-theme__body { padding: 1.25rem; }
+.card-theme__title { margin: 0 0 .4rem; font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+.card-theme__text  { margin: 0; font-size: .875rem; color: var(--text-secondary); line-height: 1.6; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   8. FORMS
+   ═══════════════════════════════════════════════════════════════════════
+   Bootstrap's .form-control/.form-select already inherit --brand-green /
+   --action-solid via admin.css's own focus rule (section 3, above) and
+   via tokens.css's --border, so they need no further override here. This
+   section is only for pages that are NOT built on Bootstrap markup. */
+.form-theme label,
+.form-theme__label {
+    display: block;
+    margin-bottom: .3rem;
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+.form-theme input,
+.form-theme select,
+.form-theme textarea,
+.form-theme__input {
+    width: 100%;
+    padding: .55rem .75rem;
+    background: var(--surface-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: .9rem;
+}
+.form-theme input:focus,
+.form-theme select:focus,
+.form-theme textarea:focus,
+.form-theme__input:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(123,30,34,.16);
+}
+.form-theme__error {
+    margin-top: .3rem;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--status-danger);
+}
+.form-theme__help {
+    margin-top: .3rem;
+    font-size: .78rem;
+    color: var(--text-muted);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   9. TABLES
+   ═══════════════════════════════════════════════════════════════════════ */
+.table-theme,
+table.table {   /* light re-theme of Bootstrap's own .table, app-wide */
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+}
+.table-theme thead th,
+table.table thead th {
+    background: var(--action-solid);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: .74rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: .65rem .85rem;
+    text-align: left;
+}
+.table-theme tbody td,
+table.table tbody td {
+    padding: .65rem .85rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+}
+.table-theme tbody tr:nth-child(even) td,
+table.table tbody tr:nth-child(even) td {
+    background: var(--surface-muted);
+}
+.table-theme tbody tr:hover td,
+table.table tbody tr:hover td {
+    background: var(--brand-primary-light);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   10. BADGES / STATUS PILLS
+   ═══════════════════════════════════════════════════════════════════════ */
+.pill-theme {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .2rem .7rem;
+    border-radius: var(--radius-pill);
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.pill-theme--pending  { background: var(--status-warning-bg); color: var(--status-warning); }
+.pill-theme--approved,
+.pill-theme--active   { background: var(--status-success-bg); color: var(--status-success); }
+.pill-theme--rejected { background: var(--status-danger-bg);  color: var(--status-danger); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   11. ALERTS / TOASTS
+   ═══════════════════════════════════════════════════════════════════════ */
+.alert-theme,
+.toast-theme {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    padding: .85rem 1rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-size: .88rem;
+    line-height: 1.5;
+}
+.toast-theme {
+    box-shadow: var(--shadow-lift);
+    background: var(--surface-card);
+    border-left: 4px solid var(--border);
+}
+.alert-theme--info,    .toast-theme--info    { background: var(--status-info-bg);    color: var(--status-info); }
+.alert-theme--success, .toast-theme--success { background: var(--status-success-bg); color: var(--status-success); }
+.alert-theme--warning, .toast-theme--warning { background: var(--status-warning-bg); color: var(--status-warning); }
+.alert-theme--danger,  .toast-theme--danger  { background: var(--status-danger-bg);  color: var(--status-danger); }
+
+/* Bootstrap's own .alert-primary / .alert-* (used by _flash.php elsewhere) */
+.alert-primary { background: var(--brand-primary-light) !important; color: var(--brand-primary-dark) !important; border-color: var(--border) !important; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   12. MODALS — Bootstrap .modal-content, given a maroon accent
+   ═══════════════════════════════════════════════════════════════════════ */
+.modal-content {
+    border-radius: var(--radius-lg);
+    border: none;
+    box-shadow: var(--shadow-modal);
+}
+.modal-header {
+    border-bottom: 3px solid var(--action-solid);
+}
+.modal-title { font-family: var(--font-heading); color: var(--text-primary); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   13. PAGINATION
+   ═══════════════════════════════════════════════════════════════════════ */
+.pagination-theme,
+.admin-pagination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.pagination-theme a,
+.pagination-theme span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: var(--radius-md);
+    font-size: .82rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--surface-card);
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+.pagination-theme a:hover { background: var(--brand-primary-light); border-color: var(--brand-primary); color: var(--brand-primary); }
+.pagination-theme .current,
+.admin-pagination .current { background: var(--action-solid); border-color: var(--action-solid); color: #fff; }
+
+/* Bootstrap's native .pagination */
+.pagination .page-link { color: var(--brand-primary); }
+.pagination .page-item.active .page-link { background-color: var(--action-solid); border-color: var(--action-solid); }
+.pagination .page-link:hover { color: var(--brand-primary-dark); background-color: var(--brand-primary-light); }
+.pagination .page-link:focus { box-shadow: 0 0 0 3px rgba(123,30,34,.16); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   14. TABS
+   ═══════════════════════════════════════════════════════════════════════ */
+.tabs-theme {
+    display: flex;
+    gap: .25rem;
+    border-bottom: 2px solid var(--border);
+    flex-wrap: wrap;
+}
+.tabs-theme__item {
+    padding: .6rem 1rem;
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    background: none;
+    border-left: none; border-right: none; border-top: none;
+}
+.tabs-theme__item:hover  { color: var(--brand-primary); }
+.tabs-theme__item.is-active {
+    color: var(--action-solid);
+    border-bottom-color: var(--action-solid);
+}
+
+/* Bootstrap's native .nav-tabs */
+.nav-tabs { border-bottom-color: var(--border); }
+.nav-tabs .nav-link { color: var(--text-secondary); border: none; border-bottom: 2px solid transparent; }
+.nav-tabs .nav-link:hover { color: var(--brand-primary); border-color: transparent; }
+.nav-tabs .nav-link.active {
+    color: var(--action-solid) !important;
+    background: none !important;
+    border-color: transparent transparent var(--action-solid) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   15. BREADCRUMBS
+   ═══════════════════════════════════════════════════════════════════════ */
+.breadcrumbs-theme {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    font-size: .8rem;
+    color: var(--text-muted);
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+}
+.breadcrumbs-theme__item { display: flex; align-items: center; gap: .35rem; }
+.breadcrumbs-theme__item:not(:first-child)::before { content: '/'; color: var(--border-strong); }
+.breadcrumbs-theme a { color: var(--brand-primary); text-decoration: none; font-weight: 600; }
+.breadcrumbs-theme a:hover { text-decoration: underline; }
+.breadcrumbs-theme__item.is-active { color: var(--text-primary); font-weight: 700; }
+
+/* Bootstrap's native .breadcrumb */
+.breadcrumb-item a { color: var(--brand-primary); }
+.breadcrumb-item.active { color: var(--text-primary); }
+.breadcrumb-item + .breadcrumb-item::before { color: var(--border-strong); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   16. EMPTY STATE — for "Walang laman" pages
+   ═══════════════════════════════════════════════════════════════════════ */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: .5rem;
+    padding: 3rem 1.5rem;
+    color: var(--text-muted);
+}
+.empty-state__icon {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--surface-muted);
+    color: var(--brand-primary);
+    font-size: 1.6rem;
+    margin-bottom: .5rem;
+}
+.empty-state__title { margin: 0; font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+.empty-state__text  { margin: 0; font-size: .875rem; max-width: 32rem; }
+.empty-state__action { margin-top: .75rem; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   17. STAT CARDS — neutral alias for pages outside the admin scaffold
+   ═══════════════════════════════════════════════════════════════════════ */
+.stat-theme {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.1rem 1.25rem;
+    box-shadow: var(--shadow-card);
+}
+.stat-theme__label { margin: 0 0 .3rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.stat-theme__value { margin: 0; font-size: 2rem; font-weight: 800; line-height: 1; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   18. BOOTSTRAP VARIABLE OVERRIDES — "override, don't fight it"
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+    --bs-primary:                  #7b1e22;
+    --bs-primary-rgb:              123, 30, 34;
+    --bs-link-color:               var(--brand-primary);
+    --bs-link-color-rgb:           122, 92, 17;
+    --bs-link-hover-color:         var(--brand-primary-dark);
+    --bs-focus-ring-color:         rgba(123, 30, 34, .25);
+}
+.btn-primary {
+    --bs-btn-bg:               var(--action-solid);
+    --bs-btn-border-color:     var(--action-solid);
+    --bs-btn-hover-bg:         var(--action-solid-hover);
+    --bs-btn-hover-border-color: var(--action-solid-hover);
+    --bs-btn-active-bg:        var(--action-solid-hover);
+    --bs-btn-active-border-color: var(--action-solid-hover);
+    --bs-btn-focus-shadow-rgb: 123, 30, 34;
+    --bs-btn-disabled-bg:      var(--action-solid);
+    --bs-btn-disabled-border-color: var(--action-solid);
+}
+.btn-outline-primary {
+    --bs-btn-color:            var(--brand-primary);
+    --bs-btn-border-color:     var(--motif-gold);
+    --bs-btn-hover-bg:         var(--brand-primary);
+    --bs-btn-hover-border-color: var(--brand-primary);
+    --bs-btn-active-bg:        var(--brand-primary-dark);
+    --bs-btn-active-border-color: var(--brand-primary-dark);
+}
+.badge.bg-primary, .badge.text-bg-primary {
+    background-color: var(--action-solid) !important;
+    color: #fff !important;
+}
+.form-check-input:checked {
+    background-color: var(--action-solid) !important;
+    border-color: var(--action-solid) !important;
+}
+.form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(123,30,34,.16) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   18b. TAILWIND CDN UTILITY RETINT
+   ═══════════════════════════════════════════════════════════════════════
+   The resident pages (layouts/main.php) load Tailwind via the CDN JIT
+   script, which generates its OWN stock-colour utility classes
+   (text-blue-700, bg-amber-100, ...) independent of tokens.css. main.css
+   already began overriding a couple of these (.text-blue-700/.bg-blue-100)
+   for the same reason; this extends that same pattern to every stock
+   Tailwind colour class actually used across the resident dashboard, so
+   the earthy palette reaches pages built with Tailwind utilities too,
+   without rewriting every class="..." string by hand.
+
+   Semantic mapping (kept stable so colour still carries meaning):
+     blue   (old brand/info)      -> brand-primary (gold-ink) / action-solid for solid fills
+     amber  (warning)             -> status-warning
+     red    (danger/urgent)       -> status-danger
+     green  (feedback's own accent)-> brand-secondary (earthy green)
+     purple (social/manobo badge) -> a muted plum accent (new, see :root below)
+     teal   (infrastructure badge)-> status-info (see helpers.php note below)
+     slate  (neutral text/surface)-> text-primary/secondary/muted, surface-muted, border
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+    --accent-plum:    #6b4a5c;   /* 7.49:1 on card */
+    --accent-plum-bg: #efe3e8;
+    --accent-clay:    #8a4a42;   /* 6.58:1 on card — the "health" category */
+    --accent-clay-bg: #f2e0da;
+}
+
+/* blue -> brand-primary / action-solid */
+.text-blue-300                        { color: var(--brand-primary-light) !important; }
+.text-blue-500, .text-blue-600,
+.text-blue-700                        { color: var(--brand-primary) !important; }
+.text-blue-800, .text-blue-900        { color: var(--brand-primary-dark) !important; }
+.hover\:text-blue-700:hover,
+.hover\:text-blue-800:hover,
+.hover\:text-blue-900:hover           { color: var(--brand-primary-dark) !important; }
+.bg-blue-50, .bg-blue-100             { background-color: var(--brand-primary-light) !important; }
+.bg-blue-500                          { background-color: var(--brand-primary) !important; }
+.bg-blue-700, .bg-blue-800            { background-color: var(--action-solid) !important; }
+.hover\:bg-blue-50:hover              { background-color: var(--brand-primary-light) !important; }
+.hover\:bg-blue-800:hover             { background-color: var(--action-solid-hover) !important; }
+.border-blue-200                      { border-color: var(--border-strong) !important; }
+.ring-blue-100                        { --tw-ring-color: var(--brand-primary-light) !important; }
+.from-blue-50                         { --tw-gradient-from: var(--surface-muted) var(--tw-gradient-from-position) !important; }
+.to-blue-100                          { --tw-gradient-to: var(--brand-primary-light) var(--tw-gradient-to-position) !important; }
+
+/* amber -> status-warning */
+.text-amber-600, .text-amber-700,
+.text-amber-800, .text-amber-900      { color: var(--status-warning) !important; }
+.bg-amber-50, .bg-amber-100           { background-color: var(--status-warning-bg) !important; }
+.bg-amber-700, .bg-amber-800          { background-color: var(--action-solid) !important; }
+.hover\:bg-amber-800:hover            { background-color: var(--action-solid-hover) !important; }
+.border-amber-200                     { border-color: var(--status-warning) !important; }
+
+/* red -> status-danger */
+.text-red-600, .text-red-700          { color: var(--status-danger) !important; }
+.bg-red-50, .bg-red-100               { background-color: var(--status-danger-bg) !important; }
+.bg-red-600                           { background-color: var(--status-danger) !important; }
+.border-red-200                       { border-color: var(--status-danger) !important; }
+
+/* green -> brand-secondary (feedback's own accent; already an earthy hue) */
+.text-green-600, .text-green-700      { color: var(--brand-secondary) !important; }
+.text-green-800, .text-green-900      { color: var(--brand-secondary-dark) !important; }
+.text-green-300                       { color: #9db89f !important; }
+.bg-green-50, .bg-green-100,
+.bg-green-200                         { background-color: var(--brand-secondary-light) !important; }
+.bg-green-600, .bg-green-700          { background-color: var(--brand-secondary) !important; }
+.hover\:bg-green-700:hover            { background-color: var(--brand-secondary-dark) !important; }
+.hover\:bg-green-50:hover             { background-color: var(--brand-secondary-light) !important; }
+.border-green-200                     { border-color: var(--brand-secondary) !important; }
+
+/* purple -> a muted plum, kept distinct from every other accent above */
+.text-purple-700                      { color: var(--accent-plum) !important; }
+.bg-purple-100                        { background-color: var(--accent-plum-bg) !important; }
+
+/* teal -> status-info. Only reached by the "infrastructure" category badge
+   (see helpers.php: category_badge_class() was changed from blue to teal
+   specifically so it would stop colliding with generic blue/brand links —
+   it used to collide with "government" (indigo) for the same reason once,
+   which is documented in resident/home.php's own header comment as a
+   previously-fixed bug; reusing blue for it here would reintroduce it. */
+.text-teal-700                        { color: var(--status-info) !important; }
+.bg-teal-100                          { background-color: var(--status-info-bg) !important; }
+
+/* indigo -> brand-primary (the "government" category badge) */
+.text-indigo-700                      { color: var(--brand-primary) !important; }
+.bg-indigo-100                        { background-color: var(--brand-primary-light) !important; }
+
+/* rose -> the clay accent (the "health" category badge) */
+.text-rose-700                        { color: var(--accent-clay) !important; }
+.bg-rose-100                          { background-color: var(--accent-clay-bg) !important; }
+
+/* orange -> status-warning (the "safety" category badge; shares the tone
+   with "important" urgency and with the amber family above — acceptable,
+   since colour is never this app's only signal: the label text differs). */
+.text-orange-700                      { color: var(--status-warning) !important; }
+.bg-orange-100                        { background-color: var(--status-warning-bg) !important; }
+
+/* white cards -> the theme's near-white cream card, not stark white */
+.bg-white                             { background-color: var(--surface-card) !important; }
+
+/* slate -> neutral ink / cream tokens */
+.text-slate-900                       { color: var(--text-primary) !important; }
+.text-slate-600, .text-slate-700      { color: var(--text-secondary) !important; }
+.text-slate-400, .text-slate-500      { color: var(--text-muted) !important; }
+.text-slate-300                       { color: #c9b8a6 !important; }
+.bg-slate-50, .bg-slate-100           { background-color: var(--surface-muted) !important; }
+.hover\:bg-slate-50:hover             { background-color: var(--surface-muted) !important; }
+.border-slate-200, .border-slate-300  { border-color: var(--border) !important; }
+
+/* left-border urgency accents (border-l-*), from urgency_border_class() */
+.border-l-red-500                     { border-left-color: var(--status-danger) !important; }
+.border-l-amber-400                   { border-left-color: var(--status-warning) !important; }
+.border-l-slate-300                   { border-left-color: var(--border-strong) !important; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   19. RESPONSIVE — the admin sidebar/topbar hamburger collapse already
+       works (admin.css + admin.php's Alpine adminLayout()); this only
+       covers the NEW components this file adds.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+    .tabs-theme { gap: 0; }
+    .tabs-theme__item { padding: .5rem .7rem; font-size: .8rem; }
+    .empty-state { padding: 2rem 1rem; }
+    .card-theme__body { padding: 1rem; }
+}

@@ -1,0 +1,216 @@
+<?php
+/**
+ * Translation health — the page to open before a defence.
+ *
+ * Ordered by what a reader can act on, not by what is easiest to query:
+ *
+ *   1. The three providers. Most lines further down trace back to one of
+ *      them being unset, and each is a two-minute fix that nobody made for
+ *      weeks only because nothing said it out loud.
+ *   2. The headline counts, so "is anything wrong" is answered without
+ *      reading a table.
+ *   3. The posts themselves, each with its reason and its fix.
+ *
+ * Variables: $providers, $overview, $rows, $lang, $pageTitle, $pendingCount
+ */
+
+use App\Services\TranslationOutcome;
+
+$providers = $providers ?? [];
+$overview  = $overview  ?? ['posts' => 0, 'missingText' => 0, 'missingAudio' => 0,
+                            'byLang' => [], 'retryable' => 0];
+$rows      = $rows      ?? [];
+$lang      = $lang      ?? '';
+
+ob_start();
+?>
+
+<div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-4">
+    <div>
+        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">
+            <?= e(t('admin_nav.translations')) ?>
+        </p>
+        <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;">
+            <?= e(t('translation_health.page_title')) ?>
+        </h1>
+        <p class="text-muted mt-1 mb-0" style="font-size:.82rem;">
+            <?= e(t('translation_health.page_sub')) ?>
+        </p>
+    </div>
+</div>
+
+<?php /* ── 1. Providers ─────────────────────────────────────────────── */ ?>
+<div class="admin-card mb-4">
+    <div class="admin-card-body">
+        <p class="fw-bold mb-3" style="font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);">
+            <?= e(t('translation_health.providers_title')) ?>
+        </p>
+
+        <div class="th-providers">
+            <?php foreach ($providers as $p): ?>
+            <div class="th-provider<?= $p['ready'] ? '' : ' th-provider--down' ?>">
+                <span class="th-provider__dot" aria-hidden="true"></span>
+                <div class="min-w-0">
+                    <p class="th-provider__name"><?= e($p['label']) ?></p>
+                    <?php if ($p['ready']): ?>
+                    <p class="th-provider__state"><?= e(t('translation_health.provider_ready')) ?></p>
+                    <?php else: ?>
+                    <p class="th-provider__state"><?= e(t(TranslationOutcome::messageKey((string) $p['reason']))) ?></p>
+                    <p class="th-provider__fix"><?= e(t(TranslationOutcome::fixKey((string) $p['reason']))) ?></p>
+                    <?php if ($p['envKey'] !== null): ?>
+                    <p class="th-provider__env"><code><?= e($p['envKey']) ?></code></p>
+                    <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
+<?php /* ── 2. The headline ──────────────────────────────────────────── */ ?>
+<div class="th-counts mb-4">
+    <div class="th-count">
+        <span class="th-count__n"><?= (int) $overview['posts'] ?></span>
+        <span class="th-count__l"><?= e(t('translation_health.count_posts')) ?></span>
+    </div>
+    <div class="th-count">
+        <span class="th-count__n"><?= (int) $overview['missingText'] ?></span>
+        <span class="th-count__l"><?= e(t('translation_health.count_text')) ?></span>
+    </div>
+    <div class="th-count">
+        <span class="th-count__n"><?= (int) $overview['missingAudio'] ?></span>
+        <span class="th-count__l"><?= e(t('translation_health.count_audio')) ?></span>
+    </div>
+    <div class="th-count">
+        <span class="th-count__n"><?= (int) $overview['retryable'] ?></span>
+        <span class="th-count__l"><?= e(t('translation_health.count_queued')) ?></span>
+    </div>
+</div>
+
+<?php /* ── Filter + bulk retry ──────────────────────────────────────── */ ?>
+<div class="admin-card mb-4">
+    <div class="admin-card-body d-flex flex-wrap align-items-center gap-2">
+        <span style="font-size:.8rem;font-weight:700;color:var(--text-secondary);">
+            <?= e(t('translation_health.filter_label')) ?>
+        </span>
+
+        <a href="<?= e(route('admin/translation-health')) ?>"
+           class="filter-chip<?= $lang === '' ? ' is-active' : '' ?>">
+            <?= e(t('translation_health.filter_all')) ?>
+        </a>
+        <?php foreach (['fil', 'en', 'msm'] as $thLang): ?>
+        <a href="<?= e(route('admin/translation-health') . '?lang=' . $thLang) ?>"
+           class="filter-chip<?= $lang === $thLang ? ' is-active' : '' ?>">
+            <?= e(strtoupper(locale_short_code($thLang))) ?>
+        </a>
+        <?php endforeach; ?>
+
+        <?php /* Only offered with a language chosen: "retry everything in
+                 every language" would spend the whole daily allowance in
+                 one press and is never what anybody means. */ ?>
+        <?php if ($lang !== ''): ?>
+        <form method="post" action="<?= e(route('admin/retranslate-all')) ?>" class="ms-auto">
+            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="lang" value="<?= e($lang) ?>">
+            <button type="submit" class="btn-barangay">
+                <i class="bi bi-arrow-repeat me-1"></i>
+                <?= e(t('translation_health.retry_all', [
+                    'lang' => strtoupper(locale_short_code($lang)),
+                ])) ?>
+            </button>
+        </form>
+        <?php endif; ?>
+    </div>
+</div>
+
+<?php /* ── 3. The posts ─────────────────────────────────────────────── */ ?>
+<?php if ($rows === []): ?>
+<div class="admin-card">
+    <div class="admin-card-body text-center" style="padding:2.5rem 1rem;">
+        <i class="bi bi-check2-circle" style="font-size:2rem;color:var(--status-success);"></i>
+        <p class="mt-2 mb-0" style="font-size:.9rem;font-weight:700;color:var(--text-primary);">
+            <?= e(t('translation_health.all_clear')) ?>
+        </p>
+        <p class="text-muted mb-0" style="font-size:.8rem;">
+            <?= e(t('translation_health.all_clear_sub')) ?>
+        </p>
+    </div>
+</div>
+<?php else: ?>
+<div class="admin-card">
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+            <tr>
+                <th><?= e(t('translation_health.col_post')) ?></th>
+                <th><?= e(t('translation_health.col_missing')) ?></th>
+                <th><?= e(t('translation_health.col_why')) ?></th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($rows as $r): ?>
+            <tr>
+                <td>
+                    <p class="mb-0 fw-semibold" style="font-size:.84rem;">
+                        <?= e(mb_strimwidth((string) $r['title'], 0, 70, '…', 'UTF-8')) ?>
+                    </p>
+                    <p class="text-muted mb-0" style="font-size:.72rem;">
+                        <?= e(t('translation_health.type_' . $r['type'])) ?>
+                        &middot; #<?= (int) $r['id'] ?>
+                        &middot; <?= e(t('translation_health.written_in_short')) ?>
+                        <?= e(strtoupper(locale_short_code($r['source']))) ?>
+                    </p>
+                </td>
+
+                <td style="white-space:nowrap;">
+                    <?php foreach ($r['missing'] as $mLang): ?>
+                    <span class="lang-chip lang-chip--missing">
+                        <?= e(strtoupper(locale_short_code($mLang))) ?>
+                    </span>
+                    <?php endforeach; ?>
+                    <?php foreach ($r['audioMissing'] as $aLang): ?>
+                    <span class="lang-chip lang-chip--machine" title="<?= e(t('translation_health.audio_only')) ?>">
+                        <i class="bi bi-volume-up"></i>
+                        <?= e(strtoupper(locale_short_code($aLang))) ?>
+                    </span>
+                    <?php endforeach; ?>
+                </td>
+
+                <td>
+                    <?php if ($r['reasons'] === []): ?>
+                    <p class="text-muted mb-0" style="font-size:.78rem;">
+                        <?= e(t('translation_health.never_tried')) ?>
+                    </p>
+                    <?php else: ?>
+                    <?php foreach ($r['reasons'] as $rLang => $why): ?>
+                    <p class="mb-1" style="font-size:.78rem;line-height:1.5;">
+                        <strong><?= e(strtoupper(locale_short_code((string) $rLang))) ?></strong>
+                        <?= e($why['message']) ?>
+                        <span class="d-block text-muted"><?= e($why['fix']) ?></span>
+                        <?php if ($why['envKey'] !== null): ?>
+                        <code style="font-size:.72rem;"><?= e($why['envKey']) ?></code>
+                        <?php endif; ?>
+                    </p>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
+                </td>
+
+                <td style="white-space:nowrap;">
+                    <a href="<?= e(route('admin/' . $r['type'] . 's/' . $r['id'] . '/edit')) ?>"
+                       class="btn btn-sm btn-outline-secondary" style="font-size:.74rem;">
+                        <?= e(t('common.edit')) ?>
+                    </a>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php
+$content = ob_get_clean();
+require __DIR__ . '/../../layouts/admin.php';

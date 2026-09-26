@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="tests/bootstrap.php" colors="true">
+    <testsuites>
+        <testsuite name="BarangGabay Test Suite">
+            <directory>tests/Unit</directory>
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <!-- ADDED: the "database" group is excluded from the default run.
+         Every other test in this suite relies on db() being UNREACHABLE
+         (e.g. TwoFactorServiceTest, whose own comment says so: "No database
+         in unit tests, so setting() falls back to its default"). The
+         dictionary tests need a REAL connection (migration 030 moved
+         Manobo/Bisaya off CSV files onto tables), and once db() connects
+         successfully in a run it stays connected for every test that
+         follows in the same process, so running them together with
+         everything else made setting() start reading the real settings
+         table instead of falling back. Run this group explicitly with the
+         phpunit "group" CLI option set to "database". -->
+    <groups>
+        <exclude>
+            <group>database</group>
+        </exclude>
+    </groups>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_DEBUG" value="true"/>
+        <env name="APP_URL" value="http://localhost"/>
+    </php>
+</phpunit>

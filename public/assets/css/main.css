@@ -1,0 +1,2521 @@
+/* ================================================================
+   BarangGabay — Resident Layout Stylesheet  (main.css)
+   Supplements Tailwind CDN loaded by the layout.
+   ================================================================ */
+
+/* ================================================================
+   DESIGN TOKENS — Global e-Gov palette (v3)
+   Brand identity: confident blue (primary) + teal (secondary accent).
+   Status colors (success/warning/danger) are semantic and intentionally
+   independent of brand — they stay green/amber/red regardless of theme.
+   Light values live on bare :root; dark overrides are applied twice —
+   once for the OS "prefers-color-scheme: dark" default, once for the
+   explicit [data-theme="dark"] toggle — so the toggle always wins.
+   ================================================================ */
+:root {
+    /* Brand, surfaces, text, borders and shadows are NOT declared here any
+       more — they come from tokens.css, which the layout loads first. They
+       used to be restated in this file and again in admin.css, and the
+       copies had already drifted: --surface-muted was #f1f5f9 here and
+       #f8fbf9 there, for the same intended colour. What stays below is what
+       is genuinely specific to the resident side. */
+
+    /* Back-compat aliases — every existing var(--bg-green) etc. call site
+       across the codebase automatically re-themes through these; new code
+       should reach for --brand-primary / --brand-secondary directly. */
+    --bg-green:          var(--brand-primary);
+    --bg-green-dk:       var(--brand-primary-dark);
+    --bg-green-lt:        var(--brand-primary-light);
+    --bg-gold:           var(--brand-secondary);
+    --bg-gold-lt:        var(--brand-secondary-light);
+
+    /* Borders */
+    --border-focus:      var(--brand-primary);
+
+    /* ── Accent text / chip colours ───────────────────────────────────
+       The resident views are written in hardcoded Tailwind utility classes
+       (text-blue-700, bg-green-100, …). Those are fixed hex values, so on a
+       dark card a 700-weight colour lands at roughly 2.5:1 contrast —
+       readable in light mode, close to invisible in dark.
+
+       These tokens let ONE set of rules (see "Tailwind accent remap" further
+       down) drive those classes from the theme. The light values below are
+       the exact Tailwind colours, so light mode renders identically to
+       before; only the dark blocks actually change anything. */
+    --tw-blue-500:   #3b82f6;
+    --tw-blue-600:   #2563eb;
+    --tw-blue-700:   #1d4ed8;
+    --tw-blue-800:   #1e40af;
+    --tw-blue-900:   #1e3a8a;
+    --tw-green-600:  #16a34a;
+    --tw-green-700:  #15803d;
+    --tw-green-800:  #166534;
+    --tw-green-900:  #14532d;
+    --tw-amber-500:  #f59e0b;
+    --tw-red-500:    #ef4444;
+    --tw-red-600:    #dc2626;
+    --tw-red-700:    #b91c1c;
+    --tw-red-800:    #991b1b;
+    --tw-red-900:    #7f1d1d;
+    --tw-amber-600:  #d97706;
+    --tw-amber-700:  #b45309;
+    --tw-amber-800:  #92400e;
+    --tw-amber-900:  #78350f;
+    --tw-purple-700: #7e22ce;
+    --tw-rose-700:   #be123c;
+    --tw-orange-700: #c2410c;
+    --tw-indigo-700: #4338ca;
+    /* ADDED: the Manobo dictionary page's category chips introduced teal
+       (time/direction), which had no token yet — see DarkModeContrastTest. */
+    --tw-teal-700:   #0f766e;
+
+    --tw-bg-blue-100:   #dbeafe;
+    --tw-bg-green-100:  #dcfce7;
+    --tw-bg-amber-100:  #fef3c7;
+    --tw-bg-red-100:    #fee2e2;
+    --tw-bg-purple-100: #f3e8ff;
+    --tw-bg-rose-100:   #ffe4e6;
+    --tw-bg-orange-100: #ffedd5;
+    --tw-bg-indigo-100: #e0e7ff;
+    --tw-bg-teal-100:   #ccfbf1;
+
+    /* Soft "notice" panels (verification prompt, today's-event card, callouts). */
+    --tw-bg-amber-50:     #fffbeb;
+    --tw-bg-red-50:       #fef2f2;
+    --tw-bg-blue-50:      #eff6ff;
+    --tw-bg-green-50:     #f0fdf4;
+    --tw-bg-yellow-50:    #fefce8;
+    --tw-border-amber-200:#fde68a;
+    --tw-border-red-200:  #fecaca;
+    --tw-border-blue-200: #bfdbfe;
+
+    /* Status comes from tokens.css. It used to be declared here with no dark
+       value, so .badge-green painted #16a34a on a tint that DOES go dark —
+       green ink on a green-black chip. */
+
+    /* Urgency (maps onto status colors) */
+    --urgency-normal:    #64748b;
+    --urgency-important: var(--status-warning);
+    --urgency-urgent:    var(--status-danger);
+
+    /* Radius */
+    --r-xs:   4px;
+    --r-sm:   6px;
+    --r-md:   10px;
+    --r-lg:   14px;
+    --r-xl:   20px;
+    --r-pill: 9999px;
+
+    /* Shadows — --shadow-card and --shadow-lift now come from tokens.css. */
+    --shadow-float: 0 8px 40px rgba(15,40,90,.18);
+
+    /* Transitions */
+    --t-fast: 0.15s ease;
+    --t-base: 0.22s ease;
+    --t-slow: 0.35s ease;
+    --t-theme: 0.25s ease;
+}
+
+/* ── Dark mode — OS default (no explicit toggle choice made yet) ──── */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        /* Brand, surface, text and border overrides live in tokens.css now.
+           Only the Tailwind accent remap below is specific to this file. */
+
+        /* Accents, lightened for a dark surface (see the light block). */
+        --tw-blue-500:   #9cc0ff;
+        --tw-blue-600:   #93b9ff;
+        --tw-blue-700:   #8ab4ff;
+        /* 800 and 900 weights were missing here, and that is not cosmetic:
+           .text-blue-800 kept its light value (#1e40af) and measured 1.97:1
+           on a dark card — and 1.70:1 inside .bg-blue-50, whose background
+           DOES go dark. Dark navy on a dark panel is the "some words can't be
+           seen" report. Every weight a view actually uses needs a value here. */
+        --tw-blue-800:   #a8c5ff;
+        /* Only ever used as a hover on "Read more". In light mode hover
+           darkens; on a dark card it has to brighten instead, or the link
+           vanishes the moment a reader points at it. */
+        --tw-blue-900:   #c2d8ff;
+        --tw-green-600:  #5fd99b;
+        --tw-green-700:  #6ee7a8;
+        --tw-green-800:  #8ef0be;
+        --tw-green-900:  #b6f5d4;
+        --tw-amber-500:  #f9b233;
+        --tw-red-500:    #ff8080;
+        --tw-red-600:    #ff8f8f;
+        --tw-red-700:    #ff9d9d;
+        --tw-red-800:    #ffb3b3;
+        --tw-red-900:    #ffc9c9;
+        --tw-amber-600:  #fbbf24;
+        --tw-amber-700:  #fcd34d;
+        --tw-amber-800:  #fde68a;
+        --tw-amber-900:  #fef3c7;
+        --tw-purple-700: #d8b4fe;
+        --tw-rose-700:   #fda4af;
+        --tw-orange-700: #fdba74;
+        /* Indigo was absent from this list entirely while the government
+           category badge uses it. The pair stayed internally readable only
+           because its background was unremapped too — a light chip in a dark
+           page, and one rule away from becoming invisible. */
+        --tw-indigo-700: #c7cdfe;
+        --tw-teal-700:   #5eead4;
+
+        --tw-bg-blue-100:   rgba(59,130,246,.20);
+        --tw-bg-green-100:  rgba(34,197,94,.20);
+        --tw-bg-amber-100:  rgba(217,119,6,.22);
+        --tw-bg-red-100:    rgba(220,38,38,.22);
+        --tw-bg-purple-100: rgba(168,85,247,.22);
+        --tw-bg-rose-100:   rgba(244,63,94,.20);
+        --tw-bg-orange-100: rgba(249,115,22,.20);
+        --tw-bg-indigo-100: rgba(99,102,241,.22);
+        --tw-bg-teal-100:   rgba(20,184,166,.20);
+
+        --tw-bg-amber-50:      rgba(217,119,6,.14);
+        --tw-bg-red-50:        rgba(220,38,38,.12);
+        --tw-bg-blue-50:       rgba(59,130,246,.12);
+        --tw-bg-green-50:      rgba(34,197,94,.12);
+        --tw-bg-yellow-50:     rgba(234,179,8,.12);
+        --tw-border-amber-200: rgba(251,191,36,.38);
+        --tw-border-red-200:   rgba(248,113,113,.36);
+        --tw-border-blue-200:  rgba(96,165,250,.36);
+
+    }
+}
+
+/* ── Dark mode — explicit toggle (wins over OS preference either way) ── */
+:root[data-theme="dark"] {
+    /* Brand, surface, text and border overrides live in tokens.css now.
+       Only the Tailwind accent remap below is specific to this file. */
+
+    /* Accents, lightened for a dark surface (see the light block).
+       Kept identical to the prefers-color-scheme block above — the two must
+       agree, or the toggle and the OS default render differently. */
+    --tw-blue-500:   #9cc0ff;
+    --tw-blue-600:   #93b9ff;
+    --tw-blue-700:   #8ab4ff;
+    --tw-blue-800:   #a8c5ff;
+    --tw-blue-900:   #c2d8ff;
+    --tw-green-600:  #5fd99b;
+    --tw-green-700:  #6ee7a8;
+    --tw-green-800:  #8ef0be;
+    --tw-green-900:  #b6f5d4;
+    --tw-amber-500:  #f9b233;
+    --tw-red-500:    #ff8080;
+    --tw-red-600:    #ff8f8f;
+    --tw-red-700:    #ff9d9d;
+    --tw-red-800:    #ffb3b3;
+    --tw-red-900:    #ffc9c9;
+    --tw-amber-600:  #fbbf24;
+    --tw-amber-700:  #fcd34d;
+    --tw-amber-800:  #fde68a;
+    --tw-amber-900:  #fef3c7;
+    --tw-purple-700: #d8b4fe;
+    --tw-rose-700:   #fda4af;
+    --tw-orange-700: #fdba74;
+    --tw-indigo-700: #c7cdfe;
+    --tw-teal-700:   #5eead4;
+
+    --tw-bg-blue-100:   rgba(59,130,246,.20);
+    --tw-bg-green-100:  rgba(34,197,94,.20);
+    --tw-bg-amber-100:  rgba(217,119,6,.22);
+    --tw-bg-red-100:    rgba(220,38,38,.22);
+    --tw-bg-purple-100: rgba(168,85,247,.22);
+    --tw-bg-rose-100:   rgba(244,63,94,.20);
+    --tw-bg-orange-100: rgba(249,115,22,.20);
+    --tw-bg-indigo-100: rgba(99,102,241,.22);
+    --tw-bg-teal-100:   rgba(20,184,166,.20);
+
+    --tw-bg-amber-50:      rgba(217,119,6,.14);
+    --tw-bg-red-50:        rgba(220,38,38,.12);
+    --tw-bg-blue-50:       rgba(59,130,246,.12);
+    --tw-bg-green-50:      rgba(34,197,94,.12);
+    --tw-bg-yellow-50:     rgba(234,179,8,.12);
+    --tw-border-amber-200: rgba(251,191,36,.38);
+    --tw-border-red-200:   rgba(248,113,113,.36);
+    --tw-border-blue-200:  rgba(96,165,250,.36);
+}
+
+/* Smooth, non-jarring theme switch on the shell surfaces */
+body, .navbar-premium, .footer-premium, .content-card, .bg-card, .card-premium {
+    transition: background-color var(--t-theme), color var(--t-theme), border-color var(--t-theme);
+}
+@media (prefers-reduced-motion: reduce) {
+    body, .navbar-premium, .footer-premium, .content-card, .bg-card, .card-premium {
+        transition: none;
+    }
+}
+
+/* ── Logo lockup — theme-aware swap ───────────────────────────────
+   logo-lockup-light.png has navy text (for light surfaces); logo-lockup-dark.png
+   has white text, same blue pin (for permanently-dark surfaces like the footer,
+   or the navbar once dark mode is on). Stack both <img> tags with .logo-lockup
+   .logo-lockup-light / .logo-lockup-dark and this shows/hides the right one. */
+.logo-lockup { display: block; height: 52px; width: auto; }
+.logo-lockup-dark { display: none; }
+:root[data-theme="dark"] .logo-lockup-light { display: none; }
+:root[data-theme="dark"] .logo-lockup-dark  { display: block; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .logo-lockup-light { display: none; }
+    :root:not([data-theme="light"]) .logo-lockup-dark  { display: block; }
+}
+
+/* ── Base reset ─────────────────────────────────────────────────── */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    background: var(--surface-page);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+img { display: block; max-width: 100%; height: auto; }
+
+/* ── Custom scrollbars (WebKit + Firefox) ───────────────────────── */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(22,82,240,.22) transparent;
+}
+::-webkit-scrollbar               { width: 5px; height: 5px; }
+::-webkit-scrollbar-track         { background: transparent; }
+::-webkit-scrollbar-thumb         { background: rgba(22,82,240,.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover   { background: rgba(22,82,240,.38); }
+
+/* ── Page fade-in ───────────────────────────────────────────────── */
+@keyframes bg-fadein {
+    from { opacity: 0; transform: translateY(5px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.content-card { animation: bg-fadein 0.28s ease both; }
+
+/* ── Card component ─────────────────────────────────────────────── */
+.bg-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-card);
+    transition: transform var(--t-base), box-shadow var(--t-base);
+}
+.bg-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+}
+
+/* ── Announcement urgency left-border cards ─────────────────────── */
+.urgency-card               { padding-left: 1rem; border-left-style: solid; border-left-width: 3px; }
+.urgency-card.urgency-normal    { border-left-color: var(--urgency-normal); }
+.urgency-card.urgency-important { border-left-color: var(--urgency-important); }
+.urgency-card.urgency-urgent    { border-left-color: var(--urgency-urgent); }
+
+/* ── Category badges ────────────────────────────────────────────── */
+.cat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 9px;
+    border-radius: var(--r-pill);
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    line-height: 1.6;
+}
+.cat-general        { background: #f1f5f9; color: #475569; }
+.cat-health         { background: #dcfce7; color: #166534; }
+.cat-safety         { background: #fee2e2; color: #991b1b; }
+.cat-government     { background: #d4edda; color: #14532d; }
+.cat-infrastructure { background: #ffedd5; color: #9a3412; }
+.cat-social         { background: #f3e8ff; color: #6b21a8; }
+
+/* ── Urgency badges ─────────────────────────────────────────────── */
+.urgency-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 9px;
+    border-radius: var(--r-pill);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    line-height: 1.6;
+    border: 1px solid transparent;
+}
+.urgency-badge-normal    { background: #f1f5f9;   color: #475569; }
+.urgency-badge-important { background: #fef9c3;   color: #854d0e; border-color: #fde68a; }
+.urgency-badge-urgent    { background: #fee2e2;   color: #991b1b; border-color: #fca5a5; }
+
+/* ── Urgent pulse — draws the eye to genuinely urgent content ──────
+   Applied to the "Urgent" badge itself (list cards, detail page). */
+@keyframes bg-urgent-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.45); }
+    70%      { box-shadow: 0 0 0 7px rgba(220,38,38,0); }
+}
+.badge-urgent-pulse { animation: bg-urgent-pulse 1.8s cubic-bezier(.66,0,0,1) infinite; }
+@media (prefers-reduced-motion: reduce) {
+    .badge-urgent-pulse { animation: none; }
+}
+
+/* ── Card pop-in — for AJAX-injected cards (live search, etc.) where
+   the IntersectionObserver-driven .fade-up never fires because the
+   element didn't exist at DOMContentLoaded. Plays once on insertion. */
+@keyframes bg-card-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.card-pop-in { animation: bg-card-in .45s cubic-bezier(.4,0,.2,1) both; }
+@media (prefers-reduced-motion: reduce) {
+    .card-pop-in { animation: none; }
+}
+
+/* ── AI summary callout ─────────────────────────────────────────── */
+.ai-summary-box {
+    background: linear-gradient(135deg, #f0faf4 0%, #e8f5ed 100%);
+    border: 1px solid #c3e6cb;
+    border-left: 4px solid var(--bg-green);
+    border-radius: var(--r-md);
+    padding: 1rem 1.25rem 1rem 3rem;
+    position: relative;
+}
+.ai-summary-box::before {
+    content: '✦';
+    position: absolute;
+    top: 1rem;
+    left: .9rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--action-solid);
+    color: var(--text-on-action);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .65rem;
+    line-height: 1.5rem;
+    text-align: center;
+}
+.ai-summary-box .ai-summary-label {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--bg-green);
+    margin-bottom: .35rem;
+    display: block;
+}
+.ai-summary-box p { margin: 0; font-size: .875rem; line-height: 1.7; color: var(--text-secondary); }
+
+/* ── Skeleton loaders ───────────────────────────────────────────── */
+@keyframes bg-shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #e4ece6 25%, #f0f4f1 50%, #e4ece6 75%);
+    background-size: 1200px 100%;
+    animation: bg-shimmer 1.5s ease-in-out infinite;
+    border-radius: var(--r-sm);
+}
+
+.skeleton-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 1.25rem;
+    overflow: hidden;
+}
+.skeleton-image   { height: 160px; border-radius: var(--r-md); margin-bottom: 1rem; }
+.skeleton-title   { height: 18px;  width: 60%;  margin-bottom: .75rem; }
+.skeleton-line    { height: 13px;  margin-bottom: .5rem; }
+.skeleton-line-sm { height: 13px;  width: 45%;  margin-bottom: .5rem; }
+.skeleton-avatar  { width: 44px;   height: 44px; border-radius: 50%; flex-shrink: 0; }
+.skeleton-badge   { height: 20px;  width: 80px;  border-radius: var(--r-pill); }
+
+/* ── Rich text (Quill.js output) ────────────────────────────────── */
+.rich-text h1,
+.rich-text h2,
+.rich-text h3,
+.rich-text h4 {
+    color: var(--text-primary);
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 1.5em 0 .6em;
+}
+.rich-text h1 { font-size: 1.65rem; }
+.rich-text h2 { font-size: 1.35rem; }
+.rich-text h3 { font-size: 1.1rem; }
+.rich-text h4 { font-size: 1rem; }
+.rich-text p  {
+    line-height: 1.8;
+    color: var(--text-secondary);
+    margin: 0 0 1em;
+}
+.rich-text ul,
+.rich-text ol { padding-left: 1.5rem; margin: 0 0 1em; }
+.rich-text li {
+    line-height: 1.75;
+    color: var(--text-secondary);
+    margin-bottom: .3em;
+}
+.rich-text blockquote {
+    border-left: 4px solid var(--bg-green-lt);
+    padding: .6rem 1rem;
+    margin: 1.25em 0;
+    color: var(--text-muted);
+    font-style: italic;
+    background: var(--surface-muted);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.rich-text a            { color: var(--bg-green); text-decoration: underline; }
+.rich-text a:hover      { color: var(--bg-green-dk); }
+.rich-text img          { border-radius: var(--r-md); max-width: 100%; margin: 1rem 0; }
+.rich-text strong       { color: var(--text-primary); font-weight: 700; }
+.rich-text pre          {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 1rem 1.25rem;
+    border-radius: var(--r-md);
+    overflow-x: auto;
+    font-size: .85rem;
+    line-height: 1.6;
+    margin: 1em 0;
+}
+
+/* ── Form field micro-interactions ─────────────────────────────── */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="date"],
+input[type="number"],
+input[type="search"],
+select,
+textarea {
+    transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--border-focus) !important;
+    box-shadow: 0 0 0 3px rgba(26,107,58,.12) !important;
+}
+
+/* ── Primary button ─────────────────────────────────────────────── */
+.btn-primary-bg {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+    background: var(--action-solid);
+    color: var(--text-on-action);
+    border: none;
+    border-radius: var(--r-pill);
+    font-size: .875rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    white-space: nowrap;
+}
+.btn-primary-bg:hover   { background: var(--action-solid-hover); box-shadow: 0 4px 16px rgba(26,107,58,.35); }
+.btn-primary-bg:active  { transform: scale(.97); }
+.btn-primary-bg:focus-visible { outline: 3px solid var(--bg-gold); outline-offset: 3px; }
+
+/* ── Button loading spinner ─────────────────────────────────────── */
+@keyframes bg-spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+.btn-loading {
+    color: transparent !important;
+    pointer-events: none;
+    cursor: not-allowed;
+    position: relative;
+}
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 1rem;
+    height: 1rem;
+    border: 2.5px solid rgba(255,255,255,.35);
+    border-top-color: rgba(255,255,255,.9);
+    border-radius: 50%;
+    animation: bg-spin .6s linear infinite;
+    transform: translate(-50%,-50%);
+}
+
+/* ── Toast slide-in ─────────────────────────────────────────────── */
+@keyframes bg-toast-in {
+    from { opacity: 0; transform: translateX(calc(100% + 1.5rem)); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Applied to each toast div via Alpine x-transition in layout */
+.toast-enter { animation: bg-toast-in .3s cubic-bezier(.4,0,.2,1) both; }
+
+/* Enhanced toast card (supplements Tailwind classes in main.php) */
+.toast-card {
+    animation: bg-toast-in .3s cubic-bezier(.4,0,.2,1) both;
+    border-left: 3px solid var(--bg-green);
+}
+.toast-card-info    { border-left-color: var(--bg-gold); }
+.toast-card-success { border-left-color: #28a745; }
+.toast-card-error   { border-left-color: #dc3545; }
+
+/* ── Image upload zone ──────────────────────────────────────────── */
+.upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface-muted);
+    text-align: center;
+    padding: 2rem 1rem;
+    cursor: pointer;
+    transition: border-color var(--t-base), background var(--t-base);
+    position: relative;
+}
+.upload-zone:hover,
+.upload-zone.drag-over {
+    border-color: var(--bg-green);
+    background: #eef7f1;
+}
+.upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+}
+.upload-preview {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: var(--r-md);
+    margin-top: .75rem;
+    border: 1px solid var(--border);
+    display: block;
+}
+
+/* ── Line-clamp utilities ───────────────────────────────────────── */
+.line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+.line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.line-clamp-4 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+
+/* ── Accessibility utility ──────────────────────────────────────── */
+.sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ── PDF.js canvas ──────────────────────────────────────────────── */
+.pdf-canvas {
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    box-shadow: var(--shadow-card);
+    display: block;
+    max-width: 100%;
+}
+
+/* ── Mobile touch targets & fixes ──────────────────────────────── */
+@media (max-width: 640px) {
+    .content-card {
+        border-radius: 1rem;
+        padding: 1.25rem !important;
+    }
+
+    /* Minimum 44px touch targets (Apple HIG) */
+    button,
+    a[class*="btn"],
+    input[type="submit"],
+    input[type="button"],
+    [role="button"] {
+        min-height: 44px;
+    }
+
+    .ai-summary-box {
+        padding-left: 1rem;
+        border-left: 4px solid var(--bg-green);
+    }
+    .ai-summary-box::before { display: none; }
+
+    .urgency-card { padding-left: .75rem; }
+
+    /* Prevent iOS tap highlight */
+    a, button { -webkit-tap-highlight-color: rgba(26,107,58,.1); }
+}
+
+@media (max-width: 480px) {
+    .cat-badge,
+    .urgency-badge { font-size: .65rem; padding: 2px 8px; }
+}
+
+/* ================================================================
+   BarangGabay — PREMIUM DESIGN SYSTEM (v2)
+   Premium UI components, animations, and layout classes
+   ================================================================ */
+
+/* ── Premium design tokens (supplement existing) ──────────────── */
+:root {
+  --gray-50:       #f8fafc;
+  --gray-100:      #f1f5f9;
+  --gray-200:      #e2e8f0;
+  --gray-500:      #64748b;
+  --gray-700:      #334155;
+  --gray-900:      #0f172a;
+  --shadow-sm-p:   0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md-p:   0 4px 16px rgba(0,0,0,0.10);
+  --shadow-lg-p:   0 8px 32px rgba(0,0,0,0.12);
+  --shadow-accent: 0 4px 20px rgba(13,148,136,0.25);
+  --shadow-brand:  0 4px 20px rgba(22,82,240,0.25);
+  /* --radius-sm/md/lg/xl used to be redeclared here at 8/12/16/24px. The
+     admin panel called the same four names 6/8/12px, and tokens.css calls
+     them .4/.6/.75/1.25rem — three scales under one set of names, so the
+     same class rounded differently depending on which stylesheet reached it
+     last. The shared scale wins; only the pill, which has no shared
+     equivalent, stays here. */
+  --radius-pill:   999px;
+}
+
+/* ── Premium Navbar ─────────────────────────────────────────────── */
+.navbar-premium {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(22,82,240,0.08);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: all 0.3s ease;
+}
+:root[data-theme="dark"] .navbar-premium { background: rgba(19,27,44,0.92); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .navbar-premium { background: rgba(19,27,44,0.92); }
+}
+.navbar-premium.scrolled {
+  background: rgba(255,255,255,0.98);
+  box-shadow: 0 4px 30px rgba(0,0,0,0.10);
+}
+
+/* ── Nav link ───────────────────────────────────────────────────── */
+.nav-link-premium {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  position: relative;
+  text-decoration: none;
+  display: inline-block;
+}
+.nav-link-premium:hover,
+.nav-link-premium.active {
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
+}
+.nav-link-premium.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--brand-primary);
+  border-radius: 2px;
+}
+
+/* ── Login button ───────────────────────────────────────────────── */
+.btn-login {
+  background: linear-gradient(135deg, var(--action-solid), var(--action-solid-hover));
+  color: white !important;
+  font-weight: 700;
+  font-size: 0.875rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-pill);
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-brand);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(22,82,240,0.35);
+  color: white !important;
+}
+
+/* ── Hero section ───────────────────────────────────────────────── */
+.hero-premium {
+  background: linear-gradient(135deg,#0a1f5c 0%,#1652f0 45%,#0d9488 100%);
+  position: relative;
+  overflow: hidden;
+  min-height: 82vh;
+  display: flex;
+  align-items: center;
+}
+.hero-premium::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(45,212,191,0.10) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Floating circles */
+.hero-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.06;
+  background: white;
+  animation: floatCircle 8s ease-in-out infinite;
+}
+@keyframes floatCircle {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-20px); }
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(45,212,191,0.16);
+  border: 1px solid rgba(45,212,191,0.35);
+  color: #5eead4;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.35rem 1rem;
+  border-radius: var(--radius-pill);
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+}
+
+.hero-title {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: clamp(2.25rem, 4.5vw, 3.75rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: white;
+  line-height: 1.15;
+  margin-bottom: 1.5rem;
+}
+.hero-title .highlight { color: #5eead4; }
+
+.hero-subtitle {
+  font-size: 1.05rem;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.7;
+  max-width: 540px;
+  margin-bottom: 2.5rem;
+}
+
+/* ── Premium buttons ────────────────────────────────────────────── */
+.btn-primary-premium {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, var(--brand-secondary), #0f766e);
+  color: white !important;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.85rem 2rem;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-accent);
+}
+.btn-primary-premium:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(13,148,136,0.4);
+  color: white !important;
+}
+
+.btn-secondary-premium {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255,255,255,0.1);
+  color: white !important;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.85rem 2rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255,255,255,0.25);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+.btn-secondary-premium:hover {
+  background: rgba(255,255,255,0.2);
+  transform: translateY(-2px);
+  color: white !important;
+}
+
+/* ── Premium cards ──────────────────────────────────────────────── */
+.card-premium {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm-p);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.card-premium:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg-p);
+  border-color: rgba(22,82,240,0.18);
+}
+.card-premium .card-top-bar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+}
+.card-premium .card-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+.card-premium .card-icon-wrap.green { background: var(--brand-primary-light); }
+.card-premium .card-icon-wrap.gold  { background: var(--brand-secondary-light); }
+.card-premium h3 {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.card-premium p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ── Section headers ────────────────────────────────────────────── */
+.section-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+.section-header .eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
+  padding: 0.3rem 1rem;
+  border-radius: var(--radius-pill);
+  margin-bottom: 1rem;
+}
+.section-header h2 {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+.section-header p {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  max-width: 520px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* ── Premium footer ─────────────────────────────────────────────── */
+.footer-premium {
+  background: linear-gradient(180deg,#0a1024 0%,#060b17 100%);
+  color: rgba(255,255,255,0.7);
+  padding: 4rem 0 2rem;
+}
+.footer-premium .footer-logo-text {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: white;
+}
+.footer-premium .footer-link {
+  color: rgba(255,255,255,0.55);
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: color 0.2s;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.footer-premium .footer-link:hover { color: #5eead4; }
+/* Was an inline rgba(255,255,255,0.35), which measured 3.2:1 on the footer's
+   own #0a1024 — below AA, and in BOTH themes, since this footer is dark either
+   way. 0.55 matches the footer links at ~6:1 and still reads as secondary. */
+.footer-premium .footer-copyright { color: rgba(255,255,255,0.55); }
+
+.footer-premium .footer-divider {
+  border-color: rgba(255,255,255,0.08);
+  margin: 2.5rem 0 1.5rem;
+  border-top-width: 1px;
+}
+
+/* ── Scroll animations ──────────────────────────────────────────── */
+.fade-up {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s ease;
+}
+.fade-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.fade-up-delay-1 { transition-delay: 0.1s; }
+.fade-up-delay-2 { transition-delay: 0.2s; }
+.fade-up-delay-3 { transition-delay: 0.3s; }
+.fade-up-delay-4 { transition-delay: 0.4s; }
+
+/* Reduced motion: show the content outright rather than sliding it in. The
+   .visible class is still added by the observer; this just makes the start and
+   end states identical, so nothing moves and nothing is left invisible if the
+   observer never fires. */
+@media (prefers-reduced-motion: reduce) {
+  .fade-up {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .fade-up-delay-1,
+  .fade-up-delay-2,
+  .fade-up-delay-3,
+  .fade-up-delay-4 { transition-delay: 0s; }
+}
+
+/* ── Urgent notice banner (resident dashboard) ───────────────────────
+   Pinned above everything on the dashboard. In a coastal barangay "urgent"
+   means typhoon signal, evacuation or water interruption, so this is
+   deliberately loud: full-bleed red, white text, its own icon. It is never
+   auto-hidden — only an explicit dismiss removes it, and only on that
+   resident's own device. */
+.urgent-banner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  /* Stops kept dark enough that plain white text clears 4.5:1 across the WHOLE
+     gradient, not just its dark end — the earlier #ef4444 tail dropped white to
+     ~3.8:1. This is the typhoon/evacuation banner; legibility outranks
+     prettiness, and it is identical in both themes. */
+  background: linear-gradient(135deg, #8f1616 0%, #b91c1c 55%, #d12626 100%);
+  box-shadow: 0 10px 30px rgba(185, 28, 28, .28);
+}
+/* Fixed light-on-red regardless of theme. */
+.urgent-banner-eyebrow { color: rgba(255, 255, 255, .88); }
+.urgent-banner-title   { color: #ffffff; }
+.urgent-banner-body    { color: rgba(255, 255, 255, .93); }
+.urgent-banner-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: #fff;
+  opacity: .85;
+}
+.urgent-banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: .75rem;
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+  font-size: 1.15rem;
+  animation: urgent-throb 2.4s ease-in-out infinite;
+}
+@keyframes urgent-throb {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(255,255,255,.35); }
+  50%      { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+}
+.urgent-dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;                    /* full touch target, not a 16px × */
+  height: 44px;
+  border: 0;
+  border-radius: .75rem;
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+.urgent-dismiss:hover { background: rgba(255, 255, 255, .28); }
+
+/* ── Hazard advisory strip (resident dashboard) ──────────────────────
+   Standing conditions set by barangay staff, NOT another post in the feed —
+   so it is deliberately a squared-off strip with a heavy leading bar rather
+   than one more rounded card. Colours arrive per-severity as inline custom
+   properties from the view. Fixed light background with dark ink in both
+   themes, hence the explicit values rather than theme tokens. */
+.advisory-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: .85rem 1rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--advisory-bar) 28%, transparent);
+  border-left: 5px solid var(--advisory-bar);
+  background: var(--advisory-bg);
+  color: var(--advisory-ink);
+}
+.advisory-strip-icon  { font-size: 1.05rem; line-height: 1.4; flex-shrink: 0; color: var(--advisory-bar); }
+.advisory-strip-label {
+  margin: 0;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  opacity: .75;
+}
+.advisory-strip-text  { margin: .15rem 0 0; font-size: .875rem; font-weight: 600; line-height: 1.55; }
+
+/* "Happening now" pulse on an event that has already started today. */
+.live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+  animation: live-dot-pulse 1.6s ease-in-out infinite;
+}
+@keyframes live-dot-pulse {
+  0%, 100% { opacity: 1;  transform: scale(1); }
+  50%      { opacity: .4; transform: scale(.75); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .urgent-banner-icon,
+  .live-dot { animation: none; }
+}
+
+/* ── Notification bell ──────────────────────────────────────────── */
+.bell-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #334155;
+  font-size: 1.1rem;
+}
+.bell-btn:hover {
+  background: var(--brand-primary-light);
+  color: var(--brand-primary);
+  transform: scale(1.05);
+}
+.bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+
+/* ── Page transition ────────────────────────────────────────────── */
+.page-transition { animation: pageIn 0.4s ease; }
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Scroll to top button ───────────────────────────────────────── */
+#scrollTop {
+  position: fixed;
+  bottom: 5.5rem;
+  right: 1.5rem;
+  width: 42px;
+  height: 42px;
+  background: var(--action-solid);
+  color: var(--text-on-action);
+  border: none;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md-p);
+  transition: all 0.3s;
+  z-index: 99;
+}
+#scrollTop:hover {
+  background: var(--action-solid-hover);
+  transform: translateY(-3px);
+}
+#scrollTop.show { display: flex; }
+
+/* ── Premium badge colors ───────────────────────────────────────── */
+.badge-green { background: var(--status-success-bg); color: var(--status-success); font-size:.72rem; font-weight:700; padding:.25rem .75rem; border-radius:var(--radius-pill); letter-spacing:.05em; }
+.badge-gold  { background: var(--status-warning-bg); color: var(--status-warning); font-size:.72rem; font-weight:700; padding:.25rem .75rem; border-radius:var(--radius-pill); letter-spacing:.05em; }
+.badge-blue  { background: var(--brand-primary-light); color: var(--brand-primary); font-size:.72rem; font-weight:700; padding:.25rem .75rem; border-radius:var(--radius-pill); letter-spacing:.05em; }
+.badge-red   { background: var(--status-danger-bg); color: var(--status-danger); font-size:.72rem; font-weight:700; padding:.25rem .75rem; border-radius:var(--radius-pill); letter-spacing:.05em; }
+
+/* ── Print styles (ordinance detail) ───────────────────────────── */
+@media print {
+    /* Hide interactive UI */
+    header,
+    footer,
+    nav,
+    .aic-root,
+    .aic-fab,
+    .no-print,
+    [x-data],
+    button:not(.print-ok) {
+        display: none !important;
+    }
+
+    body {
+        background: #fff !important;
+        color: #000;
+        font-size: 11pt;
+        font-family: 'Times New Roman', serif;
+    }
+
+    .content-card {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        animation: none !important;
+    }
+
+    /* Print-only header for ordinances */
+    .print-ordinance-header {
+        display: block !important;
+        border-bottom: 2px solid #000;
+        padding-bottom: .75rem;
+        margin-bottom: 1.25rem;
+        page-break-inside: avoid;
+    }
+    .print-ordinance-header h1 { font-size: 16pt; margin-bottom: .25rem; }
+    .print-ordinance-header p  { font-size: 10pt; color: #333; margin: 2px 0; }
+
+    .rich-text { color: #000; font-size: 11pt; }
+    .rich-text a::after { content: ' (' attr(href) ')'; font-size: .8em; color: #555; }
+
+    /* Force page breaks before major sections */
+    h1, h2 { page-break-after: avoid; }
+    table   { page-break-inside: avoid; }
+
+    /* Hide PDF canvas — the metadata and link print instead */
+    canvas { display: none !important; }
+
+    /* Ensure AI summary box is readable in B&W */
+    .ai-summary-box {
+        background: #fff !important;
+        border: 1px solid #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+/* ================================================================
+   DARK-MODE RETROFIT LAYER
+   Most page content (announcements, events, ordinances, profile,
+   notifications, etc.) is built with hardcoded Tailwind utility
+   classes (bg-white, text-slate-900, ...) rather than the CSS custom
+   properties above — those don't react to the theme toggle at all,
+   which is what made dark mode unreadable (near-black text on a now-
+   dark card, a stray white search bar sitting in an otherwise-dark
+   page). Migrating every view to var()-based classes is a large,
+   ongoing pass; this block is the stopgap that makes dark mode
+   actually usable everywhere in the meantime by remapping the Tailwind
+   classes this codebase actually uses onto the theme tokens whenever
+   dark mode is active — same dual-block pattern as the tokens above
+   (OS default, then the explicit toggle so it always wins).
+   ================================================================ */
+:root[data-theme="dark"] .bg-white                                        { background-color: var(--surface-card) !important; }
+:root[data-theme="dark"] .bg-slate-50,
+:root[data-theme="dark"] .bg-slate-100,
+:root[data-theme="dark"] .bg-gray-50,
+:root[data-theme="dark"] .bg-gray-100                                     { background-color: var(--surface-muted) !important; }
+:root[data-theme="dark"] .text-slate-900,
+:root[data-theme="dark"] .text-slate-800,
+:root[data-theme="dark"] .text-gray-800,
+:root[data-theme="dark"] .text-gray-900                                   { color: var(--text-primary) !important; }
+:root[data-theme="dark"] .text-slate-700,
+:root[data-theme="dark"] .text-slate-600,
+:root[data-theme="dark"] .text-gray-600,
+:root[data-theme="dark"] .text-gray-700                                   { color: var(--text-secondary) !important; }
+:root[data-theme="dark"] .text-slate-500,
+:root[data-theme="dark"] .text-slate-400,
+:root[data-theme="dark"] .text-slate-300,
+:root[data-theme="dark"] .text-gray-400,
+:root[data-theme="dark"] .text-gray-500                                   { color: var(--text-muted) !important; }
+:root[data-theme="dark"] .border-slate-100,
+:root[data-theme="dark"] .border-slate-200,
+:root[data-theme="dark"] .border-gray-100,
+:root[data-theme="dark"] .border-gray-200                                 { border-color: var(--border) !important; }
+:root[data-theme="dark"] .divide-slate-50 > :not([hidden]) ~ :not([hidden]),
+:root[data-theme="dark"] .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
+:root[data-theme="dark"] input.bg-slate-50,
+:root[data-theme="dark"] select.bg-slate-50,
+:root[data-theme="dark"] textarea.bg-slate-50                             { background-color: var(--surface-input) !important; color: var(--text-primary) !important; }
+:root[data-theme="dark"] .bg-slate-100.text-slate-700,
+:root[data-theme="dark"] .bg-slate-200                                    { background-color: var(--surface-muted) !important; color: var(--text-secondary) !important; }
+:root[data-theme="dark"] .prose { color: var(--text-secondary); }
+:root[data-theme="dark"] .prose :is(h1,h2,h3,h4,strong) { color: var(--text-primary); }
+:root[data-theme="dark"] .hover\:bg-slate-50:hover,
+:root[data-theme="dark"] .hover\:bg-slate-100:hover       { background-color: var(--surface-muted) !important; }
+/* Same omission as the accent hovers: the resting colour was remapped and the
+   hover was not, so .text-slate-700.hover\:text-slate-900 went from readable
+   to #0f172a — near-black on a dark card — under the pointer. */
+:root[data-theme="dark"] .hover\:text-slate-900:hover,
+:root[data-theme="dark"] .hover\:text-slate-800:hover     { color: var(--text-primary) !important; }
+:root[data-theme="dark"] .hover\:text-slate-700:hover,
+:root[data-theme="dark"] .hover\:text-slate-600:hover     { color: var(--text-secondary) !important; }
+
+/* ================================================================
+   TAILWIND ACCENT REMAP — theme-driven, single copy
+   ================================================================
+   Unlike the slate/gray block above, this one is NOT duplicated per theme.
+   It reads the --tw-* tokens, which are defined three times (light :root, OS
+   dark, explicit dark), so the cascade does the theme switching for us. In
+   light mode every token holds the exact Tailwind colour, making these rules
+   a no-op there.
+
+   Why it is needed: a 700-weight Tailwind colour is tuned for a white card.
+   On the dark #131b2c card the same hex lands at ~2.5:1 — "Idagdag sa
+   kalendaryo", "Basahin", "Tingnan lahat" and the rest were technically
+   painted but effectively unreadable. Same story for the *-100 chip
+   backgrounds, which stayed bright pastel blocks on a dark page.
+   ================================================================ */
+.text-blue-500   { color: var(--tw-blue-500)   !important; }
+.text-blue-600   { color: var(--tw-blue-600)   !important; }
+.text-blue-700   { color: var(--tw-blue-700)   !important; }
+.text-blue-800   { color: var(--tw-blue-800)   !important; }
+.text-blue-900   { color: var(--tw-blue-900)   !important; }
+.text-green-600  { color: var(--tw-green-600)  !important; }
+.text-green-700  { color: var(--tw-green-700)  !important; }
+.text-green-800  { color: var(--tw-green-800)  !important; }
+.text-green-900  { color: var(--tw-green-900)  !important; }
+.text-amber-500  { color: var(--tw-amber-500)  !important; }
+.text-red-500    { color: var(--tw-red-500)    !important; }
+.text-red-600    { color: var(--tw-red-600)    !important; }
+.text-red-700    { color: var(--tw-red-700)    !important; }
+.text-red-800    { color: var(--tw-red-800)    !important; }
+.text-red-900    { color: var(--tw-red-900)    !important; }
+.text-amber-600  { color: var(--tw-amber-600)  !important; }
+.text-amber-700  { color: var(--tw-amber-700)  !important; }
+.text-amber-800  { color: var(--tw-amber-800)  !important; }
+.text-amber-900  { color: var(--tw-amber-900)  !important; }
+.text-purple-700 { color: var(--tw-purple-700) !important; }
+.text-rose-700   { color: var(--tw-rose-700)   !important; }
+.text-orange-700 { color: var(--tw-orange-700) !important; }
+.text-indigo-700 { color: var(--tw-indigo-700) !important; }
+.text-teal-700   { color: var(--tw-teal-700)   !important; }
+
+.bg-blue-100   { background-color: var(--tw-bg-blue-100)   !important; }
+.bg-green-100  { background-color: var(--tw-bg-green-100)  !important; }
+.bg-amber-100  { background-color: var(--tw-bg-amber-100)  !important; }
+.bg-red-100    { background-color: var(--tw-bg-red-100)    !important; }
+.bg-purple-100 { background-color: var(--tw-bg-purple-100) !important; }
+.bg-rose-100   { background-color: var(--tw-bg-rose-100)   !important; }
+.bg-orange-100 { background-color: var(--tw-bg-orange-100) !important; }
+.bg-indigo-100 { background-color: var(--tw-bg-indigo-100) !important; }
+.bg-teal-100   { background-color: var(--tw-bg-teal-100)   !important; }
+
+/* Hover states need the same treatment, and were missed entirely.
+   "Read more" is text-blue-700 hover:text-blue-900 — remapped at rest and not
+   on hover, so on a dark card the link was legible until a reader pointed at
+   it, then turned #1e3a8a: 1.8:1, effectively gone. A link that disappears
+   exactly when it is being used is worse than one that is dim throughout. */
+.hover\:text-blue-700:hover  { color: var(--tw-blue-700)  !important; }
+.hover\:text-blue-800:hover  { color: var(--tw-blue-800)  !important; }
+.hover\:text-blue-900:hover  { color: var(--tw-blue-900)  !important; }
+.hover\:text-amber-700:hover { color: var(--tw-amber-700) !important; }
+.hover\:text-amber-900:hover { color: var(--tw-amber-900) !important; }
+.hover\:text-red-500:hover   { color: var(--tw-red-500)   !important; }
+.hover\:text-red-600:hover   { color: var(--tw-red-600)   !important; }
+.hover\:bg-blue-100:hover    { background-color: var(--tw-bg-blue-100) !important; }
+
+.bg-amber-50  { background-color: var(--tw-bg-amber-50)  !important; }
+.bg-red-50    { background-color: var(--tw-bg-red-50)    !important; }
+.bg-blue-50   { background-color: var(--tw-bg-blue-50)   !important; }
+.bg-green-50  { background-color: var(--tw-bg-green-50)  !important; }
+.bg-yellow-50 { background-color: var(--tw-bg-yellow-50) !important; }
+
+.border-amber-200 { border-color: var(--tw-border-amber-200) !important; }
+.border-red-200   { border-color: var(--tw-border-red-200)   !important; }
+.border-blue-200  { border-color: var(--tw-border-blue-200)  !important; }
+
+/* Hover states that pair with the above. */
+.hover\:text-blue-900:hover { color: var(--tw-blue-600) !important; }
+.hover\:bg-blue-50:hover    { background-color: var(--tw-bg-blue-100) !important; }
+.hover\:bg-green-50:hover   { background-color: var(--tw-bg-green-100) !important; }
+
+/* ── Surfaces that must follow the theme, not a fixed hex ───────────
+   Tailwind gradient utilities bake their stops into --tw-gradient-* custom
+   properties, so the .bg-white remap above cannot reach them. The resident
+   dashboard's greeting card used `bg-gradient-to-br from-white to-slate-50`,
+   which stayed WHITE in dark mode while its text switched to the near-white
+   --text-primary: the resident's own name became invisible. This is that
+   card, expressed in theme tokens instead. */
+.surface-card-gradient {
+    background-image: linear-gradient(135deg, var(--surface-card) 0%, var(--surface-muted) 100%);
+}
+
+/* The urgent banner paints its own fixed red gradient in BOTH themes, so
+   everything inside it keeps light-on-red styling. Its call-to-action is a
+   white pill: without this, the .bg-white remap turned it into a dark pill
+   and the accent remap turned its label pale red — dark-on-dark. */
+.urgent-banner-cta {
+    background-color: #ffffff !important;
+    color: #b91c1c !important;
+}
+.urgent-banner-cta:hover { background-color: #fee2e2 !important; color: #991b1b !important; }
+
+/* Ink for text that sits on a FIXED light accent — a bright yellow header bar,
+   a white pill — i.e. a surface that is identical in both themes. Those need
+   dark text in dark mode too, so they must opt out of the slate remap above.
+   Without this the Manobo widget's header rendered near-white on yellow-400,
+   about 1.3:1. */
+.on-light-accent       { color: #1f2937 !important; }
+.on-light-accent-muted { color: #4b5563 !important; }
+
+/* ── Form fields in dark mode ───────────────────────────────────────
+   An <input>/<textarea> with no background utility class keeps the browser
+   default WHITE, while its text-slate-* class is remapped to a light colour —
+   light-on-white, i.e. invisible. The rule below only sets a default, with no
+   !important, so any explicit bg utility still wins. */
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select {
+    background-color: var(--surface-input);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+:root[data-theme="dark"] ::placeholder { color: var(--text-muted); opacity: 1; }
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    :root:not([data-theme="light"]) textarea,
+    :root:not([data-theme="light"]) select {
+        background-color: var(--surface-input);
+        color: var(--text-primary);
+        border-color: var(--border);
+    }
+    :root:not([data-theme="light"]) ::placeholder { color: var(--text-muted); opacity: 1; }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .bg-white                                        { background-color: var(--surface-card) !important; }
+    :root:not([data-theme="light"]) .bg-slate-50,
+    :root:not([data-theme="light"]) .bg-slate-100,
+    :root:not([data-theme="light"]) .bg-gray-50,
+    :root:not([data-theme="light"]) .bg-gray-100                                     { background-color: var(--surface-muted) !important; }
+    :root:not([data-theme="light"]) .text-slate-900,
+    :root:not([data-theme="light"]) .text-slate-800,
+    :root:not([data-theme="light"]) .text-gray-800,
+    :root:not([data-theme="light"]) .text-gray-900                                   { color: var(--text-primary) !important; }
+    :root:not([data-theme="light"]) .text-slate-700,
+    :root:not([data-theme="light"]) .text-slate-600,
+    :root:not([data-theme="light"]) .text-gray-600,
+    :root:not([data-theme="light"]) .text-gray-700                                   { color: var(--text-secondary) !important; }
+    :root:not([data-theme="light"]) .text-slate-500,
+    :root:not([data-theme="light"]) .text-slate-400,
+    :root:not([data-theme="light"]) .text-slate-300,
+    :root:not([data-theme="light"]) .text-gray-400,
+    :root:not([data-theme="light"]) .text-gray-500                                   { color: var(--text-muted) !important; }
+    :root:not([data-theme="light"]) .border-slate-100,
+    :root:not([data-theme="light"]) .border-slate-200,
+    :root:not([data-theme="light"]) .border-gray-100,
+    :root:not([data-theme="light"]) .border-gray-200                                 { border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) input.bg-slate-50,
+    :root:not([data-theme="light"]) select.bg-slate-50,
+    :root:not([data-theme="light"]) textarea.bg-slate-50                             { background-color: var(--surface-input) !important; color: var(--text-primary) !important; }
+    /* These four were present on the toggle path only, so a reader whose
+       device was in dark mode but who had never touched the switch kept a
+       light grey fill and light divider lines on dark cards. DesignTokens/
+       DarkPathParity now fails if the two lists ever diverge again. */
+    :root:not([data-theme="light"]) .divide-slate-50 > :not([hidden]) ~ :not([hidden]),
+    :root:not([data-theme="light"]) .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) .bg-slate-100.text-slate-700,
+    :root:not([data-theme="light"]) .bg-slate-200                                    { background-color: var(--surface-muted) !important; color: var(--text-secondary) !important; }
+    :root:not([data-theme="light"]) .prose { color: var(--text-secondary); }
+    :root:not([data-theme="light"]) .prose :is(h1,h2,h3,h4,strong) { color: var(--text-primary); }
+    :root:not([data-theme="light"]) .hover\:bg-slate-50:hover,
+    :root:not([data-theme="light"]) .hover\:bg-slate-100:hover       { background-color: var(--surface-muted) !important; }
+    /* Mirrors the toggle block above — see the note there on hover states. */
+    :root:not([data-theme="light"]) .hover\:text-slate-900:hover,
+    :root:not([data-theme="light"]) .hover\:text-slate-800:hover     { color: var(--text-primary) !important; }
+    :root:not([data-theme="light"]) .hover\:text-slate-700:hover,
+    :root:not([data-theme="light"]) .hover\:text-slate-600:hover     { color: var(--text-secondary) !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SINGLE POST VIEW  (events / announcements / ordinances)
+   ══════════════════════════════════════════════════════════════════════
+   A social-style author row above a news-style headline and article body.
+
+   Everything here is expressed in the theme tokens defined at the top of
+   this file, so light and dark both work without a second set of rules —
+   the tokens are already redefined in the three blocks up there. No fixed
+   greys or hex values below for that reason.
+
+   All classes are prefixed .post- and are additive: nothing above this
+   comment is modified.
+   ------------------------------------------------------------------ */
+
+.post-shell { margin-bottom: 1.5rem; }
+
+/* ── Author row ─────────────────────────────────────────────────────── */
+.post-byline {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: 1.25rem;
+}
+.post-avatar {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--surface-card);
+    box-shadow: 0 0 0 1px var(--border);
+}
+.post-avatar-initial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--action-solid);
+    color: var(--text-on-action);    /* on a solid action fill in both themes */
+    font-weight: 700;
+    font-size: 1.05rem;
+    line-height: 1;
+}
+.post-byline-text { min-width: 0; }
+.post-author {
+    margin: 0;
+    font-size: .925rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+.post-author-role { font-weight: 500; color: var(--text-secondary); }
+.post-meta {
+    margin: .15rem 0 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .5rem;
+    font-size: .8rem;
+    /* --text-muted is #94a3b8, which is 2.56:1 on white — below AA. The
+       timestamp tells a resident whether an advisory is live right now, so
+       it has to be readable. --text-secondary clears AA in both themes.
+       Scoped here rather than changing the global token, which is used in
+       plenty of places where it is decoration rather than information. */
+    color: var(--text-secondary);
+}
+.post-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: .15em .65em;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    background: var(--surface-muted);
+    color: var(--text-secondary);
+}
+
+/* ── Headline ───────────────────────────────────────────────────────── */
+.post-eyebrow {
+    margin: 0 0 .35rem;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);   /* AA — see .post-meta */
+}
+.post-title {
+    margin: 0;
+    font-size: clamp(1.6rem, 1.15rem + 1.6vw, 2.35rem);
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -.015em;
+    color: var(--text-primary);
+}
+
+/* Hero image: full width of the column, between headline and body. */
+.post-hero {
+    margin: 1.25rem 0 0;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: var(--surface-muted);
+}
+.post-hero img { display: block; width: 100%; height: auto; }
+
+/* ── Article body ───────────────────────────────────────────────────── */
+/* A measure, not the full column: long lines are the single biggest thing
+   that makes a notice feel like a form instead of something to read. */
+.post-body {
+    max-width: 68ch;
+    font-size: 1.02rem;
+    line-height: 1.85;
+    color: var(--text-primary);
+}
+.post-body p { margin: 0 0 1.15em; }
+.post-body a { color: var(--brand-primary); }
+.post-body h2,
+.post-body h3 { color: var(--text-primary); font-weight: 700; line-height: 1.3; margin: 1.6em 0 .6em; }
+.post-body img { border-radius: .75rem; }
+.post-body ul,
+.post-body ol { margin: 0 0 1.15em; padding-left: 1.4em; }
+.post-body li { margin-bottom: .4em; }
+
+/* Insurance, not a fix. The purifier drops every style attribute, and the
+   database was checked: no stored post carries one. But post content is the
+   one place where a foreign palette could arrive — staff paste captions out
+   of Facebook, and Quill preserves inline styling from pasted HTML. If a
+   style attribute ever did survive (a widened whitelist, a body written
+   before the purifier was added, an import path added later), a hardcoded
+   near-black would sit unreadable on the dark card with no way for a
+   stylesheet to reach it. This makes the text inherit the theme regardless.
+
+   Deliberately dark-mode only, and deliberately not applied to backgrounds:
+   in light mode the stock colours are harmless, and an author's highlight is
+   worth keeping where it does no damage. */
+:root[data-theme="dark"] .post-body [style*="color"],
+:root[data-theme="dark"] .post-body font[color] {
+    color: inherit !important;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .post-body [style*="color"],
+    :root:not([data-theme="light"]) .post-body font[color] {
+        color: inherit !important;
+    }
+}
+
+/* Divider between the headline block and the article. */
+.post-rule {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+}
+
+/* ── Inline notice (translation state) ──────────────────────────────────
+   Deliberately quieter than the old boxed alert: it is a footnote about
+   the text, not a warning about the barangay. A left rule and muted ink
+   keep it legible without competing with the headline. */
+.post-note {
+    display: flex;
+    align-items: flex-start;
+    gap: .55rem;
+    margin: 0 0 1.25rem;
+    padding: .6rem .85rem;
+    border-left: 3px solid var(--border);
+    background: var(--surface-muted);
+    border-radius: 0 .5rem .5rem 0;
+    font-size: .8rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    max-width: 68ch;
+}
+.post-note i { color: var(--text-muted); margin-top: .1rem; }
+.post-note-machine { border-left-color: var(--brand-secondary); }
+
+/* ── Cards in the post flow and the sidebar ─────────────────────────── */
+.post-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    overflow: hidden;
+}
+.post-card + .post-card { margin-top: 1rem; }
+.post-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    flex-wrap: wrap;
+    padding: .85rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-muted);
+}
+.post-card-title {
+    margin: 0;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.post-card-body { padding: 1rem; }
+
+/* Sidebar metadata rows. */
+.post-facts { list-style: none; margin: 0; padding: 0; }
+.post-facts li { display: flex; gap: .75rem; padding: .7rem 0; border-bottom: 1px solid var(--border); }
+.post-facts li:last-child { border-bottom: 0; padding-bottom: 0; }
+.post-facts li:first-child { padding-top: 0; }
+.post-fact-icon {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: .6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--brand-primary-light);
+    color: var(--brand-primary);
+}
+.post-fact-label {
+    margin: 0;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-secondary);   /* AA — see .post-meta */
+}
+.post-fact-value { margin: .1rem 0 0; font-size: .875rem; color: var(--text-primary); }
+
+@media (max-width: 640px) {
+    .post-byline { gap: .6rem; }
+    .post-avatar { width: 2.35rem; height: 2.35rem; }
+    .post-body { font-size: .975rem; line-height: 1.8; }
+}
+
+/* ── Manobo language card ───────────────────────────────────────────────
+   Was a solid yellow-400 block that sat on the page like a sticker. It is
+   now the same card as everything else, with the Manobo green kept as an
+   accent (the leaf, the speak button, a left rule) so the association
+   survives without the card shouting. Tokens only, so it themes itself. */
+.post-lang-card { margin-top: 1.5rem; }
+.post-lang-head { border-left: 3px solid var(--brand-secondary); }
+.post-lang-mark { font-size: 1.35rem; line-height: 1; }
+.post-lang-title {
+    margin: 0;
+    font-size: .875rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.post-lang-sub {
+    margin: 0;
+    font-size: .75rem;
+    color: var(--text-secondary);
+}
+.post-lang-section {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-card);
+}
+.post-lang-section:last-child { border-bottom: 0; }
+.post-lang-spinner { border-color: var(--border); border-top-color: var(--brand-primary); }
+.post-lang-speak {
+    background: var(--brand-secondary);
+    color: #fff;                      /* on a solid fill in both themes */
+}
+.post-lang-speak:hover { filter: brightness(.92); }
+.post-lang-divider { border-color: var(--border) !important; }
+.post-lang-footnote {
+    background: var(--surface-muted) !important;
+    border-color: var(--border) !important;
+}
+.post-lang-footnote-text { color: var(--text-secondary); }
+
+.post-lang-listen { color: var(--text-primary); }
+.post-lang-listen i { color: var(--brand-secondary); }
+
+/* ── Voice reader ("Pakinggan") ──────────────────────────────────────────
+   An accessibility control, so it is sized like one: the play button is a
+   real target for an unsteady hand, the labels are not shrunk to fit, and
+   nothing here depends on colour alone to say what state it is in.
+
+   It sits directly under the headline on the three detail pages. That
+   placement is the feature — a resident who cannot comfortably read the
+   post must not have to read their way down it to find the button that
+   reads it for them. */
+.voice-reader [x-cloak] { display: none !important; }
+
+.voice-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--brand-primary);
+    border-radius: 1rem;
+    padding: 1rem 1.1rem;
+    margin: 0 0 1.5rem;
+    max-width: 68ch;                      /* the measure the article uses */
+}
+
+.voice-row {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    flex-wrap: wrap;
+}
+
+.voice-play {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    min-height: 3rem;
+    padding: 0 1.35rem;
+    border: 0;
+    border-radius: .85rem;
+    background: var(--action-solid);
+    color: var(--text-on-action);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color .15s ease, transform .15s ease;
+}
+.voice-play:hover  { background: var(--action-solid-hover); }
+.voice-play:active { transform: scale(.98); }
+.voice-play i      { font-size: 1.3rem; line-height: 1; }
+
+.voice-meta    { flex: 1 1 10rem; min-width: 0; }
+.voice-heading { margin: 0; font-size: .95rem; font-weight: 700; color: var(--text-primary); }
+.voice-sub     { margin: .1rem 0 0; font-size: .8rem; color: var(--text-secondary); }
+.voice-sub i   { color: var(--brand-secondary); }
+
+.voice-stop {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    min-height: 2.5rem;
+    padding: 0 .9rem;
+    border: 1px solid var(--border);
+    border-radius: .7rem;
+    background: var(--surface-card);
+    color: var(--text-secondary);
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.voice-stop:hover { background: var(--surface-muted); color: var(--text-primary); }
+
+.voice-track {
+    height: .4rem;
+    margin-top: .9rem;
+    border-radius: 999px;
+    background: var(--surface-muted);
+    overflow: hidden;
+}
+.voice-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: var(--brand-primary);
+    transition: width .2s linear;
+}
+
+.voice-speed {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    flex-wrap: wrap;
+    margin-top: .85rem;
+}
+.voice-speed-label {
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-right: .15rem;
+}
+.voice-speed-btn {
+    min-height: 2.1rem;
+    padding: 0 .75rem;
+    border: 1px solid var(--border);
+    border-radius: .6rem;
+    background: var(--surface-card);
+    color: var(--text-secondary);
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.voice-speed-btn:hover     { background: var(--surface-muted); }
+.voice-speed-btn.is-active {
+    background: var(--action-solid);
+    border-color: var(--action-solid);
+    color: var(--text-on-action);
+}
+
+/* ── Language picker ─────────────────────────────────────────────────────
+   Inside the player, because listening and reading are different choices:
+   a resident reading in Filipino may well be playing Manobo for an elder
+   sitting next to them. A language with no translation is disabled rather
+   than hidden, so the gap is visible and can be asked about. */
+.voice-langs {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    flex-wrap: wrap;
+    margin-top: .9rem;
+}
+.voice-lang-btn {
+    display: inline-flex;
+    align-items: baseline;
+    gap: .4rem;
+    min-height: 2.35rem;
+    padding: 0 .8rem;
+    border: 1px solid var(--border);
+    border-radius: .65rem;
+    background: var(--surface-card);
+    color: var(--text-secondary);
+    font-size: .82rem;
+    cursor: pointer;
+}
+.voice-lang-btn:hover:not(:disabled) { background: var(--surface-muted); }
+.voice-lang-btn.is-active {
+    background: var(--action-solid);
+    border-color: var(--action-solid);
+    color: var(--text-on-action);
+}
+.voice-lang-code { font-weight: 800; letter-spacing: .03em; }
+.voice-lang-name { font-size: .75rem; opacity: .85; }
+.voice-lang-btn:focus-visible { outline: 3px solid var(--brand-primary); outline-offset: 2px; }
+
+/* A language with no translation yet is never a dead end (see
+   _voice-reader.php) — it stays pressable and asks for the translation on
+   click, so it must never look broken. The strikethrough this used to have
+   for :disabled read as "this is broken", not "press to translate", and
+   dimmed text under an opacity trick rather than a verified token. Only the
+   few seconds while a translation is actually in flight are disabled now. */
+.voice-lang-btn:disabled.is-translating {
+    cursor: wait;
+    color: var(--text-muted);
+}
+.voice-lang-hint {
+    font-size: .7rem;
+    margin-left: .1rem;
+    color: var(--brand-primary);
+}
+.voice-lang-btn.is-active .voice-lang-hint { color: var(--text-on-action); }
+
+.voice-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: .45rem;
+    margin: .85rem 0 0;
+    font-size: .8rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+.voice-notice i                { color: var(--brand-secondary); margin-top: .15rem; }
+
+/* The Manobo approximation label. Given its own left rule and a little more
+   weight than a footnote, because a Manobo speaker has a right to know
+   before pressing play that this is a Filipino voice doing its best with
+   their language — not after. */
+.voice-notice-approx {
+    margin-top: .85rem;
+    padding: .55rem .75rem;
+    border-left: 3px solid var(--brand-secondary);
+    border-radius: 0 .5rem .5rem 0;
+    background: var(--surface-muted);
+}
+.voice-notice-approx i { color: var(--brand-secondary); }
+
+/* An action offered inside a sentence — "…listen in Filipino instead". A real
+   button, so it is reachable by keyboard, styled as the link it reads as. */
+.voice-inline-link {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    font-weight: 700;
+    color: var(--brand-primary);
+    text-decoration: underline;
+    cursor: pointer;
+}
+.voice-inline-link:hover { text-decoration: none; }
+.voice-inline-link:focus-visible { outline: 3px solid var(--brand-primary); outline-offset: 2px; }
+
+/* ── Source embed ────────────────────────────────────────────────────────
+   The original post a notice was copied from. Deliberately quieter than the
+   notice itself: this is attribution, not the content — the barangay's own
+   words are what the resident came to read. */
+.source-embed {
+    max-width: 68ch;                       /* the measure the article uses */
+    margin: 1.5rem 0;
+    padding: .85rem 1rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--brand-secondary);
+    border-radius: 0 .75rem .75rem 0;
+    background: var(--surface-muted);
+}
+.source-embed-head {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    margin: 0 0 .6rem;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+.source-embed-head .bi { color: var(--brand-secondary); font-size: .95rem; }
+
+/* The frame sizes itself to the column. A fixed width would push the page
+   sideways on a phone, which is where most residents read this. */
+.source-embed-frame {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: .6rem;
+    background: var(--surface-card);
+    min-height: 220px;
+}
+.source-embed-frame iframe {
+    display: block;
+    width: 100%;
+    height: 480px;
+    max-width: 100%;
+    border: 0;
+}
+/* A video is a known shape, so it gets a proper ratio instead of a guess. */
+.source-embed-frame.is-video { min-height: 0; aspect-ratio: 16 / 9; }
+.source-embed-frame.is-video iframe { height: 100%; position: absolute; inset: 0; }
+
+/* The way through to the original post. Deliberately a whole card rather than
+   a line of link text: when the embed above it fails — a private post, a
+   blocked tracker, a share link Facebook will not render — this is the only
+   thing on the page that still works, and on a phone it has to be big enough
+   to hit without aiming. */
+.source-embed-card {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-top: .75rem;
+    padding: .7rem .85rem;
+    border: 1px solid var(--border);
+    border-radius: .6rem;
+    background: var(--surface-card);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.source-embed-card:hover {
+    border-color: var(--brand-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 10px rgb(0 0 0 / .08);
+}
+.source-embed-card:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+}
+.source-embed-card-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: .5rem;
+    background: var(--surface-muted);
+    color: var(--brand-secondary);
+    font-size: 1.15rem;
+}
+.source-embed-card-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;                          /* lets a long host ellipsise */
+}
+.source-embed-card-text strong {
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+}
+.source-embed-card-text small {
+    font-size: .72rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.source-embed-card-go {
+    margin-left: auto;
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    font-size: .9rem;
+}
+
+/* Sits under the card so a reader facing an empty frame knows why. */
+.source-embed-fallback {
+    margin: .45rem 0 0;
+    font-size: .72rem;
+    color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+    .source-embed-frame iframe { height: 420px; }
+}
+
+/* Keyboard focus is never suppressed: this control is meant to be reachable
+   without a mouse or a steady tap. */
+.voice-play:focus-visible,
+.voice-stop:focus-visible,
+.voice-speed-btn:focus-visible,
+.voice-mini-btn:focus-visible {
+    outline: 3px solid var(--brand-primary);
+    outline-offset: 2px;
+}
+
+/* ── Sentence highlight ──────────────────────────────────────────────────
+   The single biggest accessibility win here: a resident following along can
+   see exactly where the voice is. Background alone would be lost on a
+   greyscale screen, so the underline carries the same information. */
+mark.voice-mark {
+    background: var(--brand-primary-light);
+    color: var(--text-primary);
+    border-radius: .25rem;
+    box-shadow: 0 0 0 .15rem var(--brand-primary-light);
+    text-decoration: underline;
+    text-decoration-color: var(--brand-primary);
+    text-decoration-thickness: 2px;
+    text-underline-offset: .18em;
+    transition: background-color .2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+    mark.voice-mark { transition: none; }
+    .voice-fill     { transition: none; }
+}
+
+/* ── Sticky mini player ──────────────────────────────────────────────────
+   Playback stays reachable while the resident reads down the post. */
+.voice-mini {
+    position: fixed;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+    /* Above the AI chat launcher (z 9000): the control that stops a voice
+       talking in a quiet room must never be the thing hidden behind a FAB. */
+    z-index: 9100;
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    width: min(26rem, calc(100vw - 1.5rem));
+    padding: .6rem .75rem;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--surface-card);
+    box-shadow: 0 18px 40px rgba(11, 22, 60, .18);
+}
+.voice-mini-btn {
+    flex-shrink: 0;
+    width: 2.75rem;
+    height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: .75rem;
+    background: var(--action-solid);
+    color: var(--text-on-action);
+    font-size: 1.15rem;
+    cursor: pointer;
+}
+.voice-mini-stop {
+    background: var(--surface-muted);
+    color: var(--text-secondary);
+    font-size: .85rem;
+}
+.voice-mini-body  { flex: 1 1 auto; min-width: 0; }
+.voice-mini-title {
+    margin: 0 0 .35rem;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.voice-track-mini { margin-top: 0; }
+
+.voice-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (max-width: 480px) {
+    .voice-card    { padding: .85rem .9rem; }
+    .voice-play    { flex: 1 1 100%; justify-content: center; }
+    .voice-stop    { flex: 0 0 auto; }
+    .voice-meta    { order: -1; flex: 1 1 100%; }
+    .voice-mini    { bottom: .75rem; }
+}
+
+/* While something is playing the mini player owns the bottom of the screen,
+   so the two floating controls already there step up out of its way. The
+   class is set and cleared by the player itself. */
+body.voice-playing .aic-root { bottom: 5.75rem; }
+body.voice-playing #scrollTop { bottom: 9.75rem; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   SAFETY CHECK-IN  (resident dashboard)
+   ══════════════════════════════════════════════════════════════════════
+
+   Read on a phone, probably in bad light, possibly on a failing battery,
+   by someone who has just been through a storm. Everything below follows
+   from that:
+
+     - the two answers are large, far apart, and never side by side with a
+       third choice. A mis-tap here says the wrong thing about whether a
+       person is alive.
+     - every colour is a token. Half the households here will be reading in
+       dark mode, and an advisory that is unreadable at night is worse than
+       no advisory.
+     - the card changes character once answered: loud while it needs an
+       answer, quiet once it has one, but never gone — a correction has to
+       stay one tap away.
+
+   No fixed hex values, so it follows the theme on its own.
+   ══════════════════════════════════════════════════════════════════════ */
+.safety-card {
+    border: 1px solid var(--status-warning);
+    border-left-width: 5px;
+    border-radius: var(--radius-lg);
+    background: var(--status-warning-bg);
+    padding: 1.15rem 1.25rem 1.25rem;
+}
+/* Answered: the same card, in a calmer key. */
+.safety-card--answered {
+    border-color: var(--status-success);
+    background: var(--status-success-bg);
+}
+
+/* Quiet: nothing is being asked. Present every day, so it has to sit at
+   the volume of a reference card rather than an alert — an amber box that
+   never goes away is an amber box nobody reads when it matters. */
+.safety-card--quiet {
+    border-color: var(--border);
+    border-left-color: var(--text-muted);
+    background: var(--surface-card);
+}
+.safety-card--quiet .safety-card__icon {
+    color: var(--text-secondary);
+    background: var(--surface-muted);
+}
+
+/* The evacuation centre, stated rather than linked: during a storm the
+   phone may not load a second page. */
+.safety-quiet__centre {
+    margin-top: .9rem;
+    padding: .8rem .9rem;
+    border-radius: var(--radius-md);
+    background: var(--surface-muted);
+}
+.safety-quiet__label {
+    margin: 0 0 .25rem;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.safety-quiet__name {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: .4rem;
+    font-size: .95rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+.safety-quiet__addr {
+    margin: .2rem 0 0;
+    font-size: .8rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+.safety-quiet__none {
+    margin: .9rem 0 0;
+    font-size: .82rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.safety-card__head {
+    display: flex;
+    align-items: flex-start;
+    gap: .85rem;
+}
+.safety-card__icon {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-md);
+    background: var(--surface-card);
+    color: var(--status-warning);
+    font-size: 1.25rem;
+}
+.safety-card--answered .safety-card__icon { color: var(--status-success); }
+
+.safety-card__eyebrow {
+    margin: 0 0 .15rem;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.safety-card__title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1.3;
+    color: var(--text-primary);
+}
+.safety-card__help {
+    margin: .7rem 0 0;
+    font-size: .85rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.safety-card__form { margin-top: .9rem; }
+
+/* Scoped the way .voice-reader does it, because this stylesheet has no
+   global [x-cloak] rule. Without it the collapsed form is painted once and
+   then yanked away when Alpine boots — a visible jump on the card a reader
+   is most likely to be staring at. */
+.safety-card [x-cloak] { display: none !important; }
+
+.safety-card__note {
+    width: 100%;
+    padding: .7rem .85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-card);
+    color: var(--text-primary);
+    font-size: .875rem;
+}
+.safety-card__note::placeholder { color: var(--text-muted); opacity: 1; }
+.safety-card__note:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring);
+}
+
+/* Side by side where there is room, stacked full-width on a phone — the two
+   answers must never end up as a narrow pair a thumb can slip between. */
+.safety-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+    margin-top: .7rem;
+}
+.safety-btn {
+    flex: 1 1 12rem;
+    min-height: 3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding: 0 1.1rem;
+    border: 0;
+    border-radius: var(--radius-md);
+    font-size: .95rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background-color var(--t-fast), transform var(--t-fast);
+}
+.safety-btn:active { transform: scale(.98); }
+.safety-btn:focus-visible {
+    outline: var(--focus-ring-width) solid var(--brand-primary);
+    outline-offset: 2px;
+}
+/* Both fills are fixed rather than tokenised to the theme-reactive status
+   colours: these carry white labels, and a status ink that lightens for a
+   dark card would drop the label to about 2:1 on the button. */
+.safety-btn--safe { background: #15803d; color: #ffffff; }
+.safety-btn--safe:hover { background: #166534; }
+.safety-btn--help { background: #b91c1c; color: #ffffff; }
+.safety-btn--help:hover { background: #991b1b; }
+
+.safety-card__change {
+    margin-top: .85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .4rem 0;
+    border: 0;
+    background: none;
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+    cursor: pointer;
+}
+.safety-card__change:hover { text-decoration: underline; }
+
+/* ── The purok pulse ───────────────────────────────────────────────── */
+.safety-pulse {
+    margin-top: 1.1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+.safety-pulse__title {
+    margin: 0 0 .5rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .8rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+.safety-pulse__line {
+    margin: 0;
+    font-size: .85rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+.safety-pulse__bar {
+    margin-top: .6rem;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-card);
+    overflow: hidden;
+}
+.safety-pulse__fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background: var(--status-success);
+    transition: width var(--t-slow);
+}
+
+.safety-pulse__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-top: .6rem;
+}
+.safety-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: .2rem .65rem;
+    border-radius: var(--radius-pill);
+    font-size: .72rem;
+    font-weight: 800;
+    background: var(--surface-card);
+}
+.safety-chip--silent { color: var(--status-warning); }
+.safety-chip--help   { color: var(--status-danger); }
+
+.safety-pulse__nudge {
+    margin: .6rem 0 0;
+    font-size: .8rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+.safety-pulse__private {
+    margin: .55rem 0 0;
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .72rem;
+    /* --text-muted measured 4.34:1 on the amber card tint — under the floor.
+       A line telling someone what is and is not shared about their
+       neighbours is not decoration; it has to be readable. */
+    color: var(--text-secondary);
+}
+.safety-pulse__link {
+    margin-top: .5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+    text-decoration: none;
+}
+.safety-pulse__link:hover { text-decoration: underline; }
+
+.safety-card__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: .85rem;
+    border-top: 1px solid var(--border);
+}
+.safety-card__link {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+    text-decoration: none;
+}
+.safety-card__link:hover { text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+    .safety-btn,
+    .safety-pulse__fill { transition: none; }
+    .safety-btn:active  { transform: none; }
+}
+
+@media (max-width: 420px) {
+    .safety-card       { padding: 1rem .9rem 1.1rem; }
+    .safety-btn        { flex: 1 1 100%; }
+    .safety-card__title { font-size: 1.05rem; }
+}
+

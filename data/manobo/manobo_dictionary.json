@@ -1,0 +1,372 @@
+{
+    "language": {
+        "name": "Manobo",
+        "iso_639_3": "msm"
+    },
+    "entry_count": 40,
+    "generated_at": "2026-09-15T09:51:09+02:00",
+    "generated_by": "tools/build-manobo-json.php from manobo_dictionary.csv",
+    "notice": "Original compilation for community/educational use. See data/manobo/README.md for sources and licensing.",
+    "entries": [
+        {
+            "manobo": "a'baga",
+            "english": "shoulder",
+            "tagalog": "balikat",
+            "part_of_speech": "n.",
+            "category": "body",
+            "notes": "Attested. Written without the stress mark as \"abaga\" elsewhere in the same source; both spellings refer to the same word.",
+            "source": "SIL-FM-T1"
+        },
+        {
+            "manobo": "'abiy",
+            "english": "lip",
+            "tagalog": "labi",
+            "part_of_speech": "n.",
+            "category": "body",
+            "notes": "Attested. The iy spelling is a long i sound.",
+            "source": "SIL-FM-T1"
+        },
+        {
+            "manobo": "mata",
+            "english": "eye",
+            "tagalog": "mata",
+            "part_of_speech": "n.",
+            "category": "body",
+            "notes": "Attested as Manobo. Inherited from Proto-Austronesian *maCa, so the same form appears across many Philippine languages including Tagalog.",
+            "source": "WIKT"
+        },
+        {
+            "manobo": "agid-id",
+            "english": "dirt on the body",
+            "tagalog": "libag",
+            "part_of_speech": "n.",
+            "category": "body",
+            "notes": "Attested. The dash marks a glottal stop after a consonant, so it is part of the spelling and not a hyphen.",
+            "source": "SIL-FM-1.2"
+        },
+        {
+            "manobo": "bakà",
+            "english": "jaw",
+            "tagalog": "panga",
+            "part_of_speech": "n.",
+            "category": "body",
+            "notes": "Attested. The final grave accent marks a glottal stop. Contrasts with baka \"cow\" — see that entry.",
+            "source": "SIL-FM-1.2"
+        },
+        {
+            "manobo": "baka",
+            "english": "cow",
+            "tagalog": "baka",
+            "part_of_speech": "n.",
+            "category": "animals",
+            "notes": "Attested. Minimal pair with bakà \"jaw\": same letters, but this one has no final glottal stop. Loan sharing a form with Tagalog baka.",
+            "source": "SIL-FM-1.2"
+        },
+        {
+            "manobo": "a-ae",
+            "english": "to pant (of a wild boar)",
+            "tagalog": "humingal (ng baboy-ramo)",
+            "part_of_speech": "v.",
+            "category": "animals",
+            "notes": "Attested but very narrow in meaning. The dash marks a glottal stop between vowels. Unlikely to be useful in a barangay context; included because it is directly sourced.",
+            "source": "SIL-FM-1.2"
+        },
+        {
+            "manobo": "o'nom",
+            "english": "six",
+            "tagalog": "anim",
+            "part_of_speech": "num.",
+            "category": "numbers",
+            "notes": "Attested. One of only two numerals recoverable from the accessible source.",
+            "source": "SIL-FM-T1"
+        },
+        {
+            "manobo": "dadu'wa",
+            "english": "two",
+            "tagalog": "dalawa",
+            "part_of_speech": "num.",
+            "category": "numbers",
+            "notes": "Attested. Appears to be a reduplicated form of a root \"duwa\"; the plain root was not visible in the accessible source.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "i'nay",
+            "english": "mother!",
+            "tagalog": "inay!",
+            "part_of_speech": "voc.",
+            "category": "family",
+            "notes": "Attested, and marked in the source as a form used to address a mother directly rather than to refer to one. The plain noun \"mother\" was not visible in the accessible source.",
+            "source": "SIL-FM-T1"
+        },
+        {
+            "manobo": "'ubu",
+            "english": "cough",
+            "tagalog": "ubo",
+            "part_of_speech": "n.",
+            "category": "health",
+            "notes": "Attested.",
+            "source": "SIL-FM-T1"
+        },
+        {
+            "manobo": "hi'lu",
+            "english": "poison",
+            "tagalog": "lason",
+            "part_of_speech": "n.",
+            "category": "health",
+            "notes": "Attested. Minimal pair with 'hilu \"thread\" — the only difference is which syllable is stressed.",
+            "source": "SIL-FM-1.3"
+        },
+        {
+            "manobo": "'hilu",
+            "english": "thread",
+            "tagalog": "sinulid",
+            "part_of_speech": "n.",
+            "category": "household",
+            "notes": "Attested. Minimal pair with hi'lu \"poison\" — the only difference is which syllable is stressed.",
+            "source": "SIL-FM-1.3"
+        },
+        {
+            "manobo": "hi'ngow",
+            "english": "to be drunk",
+            "tagalog": "malasing",
+            "part_of_speech": "v.",
+            "category": "health",
+            "notes": "Attested.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "ti'yahù",
+            "english": "to cry",
+            "tagalog": "umiyak",
+            "part_of_speech": "v.",
+            "category": "health",
+            "notes": "Attested. The final grave accent marks a glottal stop.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "a'lédyik",
+            "english": "allergic",
+            "tagalog": "alerdyi",
+            "part_of_speech": "adj.",
+            "category": "health",
+            "notes": "Attested, but the source gives it as a borrowed word used to demonstrate the j sound. Not native vocabulary.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "wo'hig",
+            "english": "water",
+            "tagalog": "tubig",
+            "part_of_speech": "n.",
+            "category": "nature",
+            "notes": "Attested.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "gu'yangan",
+            "english": "forest",
+            "tagalog": "gubat",
+            "part_of_speech": "n.",
+            "category": "nature",
+            "notes": "Attested.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "so'dà",
+            "english": "viand, food eaten with rice",
+            "tagalog": "ulam",
+            "part_of_speech": "n.",
+            "category": "food",
+            "notes": "Attested. The final grave accent marks a glottal stop.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "baaw",
+            "english": "food taken along on a journey",
+            "tagalog": "baon",
+            "part_of_speech": "n.",
+            "category": "food",
+            "notes": "Attested. Pronounced ba-aw; the glottal stop between the vowels is not written.",
+            "source": "SIL-FM-1.2"
+        },
+        {
+            "manobo": "ma'mà",
+            "english": "betel nut chew",
+            "tagalog": "nganga",
+            "part_of_speech": "n.",
+            "category": "food",
+            "notes": "Attested. The final grave accent marks a glottal stop.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "ri'pulyu",
+            "english": "cabbage",
+            "tagalog": "repolyu",
+            "part_of_speech": "n.",
+            "category": "food",
+            "notes": "Attested, but a Spanish-derived loan rather than native vocabulary.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "'aehu",
+            "english": "pestle",
+            "tagalog": "halo (pambayo)",
+            "part_of_speech": "n.",
+            "category": "household",
+            "notes": "Attested. The ae spelling is a distinct vowel of Manobo.",
+            "source": "SIL-FM-T1"
+        },
+        {
+            "manobo": "'kambue",
+            "english": "a kind of basket",
+            "tagalog": "isang uri ng basket",
+            "part_of_speech": "n.",
+            "category": "household",
+            "notes": "Attested, but the source does not say which kind of basket. The ue spelling is a distinct vowel of Manobo.",
+            "source": "SIL-FM-T1"
+        },
+        {
+            "manobo": "'ngadan",
+            "english": "name",
+            "tagalog": "pangalan",
+            "part_of_speech": "n.",
+            "category": "civic",
+            "notes": "Attested.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "'yukos",
+            "english": "male",
+            "tagalog": "lalaki",
+            "part_of_speech": "n.",
+            "category": "person",
+            "notes": "Attested.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "ni'pis",
+            "english": "thin",
+            "tagalog": "manipis",
+            "part_of_speech": "adj.",
+            "category": "descriptive",
+            "notes": "Attested.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "'panow",
+            "english": "to walk",
+            "tagalog": "maglakad",
+            "part_of_speech": "v.",
+            "category": "everyday",
+            "notes": "Attested.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "'baktas",
+            "english": "to hike",
+            "tagalog": "magbaktas",
+            "part_of_speech": "v.",
+            "category": "everyday",
+            "notes": "Attested.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "'yaguy",
+            "english": "to run",
+            "tagalog": "tumakbo",
+            "part_of_speech": "v.",
+            "category": "everyday",
+            "notes": "Attested as a root. The source uses it to show how affixes attach — see miglinaguy.",
+            "source": "SIL-FM-2"
+        },
+        {
+            "manobo": "miglinaguy",
+            "english": "is running",
+            "tagalog": "tumatakbo",
+            "part_of_speech": "v.",
+            "category": "everyday",
+            "notes": "Attested as an inflected form of 'yaguy, not a separate root. mig- marks a begun action and the infix -in- marks a continuing one; the root's y becomes l before i. Source sentence: miglinaguy a \"I am running\".",
+            "source": "SIL-FM-2"
+        },
+        {
+            "manobo": "bo'goy",
+            "english": "to give",
+            "tagalog": "magbigay",
+            "part_of_speech": "v.",
+            "category": "everyday",
+            "notes": "Attested as a root. With the paN- prefix it becomes pamogoy, because b changes to m after a nasal prefix.",
+            "source": "SIL-FM-2"
+        },
+        {
+            "manobo": "'tabak",
+            "english": "to answer",
+            "tagalog": "sumagot",
+            "part_of_speech": "v.",
+            "category": "everyday",
+            "notes": "Attested as a root. With the paN- prefix it becomes panabak, because t changes to n after a nasal prefix.",
+            "source": "SIL-FM-2"
+        },
+        {
+            "manobo": "'kabò",
+            "english": "to clothe",
+            "tagalog": "damitan",
+            "part_of_speech": "v.",
+            "category": "everyday",
+            "notes": "Attested as a root. With the paN- prefix it becomes pangabò, because k changes to ng after a nasal prefix. Final grave accent marks a glottal stop.",
+            "source": "SIL-FM-2"
+        },
+        {
+            "manobo": "la'ba",
+            "english": "to launder",
+            "tagalog": "maglaba",
+            "part_of_speech": "v.",
+            "category": "everyday",
+            "notes": "Attested. Shares a form with Tagalog laba.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "'kanta",
+            "english": "to sing",
+            "tagalog": "kumanta",
+            "part_of_speech": "v.",
+            "category": "everyday",
+            "notes": "Attested. Shares a form with Tagalog/Cebuano kanta, ultimately a Spanish loan.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "ja'bu",
+            "english": "to spill",
+            "tagalog": "matapon",
+            "part_of_speech": "v.",
+            "category": "everyday",
+            "notes": "Attested. Manobo j is pronounced like English j.",
+            "source": "SIL-FM-T2"
+        },
+        {
+            "manobo": "sed",
+            "english": "inside",
+            "tagalog": "loob",
+            "part_of_speech": "prep.",
+            "category": "grammar",
+            "notes": "Attested.",
+            "source": "SIL-FM-T1"
+        },
+        {
+            "manobo": "meydu'on",
+            "english": "there is",
+            "tagalog": "mayroon",
+            "part_of_speech": "exis.",
+            "category": "grammar",
+            "notes": "Attested. Existential word.",
+            "source": "SIL-FM-T1"
+        },
+        {
+            "manobo": "a",
+            "english": "I",
+            "tagalog": "ako",
+            "part_of_speech": "pro.",
+            "category": "grammar",
+            "notes": "Attested only inside the example sentence miglinaguy a \"I am running\", where it follows the verb. Listed separately because it is a distinct word, but its full pronoun set was not visible in the accessible source.",
+            "source": "SIL-FM-2"
+        }
+    ]
+}

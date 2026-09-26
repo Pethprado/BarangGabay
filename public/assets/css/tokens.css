@@ -1,0 +1,332 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   BarangGabay — design tokens
+   ═══════════════════════════════════════════════════════════════════════
+
+   The single source of truth for colour, shape, depth and motion. Loaded
+   FIRST by every layout and by the standalone auth pages, so one edit here
+   reaches the resident side, the admin panel and the login screen together.
+
+   Why this file exists
+   ────────────────────
+   These values used to live in three places — main.css, admin.css and the
+   login page's own <style> block — and they had already drifted apart:
+   --surface-muted was #f1f5f9 on the resident side and #f8fbf9 in the admin
+   panel, for the same intended colour. Drift like that is invisible until
+   two pages sit side by side.
+
+   Where the values come from
+   ──────────────────────────
+   The login redesign. Its palette is the direction the rest of the system is
+   moving toward, and it is also the more accessible of the two sets: the
+   older --text-muted (#94a3b8) measures 2.56:1 on a white card, below the
+   4.5:1 minimum for body text. The value here measures 4.83:1.
+
+   Rules this file keeps
+   ─────────────────────
+   1. Every colour is declared in the light :root first. The dark blocks only
+      OVERRIDE; no colour exists solely in a dark block, so nothing can be
+      missing from one theme.
+   2. Dark is declared twice — once for the explicit [data-theme="dark"]
+      toggle and once for the OS preference — and the two must stay identical.
+      A token added to one and forgotten in the other renders differently
+      depending on how the reader arrived at dark mode.
+   3. Every text colour carries its measured contrast in a comment. If a value
+      changes, the number is re-measured, not assumed.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+
+    /* ── Surfaces ──────────────────────────────────────────────────────
+       page   : behind everything
+       card   : the main content surface
+       raised : a card sitting on another card
+       muted  : subtle fills — chips, table stripes, inert areas
+       input  : form fields, deliberately distinct from card
+       panel  : the dark brand panel. The SAME in both themes on purpose —
+                it is the system's constant, the way a letterhead is. */
+    --surface-page:     #f7f9fc;
+    --surface-card:     #ffffff;
+    --surface-raised:   #ffffff;
+    --surface-muted:    #f1f5f9;
+    --surface-input:    #f6f8fb;
+
+    --surface-panel:    #14204a;   /* indigo, deep end   */
+    --surface-panel-2:  #1e2f6b;   /* indigo, light end  */
+
+    /* ── Text ──────────────────────────────────────────────────────────
+       Measured against --surface-card in this theme. */
+    --text-primary:     #111827;   /* 17.74:1 on #ffffff */
+    --text-secondary:   #4b5563;   /*  7.56:1 on #ffffff */
+    --text-muted:       #6b7280;   /*  4.83:1 on #ffffff */
+
+    /* Text that sits on the dark panel, in either theme.
+       Measured against the lighter end of the panel gradient (#1e2f6b),
+       which is the harder of the two. */
+    --text-on-panel:        rgba(255,255,255,.96);  /* 12.54:1 */
+    --text-on-panel-soft:   rgba(255,255,255,.82);  /*  8.95:1 */
+    --text-on-panel-faint:  rgba(255,255,255,.70);  /*  6.96:1 */
+
+    /* ── Brand ─────────────────────────────────────────────────────────
+       --brand-primary is the colour of TEXT and icons: links, active
+       labels, accents. It lightens in dark mode so a link stays legible on
+       a dark card. Never put white text on it — see the action tokens. */
+    --brand-primary:        #1652f0;
+    --brand-primary-dark:   #1041c4;
+    --brand-primary-light:  #e8effe;
+    --brand-secondary:      #0d9488;
+    --brand-secondary-dark: #0f766e;
+    --brand-secondary-light:#ccfbf1;
+
+    /* ── Actions — a SOLID fill that carries white text ────────────────
+       These are deliberately separate from --brand-primary, and they do
+       NOT change in dark mode.
+
+       One name was doing both jobs across this codebase: link colour and
+       button fill. The two pull in opposite directions. A link on a dark
+       card has to get lighter to stay readable; a button whose label is
+       white has to stay dark for the same reason. Tying them together
+       meant every solid button in the app measured about 3.3:1 in dark
+       mode — below the 4.5:1 floor — and lightening the link further
+       would have pushed it to roughly 2.6:1.
+
+       So: text accents lighten, action surfaces hold still.
+         white on --action-solid        6.00:1
+         white on --action-solid-hover  8.59:1 */
+    --action-solid:       #1652f0;
+    --action-solid-hover: #1041c4;
+    --text-on-action:     #ffffff;
+
+    /* ── Role accents ──────────────────────────────────────────────────
+       So a user can tell at a glance which part of the system they are in.
+       These are the same values AuthController already hands the login page
+       for its entry doors — named here so they stop being one-off literals. */
+    --role-resident:    #1652f0;
+    --role-staff:       #0d9488;
+    --role-admin:       #7c3aed;
+    --role-system:      #334155;
+
+    /* ── Status ────────────────────────────────────────────────────────
+       Semantic, not brand: success stays green and danger stays red in
+       every theme. Only the LIGHTNESS flips, because these are text
+       colours painted on their own pale tint — and that tint goes dark.
+       Held here rather than in main.css and admin.css, which each carried
+       their own identical copy, so a dark value added to one would have
+       been missing from the other. */
+    --status-success:    #15803d;   /* 4.54:1 on #ffffff */
+    --status-warning:    #b45309;   /* 4.52:1 on #ffffff */
+    --status-danger:     #b91c1c;   /* 6.24:1 on #ffffff */
+    --status-info:       #0369a1;   /* 5.57:1 on #ffffff */
+
+    --status-success-bg: #dcfce7;
+    --status-warning-bg: #fef3c7;
+    --status-danger-bg:  #fee2e2;
+    --status-info-bg:    #e0f2fe;
+
+    /* ── Lines and focus ───────────────────────────────────────────────── */
+    --border:           #d8dee9;
+    --border-strong:    #b9c3d4;
+    --focus-ring:       rgba(22,82,240,.35);
+    --focus-ring-width: 3px;
+
+    /* ── Shape ─────────────────────────────────────────────────────────── */
+    --radius-sm:  .4rem;
+    --radius-md:  .6rem;
+    --radius-lg:  .75rem;
+    --radius-xl:  1.25rem;
+
+    /* ── Depth ─────────────────────────────────────────────────────────── */
+    --shadow-card:  0 1px 2px rgba(15,23,42,.06), 0 2px 8px rgba(15,23,42,.05);
+    --shadow-lift:  0 6px 18px rgba(15,23,42,.10);
+    --shadow-modal: 0 28px 70px rgba(0,0,0,.45), 0 4px 18px rgba(0,0,0,.25);
+
+    /* ── Motion ────────────────────────────────────────────────────────
+       The login animation's timings, named so every other surface can move
+       the same way instead of each page inventing its own duration.
+       Anything using these must still be wrapped in a reduced-motion query —
+       a token cannot switch itself off. */
+    --motion-panel:  .56s;                        /* the two halves meeting  */
+    --motion-rise:   .42s;                        /* a field fading upward   */
+    --motion-exit:   .22s;                        /* leaving for another page*/
+    --motion-drift:  54s;                         /* the background motif    */
+    --stagger-step:  60ms;                        /* between staggered items */
+
+    --ease-out-soft: cubic-bezier(.22,.9,.3,1);   /* settles, does not bounce */
+    --ease-out:      ease-out;
+    --ease-in:       ease-in;
+
+    /* ── Motif ─────────────────────────────────────────────────────────
+       See .bg-motif at the foot of this file. Kept as tokens so the texture
+       can be tuned in one place rather than per surface. */
+    --motif-a:    rgba(201,139,46,.10);   /* warm ochre  */
+    --motif-b:    rgba(168,68,44,.10);    /* clay red    */
+    --motif-size: 120px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DARK — explicit toggle
+   Only overrides. Anything absent here keeps its light value on purpose.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] {
+    --surface-page:     #0b1220;
+    --surface-card:     #131b2c;
+    --surface-raised:   #1b2436;
+    --surface-muted:    #1b2436;
+    --surface-input:    #1b2436;
+
+    --text-primary:     #e7ecf3;   /* 14.49:1 on #131b2c */
+    --text-secondary:   #b6c0cf;   /*  9.36:1 on #131b2c */
+    --text-muted:       #94a3b8;   /*  6.71:1 on #131b2c */
+
+    --brand-primary:        #7ba4ff;   /* 7.04:1 on #131b2c — a link must
+                                          stay legible, so the accent
+                                          lightens rather than holding its
+                                          light-mode hex */
+    --brand-primary-dark:   #9cc0ff;
+    --brand-primary-light:  #16233f;
+    --brand-secondary:      #2dd4bf;
+    --brand-secondary-light:#0f2e2b;
+
+    --role-resident:    #7ba4ff;
+    --role-staff:       #2dd4bf;
+    --role-admin:       #c4b5fd;
+    --role-system:      #94a3b8;
+
+    --border:           #2d3854;
+    --border-strong:    #3d4a66;
+    --focus-ring:       rgba(123,164,255,.45);
+
+    /* The status tints go dark, so the ink on them has to go light. Leaving
+       the ink at its light-mode value is how a badge ends up dark-green on
+       dark-green — painted, and unreadable. */
+    --status-success:    #6ee7a8;
+    --status-warning:    #fcd34d;
+    --status-danger:     #ff9d9d;
+    --status-info:       #7dd3fc;
+
+    --status-success-bg: rgba(34,197,94,.15);
+    --status-warning-bg: rgba(217,119,6,.18);
+    --status-danger-bg:  rgba(220,38,38,.18);
+    --status-info-bg:    rgba(56,189,248,.16);
+
+    --shadow-card:  0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.30);
+    --shadow-lift:  0 6px 18px rgba(0,0,0,.45);
+
+    /* The motif reads as noise on a dark ground, so it is quieter still. */
+    --motif-a: rgba(201,139,46,.07);
+    --motif-b: rgba(168,68,44,.07);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DARK — OS preference
+   Byte-identical to the block above. They must not drift: a reader who never
+   touched the toggle would otherwise see a different page from one who did.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --surface-page:     #0b1220;
+        --surface-card:     #131b2c;
+        --surface-raised:   #1b2436;
+        --surface-muted:    #1b2436;
+        --surface-input:    #1b2436;
+
+        --text-primary:     #e7ecf3;
+        --text-secondary:   #b6c0cf;
+        --text-muted:       #94a3b8;
+
+        --brand-primary:        #7ba4ff;
+        --brand-primary-dark:   #9cc0ff;
+        --brand-primary-light:  #16233f;
+        --brand-secondary:      #2dd4bf;
+        --brand-secondary-light:#0f2e2b;
+
+        --role-resident:    #7ba4ff;
+        --role-staff:       #2dd4bf;
+        --role-admin:       #c4b5fd;
+        --role-system:      #94a3b8;
+
+        --border:           #2d3854;
+        --border-strong:    #3d4a66;
+        --focus-ring:       rgba(123,164,255,.45);
+
+        --status-success:    #6ee7a8;
+        --status-warning:    #fcd34d;
+        --status-danger:     #ff9d9d;
+        --status-info:       #7dd3fc;
+
+        --status-success-bg: rgba(34,197,94,.15);
+        --status-warning-bg: rgba(217,119,6,.18);
+        --status-danger-bg:  rgba(220,38,38,.18);
+        --status-info-bg:    rgba(56,189,248,.16);
+
+        --shadow-card:  0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.30);
+        --shadow-lift:  0 6px 18px rgba(0,0,0,.45);
+
+        --motif-a: rgba(201,139,46,.07);
+        --motif-b: rgba(168,68,44,.07);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THE MOTIF — AN ORIGINAL ABSTRACT PATTERN, NOT MANOBO DESIGN
+   ═══════════════════════════════════════════════════════════════════════
+
+   Diamonds and chevrons drawn with CSS gradients. It is deliberately
+   generic geometry.
+
+   It is NOT Manobo design. It is not derived from any Manobo textile,
+   emblem or motif, and it must never be described as such anywhere in this
+   project or its documentation. A government portal serving a Manobo
+   community that decorated itself with an invented "tribal-looking" pattern
+   would be appropriating the community it exists to serve.
+
+   For the real thing there is a slot, not a substitute — see
+   public/images/README.md. If the community provides an emblem or a
+   photographed textile, with permission and with a credit line, it is
+   rendered where the slot is. If they provide nothing, nothing is rendered.
+
+   USE SPARINGLY. Behind a logo, a page header, an empty state or an auth
+   page. NEVER behind body text, a table or a form field: the texture costs
+   contrast, and body text keeps 4.5:1 everywhere.
+   ═══════════════════════════════════════════════════════════════════════ */
+.bg-motif {
+    position: relative;
+    isolation: isolate;
+}
+.bg-motif::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+        repeating-linear-gradient(135deg, var(--motif-a) 0 14px, transparent 14px 38px),
+        repeating-linear-gradient(45deg,  var(--motif-b) 0 14px, transparent 14px 38px);
+    background-size: var(--motif-size) var(--motif-size);
+}
+
+/* The slow drift, offered as an opt-in class rather than applied to every
+   motif — a texture that moves behind a page header would be a distraction,
+   where behind a full-screen auth background it is the point. */
+.bg-motif--drift::before {
+    animation: motifDrift var(--motion-drift) linear infinite;
+}
+
+@keyframes motifDrift {
+    from { background-position: 0 0, 0 0; }
+    to   { background-position: 240px 240px, -240px 240px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   A global floor. Individual stylesheets still declare their own reduced
+   -motion rules for the animations they own; this catches the tokens.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --motion-panel: .01ms;
+        --motion-rise:  .01ms;
+        --motion-exit:  .01ms;
+        --stagger-step: 0ms;
+    }
+    .bg-motif--drift::before { animation: none; }
+}

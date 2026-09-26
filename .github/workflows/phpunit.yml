@@ -1,0 +1,40 @@
+name: PHP Unit Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v4
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "COMPOSER_CACHE_DIR=$(composer config cache-files-dir)" >> $GITHUB_ENV
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.COMPOSER_CACHE_DIR }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock', 'composer.json') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Strip BOMs
+        run: php tools/strip_bom.php
+
+      - name: Run PHPUnit
+        run: composer test

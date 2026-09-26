@@ -1,0 +1,415 @@
+bisaya,english,tagalog,part_of_speech,category,notes,source
+Balay,home,"tahanan,home",n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Mga Pahibalo",announcements,"mga anunsyo",n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pahibalo,"announcement,notice","anunsyo,pabatid,paunawa",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Mga Kalihokan",events,"mga kaganapan",n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kalihokan,"event,activity","kaganapan,aktibidad",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Mga Ordinansa",ordinances,"mga ordinansa",n.,interface,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+ordinansa,ordinance,ordinansa,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Mga Abiso",notifications,"mga abiso",n.,interface,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+abiso,notification,abiso,n.,interface,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+sugyot,"feedback,suggestion","puna,mungkahi",n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Akong Profile","my profile","aking profile",n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pangita,search,"maghanap,hanapin,paghahanap",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tipigi,save,"i-save,iligtas",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tagoa,hide,itago,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kanselaha,cancel,"kanselahin,ikansela",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tangtanga,"delete,remove","tanggalin,alisin,burahin",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+usba,"edit,change,update","i-edit,baguhin,i-update",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+balik,"back,return","bumalik,bumalik",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sunod,next,susunod,adj.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+ipadala,"send,submit","ipadala,isumite",v.,interface,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+tak-opi,close,isara,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+ablihi,open,buksan,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tabang,"help,assistance","tulong,ayuda",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tabangi,"to help",tulungan,v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pili,"choose,select","pumili,piliin",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+i-klik,click,i-click,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+idugang,add,"idagdag,magdagdag",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kopyaha,copy,kopyahin,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kumpirmaha,confirm,kumpirmahin,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tan-awa,"view,look,see","tingnan,tignan,makita",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Tan-awa tanan","view all,see all","tingnan ang lahat,tignan ang lahat",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Basaha ang dugang","read more","magbasa ng higit,basahin ang higit",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Sulod,"sign in,log in,login","mag-login,mag-sign in",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Gawas,"sign out,log out,logout","mag-logout,mag-sign out",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Pagparehistro,"register,sign up","magparehistro,magrehistro",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+nagkarga,loading,"naglo-load,naglo-load...",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+lista,list,listahan,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+panid,page,pahina,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kinatibuk-an,total,kabuuan,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kahimtang,status,katayuan,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+titulo,title,pamagat,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+detalye,details,"detalye,mga detalye",n.,interface,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"labing bag-o","latest,newest",pinakabago,adj.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sayop,"error,wrong,mistake","kamalian,mali",n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+husto,"correct,right",tama,adj.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+malampuson,"success,successful","tagumpay,matagumpay",adj.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+napakyas,failed,"nabigo,hindi nagtagumpay",adj.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sulayi,try,subukan,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Sulayi pag-usab","try again","subukan muli,subukang muli",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pag-usab,again,muli,adv.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+napadala,sent,naipadala,adj.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+nadawat,received,natanggap,adj.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"wala pa mabasa",unread,"hindi pa nabasa",adj.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Markahi tanan nga nabasa","mark all as read,mark all read","markahan ang lahat na nabasa,markahang nabasa ang lahat",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Idugang sa kalendaryo","add to calendar","idagdag sa kalendaryo",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Nagpadayon karon","happening now","nagaganap ngayon",phr.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+hubara,translate,isalin,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+hubad,translation,"salin,pagsasalin",n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pinulongan,language,wika,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pangutana,"question,ask","tanong,magtanong",n.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tubag,"answer,reply","sagot,tugon",n.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+mensahe,message,mensahe,n.,interface,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+ngalan,name,pangalan,n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Tibuok nga ngalan","full name","buong pangalan",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+puy-anan,"address,residence","tirahan,tinitirhan",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+telepono,"phone,telephone",telepono,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+petsa,date,petsa,n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+oras,"time,hour",oras,n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+nagpaabot,"pending,waiting","nakabinbin,naghihintay",adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+umaabot,upcoming,"paparating,darating",adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+nagpadayon,ongoing,"nagaganap,kasalukuyan",adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+nahuman,"completed,done,finished","nakumpleto,natapos",adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+gikansela,"cancelled,canceled","kinansela,nakansela",adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+dinalian,urgent,"kagyat,apurahan",adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+importante,important,mahalaga,adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"importante nga","important (before a noun)",mahalagang,adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+bag-o,new,,adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+bag-ong,"new (before a noun)",bagong,adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"labing bag-ong","newest (before a noun)",pinakabagong,adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+abli,"open (not closed)","bukas (hindi sarado)",adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sirado,closed,sarado,adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kinahanglanon,required,kinakailangan,adj.,status,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+libre,"free,free of charge","libre,walang bayad",adj.,status,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+karon,"now,today",ngayon,adv.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Karong adlawa",today,"ngayong araw",adv.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+ugma,tomorrow,bukas,adv.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+gahapon,yesterday,kahapon,adv.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+adlaw,day,araw,n.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+semana,week,linggo,n.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+bulan,month,buwan,n.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tuig,year,taon,n.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+buntag,morning,umaga,n.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+udto,noon,tanghali,n.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+hapon,afternoon,hapon,n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+gabii,"night,evening",gabi,n.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sayo,early,maaga,adj.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+ulahi,"late,last",huli,adj.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sugod,"start,begin","simula,magsimula",v.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+katapusan,end,"wakas,dulo",n.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+hangtod,until,hanggang,prep.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"sa dili pa",before,"bago ang,bago sa",prep.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+human,after,pagkatapos,prep.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+una,first,una,adj.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Maayong buntag","good morning","magandang umaga",phr.,greetings,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Maayong hapon","good afternoon","magandang hapon",phr.,greetings,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Maayong gabii","good evening","magandang gabi",phr.,greetings,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Maayong pag-abot",welcome,"maligayang pagdating",phr.,greetings,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+salamat,"thank you,thanks",salamat,phr.,greetings,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+palihug,please,"pakiusap,pakiusap po",adv.,greetings,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+oo,yes,"oo,opo",adv.,greetings,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+dili,"no,not",hindi,adv.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+ayaw,"don't,do not",huwag,adv.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+ang,the,ang,art.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+mga,"(plural marker)",mga,art.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+sa,"at,in,to,of",sa,prep.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+ug,and,at,conj.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+o,or,o,conj.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+kung,"if,whether",kung,conj.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+para,for,para,prep.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+gikan,from,"mula,mula sa",prep.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+uban,with,kasama,prep.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+aron,"so that,in order to","upang,para",conj.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"tungod kay",because,"dahil,sapagkat",conj.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+na,already,na,adv.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+pa,"still,yet","pa,pa rin",adv.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+ra,only,"lamang,lang,tanging",adv.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pud,"also,too","rin,din,pa rin",adv.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kaayo,very,"lubhang,sobra",adv.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+labaw,more,"higit,mas",adv.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tanan,"all,everyone,everything","lahat,lahat",pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+wala,"none,nothing",wala,pro.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+walay,"no (none of)",walang,adj.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+adunay,"there is,there are","may,mayroon",exis.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+dinhi,here,"dito,rito",adv.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+didto,there,"doon,roon",adv.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kini,this,"ito,ito ay",pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kana,that,"iyon,iyan",pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+unsa,what,ano,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+asa,where,saan,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kanus-a,"when (question)",kailan,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kinsa,who,sino,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+ikayo,"you (singular)",ikaw,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+ngano,why,bakit,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+unsaon,how,paano,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pila,"how many,how much","ilan,magkano",pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+imong,your,"iyong,ang iyong,iyong",pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+inyong,"your (plural)",inyong,pro.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+akong,my,aking,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+among,"our (not including you)",aming,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+atong,"our (including you)",ating,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+ikayo,you,"ikayo,kayo",pro.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+kamo,"you (plural)",kayo,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kami,we,kami,pro.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+kita,"we (including you)","kita,tayo",pro.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+sila,they,sila,pro.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+siya,"he,she",siya,pro.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+ilang,their,"kanilang,kanilang",pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kinahanglan,"need,must","kailangan,kinakailangan",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+gusto,"want,like","nais,gusto,ibig",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+mahibalo,"know,to find out","malaman,alamin,makaalam",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+masabtan,understand,"maintindihan,maunawaan",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+paminaw,listen,"makinig,pakinggan",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+basaha,read,"basahin,magbasa",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+isulat,write,"isulat,magsulat",v.,everyday,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+adto,go,"pumunta,magtungo",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+anhi,come,"halika,pumarito",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tambong,attend,dumalo,v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+apil,"join,participate","sumali,lumahok",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tawag,call,"tumawag,tawag",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+paabot,wait,"maghintay,hintay",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+hatag,give,"ibigay,magbigay",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+bayri,pay,"magbayad,bayaran",v.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+bakwit,evacuate,lumikas,v.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+dako,"big,large",malaki,adj.,descriptive,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+gamay,"small,little",maliit,adj.,descriptive,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+maayo,good,"mabuti,maganda",adj.,descriptive,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+daotan,bad,masama,adj.,descriptive,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+luwas,safe,ligtas,adj.,descriptive,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+barangay,barangay,barangay,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+molupyo,resident,"residente,taga-rito",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Mga Molupyo",residents,"mga residente",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+opisyal,official,opisyal,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Mga Opisyal sa Barangay","barangay officials","mga opisyal ng barangay",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kapitan,captain,kapitan,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+gobyerno,government,"pamahalaan,gobyerno",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+balaod,law,batas,n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+lagda,"rule,policy","alituntunin,patakaran",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kasayuran,information,impormasyon,n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+balita,news,balita,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+pahinumdom,reminder,paalala,n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pasidaan,"warning,advisory","babala,babalang",n.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+katilingban,community,"komunidad,pamayanan",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tigom,meeting,"pulong,pagpupulong",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+panagtigom,assembly,"asembliya,pagtitipon",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+hinabang,"relief,aid","ayuda,tulong",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+serbisyo,service,serbisyo,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+programa,program,programa,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+dokumento,document,dokumento,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+dapit,"place,location,venue","lugar,lokasyon",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kabalaka,concern,"hinaing,alalahanin",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+reklamo,complaint,reklamo,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+bayranan,fee,bayarin,n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kwarta,money,"pera,salapi",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+eskwelahan,school,"paaralan,eskwelahan",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+trabaho,"work,job","trabaho,gawain",n.,livelihood,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+uma,"farm,field","bukid,sakahan",n.,livelihood,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+isda,fish,isda,n.,livelihood,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+pagkaon,food,pagkain,n.,food,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+bugas,"rice (uncooked)",bigas,n.,food,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tubig,water,tubig,n.,nature,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+kuryente,"electricity,power",kuryente,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+dalan,"road,street","kalsada,daan",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+balay,house,bahay,n.,household,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tawo,person,tao,n.,person,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Mga Tawo",people,"mga tao",n.,person,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pamilya,family,pamilya,n.,family,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+bata,child,bata,n.,family,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Mga Bata",children,"mga bata",n.,family,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+tigulang,"elderly,senior citizen","matanda,nakatatanda",n.,family,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+inahan,mother,"ina,nanay",n.,family,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+amahan,father,"ama,tatay",n.,family,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+babaye,"woman,female",babae,n.,person,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+higala,friend,kaibigan,n.,person,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+silingan,neighbor,kapitbahay,n.,person,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+panglawas,health,kalusugan,n.,health,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+nasakit,sick,"may sakit,maysakit",adj.,health,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sakit,"illness,sickness","sakit,karamdaman",n.,health,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+tambal,medicine,gamot,n.,health,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+doktor,doctor,doktor,n.,health,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+ospital,hospital,ospital,n.,health,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+bakuna,vaccine,bakuna,n.,health,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+emerhensiya,emergency,"emerhensiya,emergency",n.,emergency,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+kapeligrohan,danger,panganib,n.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kaluwasan,safety,kaligtasan,n.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+baha,flood,baha,n.,emergency,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+bagyo,"typhoon,storm","bagyo,unos",n.,emergency,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+ulan,rain,ulan,n.,emergency,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+linog,earthquake,lindol,n.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sunog,fire,sunog,n.,emergency,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+pagbakwit,evacuation,paglikas,n.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Evacuation Center","evacuation center","evacuation center",n.,emergency,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"pagdahili sa yuta",landslide,"pagguho ng lupa",n.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+dagat,sea,dagat,n.,nature,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+suba,river,ilog,n.,nature,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+bukid,mountain,bundok,n.,nature,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+yuta,"land,soil",lupa,n.,nature,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+among,"our (exclusive)","namin,amin",pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+inyo,"yours (plural)","ninyo,inyo",pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+imong,"your (short form)",mong,pro.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sukad,since,"noong,mula noong",prep.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tibuok,"whole,entire","buong,buo",adj.,descriptive,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"duha ka","two (before a noun)",dalawang,num.,numbers,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+duha,two,dalawa,num.,numbers,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+usa,one,isa,num.,numbers,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tulo,three,tatlo,num.,numbers,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+kontaka,"contact,get in touch","makipag-ugnayan,kontakin",v.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+panaghisgot,conversation,"usapan,pag-uusap",n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pagpadala,"send (a message)",magpadala,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+nabasa,"read (already)","nabasa,nababasa,nababasang",adj.,interface,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+gimarkahan,marked,namarkahan,adj.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+markahi,mark,markahan,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pagtan-aw,viewing,pagtingin,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sulayi,"try (command)","subukan,subukang",v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tan-awa,"look (command)",tignan,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+bisita,visit,"bisita,pagbisita",n.,everyday,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+minuto,minute,minuto,n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+beripikado,verified,"beripikado,beripikadong,na-verify",adj.,status,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+beripikasyon,verification,"beripikasyon,pagpapatunay",n.,status,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+email,email,"email,e-mail",n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+link,link,link,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+inbox,inbox,inbox,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+password,password,password,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+account,account,account,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+code,code,code,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+profile,profile,profile,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+upload,upload,"upload,i-upload",v.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+file,file,file,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+online,online,online,adj.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+verification,verification,verification,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Menu,menu,Menu,n.,interface,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Usba ang tema","change theme","Palitan ang tema",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tema,theme,tema,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Diksyonaryo,dictionary,Diksyunaryo,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Pagdugang ug pulong","add words","Magdagdag ng salita",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pulong,word,salita,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+English,English,English,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Filipino,Filipino,Filipino,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Manobo,Manobo,Manobo,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Himoa,create,Gumawa,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Walay nakit-an.","no results","Walang nahanap.",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+nakit-an,found,nahanap,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Zone,zone,Zone,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+(opsyonal),optional,(opsyonal),adj.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+I-download,download,I-download,v.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Kategorya,category,Kategorya,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Tanan nga Kategorya","all categories","Lahat ng Kategorya",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Urgency,urgency,Urgency,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Tanan nga Urgency","all urgency","Lahat ng Urgency",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Normal,normal,Normal,adj.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+I-reset,reset,I-reset,v.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+resulta,result,resulta,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"resulta para sa","results for","resulta para sa",phr.,interface,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+laing,"other (before a noun)",ibang,adj.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Sulayi ang laing keyword.","try another keyword","Subukan ang ibang keyword.",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Hawani ang mga filter","clear filters","I-clear ang mga filter",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Kalabot nga Pahibalo","related announcement","Kaugnay na Anunsyo",phr.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Kalendaryo,calendar,Kalendaryo,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Calendar View","calendar view","Calendar View",n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Organisador,organizer,Organisador,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+mapa,map,mapa,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Mapa sa Dapit","venue map","Mapa ng Lugar",phr.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sumaryo,summary,buod,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Tan-awa ang Sumaryo","view summary","Tingnan ang Buod",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+I-simplify,simplify,I-simplify,v.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Nakopya!,copied,Nakopya!,v.,interface,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"ordinansa ang nakit-an","ordinances found","ordinansa ang nahanap",phr.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Network error. Sulayi pag-usab.","network error","Network error. Subukan muli.",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Wala pay abiso.","no notifications yet","Wala pang abiso.",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Aduna kay","you have","Mayroon kang",phr.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Ning Semanaha","this week","Linggong Ito",phr.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Bag-o pa lang","just now","Kakarating pa lang",phr.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+milabay,ago,nakakaraan,v.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+":n min. ang milabay",":n minutes ago",":n min. ang nakakaraan",phr.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+":n oras ang milabay",":n hours ago",":n oras ang nakakaraan",phr.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+":n adlaw ang milabay",":n days ago",":n araw ang nakakaraan",phr.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Feedback ug Pangutana","feedback and questions","Feedback at Katanungan",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Mensahe o Pangutana","message or question","Mensahe o Katanungan",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Gisugdan :date","started :date","Sinimulan :date",phr.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Staff,staff,Staff,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Admin,admin,Admin,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Super Admin","super admin","Super Admin",n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Wala ka pay napadalang mensahe.","you have not sent any messages yet","Wala ka pang naipadalang mensahe.",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+litrato,photo,larawan,n.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Usba ang litrato","change photo","Palitan ang larawan",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Tipigi ang Kausaban","save changes","I-save ang Pagbabago",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Usba ang Password","change password","Palitan ang Password",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Karon nga Password","current password","Kasalukuyang Password",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+miyembro,member,miyembro,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Miyembro sukad :date","member since :date","Miyembro mula :date",phr.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Pinulongang Manobo","Manobo language","Wikang Manobo",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Hubara sa Manobo","translate to Manobo","Isalin sa Manobo",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Nahubad na",translated,"Naisalin na",adj.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Gihubad…,translating,Isinasalin…,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Gihubad sa Pinulongang Manobo…","translating to Manobo","Isinasalin sa Wikang Manobo…",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Hunonga,stop,Itigil,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+tingog,voice,boses,n.,everyday,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Bilis sa tingog:","voice speed","Bilis ng boses:",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Diksyonaryong Manobo","Manobo dictionary","Diksyunaryong Manobo",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Pangita ug pulong","search for a word","Maghanap ng salita",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+I-filter,filter,I-filter,v.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+I-clear,clear,I-clear,v.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Tinubdan,source,Sanggunian,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Pulong-por-pulong,"word by word",Salita-por-salita,phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Wala pa matala:","not yet recorded","Hindi pa naitatala:",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Kadiyot lang.","please wait","Sandali lang po.",phr.,greetings,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Walay pulong nga mohaum sa pagpangita.","no matching words","Walang salitang tumutugma sa paghahanap.",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Wala available ang diksyonaryo karon.","dictionary unavailable","Hindi available ang diksyunaryo sa ngayon.",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Tak-opi ang chat","close chat","Isara ang chat",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Ablihi ang AI chat","open AI chat","Buksan ang AI chat",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Tak-opi ang AI chat","close AI chat","Isara ang AI chat",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Nagsulat…,typing,Nagsusulat…,v.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Imong pangutana","your question","Tanong mo",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Pangutan-a ko bahin sa barangay","ask me about the barangay","Tanungin ako tungkol sa barangay",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+aktibo,active,aktibo,adj.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+matag,every,bawat,adj.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Kakusog,"level,severity",Tindi,n.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"I-publish ang pasidaan","publish the advisory","I-publish ang babala",phr.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Walay aktibo nga pasidaan.","no active advisory","Walang aktibong babala.",phr.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Adunay aktibo nga pasidaan sa dashboard sa matag molupyo.","there is an active advisory on every resident dashboard","May aktibong babala sa dashboard ng bawat residente.",phr.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Live na ang pasidaan sa dashboard sa matag molupyo.","the advisory is live on every resident dashboard","Live na ang babala sa dashboard ng bawat residente.",phr.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Ang pasidaan dili molapas sa 300 ka karakter.","the advisory must not exceed 300 characters","Ang babala ay hindi dapat humigit sa 300 karakter.",phr.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Paspas nga Link","quick links","Mabilis na Link",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Balik sa dashboard","back to dashboard","Bumalik sa dashboard",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Wala kay access niini nga panid","you do not have access to this page","Wala kang access sa pahinang ito",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Naka-sign in isip :role","signed in as :role","Naka-sign in bilang :role",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Kumusta,"hello,how are you","Kumusta,Kamusta",phr.,greetings,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Maayong adlaw","good day","Magandang araw",phr.,greetings,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+malipayong,"happy,joyful","maligayang,masayang",adj.,greetings,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+pag-abot,arrival,pagdating,n.,greetings,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+ulahing,"last (before a noun)",huling,adj.,time,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"I-download ang PDF","download the PDF","I-download ang PDF",phr.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+"Gikarga ang dokumento…","loading the document","Nilo-load ang dokumento…",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Petsa sa Pagpatuman","date enacted","Petsa ng Pag-iral",phr.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Gi-upload ni","uploaded by","Na-upload ng",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sumaryo,"summary (noun)",buod,n.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Gihimo ang sumaryo…","preparing the summary","Ginagawa ang buod…",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Mahimong molungtad ug pipila ka segundo.","this may take a few seconds","Maaaring tumagal ng ilang segundo.",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Wala milampos ang AI","the AI did not succeed","Hindi nagtagumpay ang AI",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Sumaryo sa AI","AI summary","Buod ng AI",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Adunay AI-generated nga sumaryo","has an AI-generated summary","May AI-generated na buod",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"gikan sa cache","from cache","mula sa cache",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Miaging panid","previous page","Nakaraang pahina",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Sunod nga panid","next page","Susunod na pahina",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+"Gipakita ang :from sa :total ka resulta","showing :from of :total results","Nagpapakita ng :from sa :total na resulta",phr.,interface,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+numero,number,numero,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+keyword,keyword,keyword,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Gidili,"prohibited,forbidden","Ipinagbabawal,bawal",v.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+paglabay,"disposal,throwing","pagtatapon,pagtapon",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+basura,"garbage,trash,waste",basura,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+kanal,"canal,ditch,drain",kanal,n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Adunay,"there will be","Magkakaroon,Mayroon",exis.,grammar,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+Lunes,Monday,Lunes,n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Martes,Tuesday,Martes,n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Miyerkules,Wednesday,Miyerkules,n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Huwebes,Thursday,Huwebes,n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Biyernes,Friday,Biyernes,n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Sabado,Saturday,Sabado,n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Domingo,Sunday,"Linggo,Domingo",n.,time,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+Hall,Hall,Hall,n.,loanword,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+sentro,"center,centre","sentro,center",n.,civic,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+plaza,plaza,"plaza,plasa",n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+pista,"fiesta,festival","pista,piyesta",n.,civic,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini.",BISAYA-CEB
+pagbakwit,evacuation,"paglikas,evacuation",n.,emergency,"Bisaya (Cebuano). Kinahanglan i-verify sa lokal nga mamumulong — ilisi kung lahi ang Surigaonon nga porma.",BISAYA-CEB
+sa,of,ng,prep.,grammar,"Parehas sa Tagalog/Bisaya — gilista aron ang MN nga hubad makaila niini. Gibulag gikan sa ""sa"" kay lahi ang English: ng = of, sa = at/in.",BISAYA-CEB
