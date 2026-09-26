@@ -1,3 +1,4 @@
+
 FROM php:8.2-apache
 
 # Install required system packages
