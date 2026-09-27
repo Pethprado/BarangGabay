@@ -36,9 +36,9 @@ CREATE TABLE users (
     id_ai_status VARCHAR(20) NULL,
     avatar_url VARCHAR(500) NULL,
     locale VARCHAR(10) NULL,
-    email_verified SMALLINT NOT NULL DEFAULT 0,
-    totp_secret VARCHAR(255) NULL,
+    totp_secret VARCHAR(512) NULL,
     totp_enabled SMALLINT NOT NULL DEFAULT 0,
+    totp_confirmed_at TIMESTAMP NULL,
     notify_feedback SMALLINT NOT NULL DEFAULT 1,
     notify_registrations SMALLINT NOT NULL DEFAULT 1,
     notify_content SMALLINT NOT NULL DEFAULT 1,
@@ -385,3 +385,66 @@ CREATE TABLE bisaya_dictionary (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS two_factor_backup_codes (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    code_hash VARCHAR(255) NOT NULL,
+    used_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_user_unused ON two_factor_backup_codes (user_id, used_at);
+
+CREATE TABLE IF NOT EXISTS document_requests (
+    id SERIAL PRIMARY KEY,
+    reference_no VARCHAR(30) NOT NULL UNIQUE,
+    user_id INT NOT NULL,
+    document_type VARCHAR(60) NOT NULL,
+    purpose VARCHAR(255) NOT NULL,
+    notes TEXT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    staff_note TEXT NULL,
+    handled_by INT NULL,
+    requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    ready_at TIMESTAMP NULL,
+    released_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (handled_by) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_dr_status ON document_requests(status);
+CREATE INDEX IF NOT EXISTS idx_dr_user ON document_requests(user_id);
+
+CREATE TABLE IF NOT EXISTS evacuation_centers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    purok VARCHAR(50) NULL,
+    address VARCHAR(255) NULL,
+    latitude DECIMAL(10,7) NULL,
+    longitude DECIMAL(10,7) NULL,
+    capacity INT NULL,
+    contact_person VARCHAR(120) NULL,
+    contact_phone VARCHAR(30) NULL,
+    is_active SMALLINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ec_purok ON evacuation_centers(purok);
+CREATE INDEX IF NOT EXISTS idx_ec_active ON evacuation_centers(is_active);
+
+CREATE TABLE IF NOT EXISTS safety_checkins (
+    id SERIAL PRIMARY KEY,
+    advisory_id INT NOT NULL,
+    user_id INT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'safe',
+    purok VARCHAR(50) NULL,
+    note VARCHAR(255) NULL,
+    checked_in_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (advisory_id, user_id),
+    FOREIGN KEY (advisory_id) REFERENCES announcements(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_sc_status ON safety_checkins(status);
+

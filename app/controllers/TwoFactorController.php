@@ -161,15 +161,20 @@ class TwoFactorController
             redirect('/two-factor');
         }
 
-        $this->twoFactor->storeSecret($userId, $secret);
-        $this->twoFactor->enable($userId);
-        $codes = $this->twoFactor->regenerateBackupCodes($userId);
+        try {
+            $this->twoFactor->storeSecret($userId, $secret);
+            $this->twoFactor->enable($userId);
+            $codes = $this->twoFactor->regenerateBackupCodes($userId);
 
-        unset($_SESSION['2fa_setup_secret']);
-        $_SESSION['2fa_new_codes'] = $codes;
+            unset($_SESSION['2fa_setup_secret']);
+            $_SESSION['2fa_new_codes'] = $codes;
 
-        AuditLog::record($userId, 'auth.2fa_enabled', 'Two-factor authentication enabled');
-        flash('success', t('twofa.enabled_ok'));
+            AuditLog::record($userId, 'auth.2fa_enabled', 'Two-factor authentication enabled');
+            flash('success', t('twofa.enabled_ok'));
+        } catch (\Throwable $e) {
+            error_log('2FA enable failed: ' . $e->getMessage());
+            flash('error', 'May naganap na error sa pag-activate ng 2FA: ' . $e->getMessage());
+        }
         redirect('/two-factor');
     }
 

@@ -91,13 +91,143 @@ function db(): PDO
             error_log('Database schema check warning: ' . $e->getMessage());
         }
 
-        // Keep an existing database structure in sync with migrations.
-        // All migration files use IF NOT EXISTS guards, so re-running is safe.
-        runPendingMigrations($pdo, $driver);
+        if ($driver === 'pgsql') {
+            syncPostgresSchema($pdo);
+        } else {
+            // Keep an existing database structure in sync with migrations.
+            // All migration files use IF NOT EXISTS guards, so re-running is safe.
+            runPendingMigrations($pdo, $driver);
+        }
 
         seedAdminUser($pdo, $driver);
     }
     return $pdo;
+}
+
+/**
+ * Synchronize PostgreSQL schema with all required columns, indexes, and tables.
+ */
+function syncPostgresSchema(PDO $pdo): void
+{
+    $statements = [
+        // 1. Users table columns for 2FA, staff settings, etc.
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(512) NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_confirmed_at TIMESTAMP NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS designation VARCHAR(100) NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_feedback SMALLINT NOT NULL DEFAULT 1",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_registrations SMALLINT NOT NULL DEFAULT 1",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_content SMALLINT NOT NULL DEFAULT 1",
+
+        // 2. Two-Factor Backup Codes table
+        "CREATE TABLE IF NOT EXISTS two_factor_backup_codes (
+            id SERIAL PRIMARY KEY,
+            user_id INT NOT NULL,
+            code_hash VARCHAR(255) NOT NULL,
+            used_at TIMESTAMP NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_user_unused ON two_factor_backup_codes (user_id, used_at)",
+
+        // 3. Document Requests table
+        "CREATE TABLE IF NOT EXISTS document_requests (
+            id SERIAL PRIMARY KEY,
+            reference_no VARCHAR(30) NOT NULL UNIQUE,
+            user_id INT NOT NULL,
+            document_type VARCHAR(60) NOT NULL,
+            purpose VARCHAR(255) NOT NULL,
+            notes TEXT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            staff_note TEXT NULL,
+            handled_by INT NULL,
+            requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            ready_at TIMESTAMP NULL,
+            released_at TIMESTAMP NULL,
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (handled_by) REFERENCES users(id) ON DELETE SET NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_dr_status ON document_requests(status)",
+        "CREATE INDEX IF NOT EXISTS idx_dr_user ON document_requests(user_id)",
+
+        // 4. Evacuation Centers table
+        "CREATE TABLE IF NOT EXISTS evacuation_centers (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(150) NOT NULL,
+            purok VARCHAR(50) NULL,
+            address VARCHAR(255) NULL,
+            latitude DECIMAL(10,7) NULL,
+            longitude DECIMAL(10,7) NULL,
+            capacity INT NULL,
+            contact_person VARCHAR(120) NULL,
+            contact_phone VARCHAR(30) NULL,
+            is_active SMALLINT NOT NULL DEFAULT 1,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_ec_purok ON evacuation_centers(purok)",
+        "CREATE INDEX IF NOT EXISTS idx_ec_active ON evacuation_centers(is_active)",
+
+        // 5. Safety Check-ins table
+        "CREATE TABLE IF NOT EXISTS safety_checkins (
+            id SERIAL PRIMARY KEY,
+            advisory_id INT NOT NULL,
+            user_id INT NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'safe',
+            purok VARCHAR(50) NULL,
+            note VARCHAR(255) NULL,
+            checked_in_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            UNIQUE (advisory_id, user_id),
+            FOREIGN KEY (advisory_id) REFERENCES announcements(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_sc_status ON safety_checkins(status)",
+
+        // 6. Announcements columns
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS target_purok VARCHAR(50) NULL",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS asks_safety_checkin SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS source_lang VARCHAR(10) NOT NULL DEFAULT 'fil'",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS title_fil VARCHAR(500) NULL",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS body_fil TEXT NULL",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS fil_is_auto SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS en_is_auto SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS manobo_is_auto SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS en_review_state VARCHAR(20) NOT NULL DEFAULT 'none'",
+
+        // 7. Events columns
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS target_purok VARCHAR(50) NULL",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS source_lang VARCHAR(10) NOT NULL DEFAULT 'fil'",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS title_fil VARCHAR(500) NULL",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS description_fil TEXT NULL",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS fil_is_auto SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS en_is_auto SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS manobo_is_auto SMALLINT NOT NULL DEFAULT 0",
+
+        // 8. Ordinances columns
+        "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS source_lang VARCHAR(10) NOT NULL DEFAULT 'fil'",
+        "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS title_fil VARCHAR(500) NULL",
+        "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS description_fil TEXT NULL",
+        "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS fil_is_auto SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS en_is_auto SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS manobo_is_auto SMALLINT NOT NULL DEFAULT 0",
+
+        // 9. 2FA system settings
+        "INSERT INTO settings (setting_key, setting_value, value_type) VALUES
+            ('twofa_required_roles', 'superadmin', 'string'),
+            ('twofa_enabled', '1', 'bool')
+         ON CONFLICT (setting_key) DO NOTHING",
+    ];
+
+    foreach ($statements as $sql) {
+        try {
+            $pdo->exec($sql);
+        } catch (\PDOException $e) {
+            error_log('PgSQL schema sync note: ' . $e->getMessage());
+        }
+    }
 }
 
 /**
