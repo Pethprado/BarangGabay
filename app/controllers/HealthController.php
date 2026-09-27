@@ -32,6 +32,21 @@ class HealthController
             $pdo = db();
             $pdo->query('SELECT 1');
             $result['database'] = 'ok';
+
+            if (isset($_GET['errors'])) {
+                $logFile = __DIR__ . '/../../storage/logs/error.log';
+                if (file_exists($logFile)) {
+                    $lines = file($logFile);
+                    $result['recent_file_log'] = array_slice($lines ?: [], -40);
+                }
+                try {
+                    $errStmt = $pdo->query('SELECT error_id, severity, type, message, file, line, created_at FROM error_logs ORDER BY id DESC LIMIT 5');
+                    $result['recent_db_errors'] = $errStmt->fetchAll(\PDO::FETCH_ASSOC);
+                } catch (\Throwable $ex) {
+                    $result['recent_db_errors_error'] = $ex->getMessage();
+                }
+            }
+
             http_response_code(200);
         } catch (\Throwable $e) {
             $result['database'] = 'unreachable';

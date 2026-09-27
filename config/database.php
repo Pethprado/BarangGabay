@@ -219,6 +219,14 @@ function syncPostgresSchema(PDO $pdo): void
             ('twofa_required_roles', 'superadmin', 'string'),
             ('twofa_enabled', '1', 'bool')
          ON CONFLICT (setting_key) DO NOTHING",
+
+        // 10. Error logs columns
+        "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS method VARCHAR(10) NULL",
+        "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS route VARCHAR(500) NULL",
+        "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS user_id INT NULL",
+        "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45) NULL",
+        "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS user_agent VARCHAR(500) NULL",
+        "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP NULL",
     ];
 
     foreach ($statements as $sql) {
