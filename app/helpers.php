@@ -45,7 +45,13 @@ function get_base_url(): string
         return $base;
     }
 
-    $scheme = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
+    // Detect HTTPS even when behind a reverse proxy (Render, Nginx, etc.)
+    // that terminates TLS and forwards X-Forwarded-Proto.
+    $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+        || (($_SERVER['HTTP_X_FORWARDED_SSL']   ?? '') === 'on');
+
+    $scheme = $isHttps ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $scriptPath = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     if ($scriptPath === '/' || $scriptPath === '\\') {
@@ -54,6 +60,7 @@ function get_base_url(): string
 
     return $scheme . '://' . $host . rtrim($scriptPath, '/');
 }
+
 
 function app_url(string $path = ''): string
 {

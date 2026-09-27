@@ -1,4 +1,4 @@
-services:
+﻿services:
   - type: web
     name: baranggabay
     runtime: docker
@@ -6,6 +6,10 @@ services:
     region: singapore
     dockerfilePath: ./Dockerfile
     autoDeploy: true
+    # healthCheckPath tells Render to wait until /health returns 200 before
+    # marking the deploy as live. Without this, Render may route traffic to
+    # the container before the database connection is ready.
+    healthCheckPath: /health
     envVars:
       - key: APP_NAME
         value: BarangGabay
@@ -15,6 +19,7 @@ services:
         value: "false"
       - key: APP_TIMEZONE
         value: Asia/Manila
+      # Set this to your Render service URL, e.g. https://baranggabay.onrender.com
       - key: APP_URL
         sync: false
       - key: DB_HOST
@@ -57,3 +62,11 @@ services:
         value: BarangGabay - Barangay Bayogo
       - key: GOOGLE_MAPS_API_KEY
         sync: false
+      - key: SEMAPHORE_API_KEY
+        sync: false
+      - key: SEMAPHORE_SENDER_NAME
+        value: BarangGabay
+      - key: SEMAPHORE_API_URL
+        value: https://api.semaphore.co/api/v4
+      - key: SEMAPHORE_TEST_MODE
+        value: "true"
