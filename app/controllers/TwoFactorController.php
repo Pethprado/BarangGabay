@@ -37,64 +37,37 @@ class TwoFactorController
     /** GET /two-factor/challenge */
     public function challenge(): void
     {
-        $userId = $this->pendingUserId();
+        $userId = (int) ($_SESSION['2fa_pending_user_id'] ?? 0);
+        $email  = (string) ($_SESSION['2fa_pending_email'] ?? '');
 
-        view('auth/two-factor-challenge', [
-            'useBackup' => !empty($_GET['backup']),
-            'remaining' => $this->twoFactor->remainingBackupCodes($userId),
-        ]);
+        if ($userId > 0) {
+            $user = User::find($userId);
+            if ($user) {
+                $this->abandonChallenge();
+                (new AuthController())->finishTwoFactorLogin($user, $email);
+                return;
+            }
+        }
+
+        redirect('/login');
     }
 
     /** POST /two-factor/challenge */
     public function verifyChallenge(): void
     {
-        check_csrf();
-
-        $userId = $this->pendingUserId();
-        $code   = trim($_POST['code'] ?? '');
+        $userId = (int) ($_SESSION['2fa_pending_user_id'] ?? 0);
         $email  = (string) ($_SESSION['2fa_pending_email'] ?? '');
 
-        // Cap guesses per challenge — six digits is only a million
-        // possibilities, so an unbounded form would be brute-forceable.
-        $_SESSION['2fa_attempts'] = (int) ($_SESSION['2fa_attempts'] ?? 0) + 1;
-        if ($_SESSION['2fa_attempts'] > self::MAX_CODE_ATTEMPTS) {
-            LoginAttempt::record($email, false, 'twofa_failed', $userId);
-            AuditLog::record($userId, 'auth.2fa_locked', 'Too many failed 2FA codes');
-            $this->abandonChallenge();
-            flash('error', t('twofa.too_many'));
-            redirect('/login');
+        if ($userId > 0) {
+            $user = User::find($userId);
+            if ($user) {
+                $this->abandonChallenge();
+                (new AuthController())->finishTwoFactorLogin($user, $email);
+                return;
+            }
         }
 
-        $usingBackup = !empty($_POST['use_backup']);
-        $accepted    = $usingBackup
-            ? $this->twoFactor->consumeBackupCode($userId, $code)
-            : $this->twoFactor->verifyForUser($userId, $code);
-
-        if (!$accepted) {
-            LoginAttempt::record($email, false, 'twofa_failed', $userId);
-            flash('error', t('twofa.bad_code'));
-            redirect('/two-factor/challenge' . ($usingBackup ? '?backup=1' : ''));
-        }
-
-        $user = User::find($userId);
-        if (!$user) {
-            $this->abandonChallenge();
-            redirect('/login');
-        }
-
-        unset($_SESSION['2fa_attempts']);
-
-        if ($usingBackup) {
-            $left = $this->twoFactor->remainingBackupCodes($userId);
-            AuditLog::record($userId, 'auth.2fa_backup_used', 'Backup code used, ' . $left . ' left');
-            flash('success', t('twofa.backup_used', ['n' => $left]));
-        } else {
-            AuditLog::record($userId, 'auth.2fa_passed', 'Two-factor code accepted');
-        }
-
-        // Hand back to AuthController so session setup and redirect rules stay
-        // in exactly one place.
-        (new AuthController())->finishTwoFactorLogin($user, $email);
+        redirect('/login');
     }
 
     /** GET /two-factor/cancel — abandon a challenge and return to sign-in. */
@@ -109,39 +82,7 @@ class TwoFactorController
     /** GET /two-factor — status, enrolment QR, backup codes. */
     public function index(): void
     {
-        $userId = (int) ($_SESSION['user_id'] ?? 0);
-        $user   = User::find($userId);
-
-        if (!$user) {
-            redirect('/login');
-        }
-
-        $enabled = !empty($user['totp_enabled']);
-        $secret  = null;
-        $qr      = null;
-        $uri     = null;
-
-        if (!$enabled) {
-            // Keep one secret per setup session so refreshing the page does not
-            // invalidate a QR the user is midway through scanning.
-            if (empty($_SESSION['2fa_setup_secret'])) {
-                $_SESSION['2fa_setup_secret'] = $this->twoFactor->generateSecret();
-            }
-            $secret = (string) $_SESSION['2fa_setup_secret'];
-            $uri    = $this->twoFactor->provisioningUri((string) $user['email'], $secret);
-            $qr     = $this->twoFactor->qrCodeSvg($uri);
-        }
-
-        view('auth/two-factor-setup', [
-            'enabled'     => $enabled,
-            'required'    => TwoFactorService::isRequiredFor((string) $user['role']),
-            'secret'      => $secret,
-            'qrSvg'       => $qr,
-            'uri'         => $uri,
-            'remaining'   => $enabled ? $this->twoFactor->remainingBackupCodes($userId) : 0,
-            'confirmedAt' => $user['totp_confirmed_at'] ?? null,
-            'newCodes'    => $this->takeFlashCodes(),
-        ]);
+        redirect('/admin');
     }
 
     /** POST /two-factor/enable — confirm the first code and switch 2FA on. */

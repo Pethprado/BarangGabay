@@ -361,18 +361,7 @@ class AuthController
             redirect($back);
         }
 
-        // Password is correct. If this account has 2FA, stop here and hold the
-        // user in a half-authenticated state: no user_id is written to the
-        // session, so every protected route still treats them as a guest until
-        // they pass the second factor.
-        if (TwoFactorService::featureEnabled() && !empty($user['totp_enabled'])) {
-            session_regenerate_id(true);
-            $_SESSION['2fa_pending_user_id'] = (int) $user['id'];
-            $_SESSION['2fa_pending_email']   = (string) $email;
-            $_SESSION['2fa_pending_at']      = time();
-            redirect('/two-factor/challenge');
-        }
-
+        // Password is correct. Log user in directly (2FA disabled).
         $this->completeLogin($user, (string) $email);
     }
 

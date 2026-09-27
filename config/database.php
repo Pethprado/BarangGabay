@@ -214,11 +214,12 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS en_is_auto SMALLINT NOT NULL DEFAULT 0",
         "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS manobo_is_auto SMALLINT NOT NULL DEFAULT 0",
 
-        // 9. 2FA system settings
+        // 9. Disable 2FA system-wide
+        "UPDATE users SET totp_enabled = 0, totp_secret = NULL, totp_confirmed_at = NULL",
         "INSERT INTO settings (setting_key, setting_value, value_type) VALUES
-            ('twofa_required_roles', 'superadmin', 'string'),
-            ('twofa_enabled', '1', 'bool')
-         ON CONFLICT (setting_key) DO NOTHING",
+            ('twofa_required_roles', '', 'string'),
+            ('twofa_enabled', '0', 'bool')
+         ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value",
 
         // 10. Error logs columns
         "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS method VARCHAR(10) NULL",

@@ -239,13 +239,13 @@ final class TwoFactorService
     /** Whether 2FA is switched on system-wide. */
     public static function featureEnabled(): bool
     {
-        return (bool) setting('twofa_enabled', true);
+        return false;
     }
 
     /** Whether this role is obliged to set 2FA up. */
     public static function isRequiredFor(string $role): bool
     {
-        return self::featureEnabled() && in_array($role, self::requiredRoles(), true);
+        return false;
     }
 
     // ── Private helpers ──────────────────────────────────────────────
