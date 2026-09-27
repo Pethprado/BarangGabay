@@ -109,8 +109,12 @@ class TwoFactorController
     /** GET /two-factor — status, enrolment QR, backup codes. */
     public function index(): void
     {
-        $userId = (int) $_SESSION['user_id'];
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
         $user   = User::find($userId);
+
+        if (!$user) {
+            redirect('/login');
+        }
 
         $enabled = !empty($user['totp_enabled']);
         $secret  = null;
@@ -145,7 +149,10 @@ class TwoFactorController
     {
         check_csrf();
 
-        $userId = (int) $_SESSION['user_id'];
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        if ($userId <= 0) {
+            redirect('/login');
+        }
         $secret = (string) ($_SESSION['2fa_setup_secret'] ?? '');
         $code   = trim($_POST['code'] ?? '');
 

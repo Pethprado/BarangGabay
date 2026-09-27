@@ -33,18 +33,12 @@ class HealthController
             $pdo->query('SELECT 1');
             $result['database'] = 'ok';
 
-            if (isset($_GET['errors'])) {
-                $logFile = __DIR__ . '/../../storage/logs/error.log';
-                if (file_exists($logFile)) {
-                    $lines = file($logFile);
-                    $result['recent_file_log'] = array_slice($lines ?: [], -40);
-                }
-                try {
-                    $errStmt = $pdo->query('SELECT error_id, severity, type, message, file, line, created_at FROM error_logs ORDER BY id DESC LIMIT 5');
-                    $result['recent_db_errors'] = $errStmt->fetchAll(\PDO::FETCH_ASSOC);
-                } catch (\Throwable $ex) {
-                    $result['recent_db_errors_error'] = $ex->getMessage();
-                }
+            if (isset($_GET['tables'])) {
+                $tblStmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name");
+                $result['tables'] = $tblStmt->fetchAll(\PDO::FETCH_COLUMN);
+
+                $colStmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name='users' ORDER BY column_name");
+                $result['user_columns'] = $colStmt->fetchAll(\PDO::FETCH_COLUMN);
             }
 
             http_response_code(200);
