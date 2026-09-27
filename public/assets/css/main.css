@@ -250,7 +250,7 @@ body, .navbar-premium, .footer-premium, .content-card, .bg-card, .card-premium {
    has white text, same blue pin (for permanently-dark surfaces like the footer,
    or the navbar once dark mode is on). Stack both <img> tags with .logo-lockup
    .logo-lockup-light / .logo-lockup-dark and this shows/hides the right one. */
-.logo-lockup { display: block; height: 52px; width: auto; }
+.logo-lockup { display: block; height: 72px; width: auto; }
 .logo-lockup-dark { display: none; }
 :root[data-theme="dark"] .logo-lockup-light { display: none; }
 :root[data-theme="dark"] .logo-lockup-dark  { display: block; }

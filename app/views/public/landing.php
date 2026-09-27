@@ -35,10 +35,20 @@
     <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
 
         <a href="<?= e(route('')) ?>" class="flex items-center gap-3 hover:opacity-90 transition-opacity flex-shrink-0">
-            <img src="<?= e(asset('images/logo-lockup-light.svg')) ?>"
-                 alt="BarangGabay"
-                 style="height:38px;width:auto;display:block;"
+            <?php
+            // Same auto light/dark lockup swap as the resident navbar (main.php),
+            // and bigger to match it (was hardcoded to a smaller 38px, light-only
+            // logo here — inconsistent with the rest of the site). A logo uploaded
+            // in Super Admin → Settings replaces both lockups.
+            $__logo = system_logo_url();
+            ?>
+            <img src="<?= e($__logo ?? asset('images/logo-lockup-light.svg')) ?>" alt="BarangGabay"
+                 class="logo-lockup <?= $__logo === null ? 'logo-lockup-light' : '' ?>"
                  onerror="this.style.display='none';document.getElementById('landing-logo-fallback').style.display='flex'">
+            <?php if ($__logo === null): ?>
+            <img src="<?= e(asset('images/logo-lockup-dark.svg')) ?>" alt="BarangGabay" class="logo-lockup logo-lockup-dark"
+                 onerror="this.style.display='none';document.getElementById('landing-logo-fallback').style.display='flex'">
+            <?php endif; ?>
             <span id="landing-logo-fallback"
                   style="display:none;background:var(--brand-primary);color:#fff;"
                   class="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-lg font-bold ring-2 ring-white">B</span>

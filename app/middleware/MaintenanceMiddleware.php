@@ -20,7 +20,7 @@ use App\Models\Setting;
 class MaintenanceMiddleware
 {
     /** Paths that stay reachable while maintenance mode is on. */
-    private const ALLOWED_PREFIXES = ['/login', '/logout', '/set-locale'];
+    private const ALLOWED_PREFIXES = ['/login', '/logout', '/set-locale', '/health'];
 
     /**
      * Render the maintenance page and exit when the request should be blocked.

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 return [
+    ['GET', '/health', 'HealthController@check', []],
     ['GET', '/', 'ResidentController@home', []],
     ['GET', '/login', 'AuthController@showLogin', []],
     ['POST', '/login', 'AuthController@login', []],
