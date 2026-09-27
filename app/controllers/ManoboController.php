@@ -79,6 +79,7 @@ class ManoboController
     {
         $search   = trim($_GET['q']        ?? '');
         $category = trim($_GET['category'] ?? '');
+        $status   = trim($_GET['status']   ?? '');
         $tryTerm  = trim($_GET['try']      ?? '');
         $tryTo    = trim($_GET['to']       ?? 'english');
 
@@ -97,26 +98,67 @@ class ManoboController
             $coverage[$needed] = count($this->dictionary->byCategory($needed));
         }
 
+        $allEntries = $this->dictionary->search($search, $category);
+        if ($status !== '') {
+            $entries = array_values(array_filter($allEntries, function ($e) use ($status) {
+                if ($status === 'pending_review') {
+                    return ($e['review_status'] ?? '') === 'pending_review' || !empty($e['needs_review']);
+                }
+                return ($e['review_status'] ?? '') === $status;
+            }));
+        } else {
+            $entries = $allEntries;
+        }
+
+        // Fetch missing concepts
+        $missingConcepts = [];
+        try {
+            $stmt = db()->query("SELECT * FROM manobo_missing_concepts ORDER BY usage_count DESC, last_seen_at DESC LIMIT 50");
+            $missingConcepts = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable) {}
+
+        $dictVersion = (new \App\Services\ManoboHybridTranslator())->getDictionaryVersion();
+
         view('admin/manobo/index', [
-            'neededWords'      => $this->neededUiWords(),
-            'entries'          => $this->dictionary->search($search, $category),
-            'totalEntries'     => $this->dictionary->count(),
-            'categories'       => $this->dictionary->categories(),
-            'partsOfSpeech'    => $this->dictionary->partsOfSpeech(),
-            'coverage'         => $coverage,
-            'search'           => $search,
-            'filterCategory'   => $category,
-            'tryTerm'          => $tryTerm,
-            'tryTo'            => $tryTo,
-            'tryResult'        => $tryResult,
-            // ADDED: "Kailangang i-verify" — every entry carrying a note.
-            'needsVerification'=> $this->dictionary->needsVerification(),
-            // ADDED: Trash — visible to everyone, restore/purge admin-only.
-            'trash'            => $this->dictionary->trash(),
-            'canRestore'       => in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true),
-            'canDelete'        => in_array($_SESSION['role'] ?? '', ['admin', 'staff', 'superadmin'], true),
+            'neededWords'       => $this->neededUiWords(),
+            'entries'           => $entries,
+            'totalEntries'      => $this->dictionary->count(),
+            'categories'        => $this->dictionary->categories(),
+            'partsOfSpeech'     => $this->dictionary->partsOfSpeech(),
+            'coverage'          => $coverage,
+            'search'            => $search,
+            'filterCategory'    => $category,
+            'filterStatus'      => $status,
+            'tryTerm'           => $tryTerm,
+            'tryTo'             => $tryTo,
+            'tryResult'         => $tryResult,
+            'needsVerification' => $this->dictionary->needsVerification(),
+            'missingConcepts'   => $missingConcepts,
+            'dictionaryVersion' => $dictVersion,
+            'trash'             => $this->dictionary->trash(),
+            'canRestore'        => in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true),
+            'canDelete'         => in_array($_SESSION['role'] ?? '', ['admin', 'staff', 'superadmin'], true),
         ]);
     }
+
+    /** POST /admin/manobo/approve — approve a pending dictionary entry. */
+    public function approve(): void
+    {
+        check_csrf();
+        $id = (int) ($_POST['id'] ?? 0);
+
+        try {
+            $this->dictionary->approve($id, (int) ($_SESSION['user_id'] ?? 0));
+        } catch (\InvalidArgumentException $e) {
+            flash('error', $e->getMessage());
+            redirect('/admin/manobo');
+        }
+
+        AuditLog::record((int) $_SESSION['user_id'], 'manobo.entry_approved', 'Approved Manobo entry id ' . $id);
+        flash('success', 'Naaprubahan ang salita sa opisyal na diksyunaryo.');
+        redirect('/admin/manobo');
+    }
+
 
     /**
      * GET /admin/manobo/trash — the Trash lives inline on the main admin
@@ -234,10 +276,26 @@ class ManoboController
 
         // A whole announcement body is plausible input, not just a UI label —
         // capped generously, still all local string work.
-        $text = mb_substr(strip_tags($text), 0, 20000);
+        $text = mb_substr($text, 0, 20000);
 
         try {
-            $result = (new ManoboAutoTranslator())->translateBlock($text);
+            $hybrid = (new \App\Services\ManoboHybridTranslator())->translate($text);
+            $segments = [];
+            foreach ($hybrid['provenance'] as $p) {
+                $segments[] = [
+                    'text'    => $p['text'],
+                    'display' => $p['translated'],
+                    'source'  => $p['source'],
+                ];
+            }
+            $result = [
+                'success'        => true,
+                'segments'       => $segments,
+                'translation'    => $hybrid['translation'],
+                'matched_manobo' => $hybrid['manoboMatches'],
+                'matched_bisaya' => $hybrid['bisayaFallbacks'],
+                'unmatched'      => 0,
+            ];
         } catch (\Throwable $e) {
             error_log('[ManoboController::translateBlock] ' . $e->getMessage());
             echo json_encode(['success' => false, 'error' => t('admin_manobo.draft_none')]);
@@ -245,6 +303,59 @@ class ManoboController
         }
 
         echo json_encode($result);
+    }
+
+    /**
+     * POST /api/translate/manobo
+     *
+     * Requirement 27: Reusable hybrid translation API.
+     * Request:  { "text": "Good morning. There will be a meeting tomorrow." }
+     * Response: { "success": true, "language": "mn",
+     *             "translation": "...", "manoboMatches": 2,
+     *             "bisayaFallbacks": 1 }
+     */
+    public function apiTranslateManobo(): void
+    {
+        header('Content-Type: application/json');
+
+        $input = json_decode(file_get_contents('php://input') ?: '', true);
+        $text = trim((string) ($input['text'] ?? $_POST['text'] ?? ''));
+
+        if ($text === '') {
+            echo json_encode([
+                'success' => false,
+                'error'   => 'No text was provided for translation.',
+            ]);
+            return;
+        }
+
+        $text = mb_substr($text, 0, 20000);
+
+        try {
+            $translator = new \App\Services\ManoboHybridTranslator();
+            $result = $translator->translate($text);
+
+            $response = [
+                'success'         => true,
+                'language'        => 'mn',
+                'translation'     => $result['translation'],
+                'manoboMatches'   => $result['manoboMatches'],
+                'bisayaFallbacks' => $result['bisayaFallbacks'],
+            ];
+
+            // For admin / staff users, include provenance metadata
+            if (!empty($_SESSION['role']) && in_array($_SESSION['role'], ['admin', 'staff', 'superadmin'], true)) {
+                $response['provenance'] = $result['provenance'];
+            }
+
+            echo json_encode($response);
+        } catch (\Throwable $e) {
+            error_log('[ManoboController::apiTranslateManobo] ' . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'error'   => 'Translation failed: ' . $e->getMessage(),
+            ]);
+        }
     }
 
     /**

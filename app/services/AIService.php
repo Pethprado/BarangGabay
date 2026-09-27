@@ -340,7 +340,7 @@ PROMPT;
             }
         }
 
-        return array_keys($hits);
+        return array_slice(array_keys($hits), 0, 25);
     }
 
     /**
@@ -409,7 +409,7 @@ PROMPT;
             }
         }
 
-        return array_keys($hits);
+        return array_slice(array_keys($hits), 0, 25);
     }
 
     /**

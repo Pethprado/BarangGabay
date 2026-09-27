@@ -123,6 +123,7 @@ return [
     ['GET',  '/admin/manobo/export',             'ManoboController@export',         ['auth', 'role:admin,staff']],
     ['POST', '/admin/manobo',                    'ManoboController@store',          ['auth', 'role:admin,staff']],
     ['POST', '/admin/manobo/update',             'ManoboController@update',         ['auth', 'role:admin,staff']],
+    ['POST', '/admin/manobo/approve',            'ManoboController@approve',        ['auth', 'role:admin,staff']],
     ['POST', '/admin/manobo/delete',             'ManoboController@destroy',        ['auth', 'role:admin,staff']],
     ['POST', '/admin/manobo/import',             'ManoboController@importCsv',      ['auth', 'role:admin,staff']],
     ['GET',  '/admin/manobo/trash',              'ManoboController@trashIndex',     ['auth', 'role:admin']],

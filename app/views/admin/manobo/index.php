@@ -167,17 +167,21 @@ ob_start();
             <form method="POST" action="<?= e(route('admin/manobo')) ?>" id="manobo-add-form">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <div class="row g-2">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label" style="font-size:.78rem;font-weight:600;"><?= e(t('admin_manobo.col_manobo')) ?> *</label>
                         <input type="text" name="manobo" class="form-control" required style="border-radius:8px;">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label" style="font-size:.78rem;font-weight:600;"><?= e(t('admin_manobo.col_english')) ?> *</label>
                         <input type="text" name="english" class="form-control" required style="border-radius:8px;">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label" style="font-size:.78rem;font-weight:600;"><?= e(t('admin_manobo.col_tagalog')) ?> *</label>
                         <input type="text" name="tagalog" class="form-control" required style="border-radius:8px;">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-size:.78rem;font-weight:600;">Bisaya</label>
+                        <input type="text" name="bisaya" class="form-control" style="border-radius:8px;" placeholder="Katumbas sa Bisaya">
                     </div>
                     <div class="col-12">
                         <p class="form-text mb-0" style="font-size:.74rem;"><?= e(t('admin_manobo.hint_manobo')) ?></p>
@@ -311,32 +315,15 @@ ob_start();
     document.querySelectorAll('.manobo-needed-chip').forEach(function (chip) {
         chip.addEventListener('click', function () {
             var form = document.getElementById('manobo-add-form');
-            if (!form) { return; }
-            form.querySelector('[name="english"]').value = chip.dataset.word;
-            form.querySelector('[name="category"]').value = 'interface';
-            form.querySelector('[name="manobo"]').focus();
-            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
-    });
-</script>
-<?php endif; ?>
-
-<datalist id="pos-list">
-    <?php foreach ($partsOfSpeech as $pos): ?><option value="<?= e($pos) ?>"><?php endforeach; ?>
-</datalist>
-<datalist id="cat-list">
-    <?php foreach ($categories as $cat): ?><option value="<?= e($cat) ?>"><?php endforeach; ?>
-</datalist>
-
-<!-- ── Search / filter ─────────────────────────────────────────────────── -->
+            if<!-- ── Search / filter ─────────────────────────────────────────────────── -->
 <div class="admin-card mb-3">
     <form method="GET" action="<?= e(route('admin/manobo')) ?>" class="row g-2 align-items-end">
-        <div class="col-md-6">
+        <div class="col-md-5">
             <label class="form-label" style="font-size:.78rem;font-weight:600;"><?= e(t('admin_manobo.search_label')) ?></label>
             <input type="text" name="q" value="<?= e($search) ?>" class="form-control"
                    placeholder="<?= e(t('admin_manobo.search_placeholder')) ?>" style="border-radius:8px;">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <label class="form-label" style="font-size:.78rem;font-weight:600;"><?= e(t('admin_manobo.col_category')) ?></label>
             <select name="category" class="form-select" style="border-radius:8px;">
                 <option value=""><?= e(t('admin_manobo.all_categories')) ?></option>
@@ -345,11 +332,19 @@ ob_start();
                 <?php endforeach; ?>
             </select>
         </div>
+        <div class="col-md-2">
+            <label class="form-label" style="font-size:.78rem;font-weight:600;">Status</label>
+            <select name="status" class="form-select" style="border-radius:8px;">
+                <option value="">Lahat ng Status</option>
+                <option value="approved" <?= ($filterStatus ?? '') === 'approved' ? 'selected' : '' ?>>Approved</option>
+                <option value="pending_review" <?= ($filterStatus ?? '') === 'pending_review' ? 'selected' : '' ?>>Pending Review</option>
+            </select>
+        </div>
         <div class="col-md-2 d-flex gap-2">
             <button type="submit" class="btn btn-barangay flex-grow-1" style="border-radius:8px;font-weight:600;">
                 <?= e(t('admin_manobo.filter')) ?>
             </button>
-            <?php if ($search !== '' || $filterCategory !== ''): ?>
+            <?php if ($search !== '' || $filterCategory !== '' || ($filterStatus ?? '') !== ''): ?>
             <a href="<?= e(route('admin/manobo')) ?>" class="btn btn-outline-secondary" style="border-radius:8px;">
                 <i class="bi bi-x-lg"></i>
             </a>
@@ -367,42 +362,59 @@ ob_start();
                     <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_manobo')) ?></th>
                     <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_english')) ?></th>
                     <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_tagalog')) ?></th>
-                    <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_pos')) ?></th>
+                    <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Bisaya</th>
                     <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_category')) ?></th>
+                    <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Review Status</th>
                     <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_notes')) ?></th>
                     <th class="text-end" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_actions')) ?></th>
                 </tr>
             </thead>
             <tbody>
             <?php if ($entries === []): ?>
-                <tr><td colspan="7" class="text-center text-muted py-4"><?= e(t('admin_manobo.no_entries')) ?></td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-4"><?= e(t('admin_manobo.no_entries')) ?></td></tr>
             <?php endif; ?>
 
             <?php foreach ($entries as $entry): ?>
                 <?php $key = $entry['manobo']; ?>
+                <?php $isApproved = ($entry['review_status'] ?? '') === 'approved' && empty($entry['needs_review']); ?>
 
                 <!-- display row -->
                 <tr x-show="editing !== <?= e(json_encode($key)) ?>">
-                    <td style="font-weight:700;color:var(--brand-primary);white-space:nowrap;"><?= e($entry['manobo']) ?></td>
+                    <td style="font-weight:700;color:var(--brand-primary);white-space:nowrap;">
+                        <?= e($entry['manobo']) ?>
+                        <?php if (!empty($entry['source_page'])): ?>
+                            <span class="badge text-secondary" style="font-size:.65rem;">p.<?= e($entry['source_page']) ?></span>
+                        <?php endif; ?>
+                    </td>
                     <td><?= e($entry['english']) ?></td>
                     <td><?= e($entry['tagalog']) ?></td>
-                    <td style="color:var(--text-muted);"><?= e($entry['part_of_speech']) ?></td>
+                    <td style="color:#0369a1;font-weight:500;"><?= e($entry['bisaya'] ?? '') ?></td>
                     <td>
                         <span style="font-size:.72rem;font-weight:600;background:var(--surface-muted,#f1f5f9);
                                      color:var(--text-muted);border-radius:20px;padding:2px 10px;">
                             <?= e($entry['category']) ?>
                         </span>
                     </td>
-                    <td style="max-width:320px;color:var(--text-muted);font-size:.78rem;line-height:1.5;">
-                        <?php $isUnverified = stripos($entry['notes'], 'unverified') !== false; ?>
-                        <?php if ($isUnverified): ?>
-                        <span class="manobo-flag-unverified"
-                              style="font-size:.68rem;font-weight:700;border-radius:4px;
-                                     padding:1px 6px;margin-right:4px;">UNVERIFIED</span>
+                    <td>
+                        <?php if ($isApproved): ?>
+                            <span class="badge bg-success" style="font-size:.68rem;">Approved</span>
+                        <?php else: ?>
+                            <span class="badge bg-warning text-dark" style="font-size:.68rem;">Pending Review</span>
                         <?php endif; ?>
+                    </td>
+                    <td style="max-width:240px;color:var(--text-muted);font-size:.78rem;line-height:1.5;">
                         <?= e($entry['notes']) ?>
                     </td>
                     <td class="text-end" style="white-space:nowrap;">
+                        <?php if (!$isApproved): ?>
+                        <form method="POST" action="<?= e(route('admin/manobo/approve')) ?>" class="d-inline" title="Approve this entry">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="id" value="<?= e($entry['id']) ?>">
+                            <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius:6px;">
+                                <i class="bi bi-check-lg"></i> Approve
+                            </button>
+                        </form>
+                        <?php endif; ?>
                         <button type="button" class="btn btn-sm btn-outline-secondary"
                                 style="border-radius:6px;"
                                 @click="editing = <?= e(json_encode($key)) ?>">
@@ -424,7 +436,7 @@ ob_start();
                 <!-- edit row -->
                 <tr x-show="editing === <?= e(json_encode($key)) ?>" x-cloak
                     style="background:var(--surface-muted,#f8fafc);">
-                    <td colspan="7">
+                    <td colspan="8">
                         <form method="POST" action="<?= e(route('admin/manobo/update')) ?>">
                             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                             <input type="hidden" name="original_manobo" value="<?= e($entry['manobo']) ?>">
@@ -433,39 +445,44 @@ ob_start();
                             </p>
                             <div class="row g-2">
                                 <div class="col-md-3">
+                                    <label class="form-label small text-muted mb-1">Manobo</label>
                                     <input type="text" name="manobo" value="<?= e($entry['manobo']) ?>" required
-                                           class="form-control form-control-sm" style="border-radius:6px;"
-                                           placeholder="<?= e(t('admin_manobo.col_manobo')) ?>">
+                                           class="form-control form-control-sm" style="border-radius:6px;">
                                 </div>
                                 <div class="col-md-3">
+                                    <label class="form-label small text-muted mb-1">English</label>
                                     <input type="text" name="english" value="<?= e($entry['english']) ?>" required
-                                           class="form-control form-control-sm" style="border-radius:6px;"
-                                           placeholder="<?= e(t('admin_manobo.col_english')) ?>">
+                                           class="form-control form-control-sm" style="border-radius:6px;">
                                 </div>
                                 <div class="col-md-3">
+                                    <label class="form-label small text-muted mb-1">Tagalog</label>
                                     <input type="text" name="tagalog" value="<?= e($entry['tagalog']) ?>" required
-                                           class="form-control form-control-sm" style="border-radius:6px;"
-                                           placeholder="<?= e(t('admin_manobo.col_tagalog')) ?>">
+                                           class="form-control form-control-sm" style="border-radius:6px;">
                                 </div>
                                 <div class="col-md-3">
+                                    <label class="form-label small text-muted mb-1">Bisaya</label>
+                                    <input type="text" name="bisaya" value="<?= e($entry['bisaya'] ?? '') ?>"
+                                           class="form-control form-control-sm" style="border-radius:6px;">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted mb-1">Bahagi ng Pananalita</label>
                                     <input type="text" name="part_of_speech" value="<?= e($entry['part_of_speech']) ?>"
-                                           class="form-control form-control-sm" list="pos-list" style="border-radius:6px;"
-                                           placeholder="<?= e(t('admin_manobo.col_pos')) ?>">
+                                           class="form-control form-control-sm" list="pos-list" style="border-radius:6px;">
                                 </div>
                                 <div class="col-md-3">
+                                    <label class="form-label small text-muted mb-1">Kategorya</label>
                                     <input type="text" name="category" value="<?= e($entry['category']) ?>"
-                                           class="form-control form-control-sm" list="cat-list" style="border-radius:6px;"
-                                           placeholder="<?= e(t('admin_manobo.col_category')) ?>">
+                                           class="form-control form-control-sm" list="cat-list" style="border-radius:6px;">
                                 </div>
                                 <div class="col-md-3">
+                                    <label class="form-label small text-muted mb-1">Source / Page</label>
                                     <input type="text" name="source" value="<?= e($entry['source']) ?>"
-                                           class="form-control form-control-sm" style="border-radius:6px;"
-                                           placeholder="<?= e(t('admin_manobo.col_source')) ?>">
+                                           class="form-control form-control-sm" style="border-radius:6px;">
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted mb-1">Mga Tala (Notes)</label>
                                     <input type="text" name="notes" value="<?= e($entry['notes']) ?>"
-                                           class="form-control form-control-sm" style="border-radius:6px;"
-                                           placeholder="<?= e(t('admin_manobo.col_notes')) ?>">
+                                           class="form-control form-control-sm" style="border-radius:6px;">
                                 </div>
                             </div>
                             <div class="d-flex gap-2 mt-2">
@@ -547,6 +564,64 @@ ob_start();
                         </form>
                     </td>
                     <?php endif; ?>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+</div>
+
+<!-- ── Requirement 25: Track Missing Manobo Concepts ────────────────────── -->
+<div class="admin-card mt-4" id="missing-concepts">
+    <div class="admin-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="admin-card-title mb-0" style="font-size:1rem;">
+                <i class="bi bi-journal-text me-2" style="color:var(--brand-primary);"></i>
+                Mga Konseptong Wala Pa sa Manobo (Missing Concepts)
+                <span class="ms-1" style="font-weight:700;color:var(--text-muted);">(<?= count($missingConcepts ?? []) ?>)</span>
+            </h2>
+            <p class="text-muted mb-0 mt-1" style="font-size:.78rem;">
+                Awtomatikong natutukoy ang mga salita/parirala mula sa mga anunsyo at ordinansa na pansamantalang ginamitan ng Bisaya fallback.
+            </p>
+        </div>
+        <div>
+            <span class="badge bg-secondary" style="font-size:.75rem;">
+                Dictionary v<?= e($dictionaryVersion ?? 1) ?>
+            </span>
+        </div>
+    </div>
+    <?php if (empty($missingConcepts)): ?>
+    <div class="admin-card-body text-center text-muted py-4" style="font-size:.85rem;">
+        Walang naitalang nawawalang konsepto sa kasalukuyan.
+    </div>
+    <?php else: ?>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0" style="font-size:.85rem;">
+            <thead>
+                <tr style="border-bottom:2px solid var(--border);">
+                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Konsepto (Concept)</th>
+                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Source Language</th>
+                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Bisaya Fallback</th>
+                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);text-align:center;">Dalas (Usage)</th>
+                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Huling Nakita</th>
+                    <th class="text-end" style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Aksyon</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($missingConcepts as $mc): ?>
+                <tr>
+                    <td style="font-weight:600;color:var(--text-primary);"><?= e($mc['concept']) ?></td>
+                    <td><span class="badge bg-light text-dark border"><?= e(strtoupper($mc['source_lang'])) ?></span></td>
+                    <td style="color:#0284c7;font-weight:500;"><?= e($mc['bisaya_fallback'] ?? '—') ?></td>
+                    <td style="text-align:center;"><span class="badge bg-primary-subtle text-primary"><?= (int) $mc['usage_count'] ?></span></td>
+                    <td style="font-size:.78rem;color:var(--text-muted);"><?= e($mc['last_seen_at'] ?? '—') ?></td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-primary" style="border-radius:6px;"
+                                onclick="document.querySelector('#manobo-add-form [name=\'english\']').value = <?= e(json_encode($mc['concept'])) ?>; document.querySelector('#manobo-add-form [name=\'bisaya\']').value = <?= e(json_encode($mc['bisaya_fallback'] ?? '')) ?>; document.getElementById('manobo-add-form').scrollIntoView({behavior:'smooth'});">
+                            <i class="bi bi-plus-circle me-1"></i> Idagdag sa Manobo
+                        </button>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

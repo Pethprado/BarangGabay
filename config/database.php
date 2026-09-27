@@ -305,6 +305,51 @@ function syncPostgresSchema(PDO $pdo): void
              RETURN to_char(ts, pg_fmt);
          END;
          $$ LANGUAGE plpgsql IMMUTABLE",
+
+        // 14. Manobo Dictionary columns for Hybrid Translator
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS bisaya VARCHAR(255) NULL",
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS normalized_tagalog VARCHAR(255) NULL",
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS normalized_english VARCHAR(255) NULL",
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS normalized_bisaya VARCHAR(255) NULL",
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS type VARCHAR(30) NOT NULL DEFAULT 'word'",
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS priority INT NOT NULL DEFAULT 0",
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS source_page INT NULL",
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS review_status VARCHAR(30) NOT NULL DEFAULT 'approved'",
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS needs_review SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS aliases TEXT NULL",
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP NULL",
+
+        // 15. Translation Cache table
+        "CREATE TABLE IF NOT EXISTS translation_cache (
+            id SERIAL PRIMARY KEY,
+            source_text_hash CHAR(64) NOT NULL,
+            source_lang VARCHAR(10) NOT NULL DEFAULT 'fil',
+            target_lang VARCHAR(10) NOT NULL DEFAULT 'msm',
+            dictionary_version INT NOT NULL DEFAULT 1,
+            translated_text TEXT NOT NULL,
+            provenance_json TEXT NULL,
+            manobo_matches INT NOT NULL DEFAULT 0,
+            bisaya_fallbacks INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            UNIQUE (source_text_hash, source_lang, target_lang, dictionary_version)
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_tc_hash ON translation_cache(source_text_hash)",
+
+        // 16. Manobo Missing Concepts table
+        "CREATE TABLE IF NOT EXISTS manobo_missing_concepts (
+            id SERIAL PRIMARY KEY,
+            concept VARCHAR(255) NOT NULL,
+            source_lang VARCHAR(10) NOT NULL DEFAULT 'tl',
+            bisaya_fallback VARCHAR(255) NULL,
+            usage_count INT NOT NULL DEFAULT 1,
+            first_seen_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            last_seen_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            review_status VARCHAR(30) NOT NULL DEFAULT 'pending',
+            notes TEXT NULL,
+            UNIQUE (concept, source_lang)
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_mc_status ON manobo_missing_concepts(review_status)",
     ];
 
     foreach ($statements as $sql) {
@@ -313,6 +358,16 @@ function syncPostgresSchema(PDO $pdo): void
         } catch (\PDOException $e) {
             error_log('PgSQL schema sync note: ' . $e->getMessage());
         }
+    }
+
+    try {
+        $count = (int) $pdo->query("SELECT COUNT(*) FROM manobo_dictionary WHERE source = 'Manobo Words.pdf'")->fetchColumn();
+        if ($count < 50) {
+            require_once __DIR__ . '/../tools/seed_manobo_pdf_dataset.php';
+            seed_manobo_pdf_dataset($pdo);
+        }
+    } catch (\Throwable $e) {
+        error_log('PgSQL seed_manobo_pdf_dataset note: ' . $e->getMessage());
     }
 }
 

@@ -909,7 +909,7 @@ function current_locale(): string
         return 'en';
     }
 
-    $locale = $_SESSION['locale'] ?? 'fil';
+    $locale = $_SESSION['locale'] ?? $_COOKIE['bg_locale'] ?? 'fil';
     return array_key_exists($locale, available_locales()) ? $locale : 'fil';
 }
 
@@ -1322,11 +1322,12 @@ function localised_content(array $row, string $baseField, ?string $locale = null
      * COULD say it — the notice could only report an absence, never name
      * what it had fallen back to.
      */
+
     return $translated !== ''
         ? [
             'text'         => $translated,
             'translated'   => true,
-            'machine'      => (int) ($row[$autoFlag] ?? 0) === 1,
+            'machine'      => (int) ($row[$autoFlag] ?? 1) === 1,
             'locale'       => $locale,
             'is_original'  => false,
             'shown_locale' => $locale,
@@ -1350,12 +1351,26 @@ function localised_text(array $row, string $baseField): string
 }
 
 /**
- * Set the active UI locale for this session. Silently ignores unknown locales.
+ * Set the active UI locale for this session and persist to cookie/profile.
  */
 function set_locale(string $locale): void
 {
     if (array_key_exists($locale, available_locales())) {
         $_SESSION['locale'] = $locale;
+        if (!headers_sent()) {
+            setcookie('bg_locale', $locale, [
+                'expires'  => time() + 86400 * 365,
+                'path'     => '/',
+                'httponly' => false,
+                'samesite' => 'Lax',
+            ]);
+        }
+        if (!empty($_SESSION['user']['id'])) {
+            try {
+                db()->prepare("UPDATE users SET locale = ? WHERE id = ?")
+                    ->execute([$locale, $_SESSION['user']['id']]);
+            } catch (\Throwable) {}
+        }
     }
 }
 

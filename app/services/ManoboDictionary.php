@@ -44,10 +44,17 @@ final class ManoboDictionary
         'manobo',
         'english',
         'tagalog',
+        'bisaya',
         'part_of_speech',
         'category',
         'notes',
         'source',
+        'source_page',
+        'review_status',
+        'needs_review',
+        'aliases',
+        'type',
+        'priority',
     ];
 
     private PDO $pdo;
@@ -394,18 +401,36 @@ final class ManoboDictionary
     {
         $entry = $this->validated($data);
 
+        $normTagalog = mb_strtolower(trim($entry['tagalog'] ?? ''));
+        $normEnglish = mb_strtolower(trim($entry['english'] ?? ''));
+        $normBisaya  = mb_strtolower(trim($entry['bisaya'] ?? ''));
+
         $stmt = $this->pdo->prepare(
             'INSERT INTO manobo_dictionary
-                (manobo, english, tagalog, part_of_speech, category, notes, source, created_by, updated_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                (manobo, english, tagalog, bisaya, normalized_tagalog, normalized_english, normalized_bisaya, 
+                 part_of_speech, category, notes, source, source_page, review_status, needs_review, 
+                 aliases, type, priority, created_by, updated_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $entry['manobo'], $entry['english'], $entry['tagalog'],
+            $entry['bisaya'] !== '' ? $entry['bisaya'] : null,
+            $normTagalog !== '' ? $normTagalog : null,
+            $normEnglish !== '' ? $normEnglish : null,
+            $normBisaya !== '' ? $normBisaya : null,
             $entry['part_of_speech'] !== '' ? $entry['part_of_speech'] : null,
             $entry['category'] !== '' ? $entry['category'] : 'other',
             $entry['notes'] !== '' ? $entry['notes'] : null,
-            $entry['source'], $userId, $userId,
+            $entry['source'],
+            !empty($entry['source_page']) ? (int) $entry['source_page'] : null,
+            $entry['review_status'] !== '' ? $entry['review_status'] : 'pending_review',
+            !empty($entry['needs_review']) ? 1 : 0,
+            $entry['aliases'] !== '' ? $entry['aliases'] : null,
+            $entry['type'] !== '' ? $entry['type'] : 'word',
+            !empty($entry['priority']) ? (int) $entry['priority'] : 1,
+            $userId, $userId,
         ]);
+        ManoboHybridTranslator::incrementDictionaryVersion();
         $this->reload();
     }
 
@@ -425,19 +450,53 @@ final class ManoboDictionary
 
         $entry = $this->validated($data, $originalManobo);
 
+        $normTagalog = mb_strtolower(trim($entry['tagalog'] ?? ''));
+        $normEnglish = mb_strtolower(trim($entry['english'] ?? ''));
+        $normBisaya  = mb_strtolower(trim($entry['bisaya'] ?? ''));
+
         $stmt = $this->pdo->prepare(
             'UPDATE manobo_dictionary
-                SET manobo = ?, english = ?, tagalog = ?, part_of_speech = ?,
-                    category = ?, notes = ?, source = ?, updated_by = ?
+                SET manobo = ?, english = ?, tagalog = ?, bisaya = ?,
+                    normalized_tagalog = ?, normalized_english = ?, normalized_bisaya = ?,
+                    part_of_speech = ?, category = ?, notes = ?, source = ?,
+                    source_page = ?, review_status = ?, needs_review = ?,
+                    aliases = ?, type = ?, priority = ?, updated_by = ?
               WHERE id = ?'
         );
         $stmt->execute([
             $entry['manobo'], $entry['english'], $entry['tagalog'],
+            $entry['bisaya'] !== '' ? $entry['bisaya'] : null,
+            $normTagalog !== '' ? $normTagalog : null,
+            $normEnglish !== '' ? $normEnglish : null,
+            $normBisaya !== '' ? $normBisaya : null,
             $entry['part_of_speech'] !== '' ? $entry['part_of_speech'] : null,
             $entry['category'] !== '' ? $entry['category'] : 'other',
             $entry['notes'] !== '' ? $entry['notes'] : null,
-            $entry['source'], $userId, $id,
+            $entry['source'],
+            !empty($entry['source_page']) ? (int) $entry['source_page'] : null,
+            $entry['review_status'] !== '' ? $entry['review_status'] : 'approved',
+            !empty($entry['needs_review']) ? 1 : 0,
+            $entry['aliases'] !== '' ? $entry['aliases'] : null,
+            $entry['type'] !== '' ? $entry['type'] : 'word',
+            !empty($entry['priority']) ? (int) $entry['priority'] : 1,
+            $userId, $id,
         ]);
+        ManoboHybridTranslator::incrementDictionaryVersion();
+        $this->reload();
+    }
+
+    /**
+     * Mark an entry as reviewed and approved by an authorized language reviewer.
+     */
+    public function approve(int $id, ?int $userId = null): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE manobo_dictionary 
+                SET review_status = "approved", needs_review = 0, updated_by = ?
+              WHERE id = ?'
+        );
+        $stmt->execute([$userId, $id]);
+        ManoboHybridTranslator::incrementDictionaryVersion();
         $this->reload();
     }
 
@@ -620,13 +679,6 @@ final class ManoboDictionary
 
         if ($entry['source'] === '') {
             $entry['source'] = 'LOCAL';
-        }
-
-        $duplicate = $this->find($entry['manobo']);
-        if ($duplicate !== null && $entry['manobo'] !== $ignoreHeadword) {
-            throw new \InvalidArgumentException(
-                'The headword "' . $entry['manobo'] . '" is already in the dictionary.'
-            );
         }
 
         return $entry;

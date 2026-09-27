@@ -471,16 +471,38 @@ class TranslationService
         }
 
         if ($needManobo) {
-            // Paid AI first — it produces real sentences rather than a
-            // word-by-word gloss. Falls back to the community dictionary,
-            // which is the only option when there are no credits and the only
-            // option that will ever exist offline, since no translation
-            // service supports Manobo.
-            $result['manobo'] = self::autoTranslatePost($contentType, $contentId, $title, $body)
-                || self::autoTranslatePostToManobo($contentType, $contentId, $title, $body, $sourceLang);
+            // Manobo and Bisaya hybrid translation:
+            // APPROVED MANOBO DATASET -> BISAYA FALLBACK -> ORIGINAL ONLY FOR PROTECTED CONTENT
+            $result['manobo'] = self::autoTranslatePostToManobo($contentType, $contentId, $title, $body, $sourceLang);
         }
 
         return $result;
+    }
+
+    /**
+     * Reusable translation service entry point.
+     * e.g. TranslationService::translate($text, 'mn')
+     */
+    public static function translate(string $text, string $target = 'mn', string $from = 'auto'): array
+    {
+        if ($target === 'mn' || $target === 'msm') {
+            $translator = new ManoboHybridTranslator();
+            return $translator->translate($text, $from);
+        }
+
+        $free = new FreeTranslationService();
+        $source = $from === 'auto' ? (LanguageGuess::detectOrNull($text) ?? 'fil') : $from;
+        $out = $free->translate($text, $source, $target);
+        return [
+            'success'         => $out !== null,
+            'translation'     => $out ?? $text,
+            'language'        => $target,
+            'source_lang'     => $source,
+            'manoboMatches'   => 0,
+            'bisayaFallbacks' => 0,
+            'provenance'      => [],
+            'cached'          => false,
+        ];
     }
 
     /**
@@ -629,9 +651,6 @@ class TranslationService
             }
             self::flagAuto($contentType, $contentId, 'en_is_auto', $isAuto);
 
-            // Text a person typed is never gated — they already read it. This
-            // also releases a post that was pending and has since had its
-            // English written by hand, so the gate cannot strand it.
             if (!$isAuto && $contentType === 'announcement') {
                 \App\Models\Announcement::setEnReviewState($contentId, \App\Models\Announcement::REVIEW_NONE);
             }
@@ -645,19 +664,9 @@ class TranslationService
     }
 
     /**
-     * Fill the Manobo translation from the barangay's own dictionary.
+     * Fill the Manobo translation using the Manobo and Bisaya Hybrid Translator.
      *
-     * No translation service on earth supports Manobo, so unlike English there
-     * is no free provider to fall back to — the community dictionary is the
-     * only automatic option there will ever be. The result is a word-by-word
-     * gloss, which is why it is stored with the auto flag set and shown to
-     * residents with a "machine translation" note rather than passed off as
-     * something a Manobo speaker wrote.
-     *
-     * Requires real coverage before storing anything: a sentence where only
-     * one word in five was found is not a translation, it is the original with
-     * a word swapped, and showing that under a Manobo heading would be worse
-     * than showing the Filipino.
+     * Priority: APPROVED MANOBO DATASET -> BISAYA FALLBACK -> ORIGINAL ONLY FOR PROTECTED CONTENT
      */
     public static function autoTranslatePostToManobo(
         string $contentType,
@@ -666,67 +675,45 @@ class TranslationService
         string $body,
         string $sourceLang = 'fil'
     ): bool {
-        if (!\function_exists('english_gloss_phrase')) {
-            return false;
-        }
-
-        // Gloss from whichever language the post was written in. The community
-        // dictionaries index Tagalog and English side by side, so an English
-        // post is glossed directly rather than being round-tripped through
-        // Filipino first — each extra hop is another chance to lose meaning.
-        $from       = $sourceLang === 'en' ? 'english' : 'tagalog';
-        $titleGloss = manobo_gloss_for($title, 0.6, $from);
-        $bodyGloss  = manobo_gloss_for($body,  0.6, $from);
-
-        /*
-         * Both, or neither.
-         *
-         * This used to accept either one on its own, and the asymmetry bit:
-         * a short title clears the 0.6 coverage threshold on common words
-         * while a long body, with far more vocabulary the dictionary does not
-         * have, falls below it. The result was stored as a success — a Manobo
-         * headline sitting over an English article, which reads as a broken
-         * page rather than a missing translation.
-         *
-         * Worse, it defeated the notice on the resident side: an empty string
-         * is not the same as no translation, so the page could not say plainly
-         * that no Manobo version exists. Storing nothing is the honest outcome,
-         * and the reader is then told so.
-         *
-         * Same rule as isCompleteTranslation() applies to the free service.
-         * A field that was empty to begin with is allowed to stay empty.
-         */
         $needTitle = trim($title) !== '';
         $needBody  = trim(strip_tags($body)) !== '';
 
+        $titleGloss = null;
+        $bodyGloss  = null;
+
         $source = $title . "\n" . $body;
 
-        if (($needTitle && $titleGloss === null) || ($needBody && $bodyGloss === null)) {
-            /* Coverage was good enough for one field and not the other. Not
-               retryable: the dictionary has 39 entries and will not grow by
-               itself between now and the next sweep. The fix is either
-               Anthropic credits or a person typing the Manobo — and the
-               health page can now say so instead of leaving MN blank. */
-            TranslationAttempt::record(
-                $contentType, $contentId, 'msm', TranslationOutcome::PARTIAL_RESULT, 'text',
-                'The barangay dictionary covered only part of this post, so nothing was stored.',
-                'dictionary', $source
-            );
-
-            return false;
-        }
-
-        if ($titleGloss === null && $bodyGloss === null) {
-            TranslationAttempt::record(
-                $contentType, $contentId, 'msm', TranslationOutcome::PARTIAL_RESULT, 'text',
-                'Too few words in this post are in the barangay dictionary to gloss it.',
-                'dictionary', $source
-            );
-
-            return false;
-        }
-
         try {
+            $translator = new ManoboHybridTranslator();
+            if ($needTitle) {
+                $tRes = $translator->translate($title, $sourceLang);
+                $titleGloss = !empty($tRes['translation']) ? $tRes['translation'] : null;
+            }
+            if ($needBody) {
+                $bRes = $translator->translate($body, $sourceLang);
+                $bodyGloss = !empty($bRes['translation']) ? $bRes['translation'] : null;
+            }
+
+            if (($needTitle && $titleGloss === null) || ($needBody && $bodyGloss === null)) {
+                TranslationAttempt::record(
+                    $contentType, $contentId, 'msm', TranslationOutcome::PARTIAL_RESULT, 'text',
+                    'The barangay dictionary covered only part of this post, so nothing was stored.',
+                    'hybrid_translator', $source
+                );
+
+                return false;
+            }
+
+            if ($titleGloss === null && $bodyGloss === null) {
+                TranslationAttempt::record(
+                    $contentType, $contentId, 'msm', TranslationOutcome::PARTIAL_RESULT, 'text',
+                    'Too few words in this post could be translated.',
+                    'hybrid_translator', $source
+                );
+
+                return false;
+            }
+
             $t = $titleGloss ?? '';
             $b = $bodyGloss  ?? '';
 
@@ -743,13 +730,13 @@ class TranslationService
                 default:
                     TranslationAttempt::record(
                         $contentType, $contentId, 'msm', TranslationOutcome::PROVIDER_ERROR,
-                        'text', 'Unknown content type ' . $contentType, 'dictionary', $source
+                        'text', 'Unknown content type ' . $contentType, 'hybrid_translator', $source
                     );
                     return false;
             }
             self::flagAuto($contentType, $contentId, 'manobo_is_auto', true);
 
-            TranslationAttempt::recordOk($contentType, $contentId, 'msm', 'text', 'dictionary', $source);
+            TranslationAttempt::recordOk($contentType, $contentId, 'msm', 'text', 'hybrid_translator', $source);
 
             return true;
         } catch (\Throwable $e) {
@@ -758,7 +745,7 @@ class TranslationService
 
             TranslationAttempt::record(
                 $contentType, $contentId, 'msm', TranslationOutcome::PROVIDER_ERROR,
-                'text', $e->getMessage(), 'dictionary', $source
+                'text', $e->getMessage(), 'hybrid_translator', $source
             );
 
             return false;

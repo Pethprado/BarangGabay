@@ -362,10 +362,21 @@ CREATE TABLE manobo_dictionary (
     manobo VARCHAR(150) NOT NULL,
     english VARCHAR(255) NOT NULL,
     tagalog VARCHAR(255) NOT NULL,
+    bisaya VARCHAR(255) NULL,
+    normalized_tagalog VARCHAR(255) NULL,
+    normalized_english VARCHAR(255) NULL,
+    normalized_bisaya VARCHAR(255) NULL,
+    type VARCHAR(30) NOT NULL DEFAULT 'word',
+    priority INT NOT NULL DEFAULT 0,
+    source_page INT NULL,
+    review_status VARCHAR(30) NOT NULL DEFAULT 'approved',
+    needs_review SMALLINT NOT NULL DEFAULT 0,
+    aliases TEXT NULL,
     part_of_speech VARCHAR(20) NULL,
     category VARCHAR(30) NOT NULL DEFAULT 'other',
     notes TEXT NULL,
     source VARCHAR(100) NOT NULL DEFAULT 'LOCAL',
+    archived_at TIMESTAMP NULL DEFAULT NULL,
     deleted_at TIMESTAMP NULL DEFAULT NULL,
     created_by INT NULL,
     updated_by INT NULL,
@@ -454,4 +465,35 @@ CREATE TABLE IF NOT EXISTS safety_checkins (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_sc_status ON safety_checkins(status);
+
+CREATE TABLE IF NOT EXISTS translation_cache (
+    id SERIAL PRIMARY KEY,
+    source_text_hash CHAR(64) NOT NULL,
+    source_lang VARCHAR(10) NOT NULL DEFAULT 'fil',
+    target_lang VARCHAR(10) NOT NULL DEFAULT 'msm',
+    dictionary_version INT NOT NULL DEFAULT 1,
+    translated_text TEXT NOT NULL,
+    provenance_json TEXT NULL,
+    manobo_matches INT NOT NULL DEFAULT 0,
+    bisaya_fallbacks INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (source_text_hash, source_lang, target_lang, dictionary_version)
+);
+CREATE INDEX IF NOT EXISTS idx_tc_hash ON translation_cache(source_text_hash);
+
+CREATE TABLE IF NOT EXISTS manobo_missing_concepts (
+    id SERIAL PRIMARY KEY,
+    concept VARCHAR(255) NOT NULL,
+    source_lang VARCHAR(10) NOT NULL DEFAULT 'tl',
+    bisaya_fallback VARCHAR(255) NULL,
+    usage_count INT NOT NULL DEFAULT 1,
+    first_seen_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    last_seen_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    review_status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    notes TEXT NULL,
+    UNIQUE (concept, source_lang)
+);
+CREATE INDEX IF NOT EXISTS idx_mc_status ON manobo_missing_concepts(review_status);
+
 
