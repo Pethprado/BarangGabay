@@ -181,4 +181,71 @@ final class ManoboHybridTranslatorTest extends TestCase
         // Verify script is neutralized or kept as raw non-executable string
         $this->assertStringContainsString('<script>', $res['translation']);
     }
+
+    /**
+     * Requirement: Connect roots, linkers, and affixes to Manobo before using Bisaya fallback.
+     */
+    public function testStemmingConnectsToManoboBeforeBisayaFallback(): void
+    {
+        // 'walang' -> stems to 'wala' -> Manobo 'wada'
+        $resWala = $this->translator->translate('walang pagkain', 'fil', ['force_refresh' => true]);
+        $this->assertStringContainsString('wada', mb_strtolower($resWala['translation']));
+        $this->assertGreaterThanOrEqual(1, $resWala['manoboMatches']);
+
+        // 'kumain' -> stems to 'kain' -> Manobo 'kuon'
+        $resKain = $this->translator->translate('kumain', 'fil', ['force_refresh' => true]);
+        $this->assertStringContainsString('kuon', mb_strtolower($resKain['translation']));
+        $this->assertSame(1, $resKain['manoboMatches']);
+
+        // 'pumasok' -> stems to 'pasok' -> Manobo 'sed'
+        $resPasok = $this->translator->translate('pumasok', 'fil', ['force_refresh' => true]);
+        $this->assertStringContainsString('sed', mb_strtolower($resPasok['translation']));
+        $this->assertSame(1, $resPasok['manoboMatches']);
+    }
+
+    /**
+     * Requirement: Dashboard safety title 'Walang abiso ngayon' must translate using 100% Manobo words.
+     */
+    public function testWalangAbisoNgayonFullyManobo(): void
+    {
+        $res = $this->translator->translate('Walang abiso ngayon', 'fil', ['force_refresh' => true]);
+        $this->assertStringContainsString('wada', mb_strtolower($res['translation']));
+        $this->assertStringContainsString('pahinomdom', mb_strtolower($res['translation']));
+        $this->assertStringContainsString('kuntoon', mb_strtolower($res['translation']));
+        $this->assertSame(3, $res['manoboMatches']);
+        $this->assertSame(0, $res['bisayaFallbacks']);
+    }
+
+    /**
+     * Requirement: UI labels translate to Manobo when locale is 'msm'.
+     */
+    public function testUiLabelsTranslateWhenLocaleIsManobo(): void
+    {
+        $nav = t('nav.announcements', [], 'msm');
+        $this->assertStringContainsString('Pahinomdom', $nav);
+
+        $quietTitle = t('safety.quiet_title', [], 'msm');
+        $this->assertSame('Wada pahinomdom kuntoon', $quietTitle);
+
+        $doc = t('nav.documents', [], 'msm');
+        $this->assertSame('Suyat', $doc);
+
+        $home = t('nav.home', [], 'msm');
+        $this->assertSame('Bayoy', $home);
+    }
+
+    /**
+     * Requirement: Bisaya fallback text is refined with approved Manobo vocabulary.
+     */
+    public function testRefineBisayaFallbackWithManobo(): void
+    {
+        $manoboIndex = $this->translator->loadManoboIndex();
+        $refined = $this->translator->refineBisayaWithManobo('walay pahibalo sa balay', $manoboIndex);
+        
+        $lower = mb_strtolower($refined['text']);
+        $this->assertStringContainsString('wada', $lower);
+        $this->assertStringContainsString('pahinomdom', $lower);
+        $this->assertStringContainsString('bayoy', $lower);
+        $this->assertGreaterThanOrEqual(2, $refined['manoboCount']);
+    }
 }

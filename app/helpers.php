@@ -1309,6 +1309,22 @@ function localised_content(array $row, string $baseField, ?string $locale = null
         $translated = '';
     }
 
+    // Auto-generate hybrid Manobo translation for un-backfilled content on the fly
+    if ($locale === 'msm' && $translated === '' && $original !== '') {
+        try {
+            static $contentHybridTranslator = null;
+            if ($contentHybridTranslator === null) {
+                $contentHybridTranslator = new \App\Services\ManoboHybridTranslator();
+            }
+            $res = $contentHybridTranslator->translate($original, $sourceLang);
+            if (!empty($res['translation'])) {
+                $translated = $res['translation'];
+            }
+        } catch (\Throwable) {
+            // Keep fallback
+        }
+    }
+
     /*
      * 'locale' is what the reader ASKED for. 'shown_locale' is what they are
      * actually looking at, and the two differ exactly when a translation is
@@ -1455,23 +1471,34 @@ function t(string $key, array $replace = [], ?string $locale = null): string
                     $value = manobo_word($source);
                 }
             }
-            // 2. Whole label has a Bisaya entry (a fluent phrase beats a gloss).
+
+            // 2. Hybrid Manobo-first + Bisaya Translator
+            // Prioritizes approved Manobo dataset terms first, connecting roots/linkers/affixes,
+            // before falling back to Bisaya, and refining Bisaya with Manobo.
+            if ($value === null) {
+                $sourceText = $filipino ?? $english;
+                if ($sourceText !== null && trim($sourceText) !== '') {
+                    try {
+                        static $uiHybridTranslator = null;
+                        if ($uiHybridTranslator === null) {
+                            $uiHybridTranslator = new \App\Services\ManoboHybridTranslator();
+                        }
+                        $srcLang = ($filipino !== null) ? 'fil' : 'en';
+                        $res = $uiHybridTranslator->translate($sourceText, $srcLang);
+                        if (!empty($res['translation'])) {
+                            $value = $res['translation'];
+                            $cache['msm'][$key] = $value;
+                        }
+                    } catch (\Throwable) {
+                        // Fallback
+                    }
+                }
+            }
+
+            // 3. Fallback word-by-word gloss
             if ($value === null && $filipino !== null) {
-                $hit   = bisaya_word($filipino, 'tagalog');
-                $value = $hit !== null ? manobo_match_case($filipino, $hit) : null;
+                $value = local_blend_gloss($filipino, 'tagalog', 14, 0.5);
             }
-            if ($value === null && $english !== null) {
-                $hit   = bisaya_word($english, 'english');
-                $value = $hit !== null ? manobo_match_case($english, $hit) : null;
-            }
-            // 3. Word-by-word blend (Manobo word first, else Bisaya) over the
-            //    Filipino label — Tagalog and Bisaya share word order, so this
-            //    reads far better than glossing the English.
-            if ($value === null && $filipino !== null) {
-                $value = local_blend_gloss($filipino, 'tagalog', 14, 0.7);
-            }
-            // Anything still uncovered falls back to plain Filipino below —
-            // glossing the English left stray English words mid-sentence.
         }
     }
 

@@ -360,14 +360,29 @@ function syncPostgresSchema(PDO $pdo): void
         }
     }
 
-    try {
-        $count = (int) $pdo->query("SELECT COUNT(*) FROM manobo_dictionary WHERE source = 'Manobo Words.pdf'")->fetchColumn();
-        if ($count < 50) {
-            require_once __DIR__ . '/../tools/seed_manobo_pdf_dataset.php';
-            seed_manobo_pdf_dataset($pdo);
+    static $datasetSeeded = false;
+    if (!$datasetSeeded) {
+        $datasetSeeded = true;
+        try {
+            if (\App\Models\Setting::get('manobo_dataset_seeded_v3') !== '1') {
+                require_once __DIR__ . '/../tools/seed_manobo_pdf_dataset.php';
+                seed_manobo_pdf_dataset($pdo);
+                \App\Models\Setting::set('manobo_dataset_seeded_v3', '1');
+            }
+        } catch (\Throwable $e) {
+            error_log('PgSQL seed_manobo_pdf_dataset note: ' . $e->getMessage());
         }
-    } catch (\Throwable $e) {
-        error_log('PgSQL seed_manobo_pdf_dataset note: ' . $e->getMessage());
+
+        try {
+            if (\App\Models\Setting::get('manobo_backfilled_v3') !== '1') {
+                $stats = \App\Services\TranslationService::populateMissingManoboTranslations(3);
+                if ($stats['announcements'] === 0 && $stats['events'] === 0 && $stats['ordinances'] === 0) {
+                    \App\Models\Setting::set('manobo_backfilled_v3', '1');
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('PgSQL populateMissingManoboTranslations note: ' . $e->getMessage());
+        }
     }
 }
 

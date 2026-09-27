@@ -781,4 +781,56 @@ class TranslationService
             error_log('[TranslationService] flagAuto failed: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Backfill missing Manobo translations for all existing announcements, events, and ordinances.
+     *
+     * @return array{announcements: int, events: int, ordinances: int}
+     */
+    public static function populateMissingManoboTranslations(int $limit = 3): array
+    {
+        $db = db();
+        $stats = ['announcements' => 0, 'events' => 0, 'ordinances' => 0];
+
+        // 1. Announcements
+        try {
+            $stmt = $db->query("SELECT id, title, body, source_lang FROM announcements WHERE (title_manobo IS NULL OR title_manobo = '') LIMIT {$limit}");
+            while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? $row['source_lang'] : 'fil';
+                if (self::autoTranslatePostToManobo('announcement', (int)$row['id'], (string)$row['title'], (string)$row['body'], $src)) {
+                    $stats['announcements']++;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[TranslationService] populate missing announcements error: ' . $e->getMessage());
+        }
+
+        // 2. Events
+        try {
+            $stmt = $db->query("SELECT id, title, description, source_lang FROM events WHERE (title_manobo IS NULL OR title_manobo = '') LIMIT {$limit}");
+            while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? $row['source_lang'] : 'fil';
+                if (self::autoTranslatePostToManobo('event', (int)$row['id'], (string)$row['title'], (string)$row['description'], $src)) {
+                    $stats['events']++;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[TranslationService] populate missing events error: ' . $e->getMessage());
+        }
+
+        // 3. Ordinances
+        try {
+            $stmt = $db->query("SELECT id, title, description, source_lang FROM ordinances WHERE (title_manobo IS NULL OR title_manobo = '') LIMIT {$limit}");
+            while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? $row['source_lang'] : 'fil';
+                if (self::autoTranslatePostToManobo('ordinance', (int)$row['id'], (string)$row['title'], (string)$row['description'], $src)) {
+                    $stats['ordinances']++;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[TranslationService] populate missing ordinances error: ' . $e->getMessage());
+        }
+
+        return $stats;
+    }
 }

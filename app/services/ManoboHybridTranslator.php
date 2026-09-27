@@ -177,6 +177,8 @@ class ManoboHybridTranslator
             // Codes & hashtags (e.g. EVT-2026-001, #StaySafe)
             '/\b[A-Z]{2,5}-\d{3,}\b/u',
             '/#[a-zA-Z0-9_]+/u',
+            // String placeholders (e.g. :when, :email, :n, :name)
+            '/(?<!\w):[a-zA-Z_][a-zA-Z0-9_]*/u',
         ];
 
         $masked = $text;
@@ -382,14 +384,27 @@ class ManoboHybridTranslator
                 ];
                 $idx += $bestLen;
             } else {
-                // Single unmatched word token
-                $spans[] = [
-                    'type'       => 'unmatched',
-                    'text'       => $token['text'],
-                    'translated' => $token['text'],
-                    'entry'      => null,
-                ];
-                $idx++;
+                // Check if this token connects to an approved Manobo entry before treating as unmatched
+                $connected = $this->stemAndFindManobo($token['text'], $manoboIndex, $sourceLang);
+                if ($connected !== null && $this->isContextCompatible($connected['entry'], $token['text'], $idx, $tokens)) {
+                    $translatedManobo = $this->applyCase($token['text'], $connected['replacement']);
+                    $spans[] = [
+                        'type'       => 'manobo',
+                        'text'       => $token['text'],
+                        'translated' => $translatedManobo,
+                        'entry'      => $connected['entry'],
+                    ];
+                    $idx++;
+                } else {
+                    // Single unmatched word token
+                    $spans[] = [
+                        'type'       => 'unmatched',
+                        'text'       => $token['text'],
+                        'translated' => $token['text'],
+                        'entry'      => null,
+                    ];
+                    $idx++;
+                }
             }
         }
 
@@ -450,20 +465,23 @@ class ManoboHybridTranslator
                 if ($unmatchedCore !== '') {
                     $bisayaTranslation = $this->translateToBisaya($unmatchedCore, $sourceLang);
                     
+                    // Prioritize Manobo: Scan Bisaya translation to ensure NO word connected to Manobo is left in Bisaya/Cebuano
+                    $refined = $this->refineBisayaWithManobo($bisayaTranslation, $manoboIndex);
+                    $finalSegment = $refined['text'];
+                    $manoboMatches += $refined['manoboCount'];
+                    $bisayaFallbacks += $refined['bisayaCount'];
+
                     // Match spacing from original
                     $prefix = '';
                     $suffix = '';
                     if (preg_match('/^(\s+)/u', $unmatchedRaw, $m)) $prefix = $m[1];
                     if (preg_match('/(\s+)$/u', $unmatchedRaw, $m)) $suffix = $m[1];
 
-                    $assembledText .= $prefix . $bisayaTranslation . $suffix;
-                    $bisayaFallbacks++;
+                    $assembledText .= $prefix . $finalSegment . $suffix;
 
-                    $provenance[] = [
-                        'text'       => $unmatchedCore,
-                        'translated' => $bisayaTranslation,
-                        'source'     => 'bisaya',
-                    ];
+                    foreach ($refined['provenance'] as $rp) {
+                        $provenance[] = $rp;
+                    }
 
                     $this->trackMissingConcept($unmatchedCore, $sourceLang, $bisayaTranslation);
                 } else {
@@ -669,6 +687,13 @@ class ManoboHybridTranslator
                             if ($k !== '' && !isset($map[$k])) {
                                 $map[$k] = $b;
                             }
+                            if ($f === 'tagalog') {
+                                foreach ($this->stemTagalogAffixes($k) as $st) {
+                                    if ($st !== '' && !isset($map[$st])) {
+                                        $map[$st] = $b;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -678,7 +703,19 @@ class ManoboHybridTranslator
             self::$bisayaIndex = $map;
         }
 
-        return self::$bisayaIndex[$normalizedTerm] ?? null;
+        if (isset(self::$bisayaIndex[$normalizedTerm])) {
+            return self::$bisayaIndex[$normalizedTerm];
+        }
+
+        // Stemmed lookup in Bisaya index
+        $stems = $this->stemTagalogAffixes($normalizedTerm);
+        foreach ($stems as $st) {
+            if (isset(self::$bisayaIndex[$st])) {
+                return self::$bisayaIndex[$st];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -812,7 +849,14 @@ class ManoboHybridTranslator
                     if ($k !== '') $searchKeys[] = $k;
                 }
 
-                // 3. Aliases
+                // 3. Bisaya senses & alternatives (enables matching concepts that connect via Bisaya)
+                $bisaya = (string)($row['bisaya'] ?? '');
+                foreach (preg_split('~[,/]~u', $bisaya) ?: [] as $sense) {
+                    $k = $this->normalise($sense);
+                    if ($k !== '') $searchKeys[] = $k;
+                }
+
+                // 4. Aliases
                 $aliases = (string)($row['aliases'] ?? '');
                 if ($aliases !== '') {
                     $decoded = json_decode($aliases, true);
@@ -963,4 +1007,265 @@ class ManoboHybridTranslator
 
         return $replacement;
     }
+
+    /**
+     * Check if a word is morphologically or semantically connected to an approved Manobo entry
+     * BEFORE falling back to Bisaya/Cebuano.
+     */
+    public function stemAndFindManobo(string $wordText, array $manoboIndex, string $sourceLang = 'fil'): ?array
+    {
+        $norm = $this->normalise($wordText);
+        if ($norm === '' || mb_strlen($norm) < 2) {
+            return null;
+        }
+
+        // 1. Direct normalized check
+        if (isset($manoboIndex[$norm])) {
+            return [
+                'entry'       => $manoboIndex[$norm],
+                'replacement' => $manoboIndex[$norm]['manobo'],
+            ];
+        }
+
+        // 2. Tagalog / Bisaya Linker -ng (e.g. walang -> wada no, magandang -> magwapa no, maraming -> madaog no)
+        if (str_ends_with($norm, 'ng') && mb_strlen($norm) > 3) {
+            $base = mb_substr($norm, 0, -2, 'UTF-8');
+            if (isset($manoboIndex[$base])) {
+                $entry = $manoboIndex[$base];
+                return [
+                    'entry'       => $entry,
+                    'replacement' => $entry['manobo'] . ' no',
+                ];
+            }
+        }
+
+        // 3. English plural -s, -es, -ies or participle -ing, -ed
+        $singular = $this->stemEnglishSingular($norm);
+        if ($singular !== null && isset($manoboIndex[$singular])) {
+            $entry = $manoboIndex[$singular];
+            return [
+                'entry'       => $entry,
+                'replacement' => $entry['manobo'],
+            ];
+        }
+
+        // 4. Tagalog verb affixes: -um-, mag-, nag-, pag-, ma-, ka-, etc.
+        $tagalogStems = $this->stemTagalogAffixes($norm);
+        foreach ($tagalogStems as $stem) {
+            if (isset($manoboIndex[$stem])) {
+                $entry = $manoboIndex[$stem];
+                return [
+                    'entry'       => $entry,
+                    'replacement' => $entry['manobo'],
+                ];
+            }
+        }
+
+        // 5. Bisaya Bridge: If the term has a known Bisaya translation, check if that Bisaya word connects to Manobo
+        $bisayaWord = $this->lookupLocalBisaya($norm, $sourceLang);
+        if ($bisayaWord !== null) {
+            $normBisaya = $this->normalise($bisayaWord);
+            if (isset($manoboIndex[$normBisaya])) {
+                $entry = $manoboIndex[$normBisaya];
+                return [
+                    'entry'       => $entry,
+                    'replacement' => $entry['manobo'],
+                ];
+            }
+            foreach ($this->stemTagalogAffixes($normBisaya) as $bStem) {
+                if (isset($manoboIndex[$bStem])) {
+                    $entry = $manoboIndex[$bStem];
+                    return [
+                        'entry'       => $entry,
+                        'replacement' => $entry['manobo'],
+                    ];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Decompose Tagalog affixes, infixes, and reduplications to identify the base root.
+     */
+    public function stemTagalogAffixes(string $word): array
+    {
+        $stems = [];
+        $len = mb_strlen($word, 'UTF-8');
+
+        // Linker -ng (walang -> wala, magandang -> maganda)
+        if (str_ends_with($word, 'ng') && $len > 3) {
+            $stems[] = mb_substr($word, 0, -2, 'UTF-8');
+        }
+
+        // Initial CV or V reduplication for future/aspect (e.g. lilikas -> likas, tatakbo -> takbo, kakain -> kain, aalis -> alis)
+        if (preg_match('/^([b-df-hj-np-tv-z])([aeiou])\1\2(.*)$/u', $word, $rm)) {
+            $stems[] = $rm[1] . $rm[2] . $rm[3];
+        } elseif (preg_match('/^([aeiou])\1(.*)$/u', $word, $rm)) {
+            $stems[] = $rm[1] . $rm[2];
+        }
+
+        // Infix -um- (kumain -> kain, pumasok -> pasok, lumakad -> lakad, tumakbo -> takbo)
+        if (preg_match('/^([b-df-hj-np-tv-z])um([aeiou].*)$/u', $word, $m)) {
+            $stems[] = $m[1] . $m[2];
+            if (preg_match('/^([b-df-hj-np-tv-z])um[aeiou]\1([aeiou].*)$/u', $word, $m2)) {
+                $stems[] = $m2[1] . $m2[2];
+            }
+        }
+
+        // Infix -in- (niluto -> luto, ginawa -> gawa)
+        if (preg_match('/^([b-df-hj-np-tv-z])in([aeiou].*)$/u', $word, $m)) {
+            $stems[] = $m[1] . $m[2];
+        }
+        if (str_starts_with($word, 'ni') && $len > 4) {
+            $stems[] = mb_substr($word, 2, null, 'UTF-8');
+        }
+
+        // Prefixes: nag-, mag-, pag-, um-, ma-, ka-
+        foreach (['nagpa', 'magpa', 'ipag', 'nag', 'mag', 'pag', 'um', 'ma', 'ka'] as $pre) {
+            if (str_starts_with($word, $pre) && $len > strlen($pre) + 2) {
+                $rem = mb_substr($word, mb_strlen($pre, 'UTF-8'), null, 'UTF-8');
+                $rem = ltrim($rem, '-');
+                $stems[] = $rem;
+                // Reduplication check (nag-iisip -> isip, magluluto -> luto)
+                if (preg_match('/^([b-df-hj-np-tv-z]?[aeiou])\1(.*)$/u', $rem, $rm)) {
+                    $stems[] = $rm[1] . $rm[2];
+                }
+            }
+        }
+
+        // Suffixes: -an, -in, -han, -hin
+        foreach (['han', 'hin', 'an', 'in'] as $suf) {
+            if (str_ends_with($word, $suf) && $len > strlen($suf) + 3) {
+                $stems[] = mb_substr($word, 0, -mb_strlen($suf, 'UTF-8'), 'UTF-8');
+            }
+        }
+
+        return array_unique(array_filter($stems));
+    }
+
+    /**
+     * Reduce English inflected forms (plurals, participles) to base singular forms.
+     */
+    public function stemEnglishSingular(string $word): ?string
+    {
+        $length = mb_strlen($word, 'UTF-8');
+        if ($length < 4) {
+            return null;
+        }
+
+        if (str_ends_with($word, 'ies') && $length > 4) {
+            return mb_substr($word, 0, -3, 'UTF-8') . 'y';
+        }
+        foreach (['sses', 'shes', 'ches', 'xes', 'zes'] as $ending) {
+            if (str_ends_with($word, $ending)) {
+                return mb_substr($word, 0, -2, 'UTF-8');
+            }
+        }
+        foreach (['ss', 'us', 'is'] as $ending) {
+            if (str_ends_with($word, $ending)) {
+                return null;
+            }
+        }
+        if (str_ends_with($word, 's')) {
+            return mb_substr($word, 0, -1, 'UTF-8');
+        }
+        if (str_ends_with($word, 'ing') && $length > 5) {
+            return mb_substr($word, 0, -3, 'UTF-8');
+        }
+        if (str_ends_with($word, 'ed') && $length > 4) {
+            return mb_substr($word, 0, -2, 'UTF-8');
+        }
+
+        return null;
+    }
+
+    /**
+     * Scan Bisaya fallback text and replace ANY word or phrase that connects to an approved
+     * Manobo dictionary term with the Manobo term before displaying Bisaya.
+     */
+    public function refineBisayaWithManobo(string $bisayaText, array $manoboIndex): array
+    {
+        $parts = preg_split('/([^\p{L}\p{N}\x27\-]+)/u', $bisayaText, -1, PREG_SPLIT_DELIM_CAPTURE);
+        if ($parts === false || empty($parts)) {
+            return [
+                'text'        => $bisayaText,
+                'manoboCount' => 0,
+                'bisayaCount' => 1,
+                'provenance'  => [['text' => $bisayaText, 'translated' => $bisayaText, 'source' => 'bisaya']],
+            ];
+        }
+
+        $out = '';
+        $manoboCount = 0;
+        $bisayaCount = 0;
+        $provenance = [];
+
+        foreach ($parts as $i => $part) {
+            // Delimiter or whitespace
+            if ($i % 2 === 1 || $part === '') {
+                $out .= $part;
+                continue;
+            }
+
+            // Check if this Bisaya token connects to Manobo
+            $norm = $this->normalise($part);
+            $hit = null;
+
+            if (isset($manoboIndex[$norm])) {
+                $hit = $manoboIndex[$norm];
+            } else {
+                // Check Bisaya linker -y (e.g. walay -> wala -> wada)
+                if (str_ends_with($norm, 'y') && mb_strlen($norm) > 3) {
+                    $base = mb_substr($norm, 0, -1, 'UTF-8');
+                    if (isset($manoboIndex[$base])) {
+                        $hit = $manoboIndex[$base];
+                    }
+                }
+                // Check Bisaya linker -g / -ng (e.g. karong -> karon -> kuntoon)
+                if ($hit === null && str_ends_with($norm, 'ng') && mb_strlen($norm) > 3) {
+                    $base = mb_substr($norm, 0, -2, 'UTF-8');
+                    if (isset($manoboIndex[$base])) {
+                        $hit = $manoboIndex[$base];
+                    }
+                }
+                if ($hit === null) {
+                    // Try general stemming
+                    $connected = $this->stemAndFindManobo($part, $manoboIndex, 'ceb');
+                    if ($connected !== null) {
+                        $hit = $connected['entry'];
+                    }
+                }
+            }
+
+            if ($hit !== null && $this->isContextCompatible($hit, $part)) {
+                $replacement = $this->applyCase($part, $hit['manobo']);
+                $out .= $replacement;
+                $manoboCount++;
+                $provenance[] = [
+                    'text'       => $part,
+                    'translated' => $replacement,
+                    'source'     => 'manobo',
+                    'entry_id'   => $hit['id'] ?? null,
+                ];
+            } else {
+                $out .= $part;
+                $bisayaCount++;
+                $provenance[] = [
+                    'text'       => $part,
+                    'translated' => $part,
+                    'source'     => 'bisaya',
+                ];
+            }
+        }
+
+        return [
+            'text'        => $out,
+            'manoboCount' => $manoboCount,
+            'bisayaCount' => $bisayaCount > 0 ? 1 : 0,
+            'provenance'  => $provenance,
+        ];
+    }
 }
+
