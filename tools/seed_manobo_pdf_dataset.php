@@ -260,20 +260,18 @@ function seed_manobo_pdf_dataset(?PDO $pdo = null): array
     [234, 'mali', 'Mali', 'Wrong', 'Sayop', 'other', 'word', 1, 5, 'approved', 0, ['wrong', 'mistake', 'mali', 'sayop'], null],
 ];
 
-echo "Updating manobo_dictionary with 234 PDF entries...\n";
+    $isPgsql = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
 
-$isPgsql = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+    $countInserted = 0;
+    $countUpdated  = 0;
 
-$countInserted = 0;
-$countUpdated  = 0;
+    foreach ($dataset as $item) {
+        [$pdfId, $manobo, $tagalog, $english, $bisaya, $category, $type, $priority, $page, $reviewStatus, $needsReview, $aliasesArr, $notes] = $item;
 
-foreach ($dataset as $item) {
-    [$pdfId, $manobo, $tagalog, $english, $bisaya, $category, $type, $priority, $page, $reviewStatus, $needsReview, $aliasesArr, $notes] = $item;
-
-    $normTagalog = normaliseText($tagalog);
-    $normEnglish = normaliseText($english);
-    $normBisaya  = normaliseText($bisaya);
-    $aliasesJson = json_encode($aliasesArr, JSON_UNESCAPED_UNICODE);
+        $normTagalog = seed_manobo_normaliseText($tagalog);
+        $normEnglish = seed_manobo_normaliseText($english);
+        $normBisaya  = seed_manobo_normaliseText($bisaya);
+        $aliasesJson = json_encode($aliasesArr, JSON_UNESCAPED_UNICODE);
 
     // Look for existing row with this headword and source='Manobo Words.pdf' or 'USER-2026'
     $stmt = $pdo->prepare(

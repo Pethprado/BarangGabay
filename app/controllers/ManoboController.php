@@ -318,6 +318,22 @@ class ManoboController
     {
         header('Content-Type: application/json');
 
+        // IP-based rate limiting: max 60 requests per minute
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $rateKey = 'rate_trans_' . md5($ip);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            $now = time();
+            $hits = $_SESSION[$rateKey] ?? [];
+            $hits = array_filter($hits, fn($t) => $t > $now - 60);
+            if (count($hits) >= 60) {
+                http_response_code(429);
+                echo json_encode(['success' => false, 'error' => 'Too many translation requests. Please wait a moment.']);
+                return;
+            }
+            $hits[] = $now;
+            $_SESSION[$rateKey] = $hits;
+        }
+
         $input = json_decode(file_get_contents('php://input') ?: '', true);
         $text = trim((string) ($input['text'] ?? $_POST['text'] ?? ''));
 

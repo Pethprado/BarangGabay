@@ -25,7 +25,7 @@ return [
     ['POST', '/api/manobo/translate-block', 'ManoboController@translateBlock', ['auth', 'verified', 'rate-limit']],
 
     // Requirement 27: Expose reusable Manobo & Bisaya hybrid translation endpoint
-    ['POST', '/api/translate/manobo', 'ManoboController@apiTranslateManobo', ['rate-limit']],
+    ['POST', '/api/translate/manobo', 'ManoboController@apiTranslateManobo', []],
 
     // Voice reader script builder. Pure string work — no AI, no API key, no
     // database — so it is safe on plain 'auth': staff previewing a draft they
