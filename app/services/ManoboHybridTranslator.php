@@ -614,6 +614,46 @@ class ManoboHybridTranslator
      */
     private function lookupLocalBisaya(string $normalizedTerm, string $sourceLang): ?string
     {
+        static $englishFunctional = [
+            'in'   => 'sa',
+            'at'   => 'sa',
+            'on'   => 'sa',
+            'to'   => 'sa',
+            'into' => 'sa',
+            'from' => 'gikan sa',
+            'with' => 'uban sa',
+            'for'  => 'para sa',
+            'of'   => 'sa',
+            'the'  => 'ang',
+            'a'    => 'usa ka',
+            'an'   => 'usa ka',
+            'and'  => 'ug',
+            'or'   => 'o',
+            'is'   => 'mao ang',
+            'are'  => 'ang',
+            'be'   => 'mahimo',
+        ];
+
+        static $filipinoFunctional = [
+            'sa'    => 'sa',
+            'ang'   => 'ang',
+            'mga'   => 'mga',
+            'para'  => 'para sa',
+            'at'    => 'ug',
+            'ay'    => 'kay',
+            'nang'  => 'sa',
+            'ng'    => 'sa',
+            'kung'  => 'kung',
+            'o'     => 'o',
+        ];
+
+        if ($sourceLang === 'en' && isset($englishFunctional[$normalizedTerm])) {
+            return $englishFunctional[$normalizedTerm];
+        }
+        if (($sourceLang === 'tl' || $sourceLang === 'fil') && isset($filipinoFunctional[$normalizedTerm])) {
+            return $filipinoFunctional[$normalizedTerm];
+        }
+
         if (self::$bisayaIndex === null) {
             $map = [];
             try {
@@ -682,6 +722,17 @@ class ManoboHybridTranslator
                 if (str_contains($upper, $marker)) {
                     return null;
                 }
+            }
+
+            // Anti-spam guard: reject crowd-sourced translation memory spam
+            if (mb_strlen($text) <= 6 && mb_strlen($translated) > 18) {
+                return null;
+            }
+            if (mb_strlen($translated) > (mb_strlen($text) * 4 + 20)) {
+                return null;
+            }
+            if (str_contains($translated, "\n") && !str_contains($text, "\n")) {
+                return null;
             }
 
             return $translated;
