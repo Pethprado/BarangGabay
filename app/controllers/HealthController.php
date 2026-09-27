@@ -35,6 +35,20 @@ class HealthController
             http_response_code(200);
         } catch (\Throwable $e) {
             $result['database'] = 'unreachable';
+
+            // Safe to show publicly even outside debug mode: the exception
+            // class and SQL error codes identify the failure category (bad
+            // credentials vs. unreachable host vs. refused connection)
+            // without exposing the host, database name or credentials that
+            // the full exception message may contain.
+            $result['error_type'] = get_class($e);
+            if ($e instanceof \PDOException) {
+                $result['sqlstate'] = (string) $e->getCode();
+                if (preg_match('/\[(\d+)\]/', $e->getMessage(), $m)) {
+                    $result['driver_error_code'] = $m[1];
+                }
+            }
+
             if ($debug) {
                 $result['database_error'] = get_class($e) . ': ' . $e->getMessage();
             }
