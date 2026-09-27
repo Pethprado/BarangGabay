@@ -1,21 +1,30 @@
-<?php
+﻿<?php
 declare(strict_types=1);
 
 function db(): PDO
 {
     static $pdo = null;
     if ($pdo === null) {
-        $host = (string) env('DB_HOST', '127.0.0.1');
-        $port = (string) env('DB_PORT', '3306');
-        $name = (string) env('DB_NAME', 'baranggabay');
-        $user = (string) env('DB_USER', 'root');
-        $pass = (string) env('DB_PASS', '');
+        $host   = (string) env('DB_HOST', '127.0.0.1');
+        $port   = (string) env('DB_PORT', '3306');
+        $name   = (string) env('DB_NAME', 'baranggabay');
+        $user   = (string) env('DB_USER', 'root');
+        $pass   = (string) env('DB_PASS', '');
+        $driver = 'mysql'; // default; overridden when DATABASE_URL says pgsql
 
-        // Support full connection URLs like DATABASE_URL or MYSQL_URL
-        $dbUrl = (string) (env('DATABASE_URL') ?: env('MYSQL_URL', ''));
+        // Support full connection URLs: DATABASE_URL (Render PostgreSQL/MySQL)
+        // or MYSQL_URL (PlanetScale, Railway, etc.)
+        $dbUrl  = (string) (env('DATABASE_URL') ?: env('MYSQL_URL', ''));
+        $parsed = [];
         if ($dbUrl !== '') {
-            $parsed = parse_url($dbUrl);
-            if (is_array($parsed)) {
+            $parsed = parse_url($dbUrl) ?: [];
+            if (!empty($parsed)) {
+                $scheme = strtolower($parsed['scheme'] ?? 'mysql');
+                // postgresql:// or postgres:// -> use pgsql PDO driver
+                if (in_array($scheme, ['postgresql', 'postgres'], true)) {
+                    $driver = 'pgsql';
+                    $port   = '5432'; // PostgreSQL default
+                }
                 $host = $parsed['host'] ?? $host;
                 $port = isset($parsed['port']) ? (string) $parsed['port'] : $port;
                 $user = isset($parsed['user']) ? urldecode($parsed['user']) : $user;
@@ -27,64 +36,75 @@ function db(): PDO
         }
 
         $options = [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_EMULATE_PREPARES   => false,
         ];
 
-        // Support cloud databases with SSL
-        $ssl = env('DB_SSL', false);
-        if ($ssl === true || $ssl === 'true' || $ssl === '1' || (!empty($parsed['query']) && str_contains($parsed['query'], 'ssl'))) {
-            if (defined('Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT')) {
-                $options[\Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT] = false;
-            } elseif (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
-                $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+        if ($driver === 'mysql') {
+            // MySQL SSL support (Render MySQL, PlanetScale, etc.)
+            $ssl = env('DB_SSL', false);
+            if ($ssl === true || $ssl === 'true' || $ssl === '1'
+                || (!empty($parsed['query']) && str_contains((string)($parsed['query'] ?? ''), 'ssl'))
+            ) {
+                if (defined('Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT')) {
+                    $options[\Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                } elseif (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
+                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                }
             }
+            $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $name);
+        } else {
+            // PostgreSQL DSN - sslmode=require for Render
+            $dsn = sprintf('pgsql:host=%s;port=%s;dbname=%s;sslmode=require', $host, $port, $name);
         }
 
-        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $name);
         try {
             $pdo = new PDO($dsn, $user, $pass, $options);
         } catch (PDOException $exception) {
-            if (str_contains($exception->getMessage(), 'Unknown database') || $exception->getCode() === '1049') {
+            // MySQL-only: handle "unknown database" by auto-creating it
+            if ($driver === 'mysql'
+                && (str_contains($exception->getMessage(), 'Unknown database') || $exception->getCode() === '1049')
+            ) {
                 $pdo = initializeDatabase($host, $port, $name, $user, $pass, $options);
             } else {
-                // Connection refused or host unreachable — likely missing DB env vars on Render.
-                // Show a clear setup page instead of the generic crash page.
+                // Connection refused or host unreachable - show clear setup page.
                 renderDbConnectionError($host, $exception);
             }
         }
 
-        // If the database is connected but empty (common on cloud MySQL provisions), load the base schema.
+        // Check if schema needs to be loaded (empty database)
         try {
-            $stmt = $pdo->query("SHOW TABLES LIKE 'users'");
-            if ($stmt && $stmt->rowCount() === 0) {
-                loadDatabaseSchema($pdo);
+            if ($driver === 'pgsql') {
+                $stmt   = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'");
+                $exists = (int) ($stmt ? $stmt->fetchColumn() : 0);
+                if ($exists === 0) {
+                    loadDatabaseSchema($pdo, $driver);
+                }
+            } else {
+                $stmt = $pdo->query("SHOW TABLES LIKE 'users'");
+                if ($stmt && $stmt->rowCount() === 0) {
+                    loadDatabaseSchema($pdo, $driver);
+                }
             }
         } catch (\Throwable $e) {
             error_log('Database schema check warning: ' . $e->getMessage());
         }
 
-        // Keep an existing database's structure in sync with database/migrations/*.sql.
-        // Every migration file is written with IF NOT EXISTS guards, so this is a
-        // cheap no-op once a column/table already exists — it exists purely to
-        // self-heal installs that were set up before a later migration was added
-        // (e.g. Manobo translation columns, AI ID-verification columns, sms_logs).
-        runPendingMigrations($pdo);
+        // Keep an existing database structure in sync with migrations.
+        // All migration files use IF NOT EXISTS guards, so re-running is safe.
+        runPendingMigrations($pdo, $driver);
 
-        seedAdminUser($pdo);
+        seedAdminUser($pdo, $driver);
     }
     return $pdo;
 }
 
 /**
  * Apply every *.sql file under database/migrations/, in filename order.
- * Each statement is executed independently and failures are logged (never
- * thrown) so one incompatible statement can't take down the whole request —
- * migrations are additive/idempotent by convention (CREATE TABLE IF NOT EXISTS,
- * ADD COLUMN IF NOT EXISTS, CREATE INDEX IF NOT EXISTS).
+ * Failures are logged and non-fatal so one bad statement cannot block others.
  */
-function runPendingMigrations(PDO $pdo): void
+function runPendingMigrations(PDO $pdo, string $driver = 'mysql'): void
 {
     $migrationsDir = __DIR__ . '/../database/migrations';
     if (!is_dir($migrationsDir)) {
@@ -101,16 +121,6 @@ function runPendingMigrations(PDO $pdo): void
         }
 
         foreach (preg_split('/;\s*\n/', $sql) as $statement) {
-            // Strip leading comments rather than skipping the whole chunk.
-            //
-            // Splitting on ";\n" leaves each statement carrying the comment
-            // block written above it, so a chunk that opens with "--" is a
-            // comment AND the SQL that follows it. Skipping on that prefix
-            // silently dropped 26 statements across the migration set —
-            // including the CREATE TABLEs for settings, user_sessions,
-            // error_logs and ai_predictions — which defeated the whole point
-            // of running migrations on boot. Every statement in these files
-            // is written with IF NOT EXISTS, so re-applying them is a no-op.
             $statement = preg_replace('#^\s*(?:--[^\n]*(?:\n|$)|/\*.*?\*/\s*)+#s', '', $statement);
             $statement = trim((string) $statement);
             if ($statement === '') {
@@ -119,17 +129,16 @@ function runPendingMigrations(PDO $pdo): void
             try {
                 $pdo->exec($statement);
             } catch (PDOException $e) {
-                // Non-fatal: log and keep applying the remaining migrations/statements.
                 error_log(sprintf('Migration warning (%s): %s', basename($file), $e->getMessage()));
             }
         }
     }
 }
 
-function seedAdminUser(PDO $pdo): void
+function seedAdminUser(PDO $pdo, string $driver = 'mysql'): void
 {
     try {
-        $stmt = $pdo->query('SELECT COUNT(*) FROM users');
+        $stmt  = $pdo->query('SELECT COUNT(*) FROM users');
         $count = (int) $stmt->fetchColumn();
     } catch (PDOException $e) {
         return;
@@ -137,7 +146,17 @@ function seedAdminUser(PDO $pdo): void
 
     if ($count === 0) {
         $password = password_hash('Admin@1234', PASSWORD_BCRYPT);
-        $stmt = $pdo->prepare('INSERT INTO users (full_name, email, password_hash, role, status, email_verified, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())');
+        if ($driver === 'pgsql') {
+            $stmt = $pdo->prepare(
+                'INSERT INTO users (full_name, email, password_hash, role, status, email_verified, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())'
+            );
+        } else {
+            $stmt = $pdo->prepare(
+                'INSERT INTO users (full_name, email, password_hash, role, status, email_verified, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())'
+            );
+        }
         $stmt->execute([
             'Super Admin',
             'admin@baranggabay.ph',
@@ -153,23 +172,32 @@ function initializeDatabase(string $host, string $port, string $name, string $us
 {
     $dsn = sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $host, $port);
     $defaultOptions = [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
+        PDO::ATTR_EMULATE_PREPARES   => false,
     ];
     $pdo = new PDO($dsn, $user, $pass, !empty($options) ? $options : $defaultOptions);
 
     $pdo->exec(sprintf('CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci', $name));
     $pdo->exec(sprintf('USE `%s`', $name));
 
-    loadDatabaseSchema($pdo);
+    loadDatabaseSchema($pdo, 'mysql');
 
     return $pdo;
 }
 
-function loadDatabaseSchema(PDO $pdo): void
+function loadDatabaseSchema(PDO $pdo, string $driver = 'mysql'): void
 {
-    $schemaFile = __DIR__ . '/../database/schema.sql';
+    // Choose the right schema file for the driver
+    $pgsqlSchema = __DIR__ . '/../database/schema.pgsql.sql';
+    $mysqlSchema = __DIR__ . '/../database/schema.sql';
+
+    if ($driver === 'pgsql' && file_exists($pgsqlSchema)) {
+        $schemaFile = $pgsqlSchema;
+    } else {
+        $schemaFile = $mysqlSchema;
+    }
+
     if (!file_exists($schemaFile)) {
         throw new RuntimeException('Database schema file not found: ' . $schemaFile);
     }
@@ -196,34 +224,23 @@ function loadDatabaseSchema(PDO $pdo): void
 
 /**
  * Show a clear, actionable page when the database cannot be reached.
- *
- * This is almost always "DB credentials are not set in the Render
- * dashboard". Rather than the generic 500 error page (which says nothing
- * useful), we tell the operator exactly what to do and then stop — we do
- * NOT throw, so the global ErrorHandler never fires and no error ID is
- * generated for something that is purely a configuration problem.
+ * Does NOT throw in production - shows a branded setup-guide page instead.
  *
  * @never-returns (calls exit)
  */
 function renderDbConnectionError(string $host, \PDOException $e): never
 {
-    $isLocalhost = in_array($host, ['127.0.0.1', 'localhost', '::1'], true);
-    $isRender    = !empty($_SERVER['RENDER']) || !empty($_ENV['RENDER']);
-    $debug       = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
+    $debug = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
 
-    // Always log the real error for operators checking server logs.
     error_log('[DB] Connection failed (host=' . $host . '): ' . $e->getMessage());
+
+    if ($debug) {
+        throw $e;
+    }
 
     http_response_code(503);
     header('Content-Type: text/html; charset=UTF-8');
     header('Retry-After: 60');
-
-    $errorDetail = $debug ? htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') : '';
-
-    // Show a friendly page only in production; in debug mode just rethrow.
-    if ($debug) {
-        throw $e;
-    }
 
     echo <<<HTML
 <!DOCTYPE html>
@@ -241,7 +258,7 @@ function renderDbConnectionError(string $host, \PDOException $e): never
           box-shadow:0 24px 80px rgba(15,64,35,.12);text-align:center;border:1px solid #e4ece6}
     .icon{font-size:3rem;margin-bottom:1.25rem}
     h1{color:#1a6b3a;font-size:1.35rem;font-weight:800;margin-bottom:.75rem}
-    p{color:#4a5568;line-height:1.7;font-size:.9rem;margin-bottom.5rem}
+    p{color:#4a5568;line-height:1.7;font-size:.9rem;margin-bottom:.5rem}
     .steps{text-align:left;background:#f4f9f5;border-radius:.75rem;padding:1.25rem 1.5rem;margin:1.25rem 0}
     .steps li{color:#374151;font-size:.85rem;line-height:1.8;margin-left:1.25rem}
     code{background:#e8f5e9;padding:.1rem .35rem;border-radius:.25rem;font-size:.8rem;color:#1a6b3a;font-family:monospace}
@@ -253,24 +270,19 @@ function renderDbConnectionError(string $host, \PDOException $e): never
 </head>
 <body>
   <div class="card">
-    <div class="icon">🗄️</div>
+    <div class="icon">&#128374;</div>
     <h1>Database Hindi Naka-configure</h1>
     <p>Hindi makakonekta ang sistema sa database. Kailangan itakda ang database credentials sa Render dashboard.</p>
     <div class="steps">
-      <p style="font-weight:700;margin-bottom:.5rem;color:#1a6b3a;">Para sa Render — Itakda ang mga env var na ito:</p>
+      <p style="font-weight:700;margin-bottom:.5rem;color:#1a6b3a;">Para sa Render &mdash; Itakda ang mga env var na ito:</p>
       <ol>
-        <li>Pumunta sa <strong>Render Dashboard → baranggabay → Environment</strong></li>
+        <li>Pumunta sa <strong>Render Dashboard &rarr; baranggabay &rarr; Environment</strong></li>
         <li>I-add o i-update ang mga sumusunod na variable:</li>
       </ol>
       <ul style="list-style:none;margin:.75rem 0 0 0">
-        <li>• <code>DB_HOST</code> — Hostname ng iyong Render MySQL</li>
-        <li>• <code>DB_USER</code> — Username</li>
-        <li>• <code>DB_PASS</code> — Password</li>
-        <li>• <code>DB_NAME</code> — <code>baranggabay</code></li>
-        <li>• <code>DB_SSL</code> — <code>true</code></li>
-        <li>• <code>APP_URL</code> — <code>https://baranggabay.onrender.com</code></li>
+        <li>&bull; <code>DATABASE_URL</code> &mdash; Full connection string ng iyong Render PostgreSQL</li>
+        <li>&bull; <code>APP_URL</code> &mdash; <code>https://baranggabay.onrender.com</code></li>
       </ul>
-      <p style="margin-top:.75rem;font-size:.8rem;color:#6b7280;">💡 O kaya, itakda ang <code>DATABASE_URL</code> sa full connection string mula sa Render MySQL dashboard.</p>
     </div>
     <p style="font-size:.8rem;color:#94a3b8;">Pagkatapos i-save ang mga env var, i-redeploy ang service sa Render.</p>
     <a href="https://dashboard.render.com" class="btn">Buksan ang Render Dashboard</a>
