@@ -228,6 +228,83 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45) NULL",
         "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS user_agent VARCHAR(500) NULL",
         "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP NULL",
+
+        // 11. User Sessions columns and unique index
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS session_hash CHAR(64) NULL",
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS login_at TIMESTAMP NOT NULL DEFAULT NOW()",
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP NOT NULL DEFAULT NOW()",
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS logout_at TIMESTAMP NULL",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uniq_session_hash ON user_sessions(session_hash)",
+
+        // 12. Login Attempts columns
+        "ALTER TABLE login_attempts ADD COLUMN IF NOT EXISTS successful SMALLINT NOT NULL DEFAULT 0",
+        "ALTER TABLE login_attempts ADD COLUMN IF NOT EXISTS reason VARCHAR(50) NULL",
+        "ALTER TABLE login_attempts ADD COLUMN IF NOT EXISTS user_agent VARCHAR(500) NULL",
+        "UPDATE login_attempts SET successful = success WHERE successful = 0 AND success = 1",
+
+        // 13. MySQL Compatibility Functions for PostgreSQL
+        "CREATE OR REPLACE FUNCTION date_sub(ts timestamp with time zone, iv interval)
+         RETURNS timestamp with time zone AS $$ SELECT ts - iv; $$ LANGUAGE sql IMMUTABLE",
+        "CREATE OR REPLACE FUNCTION date_sub(ts timestamp without time zone, iv interval)
+         RETURNS timestamp without time zone AS $$ SELECT ts - iv; $$ LANGUAGE sql IMMUTABLE",
+        "CREATE OR REPLACE FUNCTION date_add(ts timestamp with time zone, iv interval)
+         RETURNS timestamp with time zone AS $$ SELECT ts + iv; $$ LANGUAGE sql IMMUTABLE",
+        "CREATE OR REPLACE FUNCTION date_add(ts timestamp without time zone, iv interval)
+         RETURNS timestamp without time zone AS $$ SELECT ts + iv; $$ LANGUAGE sql IMMUTABLE",
+        "CREATE OR REPLACE FUNCTION curdate()
+         RETURNS date AS $$ SELECT CURRENT_DATE; $$ LANGUAGE sql STABLE",
+        "CREATE OR REPLACE FUNCTION timestampdiff(unit text, ts1 timestamp, ts2 timestamp)
+         RETURNS integer AS $$
+         BEGIN
+             unit := lower(unit);
+             IF unit = 'second' THEN RETURN FLOOR(EXTRACT(EPOCH FROM (ts2 - ts1)));
+             ELSIF unit = 'minute' THEN RETURN FLOOR(EXTRACT(EPOCH FROM (ts2 - ts1)) / 60);
+             ELSIF unit = 'hour' THEN RETURN FLOOR(EXTRACT(EPOCH FROM (ts2 - ts1)) / 3600);
+             ELSIF unit = 'day' THEN RETURN FLOOR(EXTRACT(EPOCH FROM (ts2 - ts1)) / 86400);
+             ELSE RETURN FLOOR(EXTRACT(EPOCH FROM (ts2 - ts1)) / 60);
+             END IF;
+         END;
+         $$ LANGUAGE plpgsql IMMUTABLE",
+        "CREATE OR REPLACE FUNCTION timestampdiff(unit text, ts1 timestamp with time zone, ts2 timestamp with time zone)
+         RETURNS integer AS $$
+         BEGIN
+             unit := lower(unit);
+             IF unit = 'second' THEN RETURN FLOOR(EXTRACT(EPOCH FROM (ts2 - ts1)));
+             ELSIF unit = 'minute' THEN RETURN FLOOR(EXTRACT(EPOCH FROM (ts2 - ts1)) / 60);
+             ELSIF unit = 'hour' THEN RETURN FLOOR(EXTRACT(EPOCH FROM (ts2 - ts1)) / 3600);
+             ELSIF unit = 'day' THEN RETURN FLOOR(EXTRACT(EPOCH FROM (ts2 - ts1)) / 86400);
+             ELSE RETURN FLOOR(EXTRACT(EPOCH FROM (ts2 - ts1)) / 60);
+             END IF;
+         END;
+         $$ LANGUAGE plpgsql IMMUTABLE",
+        "CREATE OR REPLACE FUNCTION date_format(ts timestamp without time zone, fmt text)
+         RETURNS text AS $$
+         DECLARE pg_fmt text;
+         BEGIN
+             pg_fmt := replace(fmt, '%Y', 'YYYY');
+             pg_fmt := replace(pg_fmt, '%y', 'YY');
+             pg_fmt := replace(pg_fmt, '%m', 'MM');
+             pg_fmt := replace(pg_fmt, '%d', 'DD');
+             pg_fmt := replace(pg_fmt, '%H', 'HH24');
+             pg_fmt := replace(pg_fmt, '%i', 'MI');
+             pg_fmt := replace(pg_fmt, '%s', 'SS');
+             RETURN to_char(ts, pg_fmt);
+         END;
+         $$ LANGUAGE plpgsql IMMUTABLE",
+        "CREATE OR REPLACE FUNCTION date_format(ts timestamp with time zone, fmt text)
+         RETURNS text AS $$
+         DECLARE pg_fmt text;
+         BEGIN
+             pg_fmt := replace(fmt, '%Y', 'YYYY');
+             pg_fmt := replace(pg_fmt, '%y', 'YY');
+             pg_fmt := replace(pg_fmt, '%m', 'MM');
+             pg_fmt := replace(pg_fmt, '%d', 'DD');
+             pg_fmt := replace(pg_fmt, '%H', 'HH24');
+             pg_fmt := replace(pg_fmt, '%i', 'MI');
+             pg_fmt := replace(pg_fmt, '%s', 'SS');
+             RETURN to_char(ts, pg_fmt);
+         END;
+         $$ LANGUAGE plpgsql IMMUTABLE",
     ];
 
     foreach ($statements as $sql) {

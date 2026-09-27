@@ -76,19 +76,32 @@ class PostAudio
         ?int    $durationSeconds,
         ?int    $generatedBy
     ): void {
-        $stmt = db()->prepare(
-            'INSERT INTO post_audio
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $sql = $isPgsql
+            ? 'INSERT INTO post_audio
                  (content_type, content_id, locale, source, audio_path,
                   voice_name, text_hash, duration_seconds, generated_at, generated_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
-             ON DUPLICATE KEY UPDATE
-                 audio_path       = VALUES(audio_path),
-                 voice_name       = VALUES(voice_name),
-                 text_hash        = VALUES(text_hash),
-                 duration_seconds = VALUES(duration_seconds),
-                 generated_at     = NOW(),
-                 generated_by     = VALUES(generated_by)'
-        );
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+               ON CONFLICT (content_type, content_id, locale, source) DO UPDATE SET
+                  audio_path       = EXCLUDED.audio_path,
+                  voice_name       = EXCLUDED.voice_name,
+                  text_hash        = EXCLUDED.text_hash,
+                  duration_seconds = EXCLUDED.duration_seconds,
+                  generated_at     = NOW(),
+                  generated_by     = EXCLUDED.generated_by'
+            : 'INSERT INTO post_audio
+                 (content_type, content_id, locale, source, audio_path,
+                  voice_name, text_hash, duration_seconds, generated_at, generated_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+               ON DUPLICATE KEY UPDATE
+                  audio_path       = VALUES(audio_path),
+                  voice_name       = VALUES(voice_name),
+                  text_hash        = VALUES(text_hash),
+                  duration_seconds = VALUES(duration_seconds),
+                  generated_at     = NOW(),
+                  generated_by     = VALUES(generated_by)';
+
+        $stmt = db()->prepare($sql);
 
         try {
             $stmt->execute([

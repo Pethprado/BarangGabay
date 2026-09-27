@@ -92,6 +92,11 @@ class LoginAttempt
      */
     public static function countRecentFailures(string $email, int $withinMinutes): int
     {
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $dateCond = $isPgsql
+            ? "attempted_at > NOW() - (? || ' minutes')::interval"
+            : "attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)";
+
         $placeholders = implode(',', array_fill(0, count(self::LOCKOUT_REASONS), '?'));
 
         $stmt = db()->prepare(
@@ -99,7 +104,7 @@ class LoginAttempt
              WHERE email = ?
                AND successful = 0
                AND (reason IS NULL OR reason IN ({$placeholders}))
-               AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)"
+               AND {$dateCond}"
         );
         $stmt->execute(array_merge([$email], self::LOCKOUT_REASONS, [$withinMinutes]));
 
@@ -118,6 +123,11 @@ class LoginAttempt
             return 0;
         }
 
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $dateCond = $isPgsql
+            ? "attempted_at > NOW() - (? || ' minutes')::interval"
+            : "attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)";
+
         $placeholders = implode(',', array_fill(0, count(self::LOCKOUT_REASONS), '?'));
 
         $stmt = db()->prepare(
@@ -125,7 +135,7 @@ class LoginAttempt
              WHERE ip_address = ?
                AND successful = 0
                AND (reason IS NULL OR reason IN ({$placeholders}))
-               AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)"
+               AND {$dateCond}"
         );
         $stmt->execute(array_merge([$ip], self::LOCKOUT_REASONS, [$withinMinutes]));
 
@@ -140,12 +150,17 @@ class LoginAttempt
      */
     public static function countRecentByReason(string $email, string $reason, int $withinMinutes): int
     {
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $dateCond = $isPgsql
+            ? "attempted_at > NOW() - (? || ' minutes')::interval"
+            : "attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)";
+
         $stmt = db()->prepare(
-            'SELECT COUNT(*) FROM login_attempts
+            "SELECT COUNT(*) FROM login_attempts
              WHERE email = ?
                AND successful = 0
                AND reason = ?
-               AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)'
+               AND {$dateCond}"
         );
         $stmt->execute([$email, $reason, $withinMinutes]);
 
@@ -162,6 +177,14 @@ class LoginAttempt
     public static function lockedAccounts(int $threshold, int $withinMinutes): array
     {
         $placeholders = implode(',', array_fill(0, count(self::LOCKOUT_REASONS), '?'));
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+
+        $unlocksExpr = $isPgsql
+            ? "MAX(a.attempted_at) + (? || ' minutes')::interval AS unlocks_at"
+            : "DATE_ADD(MAX(a.attempted_at), INTERVAL ? MINUTE) AS unlocks_at";
+        $dateCond = $isPgsql
+            ? "a.attempted_at > NOW() - (? || ' minutes')::interval"
+            : "a.attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)";
 
         $stmt = db()->prepare(
             "SELECT a.email,
@@ -169,7 +192,7 @@ class LoginAttempt
                     COUNT(DISTINCT a.ip_address) AS ip_count,
                     MIN(a.attempted_at)        AS first_attempt,
                     MAX(a.attempted_at)        AS last_attempt,
-                    DATE_ADD(MAX(a.attempted_at), INTERVAL ? MINUTE) AS unlocks_at,
+                    {$unlocksExpr},
                     u.id                       AS user_id,
                     u.full_name,
                     u.role
@@ -177,9 +200,9 @@ class LoginAttempt
              LEFT JOIN users u ON u.email = a.email
              WHERE a.successful = 0
                AND (a.reason IS NULL OR a.reason IN ({$placeholders}))
-               AND a.attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)
+               AND {$dateCond}
              GROUP BY a.email, u.id, u.full_name, u.role
-             HAVING failures >= ?
+             HAVING COUNT(*) >= ?
              ORDER BY failures DESC, last_attempt DESC
              LIMIT 50"
         );
@@ -200,20 +223,28 @@ class LoginAttempt
     public static function lockedIps(int $threshold, int $withinMinutes): array
     {
         $placeholders = implode(',', array_fill(0, count(self::LOCKOUT_REASONS), '?'));
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+
+        $unlocksExpr = $isPgsql
+            ? "MAX(a.attempted_at) + (? || ' minutes')::interval AS unlocks_at"
+            : "DATE_ADD(MAX(a.attempted_at), INTERVAL ? MINUTE) AS unlocks_at";
+        $dateCond = $isPgsql
+            ? "a.attempted_at > NOW() - (? || ' minutes')::interval"
+            : "a.attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)";
 
         $stmt = db()->prepare(
             "SELECT a.ip_address,
                     COUNT(*)                 AS failures,
                     COUNT(DISTINCT a.email)  AS email_count,
                     MAX(a.attempted_at)      AS last_attempt,
-                    DATE_ADD(MAX(a.attempted_at), INTERVAL ? MINUTE) AS unlocks_at
+                    {$unlocksExpr}
              FROM login_attempts a
              WHERE a.successful = 0
                AND a.ip_address IS NOT NULL AND a.ip_address <> ''
                AND (a.reason IS NULL OR a.reason IN ({$placeholders}))
-               AND a.attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)
+               AND {$dateCond}
              GROUP BY a.ip_address
-             HAVING failures >= ?
+             HAVING COUNT(*) >= ?
              ORDER BY failures DESC
              LIMIT 50"
         );
@@ -299,19 +330,21 @@ class LoginAttempt
     public static function stats(): array
     {
         $pdo = db();
+        $isPgsql = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $dateCond = $isPgsql ? "attempted_at > NOW() - INTERVAL '24 hours'" : "attempted_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)";
 
         return [
             'failed_24h' => (int) $pdo->query(
-                'SELECT COUNT(*) FROM login_attempts
-                 WHERE successful = 0 AND attempted_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)'
+                "SELECT COUNT(*) FROM login_attempts
+                 WHERE successful = 0 AND {$dateCond}"
             )->fetchColumn(),
             'success_24h' => (int) $pdo->query(
-                'SELECT COUNT(*) FROM login_attempts
-                 WHERE successful = 1 AND attempted_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)'
+                "SELECT COUNT(*) FROM login_attempts
+                 WHERE successful = 1 AND {$dateCond}"
             )->fetchColumn(),
             'distinct_ips_24h' => (int) $pdo->query(
-                'SELECT COUNT(DISTINCT ip_address) FROM login_attempts
-                 WHERE successful = 0 AND attempted_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)'
+                "SELECT COUNT(DISTINCT ip_address) FROM login_attempts
+                 WHERE successful = 0 AND {$dateCond}"
             )->fetchColumn(),
         ];
     }
@@ -323,18 +356,23 @@ class LoginAttempt
      */
     public static function suspicious(int $minFailures = 3, int $withinMinutes = 60): array
     {
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $dateCond = $isPgsql
+            ? "attempted_at > NOW() - (? || ' minutes')::interval"
+            : "attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)";
+
         $stmt = db()->prepare(
-            'SELECT email,
+            "SELECT email,
                     COUNT(*)                    AS failures,
                     COUNT(DISTINCT ip_address)  AS ip_count,
                     MAX(attempted_at)           AS last_attempt
              FROM login_attempts
              WHERE successful = 0
-               AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)
+               AND {$dateCond}
              GROUP BY email
-             HAVING failures >= ?
+             HAVING COUNT(*) >= ?
              ORDER BY failures DESC
-             LIMIT 20'
+             LIMIT 20"
         );
         $stmt->execute([$withinMinutes, $minFailures]);
 

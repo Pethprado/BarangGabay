@@ -190,10 +190,13 @@ CREATE TABLE ai_chat_logs (
 CREATE TABLE login_attempts (
     id SERIAL PRIMARY KEY,
     email VARCHAR(191) NOT NULL,
-    ip_address VARCHAR(45) NULL,
-    success SMALLINT NOT NULL DEFAULT 0,
-    reason_code VARCHAR(50) NULL,
     user_id INT NULL,
+    ip_address VARCHAR(45) NULL,
+    successful SMALLINT NOT NULL DEFAULT 0,
+    success SMALLINT NOT NULL DEFAULT 0,
+    reason VARCHAR(50) NULL,
+    reason_code VARCHAR(50) NULL,
+    user_agent VARCHAR(500) NULL,
     attempted_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_la_email ON login_attempts(email);
@@ -286,10 +289,14 @@ CREATE INDEX idx_el_created ON error_logs(created_at);
 CREATE TABLE user_sessions (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
-    session_id VARCHAR(255) NOT NULL UNIQUE,
+    session_id VARCHAR(255) NULL,
+    session_hash CHAR(64) NULL UNIQUE,
     ip_address VARCHAR(45) NULL,
     user_agent VARCHAR(500) NULL,
+    login_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    last_seen_at TIMESTAMP NOT NULL DEFAULT NOW(),
     last_active_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    logout_at TIMESTAMP NULL,
     revoked_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

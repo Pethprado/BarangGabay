@@ -93,15 +93,15 @@ class Feedback
     public static function allForUser(int $userId): array
     {
         $stmt = db()->prepare(
-            'SELECT f.id, f.user_id, f.created_at,
+            "SELECT f.id, f.user_id, f.created_at,
                     COUNT(fm.id) AS message_count,
                     MAX(fm.created_at) AS last_message_at,
-                    SUM(CASE WHEN fm.sender_role != "resident" AND fm.read_by_resident = 0 THEN 1 ELSE 0 END) AS unread_reply_count
+                    SUM(CASE WHEN fm.sender_role != 'resident' AND fm.read_by_resident = 0 THEN 1 ELSE 0 END) AS unread_reply_count
              FROM feedbacks f
              LEFT JOIN feedback_messages fm ON fm.feedback_id = f.id
              WHERE f.user_id = ?
              GROUP BY f.id, f.user_id, f.created_at
-             ORDER BY COALESCE(MAX(fm.created_at), f.created_at) DESC'
+             ORDER BY COALESCE(MAX(fm.created_at), f.created_at) DESC"
         );
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

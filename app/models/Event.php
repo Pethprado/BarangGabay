@@ -56,12 +56,17 @@ class Event
      */
     public static function upcomingFrom(int $limit = 6): array
     {
+        $isPgsql = db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql';
+        $endExpr = $isPgsql
+            ? "COALESCE(e.end_date, e.event_date + INTERVAL '1 day')"
+            : "COALESCE(e.end_date, DATE_ADD(DATE(e.event_date), INTERVAL 1 DAY))";
+
         $stmt = db()->prepare(
             "SELECT e.*, u.full_name AS organizer_name
              FROM events e
              JOIN users u ON u.id = e.created_by
              WHERE e.status != 'cancelled'
-               AND COALESCE(e.end_date, DATE_ADD(DATE(e.event_date), INTERVAL 1 DAY)) >= NOW()
+               AND {$endExpr} >= NOW()
              ORDER BY e.event_date ASC
              LIMIT ?"
         );
@@ -74,10 +79,15 @@ class Event
     /** How many events are still ahead — the counterpart count to upcomingFrom(). */
     public static function countUpcoming(): int
     {
+        $isPgsql = db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql';
+        $endExpr = $isPgsql
+            ? "COALESCE(end_date, event_date + INTERVAL '1 day')"
+            : "COALESCE(end_date, DATE_ADD(DATE(event_date), INTERVAL 1 DAY))";
+
         return (int) db()->query(
             "SELECT COUNT(*) FROM events
              WHERE status != 'cancelled'
-               AND COALESCE(end_date, DATE_ADD(DATE(event_date), INTERVAL 1 DAY)) >= NOW()"
+               AND {$endExpr} >= NOW()"
         )->fetchColumn();
     }
 

@@ -126,11 +126,15 @@ class ErrorLog
     public static function stats(): array
     {
         $pdo = db();
+        $isPgsql = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+
+        $todayCond = $isPgsql ? 'created_at::date = CURRENT_DATE' : 'DATE(created_at) = CURDATE()';
+        $weekCond  = $isPgsql ? "created_at >= NOW() - INTERVAL '7 days'" : 'created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
 
         return [
             'total'      => (int) $pdo->query('SELECT COUNT(*) FROM error_logs')->fetchColumn(),
-            'today'      => (int) $pdo->query('SELECT COUNT(*) FROM error_logs WHERE DATE(created_at) = CURDATE()')->fetchColumn(),
-            'week'       => (int) $pdo->query('SELECT COUNT(*) FROM error_logs WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)')->fetchColumn(),
+            'today'      => (int) $pdo->query("SELECT COUNT(*) FROM error_logs WHERE {$todayCond}")->fetchColumn(),
+            'week'       => (int) $pdo->query("SELECT COUNT(*) FROM error_logs WHERE {$weekCond}")->fetchColumn(),
             'unresolved' => (int) $pdo->query('SELECT COUNT(*) FROM error_logs WHERE resolved_at IS NULL')->fetchColumn(),
             'critical'   => (int) $pdo->query("SELECT COUNT(*) FROM error_logs WHERE severity = 'critical' AND resolved_at IS NULL")->fetchColumn(),
         ];
@@ -152,7 +156,12 @@ class ErrorLog
     /** Delete rows older than $days. Returns how many were removed. */
     public static function purgeOlderThan(int $days): int
     {
-        $stmt = db()->prepare('DELETE FROM error_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)');
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $dateCond = $isPgsql
+            ? "created_at < NOW() - (? || ' days')::interval"
+            : "created_at < DATE_SUB(NOW(), INTERVAL ? DAY)";
+
+        $stmt = db()->prepare("DELETE FROM error_logs WHERE {$dateCond}");
         $stmt->execute([max(1, $days)]);
 
         return $stmt->rowCount();

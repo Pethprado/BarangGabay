@@ -93,25 +93,38 @@ class TranslationAttempt
                     ?->format('Y-m-d H:i:s');
             }
 
-            db()->prepare(
-                'INSERT INTO translation_attempts
+            $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+            $sql = $isPgsql
+                ? 'INSERT INTO translation_attempts
                     (content_type, content_id, lang, kind, ok, reason_code, message,
                      provider, attempts, retry_after, source_hash, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-                 ON DUPLICATE KEY UPDATE
-                    ok          = VALUES(ok),
-                    reason_code = VALUES(reason_code),
-                    message     = VALUES(message),
-                    provider    = VALUES(provider),
-                    attempts    = VALUES(attempts),
-                    retry_after = VALUES(retry_after),
-                    source_hash = VALUES(source_hash),
-                    -- A fresh attempt means the post exists again, so the
-                    -- row leaves the archive. Covers a restored post and a
-                    -- reused id alike.
-                    orphaned_at = NULL,
-                    updated_at  = NOW()'
-            )->execute([
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                   ON CONFLICT (content_type, content_id, lang, kind) DO UPDATE SET
+                      ok          = EXCLUDED.ok,
+                      reason_code = EXCLUDED.reason_code,
+                      message     = EXCLUDED.message,
+                      provider    = EXCLUDED.provider,
+                      attempts    = EXCLUDED.attempts,
+                      retry_after = EXCLUDED.retry_after,
+                      source_hash = EXCLUDED.source_hash,
+                      orphaned_at = NULL,
+                      updated_at  = NOW()'
+                : 'INSERT INTO translation_attempts
+                    (content_type, content_id, lang, kind, ok, reason_code, message,
+                     provider, attempts, retry_after, source_hash, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                   ON DUPLICATE KEY UPDATE
+                      ok          = VALUES(ok),
+                      reason_code = VALUES(reason_code),
+                      message     = VALUES(message),
+                      provider    = VALUES(provider),
+                      attempts    = VALUES(attempts),
+                      retry_after = VALUES(retry_after),
+                      source_hash = VALUES(source_hash),
+                      orphaned_at = NULL,
+                      updated_at  = NOW()';
+
+            db()->prepare($sql)->execute([
                 $contentType,
                 $contentId,
                 $lang,

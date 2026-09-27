@@ -36,15 +36,24 @@ class SafetyCheckin
         $stmt->execute([$userId]);
         $purok = $stmt->fetchColumn() ?: null;
 
-        db()->prepare(
-            'INSERT INTO safety_checkins (advisory_id, user_id, status, purok, note, checked_in_at)
-             VALUES (?, ?, ?, ?, ?, NOW())
-             ON DUPLICATE KEY UPDATE
-                status = VALUES(status),
-                note   = VALUES(note),
-                purok  = VALUES(purok),
-                checked_in_at = NOW()'
-        )->execute([
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $sql = $isPgsql
+            ? 'INSERT INTO safety_checkins (advisory_id, user_id, status, purok, note, checked_in_at)
+               VALUES (?, ?, ?, ?, ?, NOW())
+               ON CONFLICT (advisory_id, user_id) DO UPDATE SET
+                  status = EXCLUDED.status,
+                  note   = EXCLUDED.note,
+                  purok  = EXCLUDED.purok,
+                  checked_in_at = NOW()'
+            : 'INSERT INTO safety_checkins (advisory_id, user_id, status, purok, note, checked_in_at)
+               VALUES (?, ?, ?, ?, ?, NOW())
+               ON DUPLICATE KEY UPDATE
+                  status = VALUES(status),
+                  note   = VALUES(note),
+                  purok  = VALUES(purok),
+                  checked_in_at = NOW()';
+
+        db()->prepare($sql)->execute([
             $advisoryId,
             $userId,
             $status,
@@ -149,6 +158,11 @@ class SafetyCheckin
      */
     public static function openForUser(int $userId): ?array
     {
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $dateCond = $isPgsql
+            ? "a.published_at >= NOW() - INTERVAL '" . self::ASKS_FOR_DAYS . " days'"
+            : "a.published_at >= DATE_SUB(NOW(), INTERVAL " . self::ASKS_FOR_DAYS . " DAY)";
+
         $stmt = db()->prepare(
             "SELECT a.id, a.title, a.slug, a.published_at,
                     c.status        AS my_status,
@@ -160,7 +174,7 @@ class SafetyCheckin
               WHERE a.asks_safety_checkin = 1
                 AND a.status = 'published'
                 AND a.published_at IS NOT NULL
-                AND a.published_at >= DATE_SUB(NOW(), INTERVAL " . self::ASKS_FOR_DAYS . " DAY)
+                AND {$dateCond}
               ORDER BY a.published_at DESC
               LIMIT 1"
         );

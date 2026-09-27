@@ -124,7 +124,7 @@ class DocumentRequest
             $params[] = $status;
         }
 
-        $sql .= " ORDER BY FIELD(r.status,'pending','processing','ready','released','rejected'),
+        $sql .= " ORDER BY CASE r.status WHEN 'pending' THEN 1 WHEN 'processing' THEN 2 WHEN 'ready' THEN 3 WHEN 'released' THEN 4 WHEN 'rejected' THEN 5 ELSE 6 END,
                            r.requested_at ASC";
 
         $stmt = db()->prepare($sql);

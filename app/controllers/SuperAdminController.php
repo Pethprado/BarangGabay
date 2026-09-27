@@ -742,8 +742,10 @@ class SuperAdminController
         }
 
         try {
+            $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+            $dateCond = $isPgsql ? "created_at > NOW() - INTERVAL '24 hours'" : "created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)";
             $health['errors_24h'] = (int) db()->query(
-                'SELECT COUNT(*) FROM error_logs WHERE created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)'
+                "SELECT COUNT(*) FROM error_logs WHERE {$dateCond}"
             )->fetchColumn();
         } catch (\Throwable $e) {
             // error_logs may not be migrated yet.

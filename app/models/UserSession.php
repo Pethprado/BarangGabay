@@ -23,16 +23,26 @@ class UserSession
     public static function start(int $userId, string $sessionId): void
     {
         try {
-            // ON DUPLICATE guards against a regenerated id colliding with an
-            // old row, which would otherwise throw on the unique index.
-            $stmt = db()->prepare(
-                'INSERT INTO user_sessions
-                    (user_id, session_hash, ip_address, user_agent, login_at, last_seen_at)
-                 VALUES (?, ?, ?, ?, NOW(), NOW())
-                 ON DUPLICATE KEY UPDATE
-                    user_id = VALUES(user_id), login_at = NOW(), last_seen_at = NOW(),
-                    logout_at = NULL, revoked_at = NULL'
-            );
+            $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+            if ($isPgsql) {
+                $stmt = db()->prepare(
+                    'INSERT INTO user_sessions
+                        (user_id, session_hash, ip_address, user_agent, login_at, last_seen_at)
+                     VALUES (?, ?, ?, ?, NOW(), NOW())
+                     ON CONFLICT (session_hash) DO UPDATE SET
+                        user_id = EXCLUDED.user_id, login_at = NOW(), last_seen_at = NOW(),
+                        logout_at = NULL, revoked_at = NULL'
+                );
+            } else {
+                $stmt = db()->prepare(
+                    'INSERT INTO user_sessions
+                        (user_id, session_hash, ip_address, user_agent, login_at, last_seen_at)
+                     VALUES (?, ?, ?, ?, NOW(), NOW())
+                     ON DUPLICATE KEY UPDATE
+                        user_id = VALUES(user_id), login_at = NOW(), last_seen_at = NOW(),
+                        logout_at = NULL, revoked_at = NULL'
+                );
+            }
             $stmt->execute([
                 $userId,
                 self::hash($sessionId),
@@ -112,16 +122,21 @@ class UserSession
      */
     public static function active(): array
     {
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $idleExpr = $isPgsql
+            ? 'FLOOR(EXTRACT(EPOCH FROM (NOW() - s.last_seen_at)) / 60) AS idle_minutes'
+            : 'TIMESTAMPDIFF(MINUTE, s.last_seen_at, NOW()) AS idle_minutes';
+
         $stmt = db()->prepare(
-            'SELECT s.id, s.user_id, s.ip_address, s.user_agent,
+            "SELECT s.id, s.user_id, s.ip_address, s.user_agent,
                     s.login_at, s.last_seen_at,
-                    TIMESTAMPDIFF(MINUTE, s.last_seen_at, NOW()) AS idle_minutes,
+                    {$idleExpr},
                     u.full_name, u.email, u.role
              FROM user_sessions s
              JOIN users u ON u.id = s.user_id
              WHERE s.logout_at IS NULL AND s.revoked_at IS NULL
              ORDER BY s.last_seen_at DESC
-             LIMIT 200'
+             LIMIT 200"
         );
         $stmt->execute();
 
@@ -137,13 +152,18 @@ class UserSession
      */
     public static function activeForUser(int $userId): array
     {
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $idleExpr = $isPgsql
+            ? 'FLOOR(EXTRACT(EPOCH FROM (NOW() - last_seen_at)) / 60) AS idle_minutes'
+            : 'TIMESTAMPDIFF(MINUTE, last_seen_at, NOW()) AS idle_minutes';
+
         $stmt = db()->prepare(
-            'SELECT id, session_hash, ip_address, user_agent, login_at, last_seen_at,
-                    TIMESTAMPDIFF(MINUTE, last_seen_at, NOW()) AS idle_minutes
+            "SELECT id, session_hash, ip_address, user_agent, login_at, last_seen_at,
+                    {$idleExpr}
              FROM user_sessions
              WHERE user_id = ? AND logout_at IS NULL AND revoked_at IS NULL
              ORDER BY last_seen_at DESC
-             LIMIT 50'
+             LIMIT 50"
         );
         $stmt->execute([$userId]);
 
@@ -177,18 +197,27 @@ class UserSession
     public static function stats(): array
     {
         $pdo = db();
+        $isPgsql = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+
+        $onlineCond = $isPgsql
+            ? 'last_seen_at > (NOW() - INTERVAL \'' . self::IDLE_MINUTES . ' minutes\')'
+            : 'last_seen_at > DATE_SUB(NOW(), INTERVAL ' . self::IDLE_MINUTES . ' MINUTE)';
+
+        $todayCond = $isPgsql
+            ? 'login_at::date = CURRENT_DATE'
+            : 'DATE(login_at) = CURDATE()';
 
         return [
             'active' => (int) $pdo->query(
                 'SELECT COUNT(*) FROM user_sessions WHERE logout_at IS NULL AND revoked_at IS NULL'
             )->fetchColumn(),
             'online' => (int) $pdo->query(
-                'SELECT COUNT(*) FROM user_sessions
+                "SELECT COUNT(*) FROM user_sessions
                  WHERE logout_at IS NULL AND revoked_at IS NULL
-                   AND last_seen_at > DATE_SUB(NOW(), INTERVAL ' . self::IDLE_MINUTES . ' MINUTE)'
+                   AND {$onlineCond}"
             )->fetchColumn(),
             'today'  => (int) $pdo->query(
-                'SELECT COUNT(*) FROM user_sessions WHERE DATE(login_at) = CURDATE()'
+                "SELECT COUNT(*) FROM user_sessions WHERE {$todayCond}"
             )->fetchColumn(),
         ];
     }
@@ -196,12 +225,18 @@ class UserSession
     /** Remove tracking rows for sessions that ended long ago. */
     public static function purgeOlderThan(int $days): int
     {
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $days = max(1, $days);
+        $dateCond = $isPgsql
+            ? 'last_seen_at < (NOW() - (? || \' days\')::interval)'
+            : 'last_seen_at < DATE_SUB(NOW(), INTERVAL ? DAY)';
+
         $stmt = db()->prepare(
-            'DELETE FROM user_sessions
+            "DELETE FROM user_sessions
              WHERE (logout_at IS NOT NULL OR revoked_at IS NOT NULL)
-               AND last_seen_at < DATE_SUB(NOW(), INTERVAL ? DAY)'
+               AND {$dateCond}"
         );
-        $stmt->execute([max(1, $days)]);
+        $stmt->execute([$days]);
 
         return $stmt->rowCount();
     }

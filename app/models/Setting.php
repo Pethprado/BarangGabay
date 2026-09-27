@@ -93,15 +93,24 @@ class Setting
             default => (string) $value,
         };
 
-        db()->prepare(
-            'INSERT INTO settings (setting_key, setting_value, value_type, updated_by, updated_at)
-             VALUES (?, ?, ?, ?, NOW())
-             ON DUPLICATE KEY UPDATE
-                setting_value = VALUES(setting_value),
-                value_type    = VALUES(value_type),
-                updated_by    = VALUES(updated_by),
-                updated_at    = NOW()'
-        )->execute([$key, $stored, $type, $updatedBy]);
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $sql = $isPgsql
+            ? 'INSERT INTO settings (setting_key, setting_value, value_type, updated_by, updated_at)
+               VALUES (?, ?, ?, ?, NOW())
+               ON CONFLICT (setting_key) DO UPDATE SET
+                  setting_value = EXCLUDED.setting_value,
+                  value_type    = EXCLUDED.value_type,
+                  updated_by    = EXCLUDED.updated_by,
+                  updated_at    = NOW()'
+            : 'INSERT INTO settings (setting_key, setting_value, value_type, updated_by, updated_at)
+               VALUES (?, ?, ?, ?, NOW())
+               ON DUPLICATE KEY UPDATE
+                  setting_value = VALUES(setting_value),
+                  value_type    = VALUES(value_type),
+                  updated_by    = VALUES(updated_by),
+                  updated_at    = NOW()';
+
+        db()->prepare($sql)->execute([$key, $stored, $type, $updatedBy]);
 
         self::$cache = null;   // force a reload on the next read
     }

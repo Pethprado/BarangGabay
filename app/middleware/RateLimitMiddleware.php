@@ -17,9 +17,9 @@ class RateLimitMiddleware
         }
 
         $pdo = db();
-        // ai_logs is the table populated by AIController for both summarize and chat.
-        // ai_chat_logs is a separate table and is never written to by the AI endpoints.
-        $stmt = $pdo->prepare('SELECT COUNT(*) FROM ai_logs WHERE user_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
+        $isPgsql = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $dateCond = $isPgsql ? "created_at > NOW() - INTERVAL '1 hour'" : "created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)";
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM ai_logs WHERE user_id = ? AND {$dateCond}");
         $stmt->execute([$userId]);
         $count = (int) $stmt->fetchColumn();
 

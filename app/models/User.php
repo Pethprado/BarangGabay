@@ -369,13 +369,13 @@ class User
 
     public static function allPending(): array
     {
-        $stmt = db()->query('SELECT * FROM users WHERE status = "pending" ORDER BY created_at DESC');
+        $stmt = db()->query("SELECT * FROM users WHERE status = 'pending' ORDER BY created_at DESC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public static function allVerified(): array
     {
-        $stmt = db()->query('SELECT * FROM users WHERE status = "verified" ORDER BY full_name ASC');
+        $stmt = db()->query("SELECT * FROM users WHERE status = 'verified' ORDER BY full_name ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

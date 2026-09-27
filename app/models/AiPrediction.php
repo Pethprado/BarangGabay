@@ -179,17 +179,21 @@ class AiPrediction
     public static function trend(int $months = 6, string $type = self::TYPE_ID_VERIFICATION): array
     {
         try {
+            $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+            $fmtExpr = $isPgsql ? "to_char(created_at, 'YYYY-MM')" : "DATE_FORMAT(created_at, '%Y-%m')";
+            $dateCond = $isPgsql ? "created_at >= NOW() - (? || ' months')::interval" : "created_at >= DATE_SUB(NOW(), INTERVAL ? MONTH)";
+
             $stmt = db()->prepare(
-                "SELECT DATE_FORMAT(created_at, '%Y-%m')  AS period,
-                        COUNT(*)                          AS total,
-                        SUM(outcome = 'correct')          AS correct,
-                        SUM(outcome = 'incorrect')        AS incorrect
+                "SELECT {$fmtExpr} AS period,
+                        COUNT(*) AS total,
+                        SUM(CASE WHEN outcome = 'correct' THEN 1 ELSE 0 END) AS correct,
+                        SUM(CASE WHEN outcome = 'incorrect' THEN 1 ELSE 0 END) AS incorrect
                  FROM ai_predictions
                  WHERE prediction_type = ?
                    AND outcome IN ('correct','incorrect')
-                   AND created_at >= DATE_SUB(NOW(), INTERVAL ? MONTH)
-                 GROUP BY period
-                 ORDER BY period ASC"
+                   AND {$dateCond}
+                 GROUP BY 1
+                 ORDER BY 1 ASC"
             );
             $stmt->execute([$type, max(1, $months)]);
 

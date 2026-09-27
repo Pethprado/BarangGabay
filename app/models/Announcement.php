@@ -83,6 +83,11 @@ class Announcement
      */
     public static function activeUrgent(int $withinDays = 14, int $limit = 3): array
     {
+        $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+        $dateCond = $isPgsql
+            ? "published_at >= NOW() - (? || ' days')::interval"
+            : "published_at >= DATE_SUB(NOW(), INTERVAL ? DAY)";
+
         $stmt = db()->prepare(
             "SELECT id, title, title_manobo, title_en, slug, category, cover_image_url, published_at,
                     LEFT(body, 400) AS excerpt
@@ -90,7 +95,7 @@ class Announcement
              WHERE " . self::visibleSql('') . "
                AND urgency = 'urgent'
                AND published_at IS NOT NULL
-               AND published_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+               AND {$dateCond}
              ORDER BY published_at DESC
              LIMIT ?"
         );

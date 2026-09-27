@@ -261,11 +261,13 @@ class ImportController
     private function withinRateLimit(): bool
     {
         try {
+            $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+            $dateCond = $isPgsql ? "created_at > NOW() - INTERVAL '1 hour'" : "created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)";
             $stmt = db()->prepare(
                 "SELECT COUNT(*) FROM audit_logs
                   WHERE user_id = ?
                     AND action IN ('import.link', 'import.file')
-                    AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)"
+                    AND {$dateCond}"
             );
             $stmt->execute([(int) ($_SESSION['user_id'] ?? 0)]);
 
