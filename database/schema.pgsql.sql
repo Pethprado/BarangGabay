@@ -1,4 +1,4 @@
-﻿-- PostgreSQL schema for BarangGabay
+-- PostgreSQL schema for BarangGabay
 -- Converted from schema.sql (MySQL) for Render free PostgreSQL
 
 DROP TABLE IF EXISTS sms_logs CASCADE;

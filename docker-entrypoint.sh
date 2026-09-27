@@ -7,7 +7,7 @@ export APACHE_PORT="$PORT"
 # Update Apache port to match the port assigned by Render ($PORT)
 sed -i "s/Listen [0-9]*/Listen ${PORT}/" /etc/apache2/ports.conf
 
-# ── Startup sanity check ──────────────────────────────────────────────────────
+# â”€â”€ Startup sanity check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # If DB_HOST is still the localhost default (or unset), the app CANNOT connect
 # to any real database. Print a loud warning so it's visible in Render's
 # deploy logs immediately, before any HTTP request is served.
@@ -19,7 +19,7 @@ if [ -z "$DATABASE_URL_VAL" ] && [ "$DB_HOST_VAL" = "127.0.0.1" ]; then
     echo " WARNING: DB credentials are NOT configured!"
     echo " DB_HOST is still 127.0.0.1 (the localhost default)."
     echo " Set DB_HOST, DB_USER, DB_PASS, DB_NAME (and optionally"
-    echo " DATABASE_URL) in the Render dashboard → Environment tab."
+    echo " DATABASE_URL) in the Render dashboard â†’ Environment tab."
     echo " APP_URL must also be set to https://baranggabay.onrender.com"
     echo "============================================================"
 fi
