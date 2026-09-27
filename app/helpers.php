@@ -1309,21 +1309,7 @@ function localised_content(array $row, string $baseField, ?string $locale = null
         $translated = '';
     }
 
-    // Auto-generate hybrid Manobo translation for un-backfilled content on the fly
-    if ($locale === 'msm' && $translated === '' && $original !== '') {
-        try {
-            static $contentHybridTranslator = null;
-            if ($contentHybridTranslator === null) {
-                $contentHybridTranslator = new \App\Services\ManoboHybridTranslator();
-            }
-            $res = $contentHybridTranslator->translate($original, $sourceLang);
-            if (!empty($res['translation'])) {
-                $translated = $res['translation'];
-            }
-        } catch (\Throwable) {
-            // Keep fallback
-        }
-    }
+
 
     /*
      * 'locale' is what the reader ASKED for. 'shown_locale' is what they are
@@ -1485,7 +1471,7 @@ function t(string $key, array $replace = [], ?string $locale = null): string
                         }
                         $srcLang = ($filipino !== null) ? 'fil' : 'en';
                         $res = $uiHybridTranslator->translate($sourceText, $srcLang);
-                        if (!empty($res['translation'])) {
+                        if (!empty($res['translation']) && ($res['manoboMatches'] > 0 || str_starts_with($key, 'nav.'))) {
                             $value = $res['translation'];
                             $cache['msm'][$key] = $value;
                         }

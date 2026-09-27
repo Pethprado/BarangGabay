@@ -761,6 +761,11 @@ class ManoboHybridTranslator
                 }
             }
 
+            // Reject non-Latin characters (Cyrillic, Russian, Arabic, Chinese, etc.)
+            if (preg_match('/[\p{Cyrillic}\p{Arabic}\p{Han}\p{Devanagari}]/u', $translated)) {
+                return null;
+            }
+
             // Anti-spam guard: reject crowd-sourced translation memory spam
             if (mb_strlen($text) <= 6 && mb_strlen($translated) > 18) {
                 return null;
