@@ -493,9 +493,9 @@ final class ManoboDictionary
     public function approve(int $id, ?int $userId = null): void
     {
         $stmt = $this->pdo->prepare(
-            'UPDATE manobo_dictionary 
-                SET review_status = "approved", needs_review = 0, updated_by = ?
-              WHERE id = ?'
+            "UPDATE manobo_dictionary 
+                SET review_status = 'approved', needs_review = 0, updated_by = ?
+              WHERE id = ?"
         );
         $stmt->execute([$userId, $id]);
         ManoboHybridTranslator::incrementDictionaryVersion();
@@ -864,7 +864,7 @@ final class ManoboDictionary
     public function archive(int $id, ?int $userId = null): void
     {
         $stmt = $this->pdo->prepare(
-            'UPDATE manobo_dictionary SET review_status = "archived", archived_at = NOW(), updated_by = ? WHERE id = ?'
+            "UPDATE manobo_dictionary SET review_status = 'archived', archived_at = NOW(), updated_by = ? WHERE id = ?"
         );
         $stmt->execute([$userId, $id]);
         ManoboHybridTranslator::incrementDictionaryVersion();
@@ -968,9 +968,9 @@ final class ManoboDictionary
 
         // Record import metadata
         $stmt = $this->pdo->prepare(
-            'INSERT INTO dictionary_imports
+            "INSERT INTO dictionary_imports
                 (import_batch_id, filename, file_type, total_extracted, total_approved, total_duplicates, total_flagged, status, uploaded_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, "completed", ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', ?)"
         );
         $stmt->execute([
             $batchId, $filename, $fileType, count($entries), $added + $updated, $skipped, $flagged, $userId
@@ -998,7 +998,7 @@ final class ManoboDictionary
         $stmt->execute([$batchId]);
         $deleted = $stmt->rowCount();
 
-        $stmt2 = $this->pdo->prepare('UPDATE dictionary_imports SET status = "undone", undone_at = NOW() WHERE import_batch_id = ?');
+        $stmt2 = $this->pdo->prepare("UPDATE dictionary_imports SET status = 'undone', undone_at = NOW() WHERE import_batch_id = ?");
         $stmt2->execute([$batchId]);
 
         ManoboHybridTranslator::incrementDictionaryVersion();

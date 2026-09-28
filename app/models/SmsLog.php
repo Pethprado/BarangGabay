@@ -137,7 +137,7 @@ class SmsLog
             'sent'    => (int) $pdo->query("SELECT COUNT(*) FROM sms_logs WHERE status = 'sent'")->fetchColumn(),
             'failed'  => (int) $pdo->query("SELECT COUNT(*) FROM sms_logs WHERE status = 'failed'")->fetchColumn(),
             'monthly' => (int) $pdo->query(
-                "SELECT COUNT(*) FROM sms_logs WHERE status = 'sent' AND MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())"
+                "SELECT COUNT(*) FROM sms_logs WHERE status = 'sent' AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)"
             )->fetchColumn(),
         ];
     }

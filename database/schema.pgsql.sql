@@ -376,6 +376,7 @@ CREATE TABLE manobo_dictionary (
     category VARCHAR(30) NOT NULL DEFAULT 'other',
     notes TEXT NULL,
     source VARCHAR(100) NOT NULL DEFAULT 'LOCAL',
+    import_batch_id VARCHAR(100) NULL,
     archived_at TIMESTAMP NULL DEFAULT NULL,
     deleted_at TIMESTAMP NULL DEFAULT NULL,
     created_by INT NULL,
@@ -385,6 +386,24 @@ CREATE TABLE manobo_dictionary (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS dictionary_imports (
+    id SERIAL PRIMARY KEY,
+    import_batch_id VARCHAR(100) NOT NULL UNIQUE,
+    filename VARCHAR(255) NOT NULL,
+    file_type VARCHAR(20) NOT NULL DEFAULT 'doc',
+    total_extracted INT NOT NULL DEFAULT 0,
+    total_approved INT NOT NULL DEFAULT 0,
+    total_duplicates INT NOT NULL DEFAULT 0,
+    total_flagged INT NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'completed',
+    uploaded_by INT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    undone_at TIMESTAMP NULL DEFAULT NULL,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_di_batch ON dictionary_imports(import_batch_id);
+CREATE INDEX IF NOT EXISTS idx_di_status ON dictionary_imports(status);
 
 CREATE TABLE bisaya_dictionary (
     id SERIAL PRIMARY KEY,

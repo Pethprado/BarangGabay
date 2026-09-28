@@ -74,7 +74,7 @@ class TranslationLog
     {
         return (int) db()->query(
             "SELECT COUNT(*) FROM translation_logs
-             WHERE YEAR(created_at) = YEAR(NOW()) AND MONTH(created_at) = MONTH(NOW())"
+             WHERE EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)"
         )->fetchColumn();
     }
 
@@ -84,7 +84,7 @@ class TranslationLog
         return db()->query(
             "SELECT content_type, COUNT(*) AS total
              FROM translation_logs
-             WHERE YEAR(created_at) = YEAR(NOW()) AND MONTH(created_at) = MONTH(NOW())
+             WHERE EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
              GROUP BY content_type"
         )->fetchAll(PDO::FETCH_ASSOC);
     }

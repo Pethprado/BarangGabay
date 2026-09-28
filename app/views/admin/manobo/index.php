@@ -262,12 +262,12 @@ ob_start();
             <tbody>
                 <?php foreach ($importHistory as $batch): ?>
                 <tr>
-                    <td class="font-monospace" style="font-size:.78rem;"><?= e($batch['batch_id']) ?></td>
-                    <td style="font-weight:600;"><?= e($batch['filename']) ?></td>
-                    <td><span class="badge bg-primary-subtle text-primary"><?= (int)$batch['entry_count'] ?></span></td>
-                    <td><span class="badge bg-success-subtle text-success"><?= (int)$batch['approved_count'] ?></span></td>
-                    <td><span class="badge bg-info-subtle text-info"><?= (int)$batch['updated_count'] ?></span></td>
-                    <td style="font-size:.78rem;color:var(--text-muted);"><?= e($batch['created_at']) ?></td>
+                    <td class="font-monospace" style="font-size:.78rem;"><?= e($batch['import_batch_id'] ?? $batch['batch_id'] ?? '') ?></td>
+                    <td style="font-weight:600;"><?= e($batch['filename'] ?? '') ?></td>
+                    <td><span class="badge bg-primary-subtle text-primary"><?= (int)($batch['entry_count'] ?? $batch['total_extracted'] ?? 0) ?></span></td>
+                    <td><span class="badge bg-success-subtle text-success"><?= (int)($batch['approved_count'] ?? $batch['total_approved'] ?? 0) ?></span></td>
+                    <td><span class="badge bg-info-subtle text-info"><?= (int)($batch['updated_count'] ?? $batch['total_duplicates'] ?? 0) ?></span></td>
+                    <td style="font-size:.78rem;color:var(--text-muted);"><?= e($batch['created_at'] ?? '') ?></td>
                     <td class="text-end">
                         <?php if ($canRestore): ?>
                         <form method="POST" action="<?= e(route('admin/manobo/import-undo')) ?>" class="d-inline" onsubmit="return confirm('Sigurado ka bang gusto mong i-undo ang import na ito? Matatanggal ang mga bagong entri mula sa batch na ito.');">
