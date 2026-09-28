@@ -1,32 +1,81 @@
-<svg width="100%" viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg" role="img">
-<title>BarangGabay</title>
-<!-- Recoloured from the original blue/green lockup to the Manobo-inspired
-     maroon/gold earth palette (theme.css). For placement on LIGHT surfaces:
-     the wordmark reads in dark ink, the shield in maroon, per the same
-     naming convention main.css already used for the two PNG lockups this
-     replaces (-light = for light backgrounds, -dark = for dark ones). -->
-<defs>
-  <linearGradient id="hexGradL" x1="0%" y1="0%" x2="100%" y2="100%">
-    <stop offset="0%" stop-color="#7b1e22"/>
-    <stop offset="100%" stop-color="#5e161a"/>
-  </linearGradient>
-</defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 110" width="100%" height="100%" role="img" aria-label="BARANGGABAY">
+  <defs>
+    <linearGradient id="bgGradL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="50%" stop-color="#166534" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
 
-<polygon points="55,8 95,8 115,42 95,76 55,76 35,42" fill="url(#hexGradL)"/>
-<polygon points="57,11 93,11 111,42 93,73 57,73 39,42" fill="none" stroke="#c8992e" stroke-width="1.2" opacity="0.7"/>
-<polygon points="61,17 89,17 105,42 89,67 61,67 45,42" fill="none" stroke="#c8992e" stroke-width="0.6" opacity="0.35"/>
+    <linearGradient id="borderGradL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="50%" stop-color="#10b981" stroke-opacity="0.6" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
 
-<circle cx="75" cy="42" r="22" fill="#241b18"/>
-<circle cx="75" cy="42" r="20" fill="none" stroke="#c8992e" stroke-width="1.5"/>
-<text x="75" y="53" text-anchor="middle" font-family="Georgia,serif" font-size="28" font-weight="700" fill="#e2b955">B</text>
+    <linearGradient id="goldGradL" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
 
-<rect x="40" y="62" width="70" height="13" rx="2" fill="#c8992e"/>
-<text x="75" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="6" font-weight="700" fill="#1a1512" letter-spacing="1">BARANGGABAY</text>
+    <linearGradient id="mintGradL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6ee7b7" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
 
-<text x="130" y="38" font-family="Georgia,serif" font-size="36" font-weight="700" fill="#1a1512" letter-spacing="-0.5">Barang</text>
-<text x="130" y="72" font-family="Georgia,serif" font-size="36" font-weight="700" fill="#7a5c11" letter-spacing="-0.5">Gabay</text>
+    <linearGradient id="textGabayGradL" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#15803d" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
 
-<rect x="130" y="80" width="280" height="1.5" rx="1" fill="#7b1e22" opacity="0.25"/>
-<text x="130" y="96" font-family="Arial,sans-serif" font-size="11" fill="#4a3f38" opacity="0.85" letter-spacing="2">BARANGAY COMMUNITY PORTAL</text>
-<text x="130" y="112" font-family="Arial,sans-serif" font-size="10" fill="#4a3f38" opacity="0.6" letter-spacing="1">Bayogo · Madrid · Surigao del Sur</text>
+    <filter id="glowL" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- EMBLEM ICON (Left Aligned) -->
+  <g transform="translate(10, 5)">
+    <!-- Base Rounded Shield Background -->
+    <rect x="5" y="5" width="90" height="90" rx="24" fill="url(#bgGradL)" />
+    <rect x="6" y="6" width="88" height="88" rx="23" fill="none" stroke="url(#borderGradL)" stroke-width="2" opacity="0.85" />
+
+    <!-- Canopy Roof -->
+    <path d="M 25,43 L 50,22 L 75,43" fill="none" stroke="url(#mintGradL)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Beacon Star -->
+    <circle cx="50" cy="19" r="4" fill="url(#goldGradL)" filter="url(#glowL)" />
+    <circle cx="50" cy="19" r="2" fill="#ffffff" />
+
+    <!-- Figures -->
+    <circle cx="50" cy="40" r="5.5" fill="url(#goldGradL)" />
+    <path d="M 40,61 C 40,52 44,48 50,48 C 56,48 60,52 60,61 Z" fill="url(#mintGradL)" />
+
+    <circle cx="34" cy="46" r="4.5" fill="#ffffff" opacity="0.95" />
+    <path d="M 26,64 C 26,57 30,54 35,54 C 38,54 40,56 42,59" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.9" />
+
+    <circle cx="66" cy="46" r="4.5" fill="#ffffff" opacity="0.95" />
+    <path d="M 58,59 C 60,56 62,54 65,54 C 70,54 74,57 74,64" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.9" />
+
+    <!-- Connecting Dots -->
+    <path d="M 34,46 L 50,40 L 66,46" fill="none" stroke="url(#goldGradL)" stroke-width="1.5" stroke-dasharray="2.5,2.5" opacity="0.85" />
+
+    <!-- Supporting Arch -->
+    <path d="M 28,73 C 38,81 62,81 72,73" fill="none" stroke="url(#mintGradL)" stroke-width="3.5" stroke-linecap="round" />
+  </g>
+
+  <!-- WORDMARK (Right of Icon) -->
+  <g transform="translate(120, 0)">
+    <!-- BARANG -->
+    <text x="0" y="58" font-family="System-UI, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif" font-size="42" font-weight="900" fill="#0f172a" letter-spacing="1">BARANG</text>
+
+    <!-- GABAY -->
+    <text x="188" y="58" font-family="System-UI, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif" font-size="42" font-weight="900" fill="url(#textGabayGradL)" letter-spacing="1">GABAY</text>
+
+    <!-- Accent Underline Beacon -->
+    <rect x="0" y="68" width="318" height="3" rx="1.5" fill="url(#textGabayGradL)" opacity="0.85" />
+    <circle cx="186" cy="69.5" r="3.5" fill="url(#goldGradL)" filter="url(#glowL)" />
+
+    <!-- Tagline -->
+    <text x="1" y="92" font-family="System-UI, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="700" fill="#475569" letter-spacing="3.2">YOUR BARANGAY. CONNECTED.</text>
+  </g>
 </svg>

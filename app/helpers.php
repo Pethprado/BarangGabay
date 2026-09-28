@@ -294,6 +294,81 @@ function system_logo_url(): ?string
 }
 
 /**
+ * Renders the official BARANGGABAY logo component with responsive sizing and theme support.
+ *
+ * @param string $variant 'auto' | 'dark' | 'light' | 'icon' | 'full' | 'horizontal'
+ * @param array $options [
+ *     'size'     => 'small' | 'medium' | 'large' | 'xlarge' | 'hero' | string,
+ *     'iconOnly' => bool,
+ *     'class'    => string,
+ *     'style'    => string,
+ *     'alt'      => string,
+ *     'href'     => string|null,
+ * ]
+ * @return string HTML string
+ */
+function baranggabay_logo(string $variant = 'auto', array $options = []): string
+{
+    $customUploaded = system_logo_url();
+    $size     = $options['size'] ?? 'medium';
+    $iconOnly = !empty($options['iconOnly']);
+    $class    = $options['class'] ?? '';
+    $style    = $options['style'] ?? '';
+    $alt      = $options['alt'] ?? system_name();
+    $href     = array_key_exists('href', $options) ? $options['href'] : route('');
+
+    $heightMap = [
+        'small'  => '38px',
+        'medium' => '48px',
+        'large'  => '64px',
+        'xlarge' => '80px',
+        'hero'   => '96px',
+    ];
+    $height = $heightMap[$size] ?? (is_numeric($size) ? "{$size}px" : $size);
+
+    if ($customUploaded !== null) {
+        $src = $customUploaded;
+    } else {
+        if ($iconOnly || $variant === 'icon') {
+            $src = asset('images/logo-icon.svg');
+        } elseif ($variant === 'dark') {
+            $src = asset('images/logo-dark.svg');
+        } elseif ($variant === 'light') {
+            $src = asset('images/logo-light.svg');
+        } else {
+            $lightSrc = asset('images/logo-light.svg');
+            $darkSrc  = asset('images/logo-dark.svg');
+
+            $html = sprintf(
+                '<span class="baranggabay-logo-wrapper %s" style="display:inline-flex;align-items:center;vertical-align:middle;%s">
+                   <img src="%s" alt="%s" class="baranggabay-logo-img logo-light-variant" style="height:%s;width:auto;max-width:100%%;object-fit:contain;display:block;" />
+                   <img src="%s" alt="%s" class="baranggabay-logo-img logo-dark-variant" style="height:%s;width:auto;max-width:100%%;object-fit:contain;display:none;" />
+                 </span>',
+                e($class), e($style),
+                e($lightSrc), e($alt), e($height),
+                e($darkSrc), e($alt), e($height)
+            );
+
+            if ($href !== null) {
+                return sprintf('<a href="%s" class="baranggabay-logo-link" style="text-decoration:none;display:inline-block;">%s</a>', e($href), $html);
+            }
+            return $html;
+        }
+    }
+
+    $imgHtml = sprintf(
+        '<img src="%s" alt="%s" class="baranggabay-logo-img %s" style="height:%s;width:auto;max-width:100%%;object-fit:contain;display:inline-block;vertical-align:middle;%s" />',
+        e($src), e($alt), e($class), e($height), e($style)
+    );
+
+    if ($href !== null) {
+        return sprintf('<a href="%s" class="baranggabay-logo-link" style="text-decoration:none;display:inline-block;">%s</a>', e($href), $imgHtml);
+    }
+
+    return $imgHtml;
+}
+
+/**
  * The badge classes for a post's category — one definition, every view.
  *
  * There were three copies of this map (home, the list, the detail page) and

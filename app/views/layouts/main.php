@@ -42,7 +42,9 @@
             letter-spacing: -0.01em;
             line-height: 1.05;
         }
-    </style>
+    <!-- Favicon -->
+    <link rel="icon" href="<?= e(asset('images/logo-icon.svg')) ?>" type="image/svg+xml">
+    <link rel="alternate icon" href="<?= e(asset('favicon.ico')) ?>">
 </head>
 <body class="text-slate-900 antialiased">
 
@@ -51,23 +53,9 @@
         <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
 
             <!-- Logo -->
-            <a href="<?= e(route('')) ?>" class="flex items-center gap-3 hover:opacity-90 transition-opacity flex-shrink-0">
-                <?php
-                // A logo uploaded in Super Admin → Settings replaces both
-                // lockups; otherwise the light/dark pair is used as before.
-                $__logo = system_logo_url();
-                ?>
-                <img src="<?= e($__logo ?? asset('images/logo-lockup-light.svg')) ?>" alt="<?= e(system_name()) ?>"
-                     class="logo-lockup <?= $__logo === null ? 'logo-lockup-light' : '' ?>"
-                     onerror="this.style.display='none';document.getElementById('nav-logo-fallback').style.display='flex'">
-                <?php if ($__logo === null): ?>
-                <img src="<?= e(asset('images/logo-lockup-dark.svg')) ?>" alt="<?= e(system_name()) ?>" class="logo-lockup logo-lockup-dark"
-                     onerror="this.style.display='none';document.getElementById('nav-logo-fallback').style.display='flex'">
-                <?php endif; ?>
-                <span id="nav-logo-fallback"
-                      style="display:none;background:var(--brand-primary);color:#fff;"
-                      class="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-lg font-bold ring-2 ring-white">B</span>
-            </a>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <?= baranggabay_logo('auto', ['size' => 'medium', 'href' => route('')]) ?>
+            </div>
 
             <!-- Desktop nav links -->
             <nav class="hidden items-center gap-1 md:flex">
@@ -301,7 +289,7 @@
             <div class="grid gap-10 lg:grid-cols-3">
                 <div>
                     <div class="flex items-center gap-3 mb-4">
-                        <img src="<?= e(asset('images/logo-lockup-dark.svg')) ?>" alt="BarangGabay" style="height:34px;width:auto;display:block;">
+                        <?= baranggabay_logo('dark', ['size' => 'medium', 'href' => route('')]) ?>
                     </div>
                     <p class="text-sm leading-6 max-w-xs" style="color:rgba(255,255,255,0.55)">
                         <?= e(t('footer.tagline')) ?>

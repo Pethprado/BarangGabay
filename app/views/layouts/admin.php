@@ -66,6 +66,9 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <!-- Shared design tokens. Must come BEFORE admin.css, which reads them. -->
     <link rel="stylesheet" href="<?= e(asset_v('assets/css/tokens.css')) ?>">
+    <!-- Favicon -->
+    <link rel="icon" href="<?= e(asset('images/logo-icon.svg')) ?>" type="image/svg+xml">
+    <link rel="alternate icon" href="<?= e(asset('favicon.ico')) ?>">
     <!-- Admin styles -->
     <link rel="stylesheet" href="<?= e(asset_v('assets/css/admin.css')) ?>">
     <!-- System theme (Manobo-inspired earth palette) — loaded LAST so its
@@ -89,13 +92,8 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
 
         <!-- Brand -->
         <div class="sidebar-brand">
-            <div class="sidebar-brand-text">
-                <?php // A logo uploaded in Settings replaces the bundled lockup. ?>
-                <img src="<?= e(system_logo_url() ?? asset('images/logo-lockup-dark.svg')) ?>"
-                     alt="<?= e(system_name()) ?>"
-                     style="height:48px;width:auto;display:block;"
-                     onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-                <span class="brand-name" style="display:none;"><?= e(system_name()) ?></span>
+            <div class="sidebar-brand-text d-flex align-items-center">
+                <?= baranggabay_logo('dark', ['size' => 'large', 'href' => route('admin')]) ?>
             </div>
             <button class="sidebar-close d-lg-none" @click="sidebarOpen = false"
                     aria-label="Close sidebar">

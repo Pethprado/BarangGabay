@@ -307,13 +307,8 @@ $flashOk  = flash('success');
 <div class="reg-card">
 
     <!-- ── Left: welcome panel ────────────────────────────── -->
-    <div class="reg-left">
-        <img src="<?= e(asset('images/logo-lockup-dark.svg')) ?>"
-             alt="BarangGabay"
-             style="height:46px;width:auto;margin-bottom:0.75rem;display:block;"
-             onerror="this.style.display='none';document.getElementById('reg-logo-fallback').style.display='flex'">
-        <div id="reg-logo-fallback" class="reg-brand-icon" style="display:none;">
-            <i class="bi bi-building-fill-check"></i>
+        <div class="mb-3">
+            <?= baranggabay_logo('dark', ['size' => 'large', 'href' => route('')]) ?>
         </div>
 
         <h2>Sumali sa aming komunidad</h2>

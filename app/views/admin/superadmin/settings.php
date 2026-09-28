@@ -258,7 +258,7 @@ ob_start();
 
     <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
         <span style="font-size:.78rem;font-weight:600;color:var(--text-muted);"><?= e(t('superadmin.set_logo_current')) ?></span>
-        <img src="<?= e($logoUrl ?? asset('img/logo.png')) ?>" alt="<?= e(system_name()) ?>" class="logo-preview">
+        <img src="<?= e($logoUrl ?? asset('images/logo-dark.svg')) ?>" alt="<?= e(system_name()) ?>" class="logo-preview">
         <?php if ($logoUrl === null): ?>
         <span style="font-size:.75rem;color:var(--text-muted);"><?= e(t('superadmin.set_logo_default')) ?></span>
         <?php endif; ?>

@@ -242,9 +242,12 @@ $authBgUrl  = is_file($authBgFile) ? asset('images/auth-bg.jpg') : null;
         .auth-brand > *:not(.auth-brand__scape) { position: relative; z-index: 1; }
 
         .auth-brand__logo {
-            height: 64px;
+            height: 76px;
             width: auto;
+            max-width: 100%;
+            object-fit: contain;
             margin-bottom: 1.5rem;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
         }
         .auth-brand__fallback {
             width: 62px;
@@ -551,7 +554,7 @@ $authBgUrl  = is_file($authBgFile) ? asset('images/auth-bg.jpg') : null;
                and the footer are the first thing to go — on a phone the form
                should be reachable without scrolling past a sales pitch. */
             .auth-brand { padding: 1.75rem 1.5rem 1.5rem; }
-            .auth-brand__logo     { height: 46px; margin-bottom: .9rem; }
+            .auth-brand__logo     { height: 56px; margin-bottom: 1rem; }
             .auth-brand__fallback { width: 48px; height: 48px; font-size: 1.3rem; margin-bottom: .9rem; }
             .auth-brand__name     { font-size: 1.2rem; }
             .auth-brand__rule,
@@ -603,12 +606,7 @@ $authBgUrl  = is_file($authBgFile) ? asset('images/auth-bg.jpg') : null;
          * a barely-visible dark logo on a dark background. The -dark lockup
          * (cream/gold text) is the one built for this panel.
          */
-        $logoUrl = system_logo_url() ?? asset('images/logo-lockup-dark.svg');
-        ?>
-        <img src="<?= e($logoUrl) ?>"
-             alt="<?= e(system_name()) ?>"
-             class="auth-brand__logo"
-             onerror="this.style.display='none';document.getElementById('brand-fallback').style.display='flex'">
+        <?= baranggabay_logo('dark', ['size' => 'hero', 'href' => null, 'class' => 'auth-brand__logo']) ?>
         <div id="brand-fallback" class="auth-brand__fallback" style="display:none;">
             <i class="bi <?= e($entryIcon) ?>" aria-hidden="true"></i>
         </div>
