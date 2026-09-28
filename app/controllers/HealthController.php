@@ -22,10 +22,12 @@ class HealthController
 
         $debug = ((string) env('APP_DEBUG', 'false')) === 'true';
 
+        // Render deployment diagnostic check
         $result = [
             'app'       => 'ok',
             'php'       => PHP_VERSION,
             'timestamp' => date('c'),
+            'version'   => '1.0.1-logo-fix',
         ];
 
         try {
