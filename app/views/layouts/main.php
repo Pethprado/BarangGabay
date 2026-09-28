@@ -42,6 +42,7 @@
             letter-spacing: -0.01em;
             line-height: 1.05;
         }
+    </style>
     <!-- Favicon -->
     <link rel="icon" href="<?= e(asset('images/logo-icon.svg')) ?>" type="image/svg+xml">
     <link rel="alternate icon" href="<?= e(asset('favicon.ico')) ?>">
