@@ -247,7 +247,7 @@ class User
                     last_login_at, created_at
                FROM users
               WHERE role IN ('staff','admin','superadmin')
-              ORDER BY FIELD(role,'superadmin','admin','staff'), full_name"
+              ORDER BY CASE role WHEN 'superadmin' THEN 1 WHEN 'admin' THEN 2 WHEN 'staff' THEN 3 ELSE 4 END, full_name"
         )->fetchAll();
     }
 

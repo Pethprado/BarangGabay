@@ -124,7 +124,7 @@ class SafetyCheckin
                       ON c.user_id = u.id AND c.advisory_id = ?
               WHERE u.role = 'resident' AND u.status = 'verified'
                 AND (c.id IS NULL OR c.status = 'needs_help')
-              ORDER BY FIELD(COALESCE(c.status,'silent'),'needs_help','silent'), u.zone, u.full_name"
+              ORDER BY CASE COALESCE(c.status,'silent') WHEN 'needs_help' THEN 1 WHEN 'silent' THEN 2 ELSE 3 END, u.zone, u.full_name"
         );
         $stmt->execute([$advisoryId]);
 

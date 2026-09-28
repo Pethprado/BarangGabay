@@ -116,13 +116,13 @@ function seed_comprehensive_demo(?PDO $pdo = null, string $driver = 'mysql'): ar
         $stmt->execute([$u['email']]);
         $existingId = $stmt->fetchColumn();
 
+        $hash = password_hash($u['password'], PASSWORD_BCRYPT);
         if ($existingId) {
-            $pdo->prepare("UPDATE users SET full_name = ?, role = ?, status = ?, designation = ?, phone = ?, zone = ?, address = ?, email_verified = 1, totp_enabled = 0 WHERE id = ?")
-                ->execute([$u['full_name'], $u['role'], $u['status'], $u['designation'], $u['phone'], $u['zone'], $u['address'], $existingId]);
+            $pdo->prepare("UPDATE users SET full_name = ?, password_hash = ?, role = ?, status = ?, designation = ?, phone = ?, zone = ?, address = ?, email_verified = 1, totp_enabled = 0 WHERE id = ?")
+                ->execute([$u['full_name'], $hash, $u['role'], $u['status'], $u['designation'], $u['phone'], $u['zone'], $u['address'], $existingId]);
             $userIds[$u['email']] = (int) $existingId;
             echo "  [Updated] {$u['full_name']} <{$u['email']}> ({$u['role']}, {$u['status']})\n";
         } else {
-            $hash = password_hash($u['password'], PASSWORD_BCRYPT);
             $pdo->prepare("INSERT INTO users (full_name, email, password_hash, role, status, designation, phone, zone, address, email_verified, totp_enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, NOW(), NOW())")
                 ->execute([$u['full_name'], $u['email'], $hash, $u['role'], $u['status'], $u['designation'], $u['phone'], $u['zone'], $u['address']]);
             $userIds[$u['email']] = (int) $pdo->lastInsertId();

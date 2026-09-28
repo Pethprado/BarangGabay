@@ -305,6 +305,14 @@ function syncPostgresSchema(PDO $pdo): void
              RETURN to_char(ts, pg_fmt);
          END;
          $$ LANGUAGE plpgsql IMMUTABLE",
+        "CREATE OR REPLACE FUNCTION field(val anyelement, VARIADIC vals anyarray)
+         RETURNS integer AS $$
+         SELECT COALESCE((
+             SELECT i FROM generate_subscripts(vals, 1) g(i)
+             WHERE vals[i] = val
+             LIMIT 1
+         ), 0);
+         $$ LANGUAGE sql IMMUTABLE",
 
         // 14. Manobo Dictionary columns for Hybrid Translator
         "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS bisaya VARCHAR(255) NULL",

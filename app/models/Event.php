@@ -19,7 +19,7 @@ class Event
              JOIN users u ON u.id = e.created_by
              WHERE e.status != 'cancelled'
              ORDER BY
-               FIELD(e.status, 'ongoing', 'upcoming', 'completed'),
+               CASE e.status WHEN 'ongoing' THEN 1 WHEN 'upcoming' THEN 2 WHEN 'completed' THEN 3 ELSE 4 END,
                e.event_date ASC"
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
