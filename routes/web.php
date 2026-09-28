@@ -20,6 +20,7 @@ return [
     // Read-only Manobo dictionary for residents. Curation stays at
     // /admin/manobo; this one only looks words up.
     ['GET', '/manobo', 'ManoboController@residentIndex', ['auth', 'verified']],
+    ['GET', '/dictionary', 'ManoboController@residentIndex', ['auth', 'verified']],
     ['GET', '/notifications', 'NotificationController@index', ['auth', 'verified']],
     ['POST', '/notifications/mark-read', 'NotificationController@markRead', ['auth', 'verified']],
     ['GET', '/profile', 'ResidentController@profile', ['auth', 'verified']],
@@ -120,6 +121,7 @@ return [
     // for — staff should be able to curate words, not just admins). Restoring
     // from Trash and purging permanently stay admin-only: irreversible.
     ['GET',  '/admin/manobo',                    'ManoboController@adminIndex',     ['auth', 'role:admin,staff']],
+    ['GET',  '/admin/dictionary',                'ManoboController@adminIndex',     ['auth', 'role:admin,staff']],
     ['GET',  '/admin/manobo/export',             'ManoboController@export',         ['auth', 'role:admin,staff']],
     ['POST', '/admin/manobo',                    'ManoboController@store',          ['auth', 'role:admin,staff']],
     ['POST', '/admin/manobo/update',             'ManoboController@update',         ['auth', 'role:admin,staff']],

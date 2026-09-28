@@ -126,8 +126,13 @@ class Announcement
             $params[] = $like;
         }
 
+        $countSql  = 'SELECT COUNT(*) FROM announcements a JOIN users u ON u.id = a.author_id WHERE ' . implode(' AND ', $where);
+        $countStmt = db()->prepare($countSql);
+        $countStmt->execute($params);
+        $total     = (int) $countStmt->fetchColumn();
+
         $offset = ($page - 1) * $perPage;
-        $sql    = 'SELECT SQL_CALC_FOUND_ROWS a.*, u.full_name AS author_name
+        $sql    = 'SELECT a.*, u.full_name AS author_name
                    FROM announcements a JOIN users u ON u.id = a.author_id
                    WHERE ' . implode(' AND ', $where) . '
                    ORDER BY a.published_at DESC
@@ -142,7 +147,7 @@ class Announcement
 
         return [
             'items' => $stmt->fetchAll(PDO::FETCH_ASSOC),
-            'total' => (int) db()->query('SELECT FOUND_ROWS()')->fetchColumn(),
+            'total' => $total,
         ];
     }
 

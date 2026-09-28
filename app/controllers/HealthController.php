@@ -27,7 +27,7 @@ class HealthController
             'app'       => 'ok',
             'php'       => PHP_VERSION,
             'timestamp' => date('c'),
-            'version'   => '1.0.2-style-fix',
+            'version'   => '1.0.3-pg-fix',
         ];
 
         try {
