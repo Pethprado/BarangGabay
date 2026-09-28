@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Admin dashboard view.
  * Variables: $verifiedCount (int), $pendingCount (int), $publishedCount (int),
@@ -577,6 +577,22 @@ $advisoryOn    = $advisoryText !== '';
                             <?= $pendingCount > 0
                                 ? e(t('dashboard.qa_pending_approval', ['count' => number_format($pendingCount)]))
                                 : e(t('dashboard.qa_manage_residents')) ?>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="<?= e(route('admin/system/seed-demo')) ?>"
+                   class="quick-action-btn"
+                   onclick="return confirm('Nais mo bang itanim o i-refresh ang sample / demo data sa sistema?')">
+                    <span class="qa-icon" style="background:var(--brand-primary, #0d6efd);">
+                        <i class="bi bi-database-fill-gear"></i>
+                    </span>
+                    <div>
+                        <div style="font-weight:700;font-size:.875rem;line-height:1.2;">
+                            Itanim ang Sample Data
+                        </div>
+                        <div style="font-size:.73rem;color:var(--text-muted);">
+                            I-populate ang demo announcements, events, atbp.
                         </div>
                     </div>
                 </a>

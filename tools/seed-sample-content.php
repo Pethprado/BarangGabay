@@ -146,7 +146,7 @@ function sample_author(): ?array
     $stmt = db()->query(
         "SELECT id, full_name, role FROM users
           WHERE role IN ('staff','admin','superadmin') AND status = 'verified'
-          ORDER BY FIELD(role,'staff','admin','superadmin'), id
+          ORDER BY CASE role WHEN 'staff' THEN 1 WHEN 'admin' THEN 2 WHEN 'superadmin' THEN 3 ELSE 4 END, id
           LIMIT 1"
     );
 

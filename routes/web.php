@@ -186,6 +186,9 @@ return [
     ['POST', '/superadmin/settings/logo',        'SuperAdminController@uploadLogo',     ['auth', 'role:superadmin']],
     ['POST', '/superadmin/settings/logo/reset',  'SuperAdminController@resetLogo',      ['auth', 'role:superadmin']],
     ['GET',  '/superadmin/ai-accuracy',          'SuperAdminController@aiAccuracy',     ['auth', 'role:superadmin']],
+    ['GET',  '/admin/system/seed-demo',          'SuperAdminController@seedDemo',       ['auth', 'role:admin,superadmin']],
+    ['POST', '/admin/system/seed-demo',          'SuperAdminController@seedDemo',       ['auth', 'role:admin,superadmin']],
+
 
     // ── Two-factor authentication ─────────────────────────────────────
     // The challenge routes carry no 'auth' middleware on purpose: the user is

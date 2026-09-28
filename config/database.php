@@ -383,6 +383,16 @@ function syncPostgresSchema(PDO $pdo): void
         } catch (\Throwable $e) {
             error_log('PgSQL populateMissingManoboTranslations note: ' . $e->getMessage());
         }
+
+        try {
+            if (\App\Models\Setting::get('demo_sample_data_v1') !== '1') {
+                require_once __DIR__ . '/../tools/seed_comprehensive_demo.php';
+                seed_comprehensive_demo($pdo, 'pgsql');
+                \App\Models\Setting::set('demo_sample_data_v1', '1');
+            }
+        } catch (\Throwable $e) {
+            error_log('PgSQL seed_comprehensive_demo note: ' . $e->getMessage());
+        }
     }
 }
 

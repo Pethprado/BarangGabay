@@ -771,4 +771,26 @@ class SuperAdminController
 
         return $health;
     }
+
+    /**
+     * POST|GET /admin/system/seed-demo
+     * Seed or re-seed comprehensive demo/sample data.
+     */
+    public function seedDemo(): void
+    {
+        require_once dirname(__DIR__, 2) . '/tools/seed_comprehensive_demo.php';
+        $driver = db()->getAttribute(\PDO::ATTR_DRIVER_NAME) ?: 'mysql';
+        $results = seed_comprehensive_demo(db(), $driver);
+        \App\Models\Setting::set('demo_sample_data_v1', '1');
+
+        if (($_SERVER['HTTP_ACCEPT'] ?? '') === 'application/json' || (isset($_GET['format']) && $_GET['format'] === 'json')) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'seeded' => $results]);
+            exit;
+        }
+
+        flash('success', 'Matagumpay na naitanim ang sample data sa sistema (Announcements, Events, Ordinances, Residents, Evacuation Centers, Document Requests, Feedback, Notifications)!');
+        redirect('/admin');
+    }
 }
+
