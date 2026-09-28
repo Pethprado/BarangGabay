@@ -344,6 +344,7 @@ ob_start();
         <?php endforeach; ?>
     </div>
 </div>
+<?php endif; ?>
 
 <style>
     /* Explicit light values first, then a dark override — a bare
@@ -373,7 +374,19 @@ ob_start();
     document.querySelectorAll('.manobo-needed-chip').forEach(function (chip) {
         chip.addEventListener('click', function () {
             var form = document.getElementById('manobo-add-form');
-            if<!-- ── Search / filter ─────────────────────────────────────────────────── -->
+            if (form) {
+                var word = chip.getAttribute('data-word');
+                var englishInput = form.querySelector('input[name="english"]');
+                var manoboInput  = form.querySelector('input[name="manobo"]');
+                if (englishInput) englishInput.value = word;
+                if (manoboInput) manoboInput.focus();
+                form.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    });
+</script>
+
+<!-- ── Search / filter ─────────────────────────────────────────────────── -->
 <div class="admin-card mb-3">
     <form method="GET" action="<?= e(route('admin/manobo')) ?>" class="row g-2 align-items-end">
         <div class="col-md-5">
