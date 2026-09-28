@@ -41,6 +41,11 @@ class HealthController
                 $result['user_columns'] = $colStmt->fetchAll(\PDO::FETCH_COLUMN);
             }
 
+            if (isset($_GET['errors'])) {
+                $errStmt = $pdo->query("SELECT error_id, severity, type, message, file, line, stack_trace, created_at FROM error_logs ORDER BY id DESC LIMIT 5");
+                $result['latest_errors'] = $errStmt->fetchAll(\PDO::FETCH_ASSOC);
+            }
+
             http_response_code(200);
         } catch (\Throwable $e) {
             $result['database'] = 'unreachable';
