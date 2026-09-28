@@ -343,13 +343,15 @@ class TranslationAttempt
     public static function makeDue(string $contentType, int $contentId, string $lang, string $kind = 'text'): void
     {
         try {
+            $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+            $dateExpr = $isPgsql ? "NOW() - INTERVAL '1 minute'" : 'DATE_SUB(NOW(), INTERVAL 1 MINUTE)';
             db()->prepare(
-                'UPDATE translation_attempts
-                    SET retry_after = DATE_SUB(NOW(), INTERVAL 1 MINUTE),
+                "UPDATE translation_attempts
+                    SET retry_after = {$dateExpr},
                         attempts    = 0,
                         orphaned_at = NULL,
                         updated_at  = NOW()
-                  WHERE content_type = ? AND content_id = ? AND lang = ? AND kind = ?'
+                  WHERE content_type = ? AND content_id = ? AND lang = ? AND kind = ?"
             )->execute([$contentType, $contentId, $lang, $kind]);
         } catch (\Throwable $e) {
             \error_log('[TranslationAttempt::makeDue] ' . $e->getMessage());
@@ -394,13 +396,17 @@ class TranslationAttempt
     public static function seenRecently(string $reasonCode, int $withinHours = 24): bool
     {
         try {
+            $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+            $dateCond = $isPgsql
+                ? "updated_at >= NOW() - (? || ' hours')::interval"
+                : "updated_at >= DATE_SUB(NOW(), INTERVAL ? HOUR)";
             $stmt = db()->prepare(
-                'SELECT 1 FROM translation_attempts
+                "SELECT 1 FROM translation_attempts
                   WHERE ok = 0
                     AND reason_code = ?
                     AND orphaned_at IS NULL
-                    AND updated_at >= DATE_SUB(NOW(), INTERVAL ? HOUR)
-                  LIMIT 1'
+                    AND {$dateCond}
+                  LIMIT 1"
             );
             $stmt->execute([$reasonCode, \max(1, $withinHours)]);
 
