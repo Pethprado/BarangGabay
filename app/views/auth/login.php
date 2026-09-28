@@ -599,13 +599,8 @@ $authBgUrl  = is_file($authBgFile) ? asset('images/auth-bg.jpg') : null;
          * Our own mark. system_logo_url() returns the barangay's uploaded logo
          * when one is set; otherwise the bundled lockup; otherwise the entry
          * icon tile. Three steps down, so the panel is never empty.
-         *
-         * FIXED: this used to fall back to logo-lockup-light (ink-coloured
-         * text, meant for a LIGHT surface) even though .auth-brand is the
-         * dark panel — a pre-existing mismatch that would have rendered as
-         * a barely-visible dark logo on a dark background. The -dark lockup
-         * (cream/gold text) is the one built for this panel.
          */
+        ?>
         <?= baranggabay_logo('dark', ['size' => 'hero', 'href' => null, 'class' => 'auth-brand__logo']) ?>
         <div id="brand-fallback" class="auth-brand__fallback" style="display:none;">
             <i class="bi <?= e($entryIcon) ?>" aria-hidden="true"></i>
