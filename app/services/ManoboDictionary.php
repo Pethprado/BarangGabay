@@ -78,7 +78,7 @@ final class ManoboDictionary
 
     public function __construct(?PDO $pdo = null)
     {
-        $this->pdo = $pdo ?? db();
+        $this->pdo = $pdo ?? \db();
         $this->load();
     }
 
@@ -397,7 +397,7 @@ final class ManoboDictionary
      * @throws \InvalidArgumentException When required fields are missing or the
      *                                   headword already exists.
      */
-    public function addEntry(array $data, ?int $userId = null): void
+    public function addEntry(array $data, ?int $userId = null): int
     {
         $entry = $this->validated($data);
 
@@ -430,8 +430,10 @@ final class ManoboDictionary
             !empty($entry['priority']) ? (int) $entry['priority'] : 1,
             $userId, $userId,
         ]);
+        $lastId = (int) $this->pdo->lastInsertId();
         ManoboHybridTranslator::incrementDictionaryVersion();
         $this->reload();
+        return $lastId;
     }
 
     /**
@@ -854,6 +856,174 @@ final class ManoboDictionary
         }
 
         return 'Words are glossed one by one, not grammatically joined.';
+    }
+
+    /**
+     * Archive an entry (mark review_status = 'archived').
+     */
+    public function archive(int $id, ?int $userId = null): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE manobo_dictionary SET review_status = "archived", archived_at = NOW(), updated_by = ? WHERE id = ?'
+        );
+        $stmt->execute([$userId, $id]);
+        ManoboHybridTranslator::incrementDictionaryVersion();
+        $this->reload();
+    }
+
+    /**
+     * Check if a Manobo headword or English/Tagalog meaning already exists in live entries.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findDuplicate(string $manobo, string $english = '', string $tagalog = ''): ?array
+    {
+        $normManobo = mb_strtolower(trim($manobo));
+        $normEn     = mb_strtolower(trim($english));
+        $normTl     = mb_strtolower(trim($tagalog));
+
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM manobo_dictionary
+              WHERE deleted_at IS NULL
+                AND (
+                     LOWER(manobo) = ?
+                     OR (LOWER(english) = ? AND ? != "")
+                     OR (LOWER(tagalog) = ? AND ? != "")
+                    )
+              LIMIT 1'
+        );
+        $stmt->execute([$normManobo, $normEn, $normEn, $normTl, $normTl]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /**
+     * Execute a bulk batch import of candidate entries.
+     *
+     * @param list<array<string, mixed>> $entries
+     * @return array{batch_id: string, added: int, updated: int, skipped: int}
+     */
+    public function importBatch(array $entries, string $filename, string $fileType = 'doc', ?int $userId = null): array
+    {
+        $batchId = 'BATCH-' . strtoupper(substr(md5(uniqid('', true)), 0, 8)) . '-' . date('Ymd');
+        $added = 0;
+        $updated = 0;
+        $skipped = 0;
+        $flagged = 0;
+
+        foreach ($entries as $item) {
+            $action = $item['action'] ?? 'add';
+            if ($action === 'skip') {
+                $skipped++;
+                continue;
+            }
+
+            $manobo  = trim((string) ($item['manobo'] ?? ''));
+            $english = trim((string) ($item['english'] ?? ''));
+            $tagalog = trim((string) ($item['tagalog'] ?? ''));
+            $bisaya  = trim((string) ($item['bisaya'] ?? ''));
+            if ($manobo === '') {
+                $skipped++;
+                continue;
+            }
+
+            $cat   = trim((string) ($item['category'] ?? 'general'));
+            $pos   = trim((string) ($item['part_of_speech'] ?? 'word'));
+            $type  = trim((string) ($item['type'] ?? (str_contains($manobo, ' ') ? 'phrase' : 'word')));
+            $notes = trim((string) ($item['notes'] ?? ''));
+            $needsReview = !empty($item['needs_review']) ? 1 : 0;
+            $status = $needsReview ? 'pending_review' : 'approved';
+
+            if ($needsReview) $flagged++;
+
+            if ($action === 'update' && !empty($item['existing_id'])) {
+                $stmt = $this->pdo->prepare(
+                    'UPDATE manobo_dictionary
+                        SET manobo = ?, english = ?, tagalog = ?, bisaya = ?,
+                            category = ?, part_of_speech = ?, type = ?, notes = ?,
+                            review_status = ?, needs_review = ?, import_batch_id = ?, updated_by = ?
+                      WHERE id = ?'
+                );
+                $stmt->execute([
+                    $manobo, $english, $tagalog, $bisaya !== '' ? $bisaya : null,
+                    $cat !== '' ? $cat : 'general', $pos !== '' ? $pos : 'word', $type,
+                    $notes !== '' ? $notes : null, $status, $needsReview, $batchId, $userId, (int) $item['existing_id']
+                ]);
+                $updated++;
+            } else {
+                $stmt = $this->pdo->prepare(
+                    'INSERT INTO manobo_dictionary
+                        (manobo, english, tagalog, bisaya, category, part_of_speech, type, notes,
+                         source, review_status, needs_review, import_batch_id, created_by, updated_by)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                );
+                $stmt->execute([
+                    $manobo, $english, $tagalog, $bisaya !== '' ? $bisaya : null,
+                    $cat !== '' ? $cat : 'general', $pos !== '' ? $pos : 'word', $type,
+                    $notes !== '' ? $notes : null, 'DOC_IMPORT: ' . $filename, $status,
+                    $needsReview, $batchId, $userId, $userId
+                ]);
+                $added++;
+            }
+        }
+
+        // Record import metadata
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO dictionary_imports
+                (import_batch_id, filename, file_type, total_extracted, total_approved, total_duplicates, total_flagged, status, uploaded_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, "completed", ?)'
+        );
+        $stmt->execute([
+            $batchId, $filename, $fileType, count($entries), $added + $updated, $skipped, $flagged, $userId
+        ]);
+
+        ManoboHybridTranslator::incrementDictionaryVersion();
+        $this->reload();
+
+        return [
+            'batch_id' => $batchId,
+            'added'    => $added,
+            'updated'  => $updated,
+            'skipped'  => $skipped,
+        ];
+    }
+
+    /**
+     * Safely undo a batch import.
+     *
+     * @return array{deleted: int, restored: int}
+     */
+    public function undoImport(string $batchId, ?int $userId = null): array
+    {
+        $stmt = $this->pdo->prepare('UPDATE manobo_dictionary SET deleted_at = NOW() WHERE import_batch_id = ? AND deleted_at IS NULL');
+        $stmt->execute([$batchId]);
+        $deleted = $stmt->rowCount();
+
+        $stmt2 = $this->pdo->prepare('UPDATE dictionary_imports SET status = "undone", undone_at = NOW() WHERE import_batch_id = ?');
+        $stmt2->execute([$batchId]);
+
+        ManoboHybridTranslator::incrementDictionaryVersion();
+        $this->reload();
+
+        return ['deleted' => $deleted, 'restored' => 0];
+    }
+
+    /**
+     * Get import history.
+     */
+    public function getImportHistory(): array
+    {
+        try {
+            $stmt = $this->pdo->query(
+                'SELECT di.*, u.full_name AS author_name
+                   FROM dictionary_imports di
+              LEFT JOIN users u ON u.id = di.uploaded_by
+               ORDER BY di.created_at DESC
+                  LIMIT 50'
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /** Guard against typos in the language argument. */

@@ -238,6 +238,24 @@ function syncPostgresSchema(PDO $pdo): void
         // 10. Error logs columns
         "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS method VARCHAR(10) NULL",
         "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS route VARCHAR(500) NULL",
+
+        // 11. Manobo Dictionary Import History
+        "ALTER TABLE manobo_dictionary ADD COLUMN IF NOT EXISTS import_batch_id VARCHAR(100) NULL",
+        "CREATE TABLE IF NOT EXISTS dictionary_imports (
+            id SERIAL PRIMARY KEY,
+            import_batch_id VARCHAR(100) NOT NULL UNIQUE,
+            filename VARCHAR(255) NOT NULL,
+            file_type VARCHAR(20) NOT NULL DEFAULT 'doc',
+            total_extracted INT NOT NULL DEFAULT 0,
+            total_approved INT NOT NULL DEFAULT 0,
+            total_duplicates INT NOT NULL DEFAULT 0,
+            total_flagged INT NOT NULL DEFAULT 0,
+            status VARCHAR(20) NOT NULL DEFAULT 'completed',
+            uploaded_by INT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            undone_at TIMESTAMP NULL DEFAULT NULL,
+            FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+        )",
         "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS user_id INT NULL",
         "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45) NULL",
         "ALTER TABLE error_logs ADD COLUMN IF NOT EXISTS user_agent VARCHAR(500) NULL",

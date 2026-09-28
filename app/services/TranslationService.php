@@ -834,4 +834,60 @@ class TranslationService
 
         return $stats;
     }
+
+    /**
+     * Regenerate Manobo translations for ALL existing announcements, events, and ordinances
+     * using the latest approved dictionary entries.
+     *
+     * @return array{announcements: int, events: int, ordinances: int}
+     */
+    public static function regenerateAllManoboTranslations(): array
+    {
+        $db = db();
+        $stats = ['announcements' => 0, 'events' => 0, 'ordinances' => 0];
+
+        // Increment version to invalidate cache
+        ManoboHybridTranslator::incrementDictionaryVersion();
+
+        // 1. Announcements
+        try {
+            $stmt = $db->query("SELECT id, title, body, source_lang FROM announcements");
+            while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? (string)$row['source_lang'] : 'fil';
+                if (self::autoTranslatePostToManobo('announcement', (int)$row['id'], (string)$row['title'], (string)$row['body'], $src)) {
+                    $stats['announcements']++;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[TranslationService] regenerate announcements error: ' . $e->getMessage());
+        }
+
+        // 2. Events
+        try {
+            $stmt = $db->query("SELECT id, title, description, source_lang FROM events");
+            while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? (string)$row['source_lang'] : 'fil';
+                if (self::autoTranslatePostToManobo('event', (int)$row['id'], (string)$row['title'], (string)($row['description'] ?? ''), $src)) {
+                    $stats['events']++;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[TranslationService] regenerate events error: ' . $e->getMessage());
+        }
+
+        // 3. Ordinances
+        try {
+            $stmt = $db->query("SELECT id, title, description, source_lang FROM ordinances");
+            while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? (string)$row['source_lang'] : 'fil';
+                if (self::autoTranslatePostToManobo('ordinance', (int)$row['id'], (string)$row['title'], (string)($row['description'] ?? ''), $src)) {
+                    $stats['ordinances']++;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[TranslationService] regenerate ordinances error: ' . $e->getMessage());
+        }
+
+        return $stats;
+    }
 }

@@ -42,6 +42,12 @@ ob_start();
         </p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
+        <form method="POST" action="<?= e(route('admin/manobo/regenerate-posts')) ?>" class="d-inline" onsubmit="return confirm('Sigurado ka bang gusto mong i-regenerate ang lahat ng MN post gamit ang pinakabagong diksyunaryo?');">
+            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+            <button type="submit" class="btn btn-outline-primary btn-sm" style="border-radius:8px;font-weight:600;">
+                <i class="bi bi-arrow-repeat me-1"></i>Regenerate MN Posts
+            </button>
+        </form>
         <!-- ADDED: manage the Bisaya fallback dictionary from the same place. -->
         <a href="<?= e(route('admin/bisaya')) ?>" class="btn btn-outline-secondary btn-sm"
            style="border-radius:8px;font-weight:600;">
@@ -212,24 +218,76 @@ ob_start();
     </div>
 </div>
 
-<!-- ── ADDED: import from CSV ──────────────────────────────────────────── -->
+<!-- ── Document Import (.docx / .pdf / .csv) ───────────────────────── -->
 <div class="admin-card mb-4">
     <h2 style="font-size:.95rem;font-weight:700;color:var(--text-primary);margin:0 0 6px;">
-        <i class="bi bi-upload me-1" style="color:var(--brand-primary);"></i>
-        <?= e(t('admin_manobo.import_title')) ?>
+        <i class="bi bi-file-earmark-arrow-up me-1 text-primary"></i>
+        Mag-upload ng Dokumento ng Bokabularyo (.docx / .pdf / .csv)
     </h2>
     <p class="text-muted mb-3" style="font-size:.82rem;line-height:1.7;">
-        <?= e(t('admin_manobo.import_body')) ?>
+        Mag-upload ng Word document (`.docx`), PDF (`.pdf`), o CSV file. Ang sistema ay mag-eextract ng mga salita, kahulugan, at talahanayan para sa iyong preview at pagsusuri bago ito mai-save sa opisyal na diksyunaryo.
     </p>
-    <form method="POST" action="<?= e(route('admin/manobo/import')) ?>" enctype="multipart/form-data"
+    <form method="POST" action="<?= e(route('admin/manobo/import-doc')) ?>" enctype="multipart/form-data"
           class="d-flex flex-wrap align-items-center gap-2">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-        <input type="file" name="csv_file" accept=".csv,text/csv" required class="form-control" style="max-width:320px;border-radius:8px;">
+        <input type="file" name="doc_file" accept=".docx,.pdf,.csv,.txt" required class="form-control" style="max-width:380px;border-radius:8px;">
         <button type="submit" class="btn btn-barangay" style="border-radius:8px;font-weight:600;">
-            <i class="bi bi-upload me-1"></i><?= e(t('admin_manobo.import_button')) ?>
+            <i class="bi bi-search me-1"></i>Suriin at I-preview ang Dokumento
         </button>
     </form>
 </div>
+
+<!-- ── Import History & Undo ───────────────────────────────────────── -->
+<?php if (!empty($importHistory)): ?>
+<div class="admin-card mb-4">
+    <div class="admin-card-header">
+        <h2 class="admin-card-title mb-0" style="font-size:1rem;">
+            <i class="bi bi-clock-history me-2 text-secondary"></i>
+            Kasaysayan ng Import (Import History)
+        </h2>
+    </div>
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Batch ID</th>
+                    <th>Dokumento</th>
+                    <th>Kabuuan</th>
+                    <th>Naidagdag</th>
+                    <th>Na-update</th>
+                    <th>Petsa</th>
+                    <th class="text-end">Aksyon</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($importHistory as $batch): ?>
+                <tr>
+                    <td class="font-monospace" style="font-size:.78rem;"><?= e($batch['batch_id']) ?></td>
+                    <td style="font-weight:600;"><?= e($batch['filename']) ?></td>
+                    <td><span class="badge bg-primary-subtle text-primary"><?= (int)$batch['entry_count'] ?></span></td>
+                    <td><span class="badge bg-success-subtle text-success"><?= (int)$batch['approved_count'] ?></span></td>
+                    <td><span class="badge bg-info-subtle text-info"><?= (int)$batch['updated_count'] ?></span></td>
+                    <td style="font-size:.78rem;color:var(--text-muted);"><?= e($batch['created_at']) ?></td>
+                    <td class="text-end">
+                        <?php if ($canRestore): ?>
+                        <form method="POST" action="<?= e(route('admin/manobo/import-undo')) ?>" class="d-inline" onsubmit="return confirm('Sigurado ka bang gusto mong i-undo ang import na ito? Matatanggal ang mga bagong entri mula sa batch na ito.');">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="batch_id" value="<?= e($batch['batch_id']) ?>">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius:6px;font-size:.75rem;">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Undo Import
+                            </button>
+                        </form>
+                        <?php else: ?>
+                            <span class="text-muted" style="font-size:.75rem;">—</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ── ADDED: "Kailangang i-verify" — every entry carrying a note ────────── -->
 <?php if ($needsVerification !== []): ?>
@@ -412,6 +470,14 @@ ob_start();
                             <input type="hidden" name="id" value="<?= e($entry['id']) ?>">
                             <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius:6px;">
                                 <i class="bi bi-check-lg"></i> Approve
+                            </button>
+                        </form>
+                        <?php else: ?>
+                        <form method="POST" action="<?= e(route('admin/manobo/archive')) ?>" class="d-inline" title="Archive this entry">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="id" value="<?= e($entry['id']) ?>">
+                            <button type="submit" class="btn btn-sm btn-outline-warning" style="border-radius:6px;" title="Archive">
+                                <i class="bi bi-archive"></i>
                             </button>
                         </form>
                         <?php endif; ?>

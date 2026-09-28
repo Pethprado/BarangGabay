@@ -634,4 +634,52 @@ PROMPT;
         $data = json_decode((string) $response->getBody(), true);
         return $data['content'][0]['text'] ?? 'Hindi ko masagot ang iyong tanong sa ngayon.';
     }
+
+    /**
+     * Extract structured Manobo vocabulary entries from raw PDF/document text using AI.
+     *
+     * @return list<array{manobo:string, english:string, tagalog:string, bisaya:string, category:string, part_of_speech:string, notes:string, needs_review:bool}>
+     */
+    public function extractVocabularyFromText(string $text): array
+    {
+        if ($this->client === null) {
+            return [];
+        }
+
+        $cleanText = mb_substr(trim($text), 0, 10000);
+        if ($cleanText === '') return [];
+
+        $systemPrompt = <<<PROMPT
+        You extract Manobo vocabulary entries from raw document text.
+        Extract Manobo words/phrases along with their English, Tagalog/Filipino, and Bisaya/Cebuano meanings if present.
+
+        Rules:
+        - NEVER invent Manobo words or meanings. Extract only what is present in the document.
+        - Preserve original Manobo spelling exactly as given in the source.
+        - Output a valid JSON array of objects with keys: "manobo", "english", "tagalog", "bisaya", "category", "part_of_speech", "notes", "needs_review".
+        - Set "needs_review": true if the extraction is uncertain or line format was messy.
+        PROMPT;
+
+        $userPrompt = "Extract vocabulary from this text into JSON array format:\n\n" . $cleanText;
+
+        try {
+            $response = $this->client->post('/v1/messages', [
+                'json' => [
+                    'model'      => $this->model,
+                    'max_tokens' => 4000,
+                    'system'     => $systemPrompt,
+                    'messages'   => [['role' => 'user', 'content' => $userPrompt]],
+                ],
+            ]);
+            $data = json_decode((string) $response->getBody(), true);
+            $raw  = trim($data['content'][0]['text'] ?? '');
+            $raw  = preg_replace('/^```json\s*/i', '', $raw);
+            $raw  = preg_replace('/\s*```$/', '', trim($raw));
+            $parsed = json_decode($raw, true);
+            return is_array($parsed) ? $parsed : [];
+        } catch (\Throwable $e) {
+            error_log('[AIService] extractVocabularyFromText failed: ' . $e->getMessage());
+            return [];
+        }
+    }
 }
