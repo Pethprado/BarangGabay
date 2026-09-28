@@ -28,6 +28,19 @@ use App\Services\ManoboHybridTranslator;
 use App\Services\NotificationService;
 use App\Services\PostHtml;
 
+function get_last_insert_id(PDO $pdo, string $table, string $driver): int
+{
+    if ($driver === 'pgsql') {
+        try {
+            return (int) $pdo->lastInsertId("{$table}_id_seq");
+        } catch (\Throwable $e) {
+            $stmt = $pdo->query("SELECT MAX(id) FROM {$table}");
+            return (int) ($stmt ? $stmt->fetchColumn() : 0);
+        }
+    }
+    return (int) $pdo->lastInsertId();
+}
+
 function seed_comprehensive_demo(?PDO $pdo = null, string $driver = 'mysql'): array
 {
     $pdo ??= db();
@@ -125,7 +138,7 @@ function seed_comprehensive_demo(?PDO $pdo = null, string $driver = 'mysql'): ar
         } else {
             $pdo->prepare("INSERT INTO users (full_name, email, password_hash, role, status, designation, phone, zone, address, email_verified, totp_enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, NOW(), NOW())")
                 ->execute([$u['full_name'], $u['email'], $hash, $u['role'], $u['status'], $u['designation'], $u['phone'], $u['zone'], $u['address']]);
-            $userIds[$u['email']] = (int) $pdo->lastInsertId();
+            $userIds[$u['email']] = get_last_insert_id($pdo, 'users', $driver);
             echo "  [Created] {$u['full_name']} <{$u['email']}> ({$u['role']}, {$u['status']})\n";
         }
     }
@@ -224,7 +237,7 @@ function seed_comprehensive_demo(?PDO $pdo = null, string $driver = 'mysql'): ar
         } else {
             $pdo->prepare("INSERT INTO announcements (title, title_fil, title_en, title_manobo, slug, body, body_fil, body_manobo, category, urgency, author_id, cover_image_url, status, published_at, is_sample, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, 1, NOW(), NOW())")
                 ->execute([$a['title'], $a['title'], $a['title_en'], $mnTitle, $a['slug'], $a['body_html'], $a['body_html'], $mnBody, $a['category'], $a['urgency'], $a['author_id'], $coverUrl, $pubDate]);
-            $id = (int) $pdo->lastInsertId();
+            $id = get_last_insert_id($pdo, 'announcements', $driver);
             echo "  [Created] Announcement #{$id}: {$a['title']}\n";
         }
         $seededAnnouncements++;
@@ -325,7 +338,7 @@ function seed_comprehensive_demo(?PDO $pdo = null, string $driver = 'mysql'): ar
         } else {
             $pdo->prepare("INSERT INTO events (title, title_fil, title_en, title_manobo, slug, description, description_fil, description_manobo, venue, latitude, longitude, event_date, end_date, status, cover_image_url, created_by, is_sample, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())")
                 ->execute([$ev['title'], $ev['title'], $ev['title_en'], $mnTitle, $ev['slug'], $ev['desc_html'], $ev['desc_html'], $mnDesc, $ev['venue'], $ev['lat'], $ev['lng'], $ev['starts_at'], $ev['ends_at'], $ev['status'], $coverUrl, $ev['creator_id']]);
-            $id = (int) $pdo->lastInsertId();
+            $id = get_last_insert_id($pdo, 'events', $driver);
             echo "  [Created] Event #{$id}: {$ev['title']} ({$ev['status']})\n";
         }
         $seededEvents++;
@@ -420,7 +433,7 @@ function seed_comprehensive_demo(?PDO $pdo = null, string $driver = 'mysql'): ar
         } else {
             $pdo->prepare("INSERT INTO ordinances (title, title_fil, title_en, title_manobo, ordinance_no, description, description_fil, description_manobo, category, file_url, enacted_date, ai_summary, ai_summary_at, status, uploaded_by, is_sample, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, 1, NOW(), NOW())")
                 ->execute([$ord['title'], $ord['title'], $ord['title_en'], $mnTitle, $ord['number'], $ord['description'], $ord['description'], $mnDesc, $ord['category'], $fileUrl, $ord['enacted'], $ord['ai_summary'], $ord['status'], $ord['uploader_id']]);
-            $id = (int) $pdo->lastInsertId();
+            $id = get_last_insert_id($pdo, 'ordinances', $driver);
             echo "  [Created] Ordinance #{$id}: {$ord['number']} - {$ord['title']}\n";
         }
         $seededOrdinances++;
@@ -561,7 +574,7 @@ function seed_comprehensive_demo(?PDO $pdo = null, string $driver = 'mysql'): ar
         if (!$existingFbId) {
             $pdo->prepare("INSERT INTO feedbacks (user_id, message, admin_reply, replied_at, replied_by, is_read_admin, created_at) VALUES (?, ?, ?, NOW(), ?, 1, NOW())")
                 ->execute([$fb['user_id'], $fb['message'], $fb['staff_reply'], $staffId]);
-            $fbId = (int) $pdo->lastInsertId();
+            $fbId = get_last_insert_id($pdo, 'feedbacks', $driver);
 
             // Insert resident message
             $pdo->prepare("INSERT INTO feedback_messages (feedback_id, sender_id, sender_role, message, read_by_resident, read_by_staff, created_at) VALUES (?, ?, 'resident', ?, 1, 1, NOW())")

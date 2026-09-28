@@ -731,9 +731,10 @@ class ManoboHybridTranslator
 
         try {
             $client = new \GuzzleHttp\Client([
-                'timeout'     => 6,
-                'http_errors' => false,
-                'headers'     => ['User-Agent' => 'BarangGabay/1.0 (LGU Hybrid Translator)'],
+                'timeout'         => 2,
+                'connect_timeout' => 2,
+                'http_errors'     => false,
+                'headers'         => ['User-Agent' => 'BarangGabay/1.0 (LGU Hybrid Translator)'],
             ]);
 
             $res = $client->get('https://api.mymemory.translated.net/get', [

@@ -1,16 +1,18 @@
 <?php
 declare(strict_types=1);
 
-function env(string $key, $default = null)
-{
-    if (array_key_exists($key, $_ENV)) {
-        return $_ENV[$key];
+if (!function_exists('env')) {
+    function env(string $key, $default = null)
+    {
+        if (array_key_exists($key, $_ENV)) {
+            return $_ENV[$key];
+        }
+        if (array_key_exists($key, $_SERVER)) {
+            return $_SERVER[$key];
+        }
+        $val = getenv($key);
+        return $val !== false ? $val : $default;
     }
-    if (array_key_exists($key, $_SERVER)) {
-        return $_SERVER[$key];
-    }
-    $val = getenv($key);
-    return $val !== false ? $val : $default;
 }
 
 function csrf_token(): string

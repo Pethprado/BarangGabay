@@ -54,11 +54,15 @@ class ErrorHandler
             'stack_trace' => $e->getTraceAsString(),
         ]);
 
-        if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
-            http_response_code(500);
-            echo '<pre style="background:#1e1e2e;color:#cdd6f4;padding:2rem;font-size:.85rem;line-height:1.6;">';
-            echo htmlspecialchars($entry, ENT_QUOTES, 'UTF-8');
-            echo '</pre>';
+        if (($_ENV['APP_DEBUG'] ?? 'false') === 'true' || php_sapi_name() === 'cli') {
+            if (php_sapi_name() === 'cli') {
+                fwrite(STDERR, $entry);
+            } else {
+                http_response_code(500);
+                echo '<pre style="background:#1e1e2e;color:#cdd6f4;padding:2rem;font-size:.85rem;line-height:1.6;">';
+                echo htmlspecialchars($entry, ENT_QUOTES, 'UTF-8');
+                echo '</pre>';
+            }
         } else {
             http_response_code(500);
             self::renderErrorPage($errorId);

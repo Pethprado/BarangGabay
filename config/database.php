@@ -1,9 +1,14 @@
 <?php
 declare(strict_types=1);
 
-function db(): PDO
+if (!function_exists('db')) {
+function db(?PDO $setInstance = null): PDO
 {
     static $pdo = null;
+    if ($setInstance !== null) {
+        $pdo = $setInstance;
+        return $pdo;
+    }
     if ($pdo === null) {
         $host   = (string) env('DB_HOST', '127.0.0.1');
         $port   = (string) env('DB_PORT', '3306');
@@ -103,10 +108,12 @@ function db(): PDO
     }
     return $pdo;
 }
+}
 
 /**
  * Synchronize PostgreSQL schema with all required columns, indexes, and tables.
  */
+if (!function_exists('syncPostgresSchema')) {
 function syncPostgresSchema(PDO $pdo): void
 {
     $statements = [
@@ -216,6 +223,13 @@ function syncPostgresSchema(PDO $pdo): void
 
         // 9. Disable 2FA system-wide
         "UPDATE users SET totp_enabled = 0, totp_secret = NULL, totp_confirmed_at = NULL",
+        "CREATE TABLE IF NOT EXISTS settings (
+            id SERIAL PRIMARY KEY,
+            setting_key VARCHAR(100) NOT NULL UNIQUE,
+            setting_value TEXT NULL,
+            value_type VARCHAR(20) NOT NULL DEFAULT 'string',
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )",
         "INSERT INTO settings (setting_key, setting_value, value_type) VALUES
             ('twofa_required_roles', '', 'string'),
             ('twofa_enabled', '0', 'bool')
@@ -382,10 +396,10 @@ function syncPostgresSchema(PDO $pdo): void
         }
 
         try {
-            if (\App\Models\Setting::get('manobo_backfilled_v3') !== '1') {
-                $stats = \App\Services\TranslationService::populateMissingManoboTranslations(3);
+            if (\App\Models\Setting::get('manobo_backfilled_v4') !== '1') {
+                $stats = \App\Services\TranslationService::populateMissingManoboTranslations(0);
                 if ($stats['announcements'] === 0 && $stats['events'] === 0 && $stats['ordinances'] === 0) {
-                    \App\Models\Setting::set('manobo_backfilled_v3', '1');
+                    \App\Models\Setting::set('manobo_backfilled_v4', '1');
                 }
             }
         } catch (\Throwable $e) {
@@ -403,11 +417,13 @@ function syncPostgresSchema(PDO $pdo): void
         }
     }
 }
+}
 
 /**
  * Apply every *.sql file under database/migrations/, in filename order.
  * Failures are logged and non-fatal so one bad statement cannot block others.
  */
+if (!function_exists('runPendingMigrations')) {
 function runPendingMigrations(PDO $pdo, string $driver = 'mysql'): void
 {
     $migrationsDir = __DIR__ . '/../database/migrations';
@@ -438,7 +454,9 @@ function runPendingMigrations(PDO $pdo, string $driver = 'mysql'): void
         }
     }
 }
+}
 
+if (!function_exists('seedAdminUser')) {
 function seedAdminUser(PDO $pdo, string $driver = 'mysql'): void
 {
     try {
@@ -471,7 +489,9 @@ function seedAdminUser(PDO $pdo, string $driver = 'mysql'): void
         ]);
     }
 }
+}
 
+if (!function_exists('initializeDatabase')) {
 function initializeDatabase(string $host, string $port, string $name, string $user, string $pass, array $options = []): PDO
 {
     $dsn = sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $host, $port);
@@ -489,7 +509,9 @@ function initializeDatabase(string $host, string $port, string $name, string $us
 
     return $pdo;
 }
+}
 
+if (!function_exists('loadDatabaseSchema')) {
 function loadDatabaseSchema(PDO $pdo, string $driver = 'mysql'): void
 {
     // Choose the right schema file for the driver
@@ -525,6 +547,7 @@ function loadDatabaseSchema(PDO $pdo, string $driver = 'mysql'): void
         }
     }
 }
+}
 
 /**
  * Show a clear, actionable page when the database cannot be reached.
@@ -532,13 +555,14 @@ function loadDatabaseSchema(PDO $pdo, string $driver = 'mysql'): void
  *
  * @never-returns (calls exit)
  */
+if (!function_exists('renderDbConnectionError')) {
 function renderDbConnectionError(string $host, \PDOException $e): never
 {
     $debug = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
 
     error_log('[DB] Connection failed (host=' . $host . '): ' . $e->getMessage());
 
-    if ($debug) {
+    if ($debug || php_sapi_name() === 'cli') {
         throw $e;
     }
 
@@ -596,3 +620,5 @@ function renderDbConnectionError(string $host, \PDOException $e): never
 HTML;
     exit(1);
 }
+}
+

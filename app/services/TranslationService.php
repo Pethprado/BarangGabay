@@ -787,14 +787,15 @@ class TranslationService
      *
      * @return array{announcements: int, events: int, ordinances: int}
      */
-    public static function populateMissingManoboTranslations(int $limit = 3): array
+    public static function populateMissingManoboTranslations(int $limit = 0): array
     {
         $db = db();
         $stats = ['announcements' => 0, 'events' => 0, 'ordinances' => 0];
+        $limitClause = $limit > 0 ? " LIMIT {$limit}" : "";
 
         // 1. Announcements
         try {
-            $stmt = $db->query("SELECT id, title, body, source_lang FROM announcements WHERE (title_manobo IS NULL OR title_manobo = '') LIMIT {$limit}");
+            $stmt = $db->query("SELECT id, title, body, source_lang FROM announcements WHERE (title_manobo IS NULL OR title_manobo = ''){$limitClause}");
             while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
                 $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? $row['source_lang'] : 'fil';
                 if (self::autoTranslatePostToManobo('announcement', (int)$row['id'], (string)$row['title'], (string)$row['body'], $src)) {
@@ -807,7 +808,7 @@ class TranslationService
 
         // 2. Events
         try {
-            $stmt = $db->query("SELECT id, title, description, source_lang FROM events WHERE (title_manobo IS NULL OR title_manobo = '') LIMIT {$limit}");
+            $stmt = $db->query("SELECT id, title, description, source_lang FROM events WHERE (title_manobo IS NULL OR title_manobo = ''){$limitClause}");
             while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
                 $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? $row['source_lang'] : 'fil';
                 if (self::autoTranslatePostToManobo('event', (int)$row['id'], (string)$row['title'], (string)$row['description'], $src)) {
@@ -820,10 +821,10 @@ class TranslationService
 
         // 3. Ordinances
         try {
-            $stmt = $db->query("SELECT id, title, description, source_lang FROM ordinances WHERE (title_manobo IS NULL OR title_manobo = '') LIMIT {$limit}");
+            $stmt = $db->query("SELECT id, title, description, source_lang FROM ordinances WHERE (title_manobo IS NULL OR title_manobo = ''){$limitClause}");
             while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
                 $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? $row['source_lang'] : 'fil';
-                if (self::autoTranslatePostToManobo('ordinance', (int)$row['id'], (string)$row['title'], (string)$row['description'], $src)) {
+                if (self::autoTranslatePostToManobo('ordinance', (int)$row['id'], (string)$row['title'], (string)($row['description'] ?? ''), $src)) {
                     $stats['ordinances']++;
                 }
             }
