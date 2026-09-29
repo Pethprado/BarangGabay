@@ -2,14 +2,6 @@
 /**
  * Resident-facing Manobo dictionary — a read-only lookup tool.
  *
- * Aimed at residents who do NOT fully read Manobo: search in any of the three
- * languages and see the other two side by side, plus the note and cited source
- * for the entry. Curation lives at /admin/manobo; nothing here can write.
- *
- * Filtering is server-side (a plain GET form, so it works without JavaScript);
- * Alpine only adds instant client-side narrowing on top of the rendered rows,
- * which is affordable because the whole dataset is small enough to ship.
- *
  * Variables from ManoboController::residentIndex():
  *   list<array<string,string>> $entries, list<string> $categories,
  *   string $search, string $category, int $totalWords
@@ -20,11 +12,9 @@ $search     = (string) ($search   ?? '');
 $category   = (string) ($category ?? '');
 $totalWords = (int)    ($totalWords ?? 0);
 
-// Category chips reuse the announcement palette so the page belongs to the
-// same visual system rather than introducing a second one.
-// CHANGED: the 2026 dataset (migration 030) added phrase/time/pronoun/verb/
-// adjective/noun/emotion/direction/connector/question/object/other, which
-// this map did not cover yet — every category now gets a colour.
+// Sort entries alphabetically by manobo headword
+usort($entries, static fn (array $a, array $b): int => strcasecmp($a['manobo'] ?? '', $b['manobo'] ?? ''));
+
 $catColors = [
     'body'      => 'bg-rose-100 text-rose-700',
     'animal'    => 'bg-orange-100 text-orange-700',
@@ -48,24 +38,6 @@ $catColors = [
     'other'     => 'bg-slate-100 text-slate-700',
 ];
 
-// ADDED: sorted alphabetically by headword so the A-Z jump bar below means
-// something — the dictionary itself keeps insertion order (see
-// ManoboDictionary::load()), which is right for curation but not for browsing.
-usort($entries, static fn (array $a, array $b): int => strcasecmp($a['manobo'] ?? '', $b['manobo'] ?? ''));
-
-// One anchor id per first letter actually present, on its FIRST entry only.
-$letterAnchors  = [];
-$availableLetters = [];
-foreach ($entries as $entry) {
-    $letter = mb_strtoupper(mb_substr((string) ($entry['manobo'] ?? ''), 0, 1, 'UTF-8'), 'UTF-8');
-    if ($letter === '' || isset($letterAnchors[$letter])) {
-        continue;
-    }
-    $letterAnchors[$letter]    = ($entry['manobo'] ?? '') . '|' . ($entry['tagalog'] ?? '');
-    $availableLetters[$letter] = true;
-}
-$allLetters = str_split('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
-
 ob_start();
 ?>
 
@@ -75,7 +47,7 @@ ob_start();
     <div class="mt-1 flex flex-wrap items-baseline gap-3">
         <h1 class="text-2xl font-bold text-slate-900 sm:text-3xl"><?= e(t('res_manobo.title')) ?></h1>
         <span class="rounded-full bg-purple-100 px-3 py-0.5 text-xs font-semibold text-purple-700">
-            <span data-countup="<?= $totalWords ?>"><?= $totalWords ?></span>
+            <span><?= $totalWords ?></span> <?= e(t('admin_manobo.words_label') ?? 'mga salita') ?>
         </span>
     </div>
     <p class="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500"><?= e(t('res_manobo.subtitle')) ?></p>
@@ -88,11 +60,11 @@ ob_start();
 </div>
 
 <?php else: ?>
-<div x-data="manoboDict()">
+<div x-data="manoboDict(<?= e(json_encode(array_values($entries))) ?>, <?= e(json_encode($search)) ?>, <?= e(json_encode($category)) ?>)">
 
-    <!-- ── Search + category filter (server-side GET; JS narrows further) ── -->
+    <!-- ── Search & Category Filter Bar ────────────────────────────── -->
     <div class="fade-up mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <form method="get" action="<?= e(route('manobo')) ?>" class="flex flex-wrap items-end gap-3">
+        <form @submit.prevent="onSearchChange()" class="flex flex-wrap items-end gap-3">
 
             <div class="min-w-[220px] flex-[2]">
                 <label for="q" class="mb-1 block text-xs font-semibold text-slate-600">
@@ -104,7 +76,7 @@ ob_start();
                     </span>
                     <input type="text" id="q" name="q"
                            x-model="query"
-                           value="<?= e($search) ?>"
+                           @input.debounce.250ms="onSearchChange()"
                            placeholder="<?= e(t('res_manobo.placeholder')) ?>"
                            class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-800 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100">
                 </div>
@@ -114,128 +86,181 @@ ob_start();
                 <label for="category" class="mb-1 block text-xs font-semibold text-slate-600">
                     <?= e(t('res_announcements.category_label')) ?>
                 </label>
-                <select id="category" name="category" onchange="this.form.submit()"
+                <select id="category" name="category" x-model="category" @change="onSearchChange()"
                         class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100">
                     <option value=""><?= e(t('res_manobo.all_categories')) ?></option>
                     <?php foreach ($categories as $cat): ?>
-                    <option value="<?= e($cat) ?>" <?= $category === $cat ? 'selected' : '' ?>><?= e(ucfirst($cat)) ?></option>
+                    <option value="<?= e($cat) ?>"><?= e(ucfirst($cat)) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
 
-            <button type="submit" class="flex-shrink-0 rounded-xl bg-purple-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-purple-800">
+            <button type="button" @click="onSearchChange()" class="flex-shrink-0 rounded-xl bg-purple-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-purple-800">
                 <i class="bi bi-search me-1"></i><?= e(t('res_manobo.filter')) ?>
             </button>
 
-            <?php if ($search !== '' || $category !== ''): ?>
-            <a href="<?= e(route('manobo')) ?>"
-               class="flex-shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">
+            <button type="button" x-show="query !== '' || category !== '' || selectedLetter !== defaultLetter"
+                    @click="resetFilters()" x-cloak
+                    class="flex-shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">
                 <i class="bi bi-x me-1"></i><?= e(t('res_manobo.reset')) ?>
-            </a>
-            <?php endif; ?>
+            </button>
         </form>
 
-        <p class="mt-3 text-xs text-slate-500">
-            <?= e(t('res_manobo.count', ['shown' => count($entries), 'total' => $totalWords])) ?>
-            <span x-show="query" x-cloak>&middot; <span x-text="visible"></span></span>
-        </p>
-    </div>
-
-    <!-- ── ADDED: A-Z letter jump bar ─────────────────────────────────── -->
-    <?php if (!empty($entries)): ?>
-    <div class="fade-up mb-4 flex flex-wrap gap-1.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        <?php foreach ($allLetters as $letter): ?>
-            <?php if (isset($availableLetters[$letter])): ?>
-            <a href="#letter-<?= e($letter) ?>"
-               class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-purple-100 text-xs font-bold text-purple-700 transition hover:bg-purple-700 hover:text-white">
-                <?= e($letter) ?>
-            </a>
-            <?php else: ?>
-            <span class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-slate-300">
-                <?= e($letter) ?>
-            </span>
-            <?php endif; ?>
-        <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
-
-    <!-- ── Entries ────────────────────────────────────────────────── -->
-    <?php if (empty($entries)): ?>
-    <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-16 text-center">
-        <i class="bi bi-search text-4xl text-slate-300"></i>
-        <p class="mt-3 text-base font-semibold text-slate-500"><?= e(t('res_manobo.empty')) ?></p>
-        <p class="mx-auto mt-1 max-w-sm text-sm text-slate-500">
-            <?= e(t('res_manobo.empty_hint', ['total' => $totalWords])) ?>
-        </p>
-    </div>
-
-    <?php else: ?>
-    <div class="grid gap-3 sm:grid-cols-2">
-        <?php foreach ($entries as $idx => $entry):
-            $cat     = (string) ($entry['category'] ?? '');
-            $catCls  = $catColors[$cat] ?? 'bg-slate-100 text-slate-700';
-            $haystack = mb_strtolower(implode(' ', [
-                $entry['manobo'] ?? '', $entry['english'] ?? '', $entry['tagalog'] ?? '', $cat,
-            ]), 'UTF-8');
-            $fade   = 'fade-up-delay-' . (($idx % 4) + 1);
-            $letter = mb_strtoupper(mb_substr((string) ($entry['manobo'] ?? ''), 0, 1, 'UTF-8'), 'UTF-8');
-            // ADDED: the A-Z bar's anchor target, once per letter (the sorted
-            // order guarantees this is that letter's first card).
-            $isFirstOfLetter = isset($letterAnchors[$letter])
-                && $letterAnchors[$letter] === ($entry['manobo'] ?? '') . '|' . ($entry['tagalog'] ?? '');
-            if ($isFirstOfLetter) {
-                unset($letterAnchors[$letter]); // only the very first match keeps the anchor
-            }
-        ?>
-        <!-- ADDED: clicking the card opens the full entry in a modal (Alpine,
-             shared $store so only one instance renders at page scope). -->
-        <article class="fade-up <?= $fade ?> cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                 <?= $isFirstOfLetter ? 'id="letter-' . e($letter) . '"' : '' ?>
-                 data-term="<?= e($haystack) ?>"
-                 x-show="matches($el)" x-cloak
-                 @click="openEntry(<?= e(json_encode($entry)) ?>)">
-
-            <div class="flex items-start justify-between gap-3">
-                <p class="text-lg font-black leading-tight text-purple-700"><?= e($entry['manobo'] ?? '') ?></p>
-                <?php if ($cat !== ''): ?>
-                <span class="flex-shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold <?= $catCls ?>">
-                    <?= e($cat) ?>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+            <div>
+                <span><?= e(t('admin_manobo.total_label') ?? 'Kabuuan:') ?> <strong><?= $totalWords ?></strong> <?= e(t('admin_manobo.words_label') ?? 'mga salita') ?></span>
+                <span x-show="selectedLetter !== 'ALL'" class="ms-2">
+                    &middot; Letra <strong class="text-purple-700" x-text="selectedLetter"></strong>: <span class="font-bold text-slate-800" x-text="filteredEntries.length"></span> entri
                 </span>
-                <?php endif; ?>
+                <span x-show="selectedLetter === 'ALL'" class="ms-2">
+                    &middot; Na-filter: <span class="font-bold text-slate-800" x-text="filteredEntries.length"></span> entri
+                </span>
+            </div>
+            <div x-show="totalPages > 1" class="font-semibold text-slate-600">
+                Pahina <span x-text="currentPage"></span> sa <span x-text="totalPages"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Alphabet Navigation Bar & Next/Prev Controls ────────────── -->
+    <div class="fade-up mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between gap-2 mb-3">
+            <button type="button" @click="prevLetter()"
+                    :disabled="isPrevLetterDisabled"
+                    :class="isPrevLetterDisabled ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'"
+                    class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
+                <i class="bi bi-chevron-left"></i>
+                <span class="hidden sm:inline">Nakalipas na Letra</span>
+                <span class="sm:hidden">Nakaraan</span>
+            </button>
+
+            <div class="text-center">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    <span x-show="selectedLetter !== 'ALL'">Mga Salitang Nagsisimula sa <span class="text-base font-black text-purple-700" x-text="selectedLetter"></span></span>
+                    <span x-show="selectedLetter === 'ALL'">Lahat ng Letra</span>
+                </span>
             </div>
 
-            <?php if (!empty($entry['part_of_speech'])): ?>
-            <p class="mt-0.5 text-xs italic text-slate-500"><?= e($entry['part_of_speech']) ?></p>
-            <?php endif; ?>
+            <button type="button" @click="nextLetter()"
+                    :disabled="isNextLetterDisabled"
+                    :class="isNextLetterDisabled ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'"
+                    class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
+                <span class="hidden sm:inline">Susunod na Letra</span>
+                <span class="sm:hidden">Susunod</span>
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
 
-            <dl class="mt-3 space-y-1.5">
-                <div class="flex gap-2">
-                    <dt class="w-16 flex-shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                        <?= e(t('res_manobo.col_english')) ?>
-                    </dt>
-                    <dd class="text-sm font-semibold text-slate-700"><?= e($entry['english'] ?? '—') ?></dd>
-                </div>
-                <div class="flex gap-2">
-                    <dt class="w-16 flex-shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                        <?= e(t('res_manobo.col_tagalog')) ?>
-                    </dt>
-                    <dd class="text-sm font-semibold text-slate-700"><?= e($entry['tagalog'] ?? '—') ?></dd>
-                </div>
-            </dl>
+        <!-- A-Z Alphabet Buttons -->
+        <div class="flex flex-wrap items-center justify-center gap-1.5 pt-1 border-t border-slate-100">
+            <button type="button"
+                    @click="selectLetter('ALL')"
+                    :aria-pressed="selectedLetter === 'ALL' ? 'true' : 'false'"
+                    :class="selectedLetter === 'ALL' ? 'bg-purple-700 text-white font-black shadow-sm ring-2 ring-purple-300' : 'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-700'"
+                    class="flex h-8 px-2.5 items-center justify-center rounded-lg text-xs font-bold transition">
+                Lahat
+            </button>
 
-            <?php if (!empty($entry['notes'])): ?>
-            <!-- CHANGED: was an inline <details> disclosure — the notes and
-                 source now show in the click-to-open modal instead, so this
-                 is just a hint that there is more to see there. -->
-            <p class="mt-3 text-xs font-semibold text-purple-700">
-                <i class="bi bi-info-circle me-1"></i><?= e(t('res_manobo.notes')) ?>
-            </p>
-            <?php endif; ?>
-        </article>
-        <?php endforeach; ?>
+            <template x-for="l in alphabet" :key="l">
+                <button type="button"
+                        @click="selectLetter(l)"
+                        :aria-pressed="selectedLetter === l ? 'true' : 'false'"
+                        :disabled="!availableSet[l]"
+                        :class="{
+                            'bg-purple-700 text-white font-black shadow-sm ring-2 ring-purple-300': selectedLetter === l,
+                            'bg-purple-100 text-purple-700 font-bold hover:bg-purple-700 hover:text-white': selectedLetter !== l && availableSet[l],
+                            'bg-slate-100 text-slate-300 font-normal cursor-not-allowed opacity-50': !availableSet[l]
+                        }"
+                        class="flex h-8 w-8 items-center justify-center rounded-lg text-xs transition">
+                    <span x-text="l"></span>
+                </button>
+            </template>
+        </div>
     </div>
 
-    <!-- ── ADDED: click-to-open detail modal ─────────────────────────── -->
+    <!-- ── Entries Grid ────────────────────────────────────────────── -->
+    <template x-if="paginatedEntries.length > 0">
+        <div class="grid gap-3 sm:grid-cols-2">
+            <template x-for="(entry, idx) in paginatedEntries" :key="entry.manobo + '_' + idx">
+                <article class="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                         @click="openEntry(entry)">
+
+                    <div class="flex items-start justify-between gap-3">
+                        <p class="text-lg font-black leading-tight text-purple-700" x-text="entry.manobo"></p>
+                        <span x-show="entry.category"
+                              class="flex-shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-purple-100 text-purple-700"
+                              x-text="entry.category">
+                        </span>
+                    </div>
+
+                    <p class="mt-0.5 text-xs italic text-slate-500" x-show="entry.part_of_speech" x-text="entry.part_of_speech"></p>
+
+                    <dl class="mt-3 space-y-1.5">
+                        <div class="flex gap-2">
+                            <dt class="w-16 flex-shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                <?= e(t('res_manobo.col_english')) ?>
+                            </dt>
+                            <dd class="text-sm font-semibold text-slate-700" x-text="entry.english || '—'"></dd>
+                        </div>
+                        <div class="flex gap-2">
+                            <dt class="w-16 flex-shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                <?= e(t('res_manobo.col_tagalog')) ?>
+                            </dt>
+                            <dd class="text-sm font-semibold text-slate-700" x-text="entry.tagalog || '—'"></dd>
+                        </div>
+                        <div class="flex gap-2" x-show="entry.bisaya">
+                            <dt class="w-16 flex-shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                Bisaya
+                            </dt>
+                            <dd class="text-sm font-semibold text-slate-700" x-text="entry.bisaya || '—'"></dd>
+                        </div>
+                    </dl>
+
+                    <p x-show="entry.notes" class="mt-3 text-xs font-semibold text-purple-700">
+                        <i class="bi bi-info-circle me-1"></i><?= e(t('res_manobo.notes')) ?>
+                    </p>
+                </article>
+            </template>
+        </div>
+    </template>
+
+    <!-- ── Empty State Notice ──────────────────────────────────────── -->
+    <template x-if="paginatedEntries.length === 0">
+        <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center">
+            <i class="bi bi-search text-3xl text-slate-300"></i>
+            <p class="mt-3 text-base font-bold text-slate-700">
+                <span x-show="selectedLetter !== 'ALL'">Walang nahanap na salitang Manobo para sa letrang <span class="text-purple-700" x-text="selectedLetter"></span>.</span>
+                <span x-show="selectedLetter === 'ALL'">Walang nahanap na salitang tumutugma sa iyong paghahanap.</span>
+            </p>
+            <p class="mx-auto mt-1 max-w-sm text-sm text-slate-500">
+                Subukang pumili ng ibang letra o palitan ang iyong ginamit na keyword.
+            </p>
+            <button type="button" @click="resetFilters()" class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-purple-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-purple-800">
+                <i class="bi bi-arrow-counterclockwise"></i>I-reset ang mga Filter
+            </button>
+        </div>
+    </template>
+
+    <!-- ── Pagination Controls within active letter ────────────────── -->
+    <div x-show="totalPages > 1" class="mt-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <button type="button" @click="prevPage()" :disabled="currentPage === 1"
+                :class="currentPage === 1 ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-700'"
+                class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
+            <i class="bi bi-arrow-left me-1"></i>Nakalipas na Pahina
+        </button>
+
+        <span class="text-xs font-semibold text-slate-600">
+            Pahina <strong x-text="currentPage"></strong> sa <strong x-text="totalPages"></strong>
+        </span>
+
+        <button type="button" @click="nextPage()" :disabled="currentPage >= totalPages"
+                :class="currentPage >= totalPages ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-700'"
+                class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
+            Susunod na Pahina<i class="bi bi-arrow-right ms-1"></i>
+        </button>
+    </div>
+
+    <!-- ── Detail Modal ────────────────────────────────────────────── -->
     <div x-show="activeEntry" x-cloak
          class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
          @click.self="activeEntry = null">
@@ -250,16 +275,20 @@ ob_start();
                         </button>
                     </div>
                     <p class="mt-0.5 text-xs italic text-slate-500" x-show="activeEntry.part_of_speech" x-text="activeEntry.part_of_speech"></p>
-                    <span class="mt-2 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700" x-text="activeEntry.category"></span>
+                    <span class="mt-2 inline-block rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700" x-text="activeEntry.category"></span>
 
                     <dl class="mt-4 space-y-2 border-t border-slate-100 pt-4">
                         <div>
                             <dt class="text-[11px] font-bold uppercase tracking-wide text-slate-500"><?= e(t('res_manobo.col_english')) ?></dt>
-                            <dd class="text-base font-semibold text-slate-800" x-text="activeEntry.english"></dd>
+                            <dd class="text-base font-semibold text-slate-800" x-text="activeEntry.english || '—'"></dd>
                         </div>
                         <div>
                             <dt class="text-[11px] font-bold uppercase tracking-wide text-slate-500"><?= e(t('res_manobo.col_tagalog')) ?></dt>
-                            <dd class="text-base font-semibold text-slate-800" x-text="activeEntry.tagalog"></dd>
+                            <dd class="text-base font-semibold text-slate-800" x-text="activeEntry.tagalog || '—'"></dd>
+                        </div>
+                        <div x-show="activeEntry.bisaya">
+                            <dt class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Bisaya</dt>
+                            <dd class="text-base font-semibold text-slate-800" x-text="activeEntry.bisaya || '—'"></dd>
                         </div>
                     </dl>
 
@@ -275,14 +304,6 @@ ob_start();
         </div>
     </div>
 
-    <!-- Client-side "nothing matches" state, shown only while filtering. -->
-    <div x-show="query && visible === 0" x-cloak
-         class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center">
-        <i class="bi bi-search text-3xl text-slate-300"></i>
-        <p class="mt-3 text-sm font-semibold text-slate-500"><?= e(t('res_manobo.empty')) ?></p>
-    </div>
-    <?php endif; ?>
-
     <p class="mt-6 flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
         <i class="bi bi-info-circle mt-0.5 flex-shrink-0 text-slate-500"></i>
         <span><?= e(t('res_manobo.growing_note')) ?></span>
@@ -290,31 +311,173 @@ ob_start();
 </div>
 
 <script>
-    /* Instant narrowing over the already-rendered rows. The GET form above is
-       the real filter and works with JavaScript off; this only saves a round
-       trip, which is affordable because the whole dataset fits on one page. */
-    function manoboDict() {
-        return {
-            query:   <?= json_encode($search) ?>,
-            visible: 0,
-            activeEntry: null,   // ADDED: the click-to-open modal's current word
+    function manoboDict(rawEntries, initialQuery, initialCat) {
+        var alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        var availableSet = {};
 
-            matches(el) {
+        (rawEntries || []).forEach(function(e) {
+            var word = (e.manobo || '').trim();
+            if (word.length > 0) {
+                var first = word.charAt(0).toUpperCase();
+                availableSet[first] = (availableSet[first] || 0) + 1;
+            }
+        });
+
+        var firstAvailable = 'A';
+        for (var i = 0; i < alphabet.length; i++) {
+            if (availableSet[alphabet[i]]) {
+                firstAvailable = alphabet[i];
+                break;
+            }
+        }
+
+        var defaultLetter = initialQuery ? 'ALL' : firstAvailable;
+
+        return {
+            allEntries: rawEntries || [],
+            query: (initialQuery || '').trim(),
+            category: (initialCat || '').trim(),
+            selectedLetter: defaultLetter,
+            defaultLetter: defaultLetter,
+            currentPage: 1,
+            pageSize: 20,
+            activeEntry: null,
+            alphabet: alphabet,
+            availableSet: availableSet,
+
+            get filteredEntries() {
                 var q = (this.query || '').trim().toLowerCase();
-                var hit = q === '' || (el.dataset.term || '').indexOf(q) !== -1;
-                // Recount on each pass so the "nothing matches" state is accurate.
-                this.$nextTick(function () {
-                    this.visible = document.querySelectorAll('[data-term]:not([style*="display: none"])').length;
-                }.bind(this));
-                return hit;
+                var cat = (this.category || '').trim().toLowerCase();
+                var letter = this.selectedLetter;
+
+                return this.allEntries.filter(function(e) {
+                    var mWord = (e.manobo || '').trim();
+                    var mWordLower = mWord.toLowerCase();
+
+                    // Letter filter
+                    if (letter !== 'ALL' && letter !== '') {
+                        if (!mWordLower.startsWith(letter.toLowerCase())) {
+                            return false;
+                        }
+                    }
+
+                    // Category filter
+                    if (cat !== '' && (e.category || '').trim().toLowerCase() !== cat) {
+                        return false;
+                    }
+
+                    // Search query filter (prefix prioritized, matches anywhere)
+                    if (q !== '') {
+                        var inManobo = mWordLower.indexOf(q) !== -1;
+                        var inEng = (e.english || '').toLowerCase().indexOf(q) !== -1;
+                        var inTag = (e.tagalog || '').toLowerCase().indexOf(q) !== -1;
+                        var inBis = (e.bisaya || '').toLowerCase().indexOf(q) !== -1;
+                        if (!inManobo && !inEng && !inTag && !inBis) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }).sort(function(a, b) {
+                    var aM = (a.manobo || '').trim().toLowerCase();
+                    var bM = (b.manobo || '').trim().toLowerCase();
+                    if (q !== '') {
+                        var aStartsWith = aM.startsWith(q);
+                        var bStartsWith = bM.startsWith(q);
+                        if (aStartsWith && !bStartsWith) return -1;
+                        if (!aStartsWith && bStartsWith) return 1;
+                    }
+                    return aM.localeCompare(bM);
+                });
+            },
+
+            get paginatedEntries() {
+                var start = (this.currentPage - 1) * this.pageSize;
+                return this.filteredEntries.slice(start, start + this.pageSize);
+            },
+
+            get totalPages() {
+                return Math.max(1, Math.ceil(this.filteredEntries.length / this.pageSize));
+            },
+
+            get availableLettersList() {
+                var self = this;
+                return this.alphabet.filter(function(l) { return !!self.availableSet[l]; });
+            },
+
+            get isPrevLetterDisabled() {
+                if (this.selectedLetter === 'ALL') return true;
+                var list = this.availableLettersList;
+                if (list.length === 0) return true;
+                var idx = list.indexOf(this.selectedLetter);
+                return idx <= 0;
+            },
+
+            get isNextLetterDisabled() {
+                if (this.selectedLetter === 'ALL') return true;
+                var list = this.availableLettersList;
+                if (list.length === 0) return true;
+                var idx = list.indexOf(this.selectedLetter);
+                return idx < 0 || idx >= list.length - 1;
+            },
+
+            selectLetter(letter) {
+                this.selectedLetter = letter;
+                this.currentPage = 1;
+            },
+
+            prevLetter() {
+                var list = this.availableLettersList;
+                if (list.length === 0) return;
+                var idx = list.indexOf(this.selectedLetter);
+                if (idx > 0) {
+                    this.selectLetter(list[idx - 1]);
+                } else if (idx === -1 && list.length > 0) {
+                    this.selectLetter(list[0]);
+                }
+            },
+
+            nextLetter() {
+                var list = this.availableLettersList;
+                if (list.length === 0) return;
+                var idx = list.indexOf(this.selectedLetter);
+                if (idx >= 0 && idx < list.length - 1) {
+                    this.selectLetter(list[idx + 1]);
+                } else if (idx === -1 && list.length > 0) {
+                    this.selectLetter(list[0]);
+                }
+            },
+
+            onSearchChange() {
+                this.currentPage = 1;
+            },
+
+            resetFilters() {
+                this.query = '';
+                this.category = '';
+                this.selectedLetter = this.defaultLetter;
+                this.currentPage = 1;
+            },
+
+            prevPage() {
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            },
+
+            nextPage() {
+                if (this.currentPage < this.totalPages) {
+                    this.currentPage++;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
             },
 
             openEntry(entry) {
                 this.activeEntry = entry;
-            },
+            }
         };
     }
-
 </script>
 <?php endif; ?>
 
