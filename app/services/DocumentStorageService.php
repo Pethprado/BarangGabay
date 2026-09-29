@@ -163,11 +163,11 @@ class DocumentStorageService
                     SET file_name = ?, file_type = ?, file_size = ?, file_data = ?, updated_at = NOW()
                   WHERE request_id = ?'
             );
-            $stmt->bindParam(1, $cleanName, PDO::PARAM_STR);
-            $stmt->bindParam(2, $mime, PDO::PARAM_STR);
-            $stmt->bindParam(3, $size, PDO::PARAM_INT);
-            $stmt->bindParam(4, $rawBytes, PDO::PARAM_LOB);
-            $stmt->bindParam(5, $requestId, PDO::PARAM_INT);
+            $stmt->bindValue(1, $cleanName, PDO::PARAM_STR);
+            $stmt->bindValue(2, $mime, PDO::PARAM_STR);
+            $stmt->bindValue(3, $size, PDO::PARAM_INT);
+            $stmt->bindValue(4, $rawBytes, PDO::PARAM_LOB);
+            $stmt->bindValue(5, (int) $requestId, PDO::PARAM_INT);
             $stmt->execute();
         } else {
             $stmt = $pdo->prepare(
@@ -175,16 +175,16 @@ class DocumentStorageService
                  (request_id, file_name, file_type, file_size, file_data, created_at, updated_at)
                  VALUES (?, ?, ?, ?, ?, NOW(), NOW())'
             );
-            $stmt->bindParam(1, $requestId, PDO::PARAM_INT);
-            $stmt->bindParam(2, $cleanName, PDO::PARAM_STR);
-            $stmt->bindParam(3, $mime, PDO::PARAM_STR);
-            $stmt->bindParam(4, $size, PDO::PARAM_INT);
-            $stmt->bindParam(5, $rawBytes, PDO::PARAM_LOB);
+            $stmt->bindValue(1, (int) $requestId, PDO::PARAM_INT);
+            $stmt->bindValue(2, $cleanName, PDO::PARAM_STR);
+            $stmt->bindValue(3, $mime, PDO::PARAM_STR);
+            $stmt->bindValue(4, $size, PDO::PARAM_INT);
+            $stmt->bindValue(5, $rawBytes, PDO::PARAM_LOB);
             $stmt->execute();
         }
 
         // 2. Local Disk Cache (if writable)
-        $diskPath = $this->getDiskCachePath($requestId, $cleanName);
+        $diskPath = $this->getDiskCachePath((int) $requestId, $cleanName);
         if ($diskPath !== null) {
             @file_put_contents($diskPath, $rawBytes);
         }
@@ -296,7 +296,7 @@ class DocumentStorageService
     /**
      * Helper to get local disk cache path.
      */
-    private function getDiskCachePath(int $requestId, string $cleanName): ?string
+    private function getDiskCachePath(int|string $requestId, string $cleanName): ?string
     {
         $dir = $this->ensureStorageDir();
         if ($dir === null) {
