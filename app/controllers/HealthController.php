@@ -27,7 +27,7 @@ class HealthController
             'app'       => 'ok',
             'php'       => PHP_VERSION,
             'timestamp' => date('c'),
-            'version'   => '1.2.0-feedback-fix',
+            'version'   => '1.4.0-manobo-fix',
         ];
 
         try {
