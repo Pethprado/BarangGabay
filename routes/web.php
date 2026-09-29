@@ -153,13 +153,19 @@ return [
     ['GET',  '/admin/feedback',                  'FeedbackController@adminIndex',   ['auth', 'role:admin,staff']],
     ['GET',  '/admin/feedback/{id}/messages',    'FeedbackController@adminThread',  ['auth', 'role:admin,staff']],
     ['POST', '/admin/feedback/{id}/reply',       'FeedbackController@adminReply',   ['auth', 'role:admin,staff']],
-    // Document requests. The resident asks here and is told by SMS when the
-    // document is ready — nothing is issued by the app; a clearance stays a
-    // signed instrument handed over at the counter.
-    ['GET',  '/documents',                       'DocumentRequestController@index',        ['auth', 'verified']],
-    ['POST', '/documents',                       'DocumentRequestController@store',        ['auth', 'verified']],
-    ['GET',  '/admin/documents',                 'DocumentRequestController@adminIndex',   ['auth', 'role:admin,staff']],
-    ['POST', '/admin/documents/{id}/status',     'DocumentRequestController@updateStatus', ['auth', 'role:admin,staff']],
+    // Document requests: Personal Pickup & Digital Soft Copy delivery
+    ['GET',  '/documents',                        'DocumentRequestController@index',        ['auth', 'verified']],
+    ['POST', '/documents',                        'DocumentRequestController@store',        ['auth', 'verified']],
+    ['GET',  '/documents/{id}/download',          'DocumentRequestController@download',     ['auth', 'verified']],
+    ['GET',  '/documents/{id}/preview',           'DocumentRequestController@preview',      ['auth', 'verified']],
+    ['GET',  '/admin/documents',                  'DocumentRequestController@adminIndex',   ['auth', 'role:admin,staff']],
+    ['POST', '/admin/documents/{id}/status',      'DocumentRequestController@updateStatus', ['auth', 'role:admin,staff']],
+    ['POST', '/admin/documents/{id}/upload',      'DocumentRequestController@uploadFile',   ['auth', 'role:admin,staff']],
+    ['POST', '/admin/documents/{id}/replace',     'DocumentRequestController@replaceFile',  ['auth', 'role:admin,staff']],
+    ['POST', '/admin/documents/{id}/remove-file', 'DocumentRequestController@removeFile',   ['auth', 'role:admin,staff']],
+    ['GET',  '/admin/documents/{id}/download',    'DocumentRequestController@adminDownload',['auth', 'role:admin,staff']],
+    ['GET',  '/admin/documents/{id}/preview',     'DocumentRequestController@adminPreview', ['auth', 'role:admin,staff']],
+    ['GET',  '/admin/documents/{id}/details',     'DocumentRequestController@details',      ['auth', 'role:admin,staff']],
 
     // Emergency: where this resident's purok evacuates to, and the one-tap
     // "Ligtas ako" answer after a storm.

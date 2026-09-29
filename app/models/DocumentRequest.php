@@ -8,17 +8,12 @@ use PDO;
 /**
  * A resident asking the barangay to prepare a document.
  *
- * Deliberately NOT an issuing system. Nothing here generates, signs or
- * releases a barangay clearance — that is a signed instrument and stays a
- * human act at the counter. This is the queue in front of it: the resident
- * asks, staff prepare it exactly as they do now, and the resident is told when
- * to collect it instead of walking to the hall to find out.
- *
- * The value is the trip not taken. From Purok 7 a wasted visit is a real cost.
+ * Supports both Personal Pickup at the barangay hall and Digital Soft Copy
+ * delivery with secure in-app upload, preview, and download.
  */
 class DocumentRequest
 {
-    /** The documents a barangay of this size actually issues. */
+    /** The documents a barangay issues. */
     public const TYPES = [
         'clearance'  => 'Barangay Clearance',
         'residency'  => 'Certificate of Residency',
@@ -27,13 +22,14 @@ class DocumentRequest
         'other'      => 'Iba pa',
     ];
 
+    /** Delivery methods supported by the system. */
+    public const DELIVERY_METHODS = [
+        'pickup'  => 'Personal Pickup',
+        'digital' => 'Digital Soft Copy',
+    ];
+
     /**
      * Where a request can go next.
-     *
-     * Stated as a map rather than checked inline so the rule lives in one
-     * place: a released document cannot go back to pending, and a rejected one
-     * is final. Staff correcting a mistake re-open it by having the resident
-     * file again, which leaves both records intact.
      */
     public const TRANSITIONS = [
         'pending'    => ['processing', 'ready', 'rejected'],
@@ -48,45 +44,73 @@ class DocumentRequest
         return self::TYPES[$type] ?? $type;
     }
 
+    public static function deliveryLabel(string $method): string
+    {
+        return self::DELIVERY_METHODS[$method] ?? 'Personal Pickup';
+    }
+
     public static function canMove(string $from, string $to): bool
     {
         return \in_array($to, self::TRANSITIONS[$from] ?? [], true);
     }
 
     /**
-     * File a request. Returns the new reference number.
-     *
-     * The reference carries the year and a random tail rather than the row id:
-     * a resident reads it aloud at the counter, and a sequential number would
-     * also tell anyone who asked how many requests the barangay has had.
+     * File a request with chosen delivery method. Returns the new reference number.
      */
-    public static function create(int $userId, string $type, string $purpose, string $notes = ''): string
-    {
+    public static function create(
+        int $userId,
+        string $type,
+        string $purpose,
+        string $notes = '',
+        string $deliveryMethod = 'pickup'
+    ): string {
         $reference = 'BRG-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
+        $method    = \array_key_exists($deliveryMethod, self::DELIVERY_METHODS) ? $deliveryMethod : 'pickup';
+        $docType   = \array_key_exists($type, self::TYPES) ? $type : 'other';
+        $cleanPurp = mb_substr(trim($purpose), 0, 255);
+        $cleanNote = trim($notes) !== '' ? mb_substr(trim($notes), 0, 2000) : null;
 
-        db()->prepare(
+        $pdo = db();
+        $stmt = $pdo->prepare(
             'INSERT INTO document_requests
-             (reference_no, user_id, document_type, purpose, notes, status, requested_at)
-             VALUES (?, ?, ?, ?, ?, ?, NOW())'
-        )->execute([
+             (reference_no, user_id, document_type, purpose, notes, status, delivery_method, requested_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+        );
+        $stmt->execute([
             $reference,
             $userId,
-            \array_key_exists($type, self::TYPES) ? $type : 'other',
-            mb_substr(trim($purpose), 0, 255),
-            trim($notes) !== '' ? mb_substr(trim($notes), 0, 2000) : null,
+            $docType,
+            $cleanPurp,
+            $cleanNote,
             'pending',
+            $method,
         ]);
+
+        $newId = (int) $pdo->lastInsertId();
+
+        self::logActivity(
+            $newId,
+            $userId,
+            'requested',
+            null,
+            'pending',
+            sprintf('Submitted request for %s via %s.', self::label($docType), self::deliveryLabel($method))
+        );
 
         return $reference;
     }
 
-    /** One request, with the requester's details for the admin queue. */
+    /** One request, with the requester's details and staff names. */
     public static function find(int $id): ?array
     {
         $stmt = db()->prepare(
-            'SELECT r.*, u.full_name, u.phone, u.email, u.zone, u.address
+            'SELECT r.*, u.full_name, u.phone, u.email, u.zone, u.address,
+                    su.full_name AS uploaded_by_name,
+                    hb.full_name AS handled_by_name
                FROM document_requests r
                JOIN users u ON u.id = r.user_id
+          LEFT JOIN users su ON su.id = r.document_uploaded_by
+          LEFT JOIN users hb ON hb.id = r.handled_by
               WHERE r.id = ? LIMIT 1'
         );
         $stmt->execute([$id]);
@@ -98,7 +122,11 @@ class DocumentRequest
     public static function forUser(int $userId): array
     {
         $stmt = db()->prepare(
-            'SELECT * FROM document_requests WHERE user_id = ? ORDER BY requested_at DESC'
+            'SELECT r.*, su.full_name AS uploaded_by_name
+               FROM document_requests r
+          LEFT JOIN users su ON su.id = r.document_uploaded_by
+              WHERE r.user_id = ?
+              ORDER BY r.requested_at DESC'
         );
         $stmt->execute([$userId]);
 
@@ -106,22 +134,36 @@ class DocumentRequest
     }
 
     /**
-     * The admin queue.
-     *
-     * Ordered by status first so the work waiting on staff floats to the top —
-     * a list sorted only by date buries a week-old pending request under
-     * yesterday's released one.
+     * The admin queue with status, delivery method, and search filtering.
      */
-    public static function queue(string $status = ''): array
+    public static function queue(string $status = '', string $delivery = '', string $search = ''): array
     {
-        $sql = "SELECT r.*, u.full_name, u.phone, u.zone
+        $sql = "SELECT r.*, u.full_name, u.phone, u.zone,
+                       su.full_name AS uploaded_by_name
                   FROM document_requests r
-                  JOIN users u ON u.id = r.user_id";
+                  JOIN users u ON u.id = r.user_id
+             LEFT JOIN users su ON su.id = r.document_uploaded_by
+                 WHERE 1=1";
         $params = [];
 
         if ($status !== '' && \array_key_exists($status, self::TRANSITIONS)) {
-            $sql .= ' WHERE r.status = ?';
+            $sql .= ' AND r.status = ?';
             $params[] = $status;
+        }
+
+        if ($delivery !== '' && \array_key_exists($delivery, self::DELIVERY_METHODS)) {
+            $sql .= ' AND r.delivery_method = ?';
+            $params[] = $delivery;
+        }
+
+        $search = trim($search);
+        if ($search !== '') {
+            $sql .= ' AND (r.reference_no ILIKE ? OR u.full_name ILIKE ? OR r.purpose ILIKE ? OR r.document_type ILIKE ?)';
+            $like = '%' . $search . '%';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
         }
 
         $sql .= " ORDER BY CASE r.status WHEN 'pending' THEN 1 WHEN 'processing' THEN 2 WHEN 'ready' THEN 3 WHEN 'released' THEN 4 WHEN 'rejected' THEN 5 ELSE 6 END,
@@ -134,10 +176,7 @@ class DocumentRequest
     }
 
     /**
-     * Move a request to a new status.
-     *
-     * Returns false when the move is not allowed, so a stale browser tab
-     * cannot walk a released document back to pending.
+     * Move a request to a new status and record timestamp and audit log.
      */
     public static function setStatus(int $id, string $to, int $staffId, string $staffNote = ''): bool
     {
@@ -146,28 +185,220 @@ class DocumentRequest
             return false;
         }
 
-        // The timestamps are set once, when the state is first reached.
+        $oldStatus       = (string) $current['status'];
+        $deliveryMethod  = (string) ($current['delivery_method'] ?? 'pickup');
+
         $stamp = match ($to) {
             'ready'    => ', ready_at = NOW()',
-            'released' => ', released_at = NOW()',
+            'released' => ($deliveryMethod === 'digital') ? ', released_at = NOW(), completed_at = NOW()' : ', released_at = NOW()',
             default    => '',
         };
 
+        $noteValue = trim($staffNote) !== '' ? mb_substr(trim($staffNote), 0, 2000) : $current['staff_note'];
+
         db()->prepare(
             "UPDATE document_requests
-                SET status = ?, staff_note = ?, handled_by = ?{$stamp}
+                SET status = ?, staff_note = ?, handled_by = ?{$stamp}, updated_at = NOW()
               WHERE id = ?"
         )->execute([
             $to,
-            trim($staffNote) !== '' ? mb_substr(trim($staffNote), 0, 2000) : null,
+            $noteValue,
             $staffId,
             $id,
         ]);
 
+        $details = sprintf('Status updated from %s to %s', $oldStatus, $to);
+        if (trim($staffNote) !== '') {
+            $details .= ' (Staff Note: ' . trim($staffNote) . ')';
+        }
+        self::logActivity($id, $staffId, 'status_change', $oldStatus, $to, $details);
+
         return true;
     }
 
-    /** How many are waiting on staff — for the admin dashboard badge. */
+    /**
+     * Attach or replace uploaded document soft copy.
+     *
+     * @param int $id
+     * @param array{url: string, clean_name: string, mime: string, size: int} $fileMeta
+     * @param int $staffId
+     * @param string $adminNote
+     * @return bool
+     */
+    public static function attachFile(int $id, array $fileMeta, int $staffId, string $adminNote = ''): bool
+    {
+        $current = self::find($id);
+        if ($current === null) {
+            return false;
+        }
+
+        $isReplacement = !empty($current['document_file_name']);
+
+        $noteUpdate = '';
+        $params = [
+            $fileMeta['url'],
+            $fileMeta['clean_name'],
+            $fileMeta['mime'],
+            $fileMeta['size'],
+            $staffId,
+        ];
+
+        if (trim($adminNote) !== '') {
+            $noteUpdate = ', staff_note = ?';
+            $params[]   = mb_substr(trim($adminNote), 0, 2000);
+        }
+
+        $params[] = $id;
+
+        $sql = "UPDATE document_requests
+                   SET document_file_url = ?,
+                       document_file_name = ?,
+                       document_file_type = ?,
+                       document_file_size = ?,
+                       document_uploaded_at = NOW(),
+                       document_uploaded_by = ?,
+                       updated_at = NOW()
+                       {$noteUpdate}
+                 WHERE id = ?";
+
+        db()->prepare($sql)->execute($params);
+
+        $action  = $isReplacement ? 'file_replaced' : 'file_uploaded';
+        $details = sprintf(
+            '%s: %s (%s)',
+            $isReplacement ? 'Replaced document file' : 'Uploaded document file',
+            $fileMeta['clean_name'],
+            self::formatFileSize((int) $fileMeta['size'])
+        );
+        if (trim($adminNote) !== '') {
+            $details .= ' Note: ' . trim($adminNote);
+        }
+
+        self::logActivity(
+            $id,
+            $staffId,
+            $action,
+            (string) $current['status'],
+            (string) $current['status'],
+            $details
+        );
+
+        return true;
+    }
+
+    /**
+     * Remove attached file and delete file record.
+     */
+    public static function removeFile(int $id, int $staffId, string $reason = ''): bool
+    {
+        $current = self::find($id);
+        if ($current === null) {
+            return false;
+        }
+
+        $oldName = (string) ($current['document_file_name'] ?? '');
+
+        // Remove from storage / DB blob
+        (new \App\Services\DocumentStorageService())->deleteFile($id);
+
+        db()->prepare(
+            'UPDATE document_requests
+                SET document_file_url = NULL,
+                    document_file_name = NULL,
+                    document_file_type = NULL,
+                    document_file_size = NULL,
+                    document_uploaded_at = NULL,
+                    document_uploaded_by = NULL,
+                    updated_at = NOW()
+              WHERE id = ?'
+        )->execute([$id]);
+
+        $details = 'Removed attached file: ' . ($oldName ?: 'Document file');
+        if (trim($reason) !== '') {
+            $details .= ' Reason: ' . trim($reason);
+        }
+
+        self::logActivity(
+            $id,
+            $staffId,
+            'file_deleted',
+            (string) $current['status'],
+            (string) $current['status'],
+            $details
+        );
+
+        return true;
+    }
+
+    /**
+     * Log an action in document_request_logs.
+     */
+    public static function logActivity(
+        int $requestId,
+        ?int $userId,
+        string $action,
+        ?string $oldStatus = null,
+        ?string $newStatus = null,
+        ?string $details = null
+    ): void {
+        try {
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            db()->prepare(
+                'INSERT INTO document_request_logs
+                 (request_id, user_id, action, old_status, new_status, details, ip_address, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())'
+            )->execute([
+                $requestId,
+                $userId,
+                $action,
+                $oldStatus,
+                $newStatus,
+                $details,
+                $ip,
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[DocumentRequest::logActivity] ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get all audit logs for a request.
+     */
+    public static function getActivityLogs(int $requestId): array
+    {
+        try {
+            $stmt = db()->prepare(
+                'SELECT l.*, u.full_name AS actor_name, u.role AS actor_role
+                   FROM document_request_logs l
+              LEFT JOIN users u ON u.id = l.user_id
+                  WHERE l.request_id = ?
+                  ORDER BY l.created_at ASC, l.id ASC'
+            );
+            $stmt->execute([$requestId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Record download action.
+     */
+    public static function recordDownload(int $requestId, int $userId): void
+    {
+        self::logActivity(
+            $requestId,
+            $userId,
+            'file_downloaded',
+            null,
+            null,
+            'Resident downloaded or opened document soft copy.'
+        );
+    }
+
+    /**
+     * How many requests are waiting on staff.
+     */
     public static function countOpen(): int
     {
         try {
@@ -177,5 +408,19 @@ class DocumentRequest
         } catch (\Throwable $e) {
             return 0;
         }
+    }
+
+    /**
+     * Format byte size to human readable string.
+     */
+    public static function formatFileSize(int $bytes): string
+    {
+        if ($bytes <= 0) {
+            return '0 B';
+        }
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $i = (int) floor(log($bytes, 1024));
+        $i = min($i, count($units) - 1);
+        return round($bytes / pow(1024, $i), 1) . ' ' . $units[$i];
     }
 }

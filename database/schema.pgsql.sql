@@ -441,17 +441,56 @@ CREATE TABLE IF NOT EXISTS document_requests (
     purpose VARCHAR(255) NOT NULL,
     notes TEXT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    delivery_method VARCHAR(20) NOT NULL DEFAULT 'pickup',
     staff_note TEXT NULL,
+    document_file_url VARCHAR(500) NULL,
+    document_file_name VARCHAR(255) NULL,
+    document_file_type VARCHAR(100) NULL,
+    document_file_size INT NULL,
+    document_uploaded_at TIMESTAMP NULL,
+    document_uploaded_by INT NULL,
     handled_by INT NULL,
     requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
     ready_at TIMESTAMP NULL,
     released_at TIMESTAMP NULL,
+    completed_at TIMESTAMP NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (handled_by) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (handled_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (document_uploaded_by) REFERENCES users(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_dr_status ON document_requests(status);
 CREATE INDEX IF NOT EXISTS idx_dr_user ON document_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_dr_delivery ON document_requests(delivery_method);
+
+CREATE TABLE IF NOT EXISTS document_request_files (
+    id SERIAL PRIMARY KEY,
+    request_id INT NOT NULL UNIQUE,
+    file_name VARCHAR(255) NOT NULL,
+    file_type VARCHAR(100) NOT NULL,
+    file_size INT NOT NULL,
+    file_data BYTEA NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (request_id) REFERENCES document_requests(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_drf_request_id ON document_request_files(request_id);
+
+CREATE TABLE IF NOT EXISTS document_request_logs (
+    id SERIAL PRIMARY KEY,
+    request_id INT NOT NULL,
+    user_id INT NULL,
+    action VARCHAR(50) NOT NULL,
+    old_status VARCHAR(30) NULL,
+    new_status VARCHAR(30) NULL,
+    details TEXT NULL,
+    ip_address VARCHAR(45) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (request_id) REFERENCES document_requests(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_drl_req ON document_request_logs(request_id);
+CREATE INDEX IF NOT EXISTS idx_drl_action ON document_request_logs(action);
 
 CREATE TABLE IF NOT EXISTS evacuation_centers (
     id SERIAL PRIMARY KEY,

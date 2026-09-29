@@ -773,7 +773,11 @@ $docState = (string) ($docOpen['status'] ?? '');
                 <?= e(t('resident_home.doc_ready_title', ['n' => (string) $docReady])) ?>
             </p>
             <p class="mt-0.5 text-xs leading-relaxed text-green-800">
+                <?php if (($docOpen['delivery_method'] ?? 'pickup') === 'digital'): ?>
+                <i class="bi bi-file-earmark-arrow-down me-1"></i> <?= e(t('documents.status_ready_digital')) ?> &bull; I-download at i-print mula sa portal.
+                <?php else: ?>
                 <?= e(t('resident_home.doc_ready_help')) ?>
+                <?php endif; ?>
             </p>
         </div>
         <i class="bi bi-chevron-right flex-shrink-0 text-green-700"></i>
