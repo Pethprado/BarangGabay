@@ -16,6 +16,87 @@ use PDO;
 class Feedback
 {
     /**
+     * Ensure the feedback_messages table exists (PostgreSQL safety net).
+     *
+     * Migration 006 uses MySQL-only syntax (ENGINE=InnoDB, ENUM, TINYINT,
+     * SET NAMES) that silently fails on PostgreSQL. This method creates the
+     * table if it is missing, and backfills any existing feedbacks rows that
+     * have no corresponding feedback_messages entry.
+     *
+     * Runs at most once per request (static flag). Uses IF NOT EXISTS so it
+     * is safe to call repeatedly across deploys.
+     */
+    public static function ensureMessagesTable(): void
+    {
+        static $checked = false;
+        if ($checked) {
+            return;
+        }
+        $checked = true;
+
+        $pdo = db();
+
+        try {
+            // Detect driver — only needed on PostgreSQL; MySQL migration 006 handles it.
+            $driver = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
+            if ($driver !== 'pgsql') {
+                return;
+            }
+
+            // Check if table exists
+            $stmt = $pdo->query(
+                "SELECT COUNT(*) FROM information_schema.tables
+                 WHERE table_schema = 'public' AND table_name = 'feedback_messages'"
+            );
+            if ((int) $stmt->fetchColumn() > 0) {
+                return; // table already exists
+            }
+
+            // Create the table
+            $pdo->exec("CREATE TABLE IF NOT EXISTS feedback_messages (
+                id SERIAL PRIMARY KEY,
+                feedback_id INT NOT NULL,
+                sender_id INT NOT NULL,
+                sender_role VARCHAR(20) NOT NULL,
+                message TEXT NOT NULL,
+                read_by_resident SMALLINT NOT NULL DEFAULT 0,
+                read_by_staff SMALLINT NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                FOREIGN KEY (feedback_id) REFERENCES feedbacks(id) ON DELETE CASCADE,
+                FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+            )");
+            $pdo->exec("CREATE INDEX IF NOT EXISTS idx_fm_feedback_id ON feedback_messages(feedback_id)");
+            $pdo->exec("CREATE INDEX IF NOT EXISTS idx_fm_created ON feedback_messages(created_at)");
+
+            // Backfill: copy each feedback's original message into feedback_messages
+            $pdo->exec(
+                "INSERT INTO feedback_messages (feedback_id, sender_id, sender_role, message, read_by_resident, read_by_staff, created_at)
+                 SELECT f.id, f.user_id, 'resident', f.message, 1, 1, f.created_at
+                 FROM feedbacks f
+                 WHERE NOT EXISTS (SELECT 1 FROM feedback_messages fm WHERE fm.feedback_id = f.id)"
+            );
+
+            // Backfill: copy any existing admin_reply
+            $pdo->exec(
+                "INSERT INTO feedback_messages (feedback_id, sender_id, sender_role, message, read_by_resident, read_by_staff, created_at)
+                 SELECT f.id, f.replied_by, COALESCE(u.role, 'staff'), f.admin_reply, 1, 1, COALESCE(f.replied_at, f.created_at)
+                 FROM feedbacks f
+                 LEFT JOIN users u ON u.id = f.replied_by
+                 WHERE f.admin_reply IS NOT NULL AND f.admin_reply <> ''
+                   AND f.replied_by IS NOT NULL
+                   AND NOT EXISTS (
+                       SELECT 1 FROM feedback_messages fm
+                       WHERE fm.feedback_id = f.id AND fm.sender_id = f.replied_by AND fm.message = f.admin_reply
+                   )"
+            );
+
+            error_log('[Feedback] Created feedback_messages table and backfilled existing data on PostgreSQL');
+        } catch (\Throwable $e) {
+            error_log('[Feedback] ensureMessagesTable error: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Open a new feedback thread with the resident's first message.
      *
      * @param array{user_id:int, message:string, sender_role?:string} $data
@@ -259,10 +340,11 @@ class Feedback
     public static function markResidentReadForUser(int $userId): void
     {
         $stmt = db()->prepare(
-            "UPDATE feedback_messages fm
-             JOIN feedbacks f ON f.id = fm.feedback_id
-             SET fm.read_by_resident = 1
-             WHERE f.user_id = ? AND fm.sender_role != 'resident' AND fm.read_by_resident = 0"
+            "UPDATE feedback_messages
+             SET read_by_resident = 1
+             WHERE sender_role != 'resident'
+               AND read_by_resident = 0
+               AND feedback_id IN (SELECT id FROM feedbacks WHERE user_id = ?)"
         );
         $stmt->execute([$userId]);
     }

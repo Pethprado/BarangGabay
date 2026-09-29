@@ -21,6 +21,10 @@ class FeedbackController
     {
         $userId = (int) $_SESSION['user_id'];
 
+        // Ensure the feedback_messages table exists on PostgreSQL (migration 006
+        // uses MySQL-only syntax and silently fails on PostgreSQL).
+        Feedback::ensureMessagesTable();
+
         $feedbacks = Feedback::allForUser($userId);
         foreach ($feedbacks as &$fb) {
             $fb['messages'] = Feedback::findMessages((int) $fb['id']);
@@ -37,6 +41,7 @@ class FeedbackController
     public function store(): void
     {
         check_csrf();
+        Feedback::ensureMessagesTable();
 
         $userId  = (int) $_SESSION['user_id'];
         $message = \trim($_POST['message'] ?? '');
@@ -63,6 +68,7 @@ class FeedbackController
     public function residentReply(array $params): void
     {
         check_csrf();
+        Feedback::ensureMessagesTable();
 
         $id      = (int) ($params['id'] ?? 0);
         $userId  = (int) $_SESSION['user_id'];

@@ -440,6 +440,22 @@ function syncPostgresSchema(PDO $pdo): void
         )",
         "CREATE INDEX IF NOT EXISTS idx_drl_req ON document_request_logs(request_id)",
         "CREATE INDEX IF NOT EXISTS idx_drl_action ON document_request_logs(action)",
+
+        // 18. Feedback Messages table (migration 006 uses MySQL-only syntax that fails on PostgreSQL)
+        "CREATE TABLE IF NOT EXISTS feedback_messages (
+            id SERIAL PRIMARY KEY,
+            feedback_id INT NOT NULL,
+            sender_id INT NOT NULL,
+            sender_role VARCHAR(20) NOT NULL,
+            message TEXT NOT NULL,
+            read_by_resident SMALLINT NOT NULL DEFAULT 0,
+            read_by_staff SMALLINT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            FOREIGN KEY (feedback_id) REFERENCES feedbacks(id) ON DELETE CASCADE,
+            FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_fm_feedback_id ON feedback_messages(feedback_id)",
+        "CREATE INDEX IF NOT EXISTS idx_fm_created ON feedback_messages(created_at)",
     ];
 
     foreach ($statements as $sql) {

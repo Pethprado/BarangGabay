@@ -65,6 +65,7 @@ class ResidentController
         // Personal counts — the headline tiles.
         $unreadNotifications  = Notification::unreadCount($userId);
         $recentNotifications  = Notification::unreadForUser($userId, 4);
+        Feedback::ensureMessagesTable();
         $feedbackThreads      = Feedback::dashboardForUser($userId, 3);
         $openFeedbackCount    = Feedback::countForUser($userId);
         $unreadFeedbackCount  = Feedback::unreadThreadCountForUser($userId);
