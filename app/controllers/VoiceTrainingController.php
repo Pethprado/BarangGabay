@@ -39,6 +39,10 @@ class VoiceTrainingController
         // Manobo dataset coverage
         $coverage = VoiceSample::getManoboCoverageStats();
 
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $limit = 15;
+        $offset = ($page - 1) * $limit;
+
         // Filter parameters
         $filters = [
             'language'             => (string) ($_GET['language'] ?? ''),
@@ -46,12 +50,14 @@ class VoiceTrainingController
             'speaker'              => (string) ($_GET['speaker'] ?? ''),
             'has_dictionary_match' => (string) ($_GET['has_dictionary_match'] ?? ''),
             'search'               => (string) ($_GET['search'] ?? ''),
-            'page'                 => max(1, (int) ($_GET['page'] ?? 1)),
-            'limit'                => 15,
+            'page'                 => $page,
+            'limit'                => $limit,
         ];
 
-        // Fetch samples
-        $sampleData = VoiceSample::getAll($filters);
+        // Fetch samples and counts
+        $samples = VoiceSample::all($filters, $limit, $offset);
+        $totalSamples = VoiceSample::count($filters);
+        $totalPages = max(1, (int) ceil($totalSamples / $limit));
 
         // Missing pronunciations queue
         $missingPronunciations = VoiceSample::getMissingPronunciations(15);
@@ -74,12 +80,12 @@ class VoiceTrainingController
             'activeProfiles'        => $activeProfiles,
             'coverage'              => $coverage,
             'filters'               => $filters,
-            'samples'               => $sampleData['samples'],
+            'samples'               => $samples,
             'pagination'            => [
-                'total'        => $sampleData['total'],
-                'page'         => $sampleData['page'],
-                'limit'        => $sampleData['limit'],
-                'total_pages'  => ceil($sampleData['total'] / $sampleData['limit']),
+                'total'        => $totalSamples,
+                'page'         => $page,
+                'limit'        => $limit,
+                'total_pages'  => $totalPages,
             ],
             'missingPronunciations' => $missingPronunciations,
             'profiles'              => $allProfiles,
@@ -362,12 +368,9 @@ class VoiceTrainingController
         $format   = (string) ($_GET['format'] ?? 'csv');
         $language = (string) ($_GET['language'] ?? '');
 
-        $data = VoiceSample::getAll([
+        $samples = VoiceSample::getAll([
             'language' => $language,
-            'limit'    => 1000,
         ]);
-
-        $samples = $data['samples'];
 
         if ($format === 'json') {
             header('Content-Type: application/json');
