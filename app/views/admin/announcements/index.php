@@ -1,16 +1,12 @@
-﻿<?php
+<?php
 $announcements = $announcements ?? [];
-// The table shows $announcements, which may be filtered by ?status=. The
-// counts below are deliberately taken from the UNFILTERED list: narrowing to
-// drafts must not make this page announce that there are no published posts.
+// The list shows $announcements, which may be filtered by ?status=. The
+// counts below are deliberately taken from the UNFILTERED list.
 $allAnnouncements = $allAnnouncements ?? $announcements;
 $status           = $status ?? '';
 
 $total = count($allAnnouncements);
 
-// "Published" means residents can read it right now. A scheduled post shares
-// the `published` status but not that property, so it is counted separately —
-// otherwise the stat card would claim an audience the post does not have yet.
 $scheduled = count(array_filter($allAnnouncements, static fn($a) => \App\Models\Announcement::isScheduled($a)));
 $published = count(array_filter($allAnnouncements, static fn($a) => \App\Models\Announcement::isVisibleNow($a)));
 $draft     = count(array_filter($allAnnouncements, static fn($a) => $a['status'] === 'draft'));
@@ -35,31 +31,29 @@ $urgencyMeta = [
     'urgent'    => ['Urgent',    'background:#f8d7da;color:#721c24;'],
 ];
 
+$userRole = $_SESSION['role'] ?? 'staff';
+$canDelete = in_array($userRole, ['admin', 'superadmin'], true);
+
 ob_start();
 ?>
 
 <!-- Page header -->
-<div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-4">
+<div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
     <div>
-        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;"><?= e(t('admin_announcements.eyebrow')) ?></p>
-        <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;"><?= e(t('admin_announcements.title')) ?></h1>
-        <p class="text-muted mt-1 mb-0" style="font-size:.82rem;">
-            <?= e(t('admin_announcements.summary', ['total' => $total, 'published' => $published, 'draft' => $draft])) ?><?php
-// Scheduled posts belong to none of the three counts above — they are not
-// live, not drafts, and not archived — so without this the totals visibly
-// fail to add up ("1 total · 0 published · 0 draft").
-if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_announcements.stat_scheduled'))) ?><?php endif; ?>
+        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;">CONTENT MANAGEMENT</p>
+        <h1 class="mb-0 mt-1" style="font-size:1.65rem;font-weight:800;color:var(--text-primary);line-height:1.1;"><?= e(t('admin_announcements.title')) ?></h1>
+        <p class="text-muted mt-1 mb-0" style="font-size:.85rem;">
+            Manage barangay announcements and public notices.
         </p>
     </div>
-    <a href="<?= e(route('admin/announcements/create')) ?>" class="btn-barangay">
-        <i class="bi bi-plus-lg"></i> <?= e(t('admin_announcements.create_new')) ?>
-    </a>
+    <div>
+        <a href="<?= e(route('admin/announcements/create')) ?>" class="btn-barangay d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold" style="box-shadow: 0 4px 12px rgba(26,107,58,0.2);">
+            <i class="bi bi-plus-lg"></i> Create Announcement
+        </a>
+    </div>
 </div>
 
-<!-- Stat cards — also the filter control for the table below.
-     Arriving from the dashboard lands here with one already active, so the
-     same cards that got you here are how you change or clear the view.
-     Clicking the active one again returns to the full list. -->
+<!-- Summary & Filter Stats -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-sm-3 fade-up">
         <a class="stat-card stat-card-link<?= $status === '' ? ' stat-card-selected' : '' ?>"
@@ -84,9 +78,6 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
         </a>
     </div>
     <?php if ($scheduled > 0): ?>
-    <?php /* Only a card while there is something in it. Scheduled posts are a
-             real, separately filterable state — published status, no audience
-             yet — but a permanent "0 scheduled" card would be clutter. */ ?>
     <div class="col-6 col-sm-3 fade-up fade-up-delay-2">
         <a class="stat-card stat-card-link<?= $status === 'scheduled' ? ' stat-card-selected' : '' ?>"
            href="<?= e($filterUrl('scheduled')) ?>"
@@ -123,9 +114,36 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
     </div>
 </div>
 
+<!-- Toolbar: Search Bar & View Mode Toggle -->
+<div class="admin-card p-3 mb-4">
+    <div class="row g-3 align-items-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 text-muted" style="border-radius: .5rem 0 0 .5rem;">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text"
+                       id="announcementSearchInput"
+                       class="form-control border-start-0 ps-0"
+                       placeholder="Search announcements..."
+                       style="border-radius: 0 .5rem .5rem 0; font-size:.875rem;"
+                       onkeyup="filterAnnouncements()">
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-7 d-flex justify-content-md-end align-items-center gap-2">
+            <div class="btn-group" role="group" aria-label="View toggle">
+                <button type="button" class="btn btn-outline-secondary btn-sm active" id="btnViewTable" onclick="toggleView('table')">
+                    <i class="bi bi-list-ul me-1"></i> Table View
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnViewCards" onclick="toggleView('cards')">
+                    <i class="bi bi-grid-fill me-1"></i> Cards View
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php if ($status !== ''): ?>
-<!-- Says which subset is on screen and how to leave it. Without this, a page
-     showing three of eleven rows looks like the other eight were deleted. -->
 <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
     <span class="filter-pill">
         <i class="bi bi-funnel-fill" aria-hidden="true"></i>
@@ -140,9 +158,7 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
 </div>
 <?php endif; ?>
 
-<!-- Empty state. An empty FILTER is a different situation from an empty
-     system: offering "create your first announcement" to someone who just
-     clicked "Archived" would be answering a question they did not ask. -->
+<!-- Empty state -->
 <?php if (empty($announcements)): ?>
 <div class="admin-card text-center py-5">
     <?php if ($status !== ''): ?>
@@ -161,14 +177,19 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
     <p class="fw-semibold text-dark mb-1" style="font-size:.9rem;"><?= e(t('admin_announcements.empty_title')) ?></p>
     <p class="text-muted mb-3" style="font-size:.82rem;"><?= e(t('admin_announcements.empty_desc')) ?></p>
     <a href="<?= e(route('admin/announcements/create')) ?>" class="btn-barangay">
-        <i class="bi bi-plus-lg"></i> <?= e(t('admin_announcements.create_btn')) ?>
+        <i class="bi bi-plus-lg"></i> Create Announcement
     </a>
     <?php endif; ?>
 </div>
 
-<!-- Table -->
 <?php else: ?>
-<div class="admin-card p-0 fade-up">
+
+<?php
+$__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
+?>
+
+<!-- Table View -->
+<div id="announcementTableView" class="admin-card p-0 fade-up">
     <div class="table-responsive">
         <table class="admin-table">
             <thead>
@@ -180,27 +201,13 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
                     <th style="white-space:nowrap;"><?= e(t('admin_announcements.col_languages')) ?></th>
                     <th><?= e(t('residents.col_status')) ?></th>
                     <th style="white-space:nowrap;"><?= e(t('admin_announcements.col_published')) ?></th>
-                    <th style="width:130px;text-align:right;padding-right:16px;"><?= e(t('residents.col_actions')) ?></th>
+                    <th style="width:140px;text-align:right;padding-right:16px;"><?= e(t('residents.col_actions')) ?></th>
                 </tr>
             </thead>
-            <tbody>
-            <?php
-            /*
-             * Which announcements are still leaning on the generated Manobo
-             * voice. One query for the whole page rather than one per row.
-             * This is the barangay's worklist: every flagged post is a notice
-             * a Manobo speaker could improve by recording it properly, and
-             * without surfacing it the approximation quietly becomes permanent.
-             */
-            $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
-            ?>
+            <tbody id="announcementTableBody">
             <?php foreach ($announcements as $ann):
                 [$catLabel, $catCss] = $categoryMeta[$ann['category']] ?? [ucfirst($ann['category']), 'background:#f1f5f9;color:#475569;'];
                 [$urgLabel, $urgCss] = $urgencyMeta[$ann['urgency']]   ?? [ucfirst($ann['urgency']),  'background:#f1f5f9;color:#475569;'];
-                // A scheduled post is stored as status=published, so the raw
-                // status column would label it "Published" while residents
-                // still cannot see it — the single most confusing thing this
-                // list could tell staff. Split the two apart for display.
                 $annScheduled = \App\Models\Announcement::isScheduled($ann);
                 $statusCls = match(true) {
                     $annScheduled                  => 'status-draft',
@@ -208,14 +215,15 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
                     $ann['status'] === 'archived'  => 'status-archived',
                     default                        => 'status-draft',
                 };
+                $searchContent = strtolower($ann['title'] . ' ' . strip_tags($ann['body'] ?? '') . ' ' . $ann['category']);
             ?>
-            <tr>
+            <tr class="announcement-item-row" data-search="<?= e($searchContent) ?>">
                 <!-- Cover thumbnail -->
                 <td style="padding:8px 8px 8px 14px;">
                     <?php if (!empty($ann['cover_image_url'])): ?>
                     <img src="<?= e(asset($ann['cover_image_url'])) ?>"
-                         alt=""
-                         style="width:46px;height:34px;object-fit:cover;border-radius:5px;border:1px solid #e4ece6;display:block;">
+                          alt=""
+                          style="width:46px;height:34px;object-fit:cover;border-radius:5px;border:1px solid #e4ece6;display:block;">
                     <?php else: ?>
                     <div style="width:46px;height:34px;border-radius:5px;background:#f1f5f2;border:1px solid #e4ece6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i class="bi bi-image" style="font-size:.72rem;color:#c8d5cc;"></i>
@@ -235,9 +243,6 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
                         ID #<?= (int) $ann['id'] ?> &middot; <?= e(date('M j, Y', strtotime($ann['created_at']))) ?>
                     </span>
                     <?php
-                    /* Manobo text state, not just "has some". Missing is the
-                       case staff need to see: that post's MN Listen button
-                       does nothing for residents. */
                     $__mnState = manobo_text_state($ann, 'body');
                     ?>
                     <span class="manobo-state manobo-state-<?= e($__mnState) ?> ms-1"
@@ -268,9 +273,6 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
                 <td>
                     <span class="status-badge <?= $ann['urgency'] === 'urgent' ? 'badge-urgent-pulse' : '' ?>" style="<?= $urgCss ?>"><?= e($urgLabel) ?></span>
                     <?php if (($ann['en_review_state'] ?? 'none') === 'pending'): ?>
-                    <!-- The English translation is held back. Linked, so the
-                         reviewer is one click from clearing it rather than
-                         having to go looking for the queue. -->
                     <a href="<?= e(route('admin/translations/' . (int) $ann['id'])) ?>"
                        class="status-badge d-inline-flex align-items-center gap-1 mt-1"
                        style="background:#fef3c7;color:#92400e;text-decoration:none;white-space:nowrap;"
@@ -280,21 +282,9 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
                     <?php endif; ?>
                 </td>
 
-                <!-- Which languages a resident can actually read this in.
-                     Shown because it is routinely incomplete without anything
-                     being broken: the free translation service has a daily
-                     allowance, so a post saved after it runs out is saved
-                     correctly with nothing attached. Silence there reads as
-                     success, and staff only found out when a resident told
-                     them. Manobo is usually ✗ — it needs either Anthropic
-                     credits or hand-typed fields. -->
+                <!-- Languages -->
                 <td style="white-space:nowrap;">
                     <?php
-                    /* The chips used to say ✓ or ✗ and stop there, which
-                       left a red MN meaning any of four different problems
-                       with four different fixes. They now carry the reason
-                       and a per-language Translate now button — see
-                       _language-badges.php. */
                     $lbRow       = $ann;
                     $lbType      = 'announcement';
                     $lbBodyField = 'body';
@@ -319,7 +309,7 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
                     <?php endif; ?>
                 </td>
 
-                <!-- Published date (or the moment it is queued for) -->
+                <!-- Published date -->
                 <td class="text-muted" style="font-size:.82rem;white-space:nowrap;">
                     <?php if ($annScheduled): ?>
                         <span style="color:#4338ca;font-weight:600;">
@@ -335,42 +325,30 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
                 <!-- Actions -->
                 <td style="text-align:right;padding-right:14px;">
                     <div class="btn-group-action">
+                        <a href="<?= e(route('announcements/' . $ann['slug'])) ?>"
+                           target="_blank"
+                           class="btn-action"
+                           title="View on site">
+                            <i class="bi bi-eye-fill"></i>
+                        </a>
                         <a href="<?= e(route('admin/announcements/' . (int) $ann['id'] . '/edit')) ?>"
                            class="btn-action"
                            title="<?= e(t('admin_announcements.edit_title')) ?>">
                             <i class="bi bi-pencil-fill"></i>
                         </a>
-                        <?php /* Straight to the SMS page with this post already
-                                 chosen — the preview and the cost are there, so
-                                 nothing is sent by pressing this. */ ?>
                         <a href="<?= e(route('admin/sms?post_type=announcement&post_id=' . (int) $ann['id'])) ?>"
                            class="btn-action"
                            title="<?= e(t('sms_post.from_post_row')) ?>">
                             <i class="bi bi-chat-dots-fill"></i>
                         </a>
-
-                        <!-- Retry the machine translation. Its own action
-                             rather than a re-save: re-saving the post would
-                             notify every resident again just to try a
-                             translation that failed because of a daily quota. -->
-                        <form method="post"
-                              action="<?= e(route('admin/announcements/' . (int) $ann['id'] . '/translate')) ?>"
-                              style="display:inline;">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <button type="submit" class="btn-action"
-                                    title="<?= e(t('admin_announcements.translate_title')) ?>">
-                                <i class="bi bi-translate"></i>
-                            </button>
-                        </form>
-                        <form method="post"
-                              action="<?= e(route('admin/announcements/' . (int) $ann['id'] . '/delete')) ?>"
-                              style="display:inline;"
-                              onsubmit="return confirm(<?= e(json_encode(t('admin_announcements.confirm_delete', ['title' => $ann['title']]))) ?>)">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <button type="submit" class="btn-action btn-action-danger" title="<?= e(t('admin_announcements.delete_title')) ?>">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
-                        </form>
+                        <?php if ($canDelete): ?>
+                        <button type="button"
+                                class="btn-action btn-action-danger"
+                                onclick="openDeleteAnnouncementModal(<?= (int) $ann['id'] ?>, '<?= e(addslashes($ann['title'])) ?>')"
+                                title="<?= e(t('admin_announcements.delete_title')) ?>">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
+                        <?php endif; ?>
                     </div>
                 </td>
             </tr>
@@ -379,15 +357,172 @@ if ($scheduled > 0): ?> &middot; <?= $scheduled ?> <?= e(strtolower(t('admin_ann
         </table>
     </div>
 </div>
+
+<!-- Cards View (Hidden by default, toggled via JS) -->
+<div id="announcementCardsView" class="row g-3 d-none">
+    <?php foreach ($announcements as $ann):
+        [$catLabel, $catCss] = $categoryMeta[$ann['category']] ?? [ucfirst($ann['category']), 'background:#f1f5f9;color:#475569;'];
+        [$urgLabel, $urgCss] = $urgencyMeta[$ann['urgency']]   ?? [ucfirst($ann['urgency']),  'background:#f1f5f9;color:#475569;'];
+        $annScheduled = \App\Models\Announcement::isScheduled($ann);
+        $statusCls = match(true) {
+            $annScheduled                  => 'status-draft',
+            $ann['status'] === 'published' => 'status-published',
+            $ann['status'] === 'archived'  => 'status-archived',
+            default                        => 'status-draft',
+        };
+        $excerpt = strip_tags(html_entity_decode($ann['body'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $excerpt = mb_strlen($excerpt) > 130 ? mb_substr($excerpt, 0, 130) . '…' : $excerpt;
+        $searchContent = strtolower($ann['title'] . ' ' . $excerpt . ' ' . $ann['category']);
+    ?>
+    <div class="col-md-6 col-lg-4 announcement-item-card" data-search="<?= e($searchContent) ?>">
+        <div class="admin-card h-100 d-flex flex-column p-0 overflow-hidden">
+            <!-- Card Image -->
+            <div style="height: 140px; background: #f8fafc; position: relative; overflow: hidden;" class="border-bottom">
+                <?php if (!empty($ann['cover_image_url'])): ?>
+                <img src="<?= e(asset($ann['cover_image_url'])) ?>" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                <?php else: ?>
+                <div class="d-flex align-items-center justify-content-center h-100 text-muted opacity-50">
+                    <i class="bi bi-megaphone" style="font-size: 2.5rem;"></i>
+                </div>
+                <?php endif; ?>
+                <div style="position: absolute; top: 10px; right: 10px;" class="d-flex gap-1">
+                    <span class="status-badge" style="<?= $catCss ?>"><?= e($catLabel) ?></span>
+                    <span class="status-badge <?= $ann['urgency'] === 'urgent' ? 'badge-urgent-pulse' : '' ?>" style="<?= $urgCss ?>"><?= e($urgLabel) ?></span>
+                </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="p-3 d-flex flex-column flex-grow-1">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted" style="font-size: .75rem;">
+                        ID #<?= (int) $ann['id'] ?> &middot; <?= e(date('M j, Y', strtotime($ann['created_at']))) ?>
+                    </span>
+                    <?php if ($annScheduled): ?>
+                    <span class="status-badge" style="background:#e0e7ff;color:#3730a3;"><i class="bi bi-clock"></i> Scheduled</span>
+                    <?php else: ?>
+                    <span class="status-badge <?= $statusCls ?>"><?= ucfirst(e($ann['status'])) ?></span>
+                    <?php endif; ?>
+                </div>
+
+                <h5 class="fw-bold text-dark mb-2 style-title" style="font-size: 1rem; line-height: 1.3;">
+                    <a href="<?= e(route('admin/announcements/' . (int) $ann['id'] . '/edit')) ?>" class="text-dark text-decoration-none">
+                        <?= e($ann['title']) ?>
+                    </a>
+                </h5>
+
+                <p class="text-muted small mb-3 flex-grow-1" style="line-height: 1.5; font-size: .82rem;">
+                    <?= e($excerpt) ?>
+                </p>
+
+                <!-- Footer / Action Buttons -->
+                <div class="pt-2 border-top d-flex align-items-center justify-content-between mt-auto">
+                    <a href="<?= e(route('announcements/' . $ann['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-eye"></i> View
+                    </a>
+                    <div class="d-flex gap-1">
+                        <a href="<?= e(route('admin/announcements/' . (int) $ann['id'] . '/edit')) ?>" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <?php if ($canDelete): ?>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="openDeleteAnnouncementModal(<?= (int) $ann['id'] ?>, '<?= e(addslashes($ann['title'])) ?>')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+</div>
+
 <?php endif; ?>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteAnnouncementModal" tabindex="-1" aria-labelledby="deleteAnnouncementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="deleteAnnouncementModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Delete Announcement?
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="text-muted mb-0" style="font-size: .92rem;">
+                    Are you sure you want to delete <strong id="deleteTargetTitle" class="text-dark">this announcement</strong>? This action cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-3 px-3" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteAnnouncementForm" method="post" action="">
+                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                    <button type="submit" class="btn btn-danger rounded-3 px-4 fw-semibold">Delete Announcement</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php
-/* One detail panel for the whole page — the language chips above open it.
-   Per-chip popovers would be sixty copies of this on a page of twenty
-   posts, and would clip inside the scrolling table. */
 $lbpRedirect = '/admin/announcements';
 require __DIR__ . '/../../shared/_language-badge-panel.php';
 ?>
+
+<script>
+function filterAnnouncements() {
+    const query = document.getElementById('announcementSearchInput').value.toLowerCase().trim();
+    
+    // Filter Table rows
+    const rows = document.querySelectorAll('.announcement-item-row');
+    rows.forEach(row => {
+        const text = row.getAttribute('data-search') || '';
+        if (text.includes(query)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    // Filter Cards
+    const cards = document.querySelectorAll('.announcement-item-card');
+    cards.forEach(card => {
+        const text = card.getAttribute('data-search') || '';
+        if (text.includes(query)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function toggleView(mode) {
+    const tableView = document.getElementById('announcementTableView');
+    const cardsView = document.getElementById('announcementCardsView');
+    const btnTable = document.getElementById('btnViewTable');
+    const btnCards = document.getElementById('btnViewCards');
+
+    if (mode === 'cards') {
+        if (tableView) tableView.classList.add('d-none');
+        if (cardsView) cardsView.classList.remove('d-none');
+        btnCards.classList.add('active');
+        btnTable.classList.remove('active');
+    } else {
+        if (cardsView) cardsView.classList.add('d-none');
+        if (tableView) tableView.classList.remove('d-none');
+        btnTable.classList.add('active');
+        btnCards.classList.remove('active');
+    }
+}
+
+function openDeleteAnnouncementModal(id, title) {
+    document.getElementById('deleteTargetTitle').innerText = title;
+    const form = document.getElementById('deleteAnnouncementForm');
+    form.action = "<?= e(route('admin/announcements/')) ?>" + id + "/delete";
+    const modal = new bootstrap.Modal(document.getElementById('deleteAnnouncementModal'));
+    modal.show();
+}
+</script>
 
 <?php
 $content   = ob_get_clean();

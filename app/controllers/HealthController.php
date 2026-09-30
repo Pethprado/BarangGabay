@@ -27,7 +27,7 @@ class HealthController
             'app'       => 'ok',
             'php'       => PHP_VERSION,
             'timestamp' => date('c'),
-            'version'   => '1.6.0-backup-fix',
+            'version'   => '1.7.0-content-fix',
         ];
 
         try {
