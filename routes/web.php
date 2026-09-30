@@ -79,6 +79,14 @@ return [
 ['GET',  '/admin/translation-health',  'TranslationHealthController@index',    ['auth', 'role:admin,staff']],
 ['POST', '/admin/retranslate-all',     'TranslationHealthController@retryAll', ['auth', 'role:admin,staff']],
 
+// Voice Training & Voice Dataset Management
+['GET',  '/admin/voice-training',           'VoiceTrainingController@index',         ['auth', 'role:admin,superadmin']],
+['POST', '/admin/voice-training/samples',   'VoiceTrainingController@storeSample',   ['auth', 'role:admin,superadmin']],
+['POST', '/admin/voice-training/update',    'VoiceTrainingController@updateSample',  ['auth', 'role:admin,superadmin']],
+['POST', '/admin/voice-training/profile',   'VoiceTrainingController@updateProfile', ['auth', 'role:admin,superadmin']],
+['POST', '/admin/voice-training/test',      'VoiceTrainingController@testVoice',     ['auth', 'role:admin,superadmin']],
+['GET',  '/admin/voice-training/export',    'VoiceTrainingController@exportDataset', ['auth', 'role:admin,superadmin']],
+
 ['GET',  '/admin/staff',        'ResidentController@staffIndex',  ['auth', 'role:admin,superadmin']],
 ['GET',  '/admin/staff/create', 'ResidentController@createStaff', ['auth', 'role:admin,superadmin']],
     ['POST', '/admin/staff',        'ResidentController@storeStaff',  ['auth', 'role:admin,superadmin']],

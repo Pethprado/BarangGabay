@@ -189,7 +189,14 @@ class PostAudioService
             }
 
             $ai = $stored[$locale . ':' . PostAudio::SOURCE_AI] ?? null;
-            if ($ai !== null && $ai['text_hash'] === $script['hash']) {
+            $datasetMatch = \App\Models\VoiceSample::findMatchingSample($script['title'] ?? '', $locale);
+
+            if ($datasetMatch && !empty($datasetMatch['audio_url'])) {
+                $track['source']    = 'dataset';
+                $track['audioUrl']  = asset($datasetMatch['audio_url']);
+                $track['voiceName'] = $datasetMatch['speaker_label'] ?: 'Community Recording';
+                $track['stale']     = false;
+            } elseif ($ai !== null && $ai['text_hash'] === $script['hash']) {
                 $track['source']    = PostAudio::SOURCE_AI;
                 $track['audioUrl']  = asset((string) $ai['audio_path']);
                 $track['voiceName'] = $ai['voice_name'] ?? null;

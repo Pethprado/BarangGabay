@@ -248,6 +248,11 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
                 <i class="bi bi-translate nav-icon"></i>
                 <span><?= e(t('admin_nav.manobo')) ?></span>
             </a>
+            <a href="<?= e(route('admin/voice-training')) ?>"
+               class="sidebar-link <?= $isActive('/admin/voice-training', false) ?>">
+                <i class="bi bi-mic nav-icon"></i>
+                <span>Voice Training</span>
+            </a>
             <?php endif; ?>
 
             <?php endif; ?>
