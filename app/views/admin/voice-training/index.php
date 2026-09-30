@@ -568,7 +568,7 @@ ob_start();
                                         <div class="d-inline-flex gap-1.5">
                                             <?php if ($s['status'] !== 'APPROVED'): ?>
                                                 <form method="post" action="<?= e(route('admin/voice-training/update')) ?>" class="d-inline">
-                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                                     <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
                                                     <input type="hidden" name="action" value="approve">
                                                     <button type="submit" class="btn btn-xs btn-emerald text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg font-bold px-2.5 py-1 shadow-sm" title="Approve Sample">
@@ -577,7 +577,7 @@ ob_start();
                                                 </form>
                                             <?php endif; ?>
                                             <form method="post" action="<?= e(route('admin/voice-training/update')) ?>" class="d-inline" onsubmit="return confirm('Sigurado ka bang gustong idelete ang voice sample na ito?');">
-                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                                 <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
                                                 <input type="hidden" name="action" value="delete">
                                                 <button type="submit" class="btn btn-xs btn-outline-danger rounded-lg px-2 py-1" title="Delete Sample">
@@ -623,14 +623,14 @@ ob_start();
                                         <div class="d-flex gap-1">
                                             <?php if ($s['status'] !== 'APPROVED'): ?>
                                                 <form method="post" action="<?= e(route('admin/voice-training/update')) ?>" class="d-inline">
-                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                                     <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
                                                     <input type="hidden" name="action" value="approve">
                                                     <button type="submit" class="btn btn-xs btn-emerald text-white bg-emerald-600 rounded-md font-bold px-2 py-1">Approve</button>
                                                 </form>
                                             <?php endif; ?>
                                             <form method="post" action="<?= e(route('admin/voice-training/update')) ?>" class="d-inline" onsubmit="return confirm('Sigurado ka bang gustong idelete ang voice sample na ito?');">
-                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                                 <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
                                                 <input type="hidden" name="action" value="delete">
                                                 <button type="submit" class="btn btn-xs btn-outline-danger rounded-md px-2 py-1"><i class="bi bi-trash"></i></button>
@@ -673,7 +673,7 @@ ob_start();
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="addVoiceSampleForm" method="post" action="<?= e(route('admin/voice-training/samples')) ?>" enctype="multipart/form-data">
-                <?= csrf_field() ?>
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <div class="modal-body p-4">
                     <div class="row g-3">
                         <div class="col-12 col-md-4">
@@ -803,7 +803,7 @@ ob_start();
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="<?= e(route('admin/voice-training/profile')) ?>">
-                <?= csrf_field() ?>
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <input type="hidden" name="action" value="create">
                 <input type="hidden" name="language" value="<?= $langKey ?>">
                 <input type="hidden" name="is_active" value="1">
