@@ -7,7 +7,7 @@ use App\Models\SmsLog;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\PostSms;
-use App\Services\SemaphoreSmsService;
+use App\Services\OneWaySmsService;
 
 /**
  * Admin SMS management — send, broadcast, view logs, check balance.
@@ -16,11 +16,11 @@ use App\Services\SemaphoreSmsService;
  */
 class SmsController
 {
-    private SemaphoreSmsService $sms;
+    private OneWaySmsService $sms;
 
     public function __construct()
     {
-        $this->sms = new SemaphoreSmsService();
+        $this->sms = new OneWaySmsService();
     }
 
     // ── Pages ─────────────────────────────────────────────────────────────

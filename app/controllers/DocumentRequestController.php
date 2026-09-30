@@ -403,10 +403,10 @@ class DocumentRequestController
     // ── Internals ────────────────────────────────────────────────────────
 
     /**
-     * Notify resident via in-app notification and SMS tailored to delivery method.
+     * Notify resident via in-app notification and SMS tailored to delivery method and status.
      *
      * @param array<string,mixed> $request The request row.
-     * @param string $to The new status.
+     * @param string $to The new status ('processing', 'ready', 'released', 'rejected').
      * @param string $note Staff note.
      */
     private function tellResident(array $request, string $to, string $note): void
@@ -442,39 +442,64 @@ class DocumentRequestController
             error_log('[DocumentRequestController] notify failed for #' . $request['id'] . ': ' . $e->getMessage());
         }
 
-        if ($to !== 'ready') {
-            return;
+        // Fetch phone number from request or user profile
+        $phone = trim((string) ($request['phone'] ?? ''));
+        if ($phone === '') {
+            try {
+                $user = \App\Models\User::find($userId);
+                $phone = trim((string) ($user['phone'] ?? ''));
+            } catch (\Throwable) {}
         }
 
-        $phone = trim((string) ($request['phone'] ?? ''));
         if ($phone === '') {
             return;
         }
 
-        // Tailor SMS message
-        if ($deliveryMethod === 'digital') {
+        // Tailor concise English SMS message per status
+        $smsMessage = null;
+
+        if ($to === 'processing') {
             $smsMessage = sprintf(
-                '[BarangGabay] Handa na ang inyong digital soft copy para sa %s (%s). Maaari na itong i-download at i-print mula sa inyong account. - Brgy. Bayogo, Madrid',
+                'BARANGGABAY: Your %s request %s is being prepared.',
                 $label,
                 $reference
             );
-        } else {
+        } elseif ($to === 'ready') {
+            if ($deliveryMethod === 'digital') {
+                $storageService = new DocumentStorageService();
+                $hasFile = ($storageService->getFile((int) $request['id']) !== null);
+                if ($hasFile) {
+                    $smsMessage = sprintf(
+                        'BARANGGABAY: Your %s request %s is ready. Log in to BarangGabay to download your digital copy.',
+                        $label,
+                        $reference
+                    );
+                }
+            } else {
+                $smsMessage = sprintf(
+                    'BARANGGABAY: Your %s request %s is ready for pickup at the Barangay Office.',
+                    $label,
+                    $reference
+                );
+            }
+        } elseif ($to === 'rejected') {
             $smsMessage = sprintf(
-                '[BarangGabay] Handa na ang inyong %s (%s). Maaari na itong kunin sa Barangay Hall. - Brgy. Bayogo, Madrid',
-                $label,
+                'BARANGGABAY: Your document request %s could not be approved. Please log in to BarangGabay or contact the Barangay Office for details.',
                 $reference
             );
         }
 
-        try {
-            (new SemaphoreSmsService())->send(
-                $phone,
-                $smsMessage,
-                'document_request',
-                (int) $request['id']
-            );
-        } catch (\Throwable $e) {
-            error_log('[DocumentRequestController] SMS failed for #' . $request['id'] . ': ' . $e->getMessage());
+        if ($smsMessage !== null && $smsMessage !== '') {
+            try {
+                (new \App\Services\OneWaySmsService())->send(
+                    $phone,
+                    $smsMessage,
+                    'document_request',
+                    (int) $request['id']
+                );
+            } catch (\Throwable $e) {
+                error_log('[DocumentRequestController] OneWaySMS failed for #' . $request['id'] . ': ' . $e->getMessage());
+            }
         }
     }
 
