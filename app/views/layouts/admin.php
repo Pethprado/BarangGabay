@@ -116,49 +116,19 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
             <!-- ── Content ──────────────────────────────── -->
             <p class="nav-section-label"><?= e(t('admin_nav.content')) ?></p>
 
-            <!-- Announcements accordion -->
-            <div x-data="{ open: <?= $announcementsOpen ?> }">
-                <button @click="open = !open"
-                        class="sidebar-link sidebar-accordion <?= $isActive('/admin/announcements', false) ?>"
-                        :aria-expanded="open">
-                    <i class="bi bi-megaphone nav-icon"></i>
-                    <span><?= e(t('admin_nav.announcements')) ?></span>
-                    <i class="bi bi-chevron-down accordion-arrow ms-auto"
-                       :class="{ rotated: open }"></i>
-                </button>
-                <div class="sidebar-sub" x-show="open" x-transition>
-                    <a href="<?= e(route('admin/announcements')) ?>"
-                       class="sidebar-sub-link <?= $isActive('/admin/announcements', true) ?>">
-                        <i class="bi bi-list-ul"></i> <?= e(t('admin_nav.all_announcements')) ?>
-                    </a>
-                    <a href="<?= e(route('admin/announcements/create')) ?>"
-                       class="sidebar-sub-link <?= $isActive('/admin/announcements/create', true) ?>">
-                        <i class="bi bi-plus-circle"></i> <?= e(t('admin_nav.create_new')) ?>
-                    </a>
-                </div>
-            </div>
+            <!-- Announcements -->
+            <a href="<?= e(route('admin/announcements')) ?>"
+               class="sidebar-link <?= $isActive('/admin/announcements', false) ?>">
+                <i class="bi bi-megaphone nav-icon"></i>
+                <span><?= e(t('admin_nav.announcements')) ?></span>
+            </a>
 
-            <!-- Events accordion -->
-            <div x-data="{ open: <?= $eventsOpen ?> }">
-                <button @click="open = !open"
-                        class="sidebar-link sidebar-accordion <?= $isActive('/admin/events', false) ?>"
-                        :aria-expanded="open">
-                    <i class="bi bi-calendar-event nav-icon"></i>
-                    <span><?= e(t('admin_nav.events')) ?></span>
-                    <i class="bi bi-chevron-down accordion-arrow ms-auto"
-                       :class="{ rotated: open }"></i>
-                </button>
-                <div class="sidebar-sub" x-show="open" x-transition>
-                    <a href="<?= e(route('admin/events')) ?>"
-                       class="sidebar-sub-link <?= $isActive('/admin/events', true) ?>">
-                        <i class="bi bi-list-ul"></i> <?= e(t('admin_nav.all_events')) ?>
-                    </a>
-                    <a href="<?= e(route('admin/events/create')) ?>"
-                       class="sidebar-sub-link <?= $isActive('/admin/events/create', true) ?>">
-                        <i class="bi bi-plus-circle"></i> <?= e(t('admin_nav.create_new')) ?>
-                    </a>
-                </div>
-            </div>
+            <!-- Events -->
+            <a href="<?= e(route('admin/events')) ?>"
+               class="sidebar-link <?= $isActive('/admin/events', false) ?>">
+                <i class="bi bi-calendar-event nav-icon"></i>
+                <span><?= e(t('admin_nav.events')) ?></span>
+            </a>
 
             <!-- Ordinances -->
             <a href="<?= e(route('admin/ordinances')) ?>"
