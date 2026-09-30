@@ -4,9 +4,10 @@
  * BARANGGABAY Admin Interface
  */
 $title = $title ?? 'Voice Training & AI Dataset Hub';
+ob_start();
 ?>
 
-<div class="container-fluid px-4 py-4" id="voice-training-app">
+<div class="w-100" id="voice-training-app">
     <!-- ── 1. Page Header ─────────────────────────────────────────────────── -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
@@ -41,20 +42,6 @@ $title = $title ?? 'Voice Training & AI Dataset Hub';
             </button>
         </div>
     </div>
-
-    <!-- Flash Messages -->
-    <?php if ($msg = flash('success')): ?>
-        <div class="alert alert-success alert-dismissible fade show rounded-xl shadow-sm mb-4 border-0 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i><?= e($msg) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-    <?php if ($err = flash('error')): ?>
-        <div class="alert alert-danger alert-dismissible fade show rounded-xl shadow-sm mb-4 border-0 bg-rose-500/10 text-rose-700 dark:text-rose-300" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i><?= e($err) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
 
     <!-- ── 2. Top Summary Metric Cards Bar ───────────────────────────────── -->
     <?php
@@ -425,12 +412,15 @@ $title = $title ?? 'Voice Training & AI Dataset Hub';
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($missingPronunciations as $m): ?>
+                                    <?php foreach ($missingPronunciations as $m): 
+                                        $mWord = $m['manobo'] ?? $m['manobo_word'] ?? '';
+                                        $mTranslation = $m['tagalog'] ?? $m['tagalog_word'] ?? $m['english'] ?? $m['english_word'] ?? '';
+                                    ?>
                                         <tr>
-                                            <td class="ps-2 font-bold text-slate-800 dark:text-slate-100"><?= e($m['manobo_word']) ?></td>
-                                            <td class="text-slate-500 dark:text-slate-400"><?= e($m['tagalog_word'] ?: $m['english_word']) ?></td>
+                                            <td class="ps-2 font-bold text-slate-800 dark:text-slate-100"><?= e($mWord) ?></td>
+                                            <td class="text-slate-500 dark:text-slate-400"><?= e($mTranslation) ?></td>
                                             <td class="text-end pe-2">
-                                                <button type="button" class="btn btn-xs btn-amber text-white bg-amber-500 hover:bg-amber-600 rounded-lg font-bold px-2.5 py-1 shadow-sm" onclick="quickRecordForWord(<?= (int)$m['id'] ?>, '<?= e(addslashes($m['manobo_word'])) ?>')">
+                                                <button type="button" class="btn btn-xs btn-amber text-white bg-amber-500 hover:bg-amber-600 rounded-lg font-bold px-2.5 py-1 shadow-sm" onclick="quickRecordForWord(<?= (int)$m['id'] ?>, '<?= e(addslashes($mWord)) ?>')">
                                                     <i class="bi bi-mic-fill me-1"></i> Record
                                                 </button>
                                             </td>
@@ -519,7 +509,9 @@ $title = $title ?? 'Voice Training & AI Dataset Hub';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($samples as $s): ?>
+                            <?php foreach ($samples as $s): 
+                                $sManobo = $s['manobo'] ?? $s['manobo_word'] ?? '';
+                            ?>
                                 <tr>
                                     <td class="ps-4 font-bold text-slate-800 dark:text-slate-100">
                                         <?= e($s['text']) ?>
@@ -553,9 +545,9 @@ $title = $title ?? 'Voice Training & AI Dataset Hub';
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-xs">
-                                        <?php if (!empty($s['manobo_word'])): ?>
+                                        <?php if (!empty($sManobo)): ?>
                                             <span class="badge bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-semibold px-2 py-1 rounded-md">
-                                                <i class="bi bi-book me-1"></i><?= e($s['manobo_word']) ?>
+                                                <i class="bi bi-book me-1"></i><?= e($sManobo) ?>
                                             </span>
                                         <?php else: ?>
                                             <span class="text-slate-400">—</span>
@@ -700,8 +692,11 @@ $title = $title ?? 'Voice Training & AI Dataset Hub';
                             <label class="form-label text-xs font-bold text-slate-700 dark:text-slate-300">Link to Dictionary Entry (Optional)</label>
                             <select name="dictionary_entry_id" id="sample_dictionary_entry_id" class="form-select form-select-sm rounded-xl font-semibold py-2">
                                 <option value="">-- Select Manobo Word --</option>
-                                <?php foreach ($dictionaryWords as $dw): ?>
-                                    <option value="<?= (int)$dw['id'] ?>"><?= e($dw['manobo_word']) ?> (<?= e($dw['tagalog_word'] ?: $dw['english_word']) ?>)</option>
+                                <?php foreach ($dictionaryWords as $dw): 
+                                    $dwHead = $dw['manobo'] ?? $dw['manobo_word'] ?? '';
+                                    $dwTrans = $dw['tagalog'] ?? $dw['tagalog_word'] ?? $dw['english'] ?? $dw['english_word'] ?? '';
+                                ?>
+                                    <option value="<?= (int)$dw['id'] ?>"><?= e($dwHead) ?> (<?= e($dwTrans) ?>)</option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1036,3 +1031,8 @@ function runVoiceTest(e) {
     });
 }
 </script>
+
+<?php
+$content   = ob_get_clean();
+$pageTitle = 'Voice Training & AI Dataset Hub';
+require __DIR__ . '/../../layouts/admin.php';
