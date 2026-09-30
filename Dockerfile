@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     zip \
     unzip \
+    postgresql-client \
+    default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure and install PHP extensions (includes pdo_pgsql for Render PostgreSQL)

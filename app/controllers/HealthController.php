@@ -27,7 +27,7 @@ class HealthController
             'app'       => 'ok',
             'php'       => PHP_VERSION,
             'timestamp' => date('c'),
-            'version'   => '1.5.0-onewaysms-fix',
+            'version'   => '1.6.0-backup-fix',
         ];
 
         try {

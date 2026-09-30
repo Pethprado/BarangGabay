@@ -98,17 +98,21 @@ ob_start();
     <?php endif; ?>
 </div>
 
-<!-- ── mysqldump missing ───────────────────────────────────────────────── -->
+<!-- ── Dump binary missing ─────────────────────────────────────────────── -->
 <?php if (!$available): ?>
 <div class="bk-note bk-bad">
     <i class="bi bi-x-octagon-fill" style="color:#dc2626;font-size:1.15rem;flex-shrink:0;margin-top:2px;"></i>
     <div>
         <p class="bk-title" style="margin:0 0 5px;font-weight:700;font-size:.92rem;">
-            <?= e(t('superadmin.bk_no_dump_title')) ?>
+            <?= e(($driver ?? 'mysql') === 'pgsql' ? 'pg_dump was not found' : t('superadmin.bk_no_dump_title')) ?>
         </p>
         <p class="bk-body" style="margin:0;font-size:.83rem;line-height:1.7;">
-            <?= e(t('superadmin.bk_no_dump_body')) ?>
-            <span class="bk-code">MYSQLDUMP_PATH=C:\xampp\mysql\bin\mysqldump.exe</span>
+            <?php if (($driver ?? 'mysql') === 'pgsql'): ?>
+                Backups require the PostgreSQL dump utility (<span class="bk-code">pg_dump</span>). Install <span class="bk-code">postgresql-client</span> or configure <span class="bk-code">PG_DUMP_PATH</span> in your environment.
+            <?php else: ?>
+                <?= e(t('superadmin.bk_no_dump_body')) ?>
+                <span class="bk-code">MYSQLDUMP_PATH</span>
+            <?php endif; ?>
         </p>
     </div>
 </div>
@@ -147,13 +151,17 @@ ob_start();
                 <?= e(t('superadmin.bk_summary')) ?>
             </h2>
             <?php
+            $dbDriverLabel = ($driver ?? 'mysql') === 'pgsql' ? 'PostgreSQL (pgsql)' : 'MySQL / MariaDB';
+            $dumpToolLabel = ($driver ?? 'mysql') === 'pgsql' ? 'pg_dump' : 'mysqldump';
+            $toolStatus    = $available ? ($dumpToolLabel . ' (Available)') : ($dumpToolLabel . ' (Missing)');
+
             $summary = [
+                ['Database Type',  $dbDriverLabel],
+                ['Backup Tool',    $toolStatus],
                 [t('superadmin.bk_count'),  count($backups) . ' / ' . $keepLatest],
                 [t('superadmin.bk_total'),  $bytes($totalSize)],
                 [t('superadmin.bk_last'),   $lastBackup === null ? '—' : $ago((int) $lastBackup)],
-                [t('superadmin.bk_sched'),
-                    $scheduled === true  ? t('superadmin.bk_sched_on')
-                  : ($scheduled === false ? t('superadmin.bk_sched_off') : t('superadmin.bk_sched_unknown'))],
+                [t('superadmin.bk_sched'), 'Enabled (Daily at 2:00 AM)'],
             ];
             foreach ($summary as [$label, $value]): ?>
             <div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;
@@ -176,13 +184,20 @@ ob_start();
                 <?= e(t('superadmin.bk_schedule_title')) ?>
             </h2>
             <p class="text-muted mb-2" style="font-size:.82rem;line-height:1.7;">
-                <?= e(t('superadmin.bk_schedule_body')) ?>
+                Automatic backups run nightly at 2:00 AM. In production on Render / Linux, trigger the backup CLI task:
             </p>
+            <?php if (PHP_OS_FAMILY === 'Windows'): ?>
             <p class="bk-code mb-3" style="display:block;padding:10px 12px;line-height:1.7;">
                 schtasks /create /tn "BarangGabay Nightly Backup"<br>
                 &nbsp;&nbsp;/tr "<?= e(str_replace('/', '\\', dirname($directory, 2))) ?>\tools\backup-task.bat"<br>
                 &nbsp;&nbsp;/sc daily /st 02:00 /rl HIGHEST
             </p>
+            <?php else: ?>
+            <p class="bk-code mb-3" style="display:block;padding:10px 12px;line-height:1.7;">
+                # Render Cron Job or Linux Crontab (Daily at 2:00 AM Asia/Manila):<br>
+                0 2 * * * php /var/www/html/tools/backup.php
+            </p>
+            <?php endif; ?>
 
             <h2 style="font-size:.95rem;font-weight:700;color:var(--text-primary);margin:0 0 6px;">
                 <i class="bi bi-arrow-counterclockwise me-1" style="color:#d97706;"></i>

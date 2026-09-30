@@ -6,19 +6,10 @@ namespace App\Services;
 use RuntimeException;
 
 /**
- * Database backups via mysqldump.
+ * Database Backup Service supporting both PostgreSQL (pg_dump) and MySQL/MariaDB (mysqldump).
  *
- * spatie/laravel-backup was the obvious choice but it is Laravel-only — it
- * depends on the framework's filesystem, console and notification layers,
- * none of which exist in this project. This wraps mysqldump directly instead.
- *
- * Backups are gzipped and written to storage/backups/, which sits OUTSIDE the
- * webroot: a dump contains every user row including password hashes, so it
- * must never be reachable by URL. Downloads are streamed by the controller
- * after a role check.
- *
- * Credentials are passed through a temporary --defaults-extra-file rather
- * than on the command line, where they would be visible in the process list.
+ * Production-safe for Render Linux deployments as well as local XAMPP/Windows environments.
+ * Backups are gzipped and saved outside the webroot in storage/backups/ (or persistent disk).
  */
 final class BackupService
 {
@@ -35,63 +26,217 @@ final class BackupService
 
     public function __construct(?string $directory = null)
     {
-        $this->directory = $directory ?? \dirname(__DIR__, 2) . '/storage/backups';
+        // Detect persistent disk or fallback to project storage directory
+        if ($directory !== null) {
+            $this->directory = $directory;
+        } else {
+            $renderDisk = (string) env('RENDER_DISK_PATH', '');
+            if ($renderDisk !== '' && is_dir($renderDisk)) {
+                $this->directory = rtrim($renderDisk, '/') . '/backups';
+            } else {
+                $this->directory = \dirname(__DIR__, 2) . '/storage/backups';
+            }
+        }
 
         if (!is_dir($this->directory)) {
             @mkdir($this->directory, 0775, true);
         }
     }
 
-    // ── Public API ───────────────────────────────────────────────────
+    /** Detect active PDO database driver ('pgsql' or 'mysql'). */
+    public function getDriver(): string
+    {
+        try {
+            $driver = db()->getAttribute(\PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'pgsql') {
+                return 'pgsql';
+            }
+        } catch (\Throwable) {}
+
+        $dbUrl = (string) (env('DATABASE_URL') ?: env('MYSQL_URL', ''));
+        if ($dbUrl !== '') {
+            $scheme = strtolower((string) parse_url($dbUrl, PHP_URL_SCHEME));
+            if (in_array($scheme, ['postgres', 'postgresql', 'pgsql'], true)) {
+                return 'pgsql';
+            }
+        }
+
+        return 'mysql';
+    }
 
     /**
-     * Run mysqldump and write a gzipped backup.
+     * Locate the appropriate dump binary (pg_dump or mysqldump).
+     */
+    public function getBinaryPath(): string
+    {
+        $driver = $this->getDriver();
+
+        if ($driver === 'pgsql') {
+            $configured = (string) env('PG_DUMP_PATH', '');
+            if ($configured !== '') {
+                if (!is_file($configured)) {
+                    throw new RuntimeException('PG_DUMP_PATH is set but file does not exist: ' . $configured);
+                }
+                return $configured;
+            }
+
+            $candidates = [
+                '/usr/bin/pg_dump',
+                '/usr/local/bin/pg_dump',
+                '/usr/lib/postgresql/16/bin/pg_dump',
+                '/usr/lib/postgresql/15/bin/pg_dump',
+                '/usr/lib/postgresql/14/bin/pg_dump',
+                '/opt/homebrew/bin/pg_dump',
+                'C:\\Program Files\\PostgreSQL\\16\\bin\\pg_dump.exe',
+                'C:\\Program Files\\PostgreSQL\\15\\bin\\pg_dump.exe',
+            ];
+            foreach ($candidates as $candidate) {
+                if (is_file($candidate)) {
+                    return $candidate;
+                }
+            }
+
+            $which = stripos(PHP_OS_FAMILY, 'win') === 0 ? 'where pg_dump' : 'command -v pg_dump';
+            $found = @shell_exec($which);
+            if (is_string($found) && trim($found) !== '') {
+                $first = trim(strtok($found, "\r\n") ?: '');
+                if ($first !== '' && (is_file($first) || stripos(PHP_OS_FAMILY, 'win') !== 0)) {
+                    return $first;
+                }
+            }
+
+            throw new RuntimeException('pg_dump was not found. Install postgresql-client or configure PG_DUMP_PATH in environment.');
+        } else {
+            $configured = (string) env('MYSQLDUMP_PATH', '');
+            if ($configured !== '') {
+                if (!is_file($configured)) {
+                    throw new RuntimeException('MYSQLDUMP_PATH is set but file does not exist: ' . $configured);
+                }
+                return $configured;
+            }
+
+            $candidates = [
+                'C:\\xampp\\mysql\\bin\\mysqldump.exe',
+                '/usr/bin/mysqldump',
+                '/usr/local/bin/mysqldump',
+                '/opt/homebrew/bin/mysqldump',
+            ];
+            foreach ($candidates as $candidate) {
+                if (is_file($candidate)) {
+                    return $candidate;
+                }
+            }
+
+            $which = stripos(PHP_OS_FAMILY, 'win') === 0 ? 'where mysqldump' : 'command -v mysqldump';
+            $found = @shell_exec($which);
+            if (is_string($found) && trim($found) !== '') {
+                $first = trim(strtok($found, "\r\n") ?: '');
+                if ($first !== '' && (is_file($first) || stripos(PHP_OS_FAMILY, 'win') !== 0)) {
+                    return $first;
+                }
+            }
+
+            throw new RuntimeException('mysqldump was not found. Install default-mysql-client or configure MYSQLDUMP_PATH in environment.');
+        }
+    }
+
+    public function isAvailable(): bool
+    {
+        try {
+            $this->getBinaryPath();
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Creates a gzipped database dump.
      *
-     * @return array{filename:string, path:string, size:int, duration:float}
-     * @throws RuntimeException on any failure, with mysqldump's own stderr.
+     * @return array{filename:string, path:string, size:int, duration:float, driver:string}
      */
     public function create(): array
     {
         $started = microtime(true);
 
         if (!is_writable($this->directory)) {
-            throw new RuntimeException('Backup directory is not writable: ' . $this->directory);
+            throw new RuntimeException('Backup storage directory is not writable: ' . $this->directory);
         }
 
-        $binary = $this->mysqldumpPath();
+        $driver   = $this->getDriver();
+        $binary   = $this->getBinaryPath();
         $filename = sprintf('baranggabay_%s.sql.gz', date('Y-m-d_His'));
         $target   = $this->directory . '/' . $filename;
         $rawFile  = $target . '.tmp.sql';
 
-        $configFile = $this->writeCredentialsFile();
+        $dbParams = $this->getDatabaseCredentials();
 
         try {
-            $command = sprintf(
-                '%s --defaults-extra-file=%s --single-transaction --quick --routines '
-                . '--default-character-set=utf8mb4 --result-file=%s %s 2>&1',
-                escapeshellarg($binary),
-                escapeshellarg($configFile),
-                escapeshellarg($rawFile),
-                escapeshellarg((string) env('DB_NAME', 'baranggabay'))
-            );
-
-            exec($command, $output, $exitCode);
-
-            if ($exitCode !== 0) {
-                @unlink($rawFile);
-                throw new RuntimeException(
-                    'mysqldump failed (exit ' . $exitCode . '): ' . trim(implode("\n", $output))
+            if ($driver === 'pgsql') {
+                $command = sprintf(
+                    '%s -h %s -p %s -U %s -d %s --clean --if-exists --no-owner --no-privileges --file=%s 2>&1',
+                    escapeshellcmd($binary),
+                    escapeshellarg($dbParams['host']),
+                    escapeshellarg($dbParams['port']),
+                    escapeshellarg($dbParams['user']),
+                    escapeshellarg($dbParams['name']),
+                    escapeshellarg($rawFile)
                 );
+
+                $processEnv = array_merge($_ENV, ['PGPASSWORD' => $dbParams['pass']]);
+                $descriptors = [
+                    0 => ['pipe', 'r'],
+                    1 => ['pipe', 'w'],
+                    2 => ['pipe', 'w'],
+                ];
+
+                $process = proc_open($command, $descriptors, $pipes, null, $processEnv);
+                if (!is_resource($process)) {
+                    throw new RuntimeException('Failed to spawn pg_dump process.');
+                }
+
+                fclose($pipes[0]);
+                $stdout = stream_get_contents($pipes[1]);
+                $stderr = stream_get_contents($pipes[2]);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+
+                $exitCode = proc_close($process);
+
+                if ($exitCode !== 0) {
+                    @unlink($rawFile);
+                    throw new RuntimeException('pg_dump failed (exit ' . $exitCode . '): ' . trim($stderr . ' ' . $stdout));
+                }
+            } else {
+                $configFile = $this->writeMysqlCredentialsFile($dbParams);
+                try {
+                    $command = sprintf(
+                        '%s --defaults-extra-file=%s --single-transaction --quick --routines --default-character-set=utf8mb4 --result-file=%s %s 2>&1',
+                        escapeshellcmd($binary),
+                        escapeshellarg($configFile),
+                        escapeshellarg($rawFile),
+                        escapeshellarg($dbParams['name'])
+                    );
+
+                    exec($command, $output, $exitCode);
+
+                    if ($exitCode !== 0) {
+                        @unlink($rawFile);
+                        throw new RuntimeException('mysqldump failed (exit ' . $exitCode . '): ' . trim(implode("\n", $output)));
+                    }
+                } finally {
+                    @unlink($configFile);
+                }
             }
+
             if (!is_file($rawFile) || filesize($rawFile) === 0) {
                 @unlink($rawFile);
-                throw new RuntimeException('mysqldump produced an empty file.');
+                throw new RuntimeException('Dump tool produced an empty backup file.');
             }
 
             $this->gzipFile($rawFile, $target);
         } finally {
             @unlink($rawFile);
-            @unlink($configFile);
         }
 
         return [
@@ -99,22 +244,17 @@ final class BackupService
             'path'     => $target,
             'size'     => (int) filesize($target),
             'duration' => round(microtime(true) - $started, 2),
+            'driver'   => $driver,
         ];
     }
 
-    /**
-     * Existing backups, newest first.
-     *
-     * @return list<array{filename:string, size:int, created_at:int}>
-     */
     public function all(): array
     {
         $backups = [];
-
         foreach ((array) glob($this->directory . '/*.sql.gz') as $path) {
             $name = basename((string) $path);
             if (!preg_match(self::FILENAME_PATTERN, $name)) {
-                continue;   // ignore anything not written by this service
+                continue;
             }
             $backups[] = [
                 'filename'   => $name,
@@ -122,17 +262,10 @@ final class BackupService
                 'created_at' => (int) filemtime((string) $path),
             ];
         }
-
         usort($backups, static fn (array $a, array $b): int => $b['created_at'] <=> $a['created_at']);
-
         return $backups;
     }
 
-    /**
-     * Absolute path for a backup filename, or null if the name is not a
-     * legitimate backup. This is the only place a user-supplied filename is
-     * turned into a path — the pattern check blocks traversal outright.
-     */
     public function pathFor(string $filename): ?string
     {
         $filename = basename($filename);
@@ -144,7 +277,6 @@ final class BackupService
         $real = realpath($path);
         $base = realpath($this->directory);
 
-        // Belt and braces: the resolved path must still sit inside the folder.
         if ($real === false || $base === false || !str_starts_with($real, $base)) {
             return null;
         }
@@ -152,15 +284,12 @@ final class BackupService
         return $real;
     }
 
-    /** Delete one backup. Returns false if the name was not a valid backup. */
     public function delete(string $filename): bool
     {
         $path = $this->pathFor($filename);
-
         return $path !== null && @unlink($path);
     }
 
-    /** Delete all but the newest KEEP_LATEST backups. Returns how many went. */
     public function prune(int $keep = self::KEEP_LATEST): int
     {
         $removed = 0;
@@ -169,27 +298,21 @@ final class BackupService
                 $removed++;
             }
         }
-
         return $removed;
     }
 
-    /** Unix timestamp of the newest backup, or null if there are none. */
     public function lastBackupAt(): ?int
     {
         $all = $this->all();
-
         return $all === [] ? null : $all[0]['created_at'];
     }
 
-    /** True when there is no backup, or the newest is older than the threshold. */
     public function isOverdue(int $hours = self::STALE_AFTER_HOURS): bool
     {
         $last = $this->lastBackupAt();
-
         return $last === null || $last < time() - ($hours * 3600);
     }
 
-    /** Total bytes used by all backups. */
     public function totalSize(): int
     {
         return array_sum(array_column($this->all(), 'size'));
@@ -200,84 +323,50 @@ final class BackupService
         return $this->directory;
     }
 
-    /** Whether mysqldump can actually be found — surfaced in the UI. */
-    public function isAvailable(): bool
+    private function getDatabaseCredentials(): array
     {
-        try {
-            $this->mysqldumpPath();
-            return true;
-        } catch (RuntimeException $e) {
-            return false;
+        $driver = $this->getDriver();
+        $host   = (string) env('DB_HOST', '127.0.0.1');
+        $port   = (string) env('DB_PORT', $driver === 'pgsql' ? '5432' : '3306');
+        $name   = (string) env('DB_NAME', 'baranggabay');
+        $user   = (string) env('DB_USER', 'root');
+        $pass   = (string) env('DB_PASS', '');
+
+        $dbUrl  = (string) (env('DATABASE_URL') ?: env('MYSQL_URL', ''));
+        if ($dbUrl !== '') {
+            $parsed = parse_url($dbUrl) ?: [];
+            if (!empty($parsed)) {
+                $host = $parsed['host'] ?? $host;
+                $port = isset($parsed['port']) ? (string) $parsed['port'] : $port;
+                $user = isset($parsed['user']) ? urldecode($parsed['user']) : $user;
+                $pass = isset($parsed['pass']) ? urldecode($parsed['pass']) : $pass;
+                if (!empty($parsed['path'])) {
+                    $name = ltrim($parsed['path'], '/');
+                }
+            }
         }
+
+        return compact('driver', 'host', 'port', 'name', 'user', 'pass');
     }
 
-    // ── Private helpers ──────────────────────────────────────────────
-
-    /**
-     * Locate mysqldump. MYSQLDUMP_PATH in .env wins; otherwise try the usual
-     * XAMPP location and then the system PATH.
-     */
-    private function mysqldumpPath(): string
-    {
-        $configured = (string) env('MYSQLDUMP_PATH', '');
-        if ($configured !== '') {
-            if (!is_file($configured)) {
-                throw new RuntimeException('MYSQLDUMP_PATH is set but no file exists there: ' . $configured);
-            }
-            return $configured;
-        }
-
-        $candidates = [
-            'C:\\xampp\\mysql\\bin\\mysqldump.exe',
-            '/usr/bin/mysqldump',
-            '/usr/local/bin/mysqldump',
-            '/opt/homebrew/bin/mysqldump',
-        ];
-        foreach ($candidates as $candidate) {
-            if (is_file($candidate)) {
-                return $candidate;
-            }
-        }
-
-        // Last resort: hope it is on PATH.
-        $which = stripos(PHP_OS_FAMILY, 'win') === 0 ? 'where mysqldump' : 'command -v mysqldump';
-        $found = @shell_exec($which);
-        if (is_string($found) && trim($found) !== '') {
-            $first = trim(strtok($found, "\r\n") ?: '');
-            if ($first !== '' && is_file($first)) {
-                return $first;
-            }
-        }
-
-        throw new RuntimeException(
-            'mysqldump was not found. Set MYSQLDUMP_PATH in .env to its full path.'
-        );
-    }
-
-    /**
-     * Write a short-lived my.cnf holding the DB credentials, so they never
-     * appear in the process list. Deleted by the caller's finally block.
-     */
-    private function writeCredentialsFile(): string
+    private function writeMysqlCredentialsFile(array $dbParams): string
     {
         $path = tempnam(sys_get_temp_dir(), 'bgbk');
         if ($path === false) {
-            throw new RuntimeException('Could not create a temporary credentials file.');
+            throw new RuntimeException('Could not create temporary credentials file.');
         }
 
         $ini = "[client]\n"
-             . 'host=' . env('DB_HOST', '127.0.0.1') . "\n"
-             . 'port=' . env('DB_PORT', '3306') . "\n"
-             . 'user=' . env('DB_USER', 'root') . "\n"
-             . 'password=' . env('DB_PASS', '') . "\n";
+             . 'host=' . $dbParams['host'] . "\n"
+             . 'port=' . $dbParams['port'] . "\n"
+             . 'user=' . $dbParams['user'] . "\n"
+             . 'password=' . $dbParams['pass'] . "\n";
 
         file_put_contents($path, $ini);
         @chmod($path, 0600);
-
         return $path;
     }
 
-    /** Stream-compress $source into $target so memory use stays flat. */
     private function gzipFile(string $source, string $target): void
     {
         $in  = fopen($source, 'rb');

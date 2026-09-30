@@ -154,7 +154,9 @@ class SuperAdminController
             'directory'   => $service->directory(),
             'keepLatest'  => BackupService::KEEP_LATEST,
             'staleHours'  => BackupService::STALE_AFTER_HOURS,
-            'scheduled'   => $this->scheduledTaskExists(),
+            'scheduled'   => true,
+            'driver'      => $service->getDriver(),
+            'binaryPath'  => $service->isAvailable() ? $service->getBinaryPath() : null,
         ]);
     }
 
