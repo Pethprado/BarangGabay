@@ -965,3 +965,95 @@ table.table tbody tr:hover td {
     .empty-state { padding: 2rem 1rem; }
     .card-theme__body { padding: 1rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   20. COMPLETE DARK MODE READABILITY & CONTRAST GUARANTEE
+   ═══════════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] select option,
+:root[data-theme="dark"] .form-select option {
+    background-color: #241b18 !important;
+    color: #fdf8ee !important;
+}
+
+:root[data-theme="dark"] .dropdown-menu {
+    background-color: #2d2320 !important;
+    border-color: #3d2f28 !important;
+    color: #fdf8ee !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+}
+
+:root[data-theme="dark"] .dropdown-item {
+    color: #e6d9c8 !important;
+}
+
+:root[data-theme="dark"] .dropdown-item:hover,
+:root[data-theme="dark"] .dropdown-item:focus {
+    background-color: #3a2a22 !important;
+    color: #fdf8ee !important;
+}
+
+:root[data-theme="dark"] .modal-content {
+    background-color: #241b18 !important;
+    color: #fdf8ee !important;
+    border: 1px solid #3d2f28 !important;
+}
+
+:root[data-theme="dark"] .modal-header,
+:root[data-theme="dark"] .modal-footer {
+    border-color: #3d2f28 !important;
+}
+
+:root[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select,
+:root[data-theme="dark"] textarea.form-control {
+    background-color: #2d2320 !important;
+    color: #fdf8ee !important;
+    border-color: #3d2f28 !important;
+}
+
+:root[data-theme="dark"] .form-control::placeholder {
+    color: #c3b2a0 !important;
+    opacity: 0.8;
+}
+
+:root[data-theme="dark"] .input-group-text {
+    background-color: #2d2320 !important;
+    color: #e6d9c8 !important;
+    border-color: #3d2f28 !important;
+}
+
+:root[data-theme="dark"] .admin-card,
+:root[data-theme="dark"] .stat-card {
+    background-color: #241b18 !important;
+    border-color: #3d2f28 !important;
+    color: #fdf8ee !important;
+}
+
+:root[data-theme="dark"] .stat-card-label {
+    color: #c3b2a0 !important;
+}
+
+:root[data-theme="dark"] .admin-table,
+:root[data-theme="dark"] table.table {
+    color: #fdf8ee !important;
+}
+
+:root[data-theme="dark"] .admin-table tbody tr,
+:root[data-theme="dark"] table.table tbody tr {
+    background-color: transparent !important;
+}
+
+:root[data-theme="dark"] .admin-table tbody tr:nth-child(even),
+:root[data-theme="dark"] table.table tbody tr:nth-child(even) {
+    background-color: rgba(255,255,255,0.02) !important;
+}
+
+:root[data-theme="dark"] .admin-table tbody tr:hover,
+:root[data-theme="dark"] table.table tbody tr:hover {
+    background-color: rgba(255,255,255,0.06) !important;
+}
+

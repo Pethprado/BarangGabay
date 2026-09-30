@@ -27,7 +27,7 @@ class HealthController
             'app'       => 'ok',
             'php'       => PHP_VERSION,
             'timestamp' => date('c'),
-            'version'   => '1.7.1-sidebar-fix',
+            'version'   => '1.8.0-redesign',
         ];
 
         try {
