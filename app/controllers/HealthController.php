@@ -27,7 +27,7 @@ class HealthController
             'app'       => 'ok',
             'php'       => PHP_VERSION,
             'timestamp' => date('c'),
-            'version'   => '1.9.0-voice-training',
+            'version'   => '1.9.1-voice-fix',
         ];
 
         try {

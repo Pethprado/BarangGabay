@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Models;
@@ -13,43 +14,46 @@ class VoiceSample
      */
     public static function create(array $data): int
     {
-        $db = \App\Database::getInstance();
+        try {
+            $text = trim((string) ($data['text'] ?? ''));
+            $normalizedText = mb_strtolower(preg_replace('/[^\p{L}\p{N}\s]+/u', '', $text) ?? '');
+            $normalizedText = trim(preg_replace('/\s+/u', ' ', $normalizedText) ?? '');
 
-        $text = trim((string) ($data['text'] ?? ''));
-        $normalizedText = mb_strtolower(preg_replace('/[^\p{L}\p{N}\s]+/u', '', $text) ?? '');
-        $normalizedText = trim(preg_replace('/\s+/u', ' ', $normalizedText) ?? '');
+            $sql = "INSERT INTO voice_samples (
+                language, text, normalized_text, dictionary_entry_id, audio_url, audio_storage_key,
+                speaker_label, voice_type, sample_type, status, duration, mime_type, file_size,
+                notes, created_by, approved_by, created_at, updated_at
+            ) VALUES (
+                :language, :text, :normalized_text, :dictionary_entry_id, :audio_url, :audio_storage_key,
+                :speaker_label, :voice_type, :sample_type, :status, :duration, :mime_type, :file_size,
+                :notes, :created_by, :approved_by, NOW(), NOW()
+            )";
 
-        $sql = "INSERT INTO voice_samples (
-            language, text, normalized_text, dictionary_entry_id, audio_url, audio_storage_key,
-            speaker_label, voice_type, sample_type, status, duration, mime_type, file_size,
-            notes, created_by, approved_by, created_at, updated_at
-        ) VALUES (
-            :language, :text, :normalized_text, :dictionary_entry_id, :audio_url, :audio_storage_key,
-            :speaker_label, :voice_type, :sample_type, :status, :duration, :mime_type, :file_size,
-            :notes, :created_by, :approved_by, NOW(), NOW()
-        )";
+            $stmt = db()->prepare($sql);
+            $stmt->execute([
+                'language'            => $data['language'] ?? 'msm',
+                'text'                => $text,
+                'normalized_text'     => $normalizedText,
+                'dictionary_entry_id' => !empty($data['dictionary_entry_id']) ? (int) $data['dictionary_entry_id'] : null,
+                'audio_url'           => $data['audio_url'] ?? '',
+                'audio_storage_key'   => $data['audio_storage_key'] ?? null,
+                'speaker_label'       => $data['speaker_label'] ?? 'Community Speaker',
+                'voice_type'          => $data['voice_type'] ?? 'community',
+                'sample_type'         => $data['sample_type'] ?? 'word',
+                'status'              => $data['status'] ?? 'approved',
+                'duration'            => isset($data['duration']) ? (float) $data['duration'] : null,
+                'mime_type'           => $data['mime_type'] ?? 'audio/webm',
+                'file_size'           => isset($data['file_size']) ? (int) $data['file_size'] : null,
+                'notes'               => $data['notes'] ?? null,
+                'created_by'          => isset($data['created_by']) ? (int) $data['created_by'] : null,
+                'approved_by'         => isset($data['approved_by']) ? (int) $data['approved_by'] : null,
+            ]);
 
-        $stmt = $db->prepare($sql);
-        $stmt->execute([
-            'language'            => $data['language'] ?? 'msm',
-            'text'                => $text,
-            'normalized_text'     => $normalizedText,
-            'dictionary_entry_id' => !empty($data['dictionary_entry_id']) ? (int) $data['dictionary_entry_id'] : null,
-            'audio_url'           => $data['audio_url'] ?? '',
-            'audio_storage_key'   => $data['audio_storage_key'] ?? null,
-            'speaker_label'       => $data['speaker_label'] ?? 'Community Speaker',
-            'voice_type'          => $data['voice_type'] ?? 'community',
-            'sample_type'         => $data['sample_type'] ?? 'word',
-            'status'              => $data['status'] ?? 'approved',
-            'duration'            => isset($data['duration']) ? (float) $data['duration'] : null,
-            'mime_type'           => $data['mime_type'] ?? 'audio/webm',
-            'file_size'           => isset($data['file_size']) ? (int) $data['file_size'] : null,
-            'notes'               => $data['notes'] ?? null,
-            'created_by'          => isset($data['created_by']) ? (int) $data['created_by'] : null,
-            'approved_by'         => isset($data['approved_by']) ? (int) $data['approved_by'] : null,
-        ]);
-
-        return (int) $db->lastInsertId();
+            return (int) db()->lastInsertId();
+        } catch (PDOException $e) {
+            error_log('[VoiceSample::create] ' . $e->getMessage());
+            return 0;
+        }
     }
 
     /**
@@ -57,11 +61,15 @@ class VoiceSample
      */
     public static function find(int $id): ?array
     {
-        $db = \App\Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM voice_samples WHERE id = ? LIMIT 1");
-        $stmt->execute([$id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
+        try {
+            $stmt = db()->prepare("SELECT * FROM voice_samples WHERE id = ? LIMIT 1");
+            $stmt->execute([$id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: null;
+        } catch (PDOException $e) {
+            error_log('[VoiceSample::find] ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**
@@ -69,9 +77,13 @@ class VoiceSample
      */
     public static function updateStatus(int $id, string $status, ?int $approvedBy = null): bool
     {
-        $db = \App\Database::getInstance();
-        $stmt = $db->prepare("UPDATE voice_samples SET status = ?, approved_by = ?, updated_at = NOW() WHERE id = ?");
-        return $stmt->execute([$status, $approvedBy, $id]);
+        try {
+            $stmt = db()->prepare("UPDATE voice_samples SET status = ?, approved_by = ?, updated_at = NOW() WHERE id = ?");
+            return $stmt->execute([$status, $approvedBy, $id]);
+        } catch (PDOException $e) {
+            error_log('[VoiceSample::updateStatus] ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -79,16 +91,20 @@ class VoiceSample
      */
     public static function delete(int $id): bool
     {
-        $db = \App\Database::getInstance();
-        $sample = self::find($id);
-        if ($sample && !empty($sample['audio_storage_key'])) {
-            $fullPath = \App\Services\FileService::publicToAbsolutePath($sample['audio_url'] ?? '');
-            if (file_exists($fullPath)) {
-                @unlink($fullPath);
+        try {
+            $sample = self::find($id);
+            if ($sample && !empty($sample['audio_storage_key'])) {
+                $fullPath = \App\Services\FileService::publicToAbsolutePath($sample['audio_url'] ?? '');
+                if (file_exists($fullPath)) {
+                    @unlink($fullPath);
+                }
             }
+            $stmt = db()->prepare("DELETE FROM voice_samples WHERE id = ?");
+            return $stmt->execute([$id]);
+        } catch (PDOException $e) {
+            error_log('[VoiceSample::delete] ' . $e->getMessage());
+            return false;
         }
-        $stmt = $db->prepare("DELETE FROM voice_samples WHERE id = ?");
-        return $stmt->execute([$id]);
     }
 
     /**
@@ -96,42 +112,53 @@ class VoiceSample
      */
     public static function all(array $filters = [], int $limit = 50, int $offset = 0): array
     {
-        $db = \App\Database::getInstance();
+        try {
+            $where = [];
+            $params = [];
 
-        $where = [];
-        $params = [];
+            if (!empty($filters['language'])) {
+                $where[] = "vs.language = :language";
+                $params['language'] = $filters['language'];
+            }
 
-        if (!empty($filters['language'])) {
-            $where[] = "language = :language";
-            $params['language'] = $filters['language'];
+            if (!empty($filters['status'])) {
+                $where[] = "vs.status = :status";
+                $params['status'] = $filters['status'];
+            }
+
+            if (!empty($filters['sample_type'])) {
+                $where[] = "vs.sample_type = :sample_type";
+                $params['sample_type'] = $filters['sample_type'];
+            }
+
+            if (!empty($filters['search'])) {
+                $where[] = "(vs.text LIKE :search OR vs.normalized_text LIKE :search OR vs.speaker_label LIKE :search)";
+                $params['search'] = '%' . trim($filters['search']) . '%';
+            }
+
+            $whereSql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+            $sql = "SELECT vs.*, md.manobo, md.english, md.tagalog 
+                    FROM voice_samples vs
+                    LEFT JOIN manobo_dictionary md ON vs.dictionary_entry_id = md.id
+                    {$whereSql}
+                    ORDER BY vs.created_at DESC
+                    LIMIT {$limit} OFFSET {$offset}";
+
+            $stmt = db()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (PDOException $e) {
+            error_log('[VoiceSample::all] ' . $e->getMessage());
+            return [];
         }
+    }
 
-        if (!empty($filters['status'])) {
-            $where[] = "status = :status";
-            $params['status'] = $filters['status'];
-        }
-
-        if (!empty($filters['sample_type'])) {
-            $where[] = "sample_type = :sample_type";
-            $params['sample_type'] = $filters['sample_type'];
-        }
-
-        if (!empty($filters['search'])) {
-            $where[] = "(text LIKE :search OR normalized_text LIKE :search OR speaker_label LIKE :search)";
-            $params['search'] = '%' . trim($filters['search']) . '%';
-        }
-
-        $whereSql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
-        $sql = "SELECT vs.*, md.manobo, md.english, md.tagalog 
-                FROM voice_samples vs
-                LEFT JOIN manobo_dictionary md ON vs.dictionary_entry_id = md.id
-                {$whereSql}
-                ORDER BY vs.created_at DESC
-                LIMIT {$limit} OFFSET {$offset}";
-
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    /**
+     * Alias for all() used in controllers and export functions.
+     */
+    public static function getAll(array $filters = [], int $limit = 1000, int $offset = 0): array
+    {
+        return self::all($filters, $limit, $offset);
     }
 
     /**
@@ -139,27 +166,31 @@ class VoiceSample
      */
     public static function count(array $filters = []): int
     {
-        $db = \App\Database::getInstance();
-        $where = [];
-        $params = [];
+        try {
+            $where = [];
+            $params = [];
 
-        if (!empty($filters['language'])) {
-            $where[] = "language = :language";
-            $params['language'] = $filters['language'];
-        }
-        if (!empty($filters['status'])) {
-            $where[] = "status = :status";
-            $params['status'] = $filters['status'];
-        }
-        if (!empty($filters['search'])) {
-            $where[] = "(text LIKE :search OR normalized_text LIKE :search OR speaker_label LIKE :search)";
-            $params['search'] = '%' . trim($filters['search']) . '%';
-        }
+            if (!empty($filters['language'])) {
+                $where[] = "language = :language";
+                $params['language'] = $filters['language'];
+            }
+            if (!empty($filters['status'])) {
+                $where[] = "status = :status";
+                $params['status'] = $filters['status'];
+            }
+            if (!empty($filters['search'])) {
+                $where[] = "(text LIKE :search OR normalized_text LIKE :search OR speaker_label LIKE :search)";
+                $params['search'] = '%' . trim($filters['search']) . '%';
+            }
 
-        $whereSql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
-        $stmt = $db->prepare("SELECT COUNT(*) FROM voice_samples {$whereSql}");
-        $stmt->execute($params);
-        return (int) $stmt->fetchColumn();
+            $whereSql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+            $stmt = db()->prepare("SELECT COUNT(*) FROM voice_samples {$whereSql}");
+            $stmt->execute($params);
+            return (int) $stmt->fetchColumn();
+        } catch (PDOException $e) {
+            error_log('[VoiceSample::count] ' . $e->getMessage());
+            return 0;
+        }
     }
 
     /**
@@ -167,24 +198,27 @@ class VoiceSample
      */
     public static function findMatchingSample(string $language, string $text): ?array
     {
-        $db = \App\Database::getInstance();
+        try {
+            $text = trim($text);
+            $normalizedText = mb_strtolower(preg_replace('/[^\p{L}\p{N}\s]+/u', '', $text) ?? '');
+            $normalizedText = trim(preg_replace('/\s+/u', ' ', $normalizedText) ?? '');
 
-        $text = trim($text);
-        $normalizedText = mb_strtolower(preg_replace('/[^\p{L}\p{N}\s]+/u', '', $text) ?? '');
-        $normalizedText = trim(preg_replace('/\s+/u', ' ', $normalizedText) ?? '');
+            if ($normalizedText === '') {
+                return null;
+            }
 
-        if ($normalizedText === '') {
+            $stmt = db()->prepare("SELECT * FROM voice_samples 
+                                  WHERE language = ? AND status = 'approved' 
+                                  AND (normalized_text = ? OR text = ?)
+                                  ORDER BY length(normalized_text) DESC, id DESC LIMIT 1");
+            $stmt->execute([$language, $normalizedText, $text]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return $row ?: null;
+        } catch (PDOException $e) {
+            error_log('[VoiceSample::findMatchingSample] ' . $e->getMessage());
             return null;
         }
-
-        $stmt = $db->prepare("SELECT * FROM voice_samples 
-                              WHERE language = ? AND status = 'approved' 
-                              AND (normalized_text = ? OR text = ?)
-                              ORDER BY length(normalized_text) DESC, id DESC LIMIT 1");
-        $stmt->execute([$language, $normalizedText, $text]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row ?: null;
     }
 
     /**
@@ -192,8 +226,6 @@ class VoiceSample
      */
     public static function getStatsByLanguage(): array
     {
-        $db = \App\Database::getInstance();
-
         $stats = [
             'msm' => ['total' => 0, 'approved' => 0, 'pending' => 0],
             'fil' => ['total' => 0, 'approved' => 0, 'pending' => 0],
@@ -201,7 +233,7 @@ class VoiceSample
         ];
 
         try {
-            $stmt = $db->query("SELECT language, status, COUNT(*) as count FROM voice_samples GROUP BY language, status");
+            $stmt = db()->query("SELECT language, status, COUNT(*) as count FROM voice_samples GROUP BY language, status");
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             foreach ($rows as $r) {
@@ -227,18 +259,25 @@ class VoiceSample
     }
 
     /**
+     * Stats alias for singular language code.
+     */
+    public static function getStats(string $language): array
+    {
+        $all = self::getStatsByLanguage();
+        return $all[$language] ?? ['total' => 0, 'approved' => 0, 'pending' => 0];
+    }
+
+    /**
      * Manobo Voice Coverage stats.
      */
     public static function getManoboCoverageStats(): array
     {
-        $db = \App\Database::getInstance();
-
         $totalWords = 0;
         $wordsWithAudio = 0;
 
         try {
-            $totalWords = (int) $db->query("SELECT COUNT(*) FROM manobo_dictionary")->fetchColumn();
-            $wordsWithAudio = (int) $db->query("SELECT COUNT(DISTINCT dictionary_entry_id) FROM voice_samples WHERE language = 'msm' AND status = 'approved' AND dictionary_entry_id IS NOT NULL")->fetchColumn();
+            $totalWords = (int) db()->query("SELECT COUNT(*) FROM manobo_dictionary")->fetchColumn();
+            $wordsWithAudio = (int) db()->query("SELECT COUNT(DISTINCT dictionary_entry_id) FROM voice_samples WHERE language = 'msm' AND status = 'approved' AND dictionary_entry_id IS NOT NULL")->fetchColumn();
         } catch (PDOException $e) {
             error_log('[VoiceSample::getManoboCoverageStats] ' . $e->getMessage());
         }
@@ -259,8 +298,6 @@ class VoiceSample
      */
     public static function getMissingPronunciations(int $limit = 50): array
     {
-        $db = \App\Database::getInstance();
-
         $sql = "SELECT md.* FROM manobo_dictionary md
                 LEFT JOIN voice_samples vs ON md.id = vs.dictionary_entry_id AND vs.status = 'approved'
                 WHERE vs.id IS NULL
@@ -268,7 +305,7 @@ class VoiceSample
                 LIMIT {$limit}";
 
         try {
-            $stmt = $db->query($sql);
+            $stmt = db()->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (PDOException $e) {
             error_log('[VoiceSample::getMissingPronunciations] ' . $e->getMessage());
