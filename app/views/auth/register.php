@@ -19,13 +19,16 @@ $flashOk  = flash('success');
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
         :root {
-            /* CHANGED: this page is self-contained (no tokens.css/theme.css
-               link), so it carries its own local palette — retinted from
-               blue/teal to the system-wide maroon/gold earth palette. */
-            --green:  #7b1e22;   /* maroon — the var name predates the rebrand */
+            /* System-wide maroon/gold earth palette with proper contrast tokens */
+            --green:  #7b1e22;   /* maroon brand primary */
+            --green-hover: #5e161a;
             --darker: #241b18;
             --gold:   #7a5c11;   /* gold-ink: safe for white text/icons on it */
             --radius: .75rem;
+            --text-primary: #1a1512;
+            --text-secondary: #4a3f38;
+            --text-muted: #6b5d52;
+            --border: #d1d5db;
         }
 
         *, *::before, *::after { box-sizing: border-box; }
@@ -34,9 +37,9 @@ $flashOk  = flash('success');
             margin: 0;
             min-height: 100vh;
             display: flex;
-            align-items: stretch;
+            align-items: center;
+            justify-content: center;
             font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-            /* CHANGED: teal glow + blue gradient -> gold glow + maroon/night gradient */
             background:
                 radial-gradient(ellipse at 20% 30%, rgba(200,153,46,.16) 0%, transparent 55%),
                 linear-gradient(145deg, #241b18 0%, #7b1e22 60%, #3a2a22 100%);
@@ -55,8 +58,9 @@ $flashOk  = flash('success');
         .reg-card {
             display: flex;
             width: 100%;
-            max-width: 1000px;
-            min-height: 580px;
+            max-width: 1020px;
+            min-height: 600px;
+            background: #fff;
             border-radius: 1.5rem;
             overflow: hidden;
             box-shadow: 0 28px 80px rgba(0,0,0,.45), 0 4px 20px rgba(0,0,0,.25);
@@ -64,15 +68,21 @@ $flashOk  = flash('success');
 
         /* ── Left panel ─────────────────────────────────────── */
         .reg-left {
-            width: 340px;
+            width: 360px;
             flex-shrink: 0;
-            /* CHANGED: navy-to-blue -> night-to-maroon */
             background: linear-gradient(180deg, #241b18 0%, #5e161a 100%);
             padding: 2.5rem 2rem;
             display: flex;
             flex-direction: column;
             position: relative;
             overflow: hidden;
+        }
+
+        .reg-left .baranggabay-logo-img {
+            max-height: 52px;
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
         }
 
         /* decorative circle */
@@ -307,6 +317,7 @@ $flashOk  = flash('success');
 <div class="reg-card">
 
     <!-- ── Left: welcome panel ────────────────────────────── -->
+    <div class="reg-left">
         <div class="mb-3">
             <?= baranggabay_logo('dark', ['size' => 'large', 'href' => route('')]) ?>
         </div>
