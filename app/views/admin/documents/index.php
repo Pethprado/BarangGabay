@@ -90,10 +90,21 @@ ob_start();
                     <input type="hidden" name="status" value="<?= e($status) ?>">
                     <?php endif; ?>
 
-                    <select name="delivery" class="form-select form-select-sm" style="font-size:.8rem;min-width:130px;max-width:160px;" onchange="this.form.submit()">
+                    <select name="delivery" class="form-select form-select-sm" style="font-size:.8rem;min-width:120px;max-width:140px;" onchange="this.form.submit()">
                         <option value=""><?= e(t('admin_documents.filter_all')) ?> Delivery</option>
                         <option value="pickup" <?= $delivery === 'pickup' ? 'selected' : '' ?>><?= e(t('admin_documents.filter_pickup')) ?></option>
                         <option value="digital" <?= $delivery === 'digital' ? 'selected' : '' ?>><?= e(t('admin_documents.filter_digital')) ?></option>
+                    </select>
+
+                    <select name="payment_status" class="form-select form-select-sm" style="font-size:.8rem;min-width:130px;max-width:150px;" onchange="this.form.submit()">
+                        <option value="">Lahat ng Bayad</option>
+                        <option value="PAYMENT_PROOF_SUBMITTED" <?= ($paymentStatus ?? '') === 'PAYMENT_PROOF_SUBMITTED' ? 'selected' : '' ?>>Proof Submitted</option>
+                        <option value="PAID_VERIFIED" <?= ($paymentStatus ?? '') === 'PAID_VERIFIED' ? 'selected' : '' ?>>Paid Verified</option>
+                        <option value="PAY_AT_PICKUP" <?= ($paymentStatus ?? '') === 'PAY_AT_PICKUP' ? 'selected' : '' ?>>Pay at Pickup</option>
+                        <option value="PAID_AT_PICKUP" <?= ($paymentStatus ?? '') === 'PAID_AT_PICKUP' ? 'selected' : '' ?>>Paid at Pickup</option>
+                        <option value="UNPAID" <?= ($paymentStatus ?? '') === 'UNPAID' ? 'selected' : '' ?>>Unpaid</option>
+                        <option value="PAYMENT_REJECTED" <?= ($paymentStatus ?? '') === 'PAYMENT_REJECTED' ? 'selected' : '' ?>>Rejected</option>
+                        <option value="FREE" <?= ($paymentStatus ?? '') === 'FREE' ? 'selected' : '' ?>>Libre (Free)</option>
                     </select>
 
                     <div class="input-group input-group-sm">
@@ -103,7 +114,7 @@ ob_start();
                         <button type="submit" class="btn btn-outline-secondary" title="Search">
                             <i class="bi bi-search"></i>
                         </button>
-                        <?php if ($search !== '' || $delivery !== '' || $status !== ''): ?>
+                        <?php if ($search !== '' || $delivery !== '' || $status !== '' || ($paymentStatus ?? '') !== ''): ?>
                         <a href="<?= e(route('admin/documents')) ?>" class="btn btn-outline-danger" title="Clear Filters">
                             <i class="bi bi-x-lg"></i>
                         </a>
@@ -138,6 +149,7 @@ ob_start();
                     <th><?= e(t('admin_documents.col_resident')) ?></th>
                     <th><?= e(t('admin_documents.col_delivery')) ?></th>
                     <th><?= e(t('admin_documents.col_document')) ?> & <?= e(t('admin_documents.col_purpose')) ?></th>
+                    <th>Pagbabayad (Payment)</th>
                     <th><?= e(t('residents.col_status')) ?></th>
                     <th><?= e(t('admin_documents.col_attachment')) ?></th>
                     <th style="width:280px;text-align:right;padding-right:16px;"><?= e(t('admin_documents.col_actions')) ?></th>
@@ -151,6 +163,16 @@ ob_start();
                 $isDigital= $deliv === 'digital';
                 $hasFile  = !empty($r['document_file_name']);
                 $next     = \App\Models\DocumentRequest::TRANSITIONS[$st] ?? [];
+
+                // Payment fields
+                $fee       = (float) ($r['fee_amount'] ?? 0);
+                $pst       = (string) ($r['payment_status'] ?? 'FREE');
+                $isFree    = $fee <= 0.0 || $pst === 'FREE';
+                $isVerified= in_array($pst, ['PAID_VERIFIED', 'PAID_AT_PICKUP', 'FREE', 'WAIVED'], true);
+                $isProofSub= $pst === 'PAYMENT_PROOF_SUBMITTED';
+                $isAtPickup= $pst === 'PAY_AT_PICKUP';
+                $isRejected= $pst === 'PAYMENT_REJECTED';
+                $pId       = (int) ($r['payment_id'] ?? 0);
 
                 // Tailored status display text
                 $displayStatus = ($isDigital && $st === 'ready')
@@ -211,6 +233,56 @@ ob_start();
                     <?php endif; ?>
                 </td>
 
+                <!-- Payment Status Column -->
+                <td>
+                    <div class="d-flex flex-column gap-1">
+                        <?php if ($isFree): ?>
+                        <span class="status-badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:.72rem;">
+                            LIBRE (Free)
+                        </span>
+                        <?php elseif ($isVerified): ?>
+                        <span class="status-badge" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-weight:700;font-size:.72rem;">
+                            <i class="bi bi-patch-check-fill me-1"></i><?= $pst === 'PAID_AT_PICKUP' ? 'Paid at Pickup' : 'PAID (Verified)' ?> (₱<?= number_format($fee, 2) ?>)
+                        </span>
+                        <?php if ($pId > 0): ?>
+                        <a href="<?= e(route('documents/' . $id . '/acknowledgement')) ?>" target="_blank" class="text-decoration-none" style="font-size:.68rem;color:#047857;">
+                            <i class="bi bi-printer me-0.5"></i> Katibayan ng Bayad
+                        </a>
+                        <?php endif; ?>
+                        <?php elseif ($isProofSub): ?>
+                        <span class="status-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-weight:700;font-size:.72rem;">
+                            <i class="bi bi-hourglass-split me-1"></i>Proof Submitted
+                        </span>
+                        <div class="d-flex gap-1 mt-0.5">
+                            <a href="<?= e(route('admin/payments?search=' . urlencode((string)$r['reference_no']))) ?>" class="btn btn-xs btn-warning py-0 px-1 fw-bold" style="font-size:.68rem;">
+                                <i class="bi bi-eye me-0.5"></i> Review Payment
+                            </a>
+                        </div>
+                        <?php elseif ($isAtPickup): ?>
+                        <span class="status-badge" style="background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;font-weight:600;font-size:.72rem;">
+                            <i class="bi bi-cash me-1"></i>Pay at Pickup (₱<?= number_format($fee, 2) ?>)
+                        </span>
+                        <?php if ($pId > 0): ?>
+                        <form method="post" action="<?= e(route('admin/payments/' . $pId . '/mark-pickup')) ?>" class="d-inline mt-0.5" onsubmit="return confirm('Kumpirmahin na natanggap ang ₱<?= number_format($fee, 2) ?> mula kay <?= e(addslashes((string)$r['full_name'])) ?>?');">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="return_to" value="<?= e($_SERVER['REQUEST_URI'] ?? '/admin/documents') ?>">
+                            <button type="submit" class="btn btn-xs btn-outline-primary py-0 px-1" style="font-size:.68rem;font-weight:600;">
+                                <i class="bi bi-check2-circle me-0.5"></i> Mark Paid at Pickup
+                            </button>
+                        </form>
+                        <?php endif; ?>
+                        <?php elseif ($isRejected): ?>
+                        <span class="status-badge" style="background:#fff1f2;color:#be123c;border:1px solid #fecdd3;font-size:.72rem;">
+                            Tinanggihan (Rejected)
+                        </span>
+                        <?php else: ?>
+                        <span class="status-badge" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-size:.72rem;">
+                            UNPAID (₱<?= number_format($fee, 2) ?>)
+                        </span>
+                        <?php endif; ?>
+                    </div>
+                </td>
+
                 <!-- Status Badge -->
                 <td>
                     <span class="status-badge" style="<?= $statusClass[$st] ?? '' ?>;font-weight:700;font-size:.76rem;">
@@ -227,7 +299,20 @@ ob_start();
 
                 <!-- Soft Copy Attachment Column -->
                 <td style="min-width:180px;">
-                    <?php if ($hasFile): ?>
+                    <?php if ($isDigital && !$isVerified): ?>
+                    <!-- Digital Soft Copy requires verified payment first! -->
+                    <div class="p-1.5 rounded" style="background:#fff1f2;border:1px dashed #fecdd3;font-size:.74rem;">
+                        <span class="text-danger fw-bold d-block mb-1" style="font-size:.72rem;">
+                            <i class="bi bi-lock-fill me-1"></i>PAYMENT REQUIRED
+                        </span>
+                        <button type="button" class="btn btn-sm btn-secondary py-1 px-2 w-100" style="font-size:.72rem;opacity:.7;" disabled title="Payment verification is required before this digital document can be released.">
+                            <i class="bi bi-lock me-1"></i>Attach Soft Copy
+                        </button>
+                        <span class="text-muted d-block mt-1" style="font-size:.66rem;line-height:1.2;">
+                            Kailangan munang beripikahin ang bayad bago mai-release.
+                        </span>
+                    </div>
+                    <?php elseif ($hasFile): ?>
                     <div class="p-1.5 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;font-size:.75rem;">
                         <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
                             <span class="text-truncate" style="max-width:120px;font-weight:600;" title="<?= e((string) $r['document_file_name']) ?>">

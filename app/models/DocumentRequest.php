@@ -55,14 +55,60 @@ class DocumentRequest
     }
 
     /**
-     * File a request with chosen delivery method. Returns the new reference number.
+     * Check if payment is verified (or document is free / waived).
+     */
+    public static function isPaymentVerified(array|int $request): bool
+    {
+        if (is_int($request)) {
+            $request = self::find($request);
+        }
+        if (!$request) {
+            return false;
+        }
+
+        $fee = (float) ($request['fee_amount'] ?? 0);
+        if ($fee <= 0.0) {
+            return true;
+        }
+
+        $status = (string) ($request['payment_status'] ?? '');
+        return in_array($status, [
+            DocumentPayment::STATUS_FREE,
+            DocumentPayment::STATUS_PAID_VERIFIED,
+            DocumentPayment::STATUS_PAID_AT_PICKUP,
+            DocumentPayment::STATUS_WAIVED,
+        ], true);
+    }
+
+    /**
+     * Check if this request requires payment.
+     */
+    public static function requiresPayment(array|int $request): bool
+    {
+        if (is_int($request)) {
+            $request = self::find($request);
+        }
+        if (!$request) {
+            return false;
+        }
+
+        $fee = (float) ($request['fee_amount'] ?? 0);
+        $status = (string) ($request['payment_status'] ?? '');
+        return $fee > 0.0 && !in_array($status, [DocumentPayment::STATUS_FREE, DocumentPayment::STATUS_WAIVED], true);
+    }
+
+    /**
+     * File a request with chosen delivery method and fee snapshot. Returns reference number.
      */
     public static function create(
         int $userId,
         string $type,
         string $purpose,
         string $notes = '',
-        string $deliveryMethod = 'pickup'
+        string $deliveryMethod = 'pickup',
+        float $feeAmount = 0.00,
+        string $paymentMethod = 'free',
+        ?int $gcashAccountId = null
     ): string {
         $reference = 'BRG-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
         $method    = \array_key_exists($deliveryMethod, self::DELIVERY_METHODS) ? $deliveryMethod : 'pickup';
@@ -70,11 +116,18 @@ class DocumentRequest
         $cleanPurp = mb_substr(trim($purpose), 0, 255);
         $cleanNote = trim($notes) !== '' ? mb_substr(trim($notes), 0, 2000) : null;
 
+        $isFree = $feeAmount <= 0.00;
+        $payStatus = match ($paymentMethod) {
+            'free'   => DocumentPayment::STATUS_FREE,
+            'pickup' => DocumentPayment::STATUS_PAY_AT_PICKUP,
+            default  => $isFree ? DocumentPayment::STATUS_FREE : DocumentPayment::STATUS_UNPAID,
+        };
+
         $pdo = db();
         $stmt = $pdo->prepare(
             'INSERT INTO document_requests
-             (reference_no, user_id, document_type, purpose, notes, status, delivery_method, requested_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+             (reference_no, user_id, document_type, purpose, notes, status, delivery_method, fee_amount, payment_method, payment_status, requested_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
         );
         $stmt->execute([
             $reference,
@@ -84,9 +137,15 @@ class DocumentRequest
             $cleanNote,
             'pending',
             $method,
+            $feeAmount,
+            $paymentMethod,
+            $payStatus,
         ]);
 
         $newId = (int) $pdo->lastInsertId();
+
+        // Create financial payment record if paid document or tracked
+        $paymentId = DocumentPayment::createForRequest($newId, $userId, $docType, $feeAmount, $paymentMethod, $gcashAccountId);
 
         self::logActivity(
             $newId,
@@ -94,23 +153,27 @@ class DocumentRequest
             'requested',
             null,
             'pending',
-            sprintf('Submitted request for %s via %s.', self::label($docType), self::deliveryLabel($method))
+            sprintf('Submitted request for %s via %s. Fee: ₱%.2f (%s)', self::label($docType), self::deliveryLabel($method), $feeAmount, strtoupper($paymentMethod))
         );
 
         return $reference;
     }
 
-    /** One request, with the requester's details and staff names. */
+    /** One request, with requester's details, staff names, and payment details. */
     public static function find(int $id): ?array
     {
         $stmt = db()->prepare(
             'SELECT r.*, u.full_name, u.phone, u.email, u.zone, u.address,
                     su.full_name AS uploaded_by_name,
-                    hb.full_name AS handled_by_name
+                    hb.full_name AS handled_by_name,
+                    p.payment_ref, p.amount_reported, p.gcash_reference_no, p.receipt_file_name, p.rejection_reason, p.receipt_file_hash,
+                    g.account_name AS gcash_account_name, g.mobile_number AS gcash_mobile_number
                FROM document_requests r
                JOIN users u ON u.id = r.user_id
           LEFT JOIN users su ON su.id = r.document_uploaded_by
           LEFT JOIN users hb ON hb.id = r.handled_by
+          LEFT JOIN document_payments p ON p.id = r.payment_id
+          LEFT JOIN gcash_accounts g ON g.id = p.gcash_account_id
               WHERE r.id = ? LIMIT 1'
         );
         $stmt->execute([$id]);
@@ -122,9 +185,13 @@ class DocumentRequest
     public static function forUser(int $userId): array
     {
         $stmt = db()->prepare(
-            'SELECT r.*, su.full_name AS uploaded_by_name
+            'SELECT r.*, su.full_name AS uploaded_by_name,
+                    p.payment_ref, p.amount_reported, p.gcash_reference_no, p.receipt_file_name, p.rejection_reason, p.rejection_note, p.verified_at,
+                    g.account_name AS gcash_account_name, g.mobile_number AS gcash_mobile_number, g.qr_image_data, g.qr_mime_type
                FROM document_requests r
           LEFT JOIN users su ON su.id = r.document_uploaded_by
+          LEFT JOIN document_payments p ON p.id = r.payment_id
+          LEFT JOIN gcash_accounts g ON g.id = p.gcash_account_id
               WHERE r.user_id = ?
               ORDER BY r.requested_at DESC'
         );
@@ -134,15 +201,19 @@ class DocumentRequest
     }
 
     /**
-     * The admin queue with status, delivery method, and search filtering.
+     * The admin queue with status, delivery method, payment status, and search filtering.
      */
-    public static function queue(string $status = '', string $delivery = '', string $search = ''): array
+    public static function queue(string $status = '', string $delivery = '', string $search = '', string $paymentStatus = ''): array
     {
         $sql = "SELECT r.*, u.full_name, u.phone, u.zone,
-                       su.full_name AS uploaded_by_name
+                       su.full_name AS uploaded_by_name,
+                       p.payment_ref, p.amount_reported, p.gcash_reference_no, p.receipt_file_name, p.rejection_reason,
+                       g.account_name AS gcash_account_name
                   FROM document_requests r
                   JOIN users u ON u.id = r.user_id
              LEFT JOIN users su ON su.id = r.document_uploaded_by
+             LEFT JOIN document_payments p ON p.id = r.payment_id
+             LEFT JOIN gcash_accounts g ON g.id = p.gcash_account_id
                  WHERE 1=1";
         $params = [];
 
@@ -156,10 +227,17 @@ class DocumentRequest
             $params[] = $delivery;
         }
 
+        if ($paymentStatus !== '') {
+            $sql .= ' AND r.payment_status = ?';
+            $params[] = $paymentStatus;
+        }
+
         $search = trim($search);
         if ($search !== '') {
-            $sql .= ' AND (r.reference_no ILIKE ? OR u.full_name ILIKE ? OR r.purpose ILIKE ? OR r.document_type ILIKE ?)';
+            $sql .= ' AND (r.reference_no ILIKE ? OR u.full_name ILIKE ? OR r.purpose ILIKE ? OR r.document_type ILIKE ? OR p.payment_ref ILIKE ? OR p.gcash_reference_no ILIKE ?)';
             $like = '%' . $search . '%';
+            $params[] = $like;
+            $params[] = $like;
             $params[] = $like;
             $params[] = $like;
             $params[] = $like;

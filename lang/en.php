@@ -639,6 +639,7 @@ return [
         'residents'   => 'Residents',
         'feedback'    => 'Feedback',
         'documents'   => 'Document Requests',
+        'payments'    => 'Payment Management',
         'safety'      => 'Safety Check-In',
         'evacuation'  => 'Evacuation Centres',
         'reports'     => 'Reports',

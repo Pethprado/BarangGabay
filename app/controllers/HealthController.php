@@ -27,7 +27,7 @@ class HealthController
             'app'       => 'ok',
             'php'       => PHP_VERSION,
             'timestamp' => date('c'),
-            'version'   => '2.3.1-register-layout-fixed',
+            'version'   => '2.4.0-payments-live',
         ];
 
         try {
@@ -41,6 +41,20 @@ class HealthController
 
                 $colStmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name='users' ORDER BY column_name");
                 $result['user_columns'] = $colStmt->fetchAll(\PDO::FETCH_COLUMN);
+            }
+
+            if (isset($_GET['payments'])) {
+                $pTblStmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_name IN ('document_fees', 'gcash_accounts', 'document_payments', 'payment_audit_logs')");
+                $result['payment_tables'] = $pTblStmt->fetchAll(\PDO::FETCH_COLUMN);
+
+                $dpColStmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name='document_requests' AND column_name IN ('fee_amount', 'payment_method', 'payment_status', 'payment_id')");
+                $result['document_request_payment_cols'] = $dpColStmt->fetchAll(\PDO::FETCH_COLUMN);
+
+                $feesStmt = $pdo->query("SELECT document_type, amount, is_free FROM document_fees");
+                $result['seeded_fees'] = $feesStmt->fetchAll(\PDO::FETCH_ASSOC);
+
+                $gcashStmt = $pdo->query("SELECT id, account_name, mobile_number, is_default, is_active FROM gcash_accounts");
+                $result['seeded_gcash'] = $gcashStmt->fetchAll(\PDO::FETCH_ASSOC);
             }
 
             try {

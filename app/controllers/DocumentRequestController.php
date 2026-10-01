@@ -24,11 +24,13 @@ class DocumentRequestController
     /** GET /documents — the request form and this resident's own history. */
     public function index(): void
     {
-        $userId   = (int) ($_SESSION['user_id'] ?? 0);
-        $requests = DocumentRequest::forUser($userId);
-        $types    = DocumentRequest::TYPES;
+        $userId       = (int) ($_SESSION['user_id'] ?? 0);
+        $requests     = DocumentRequest::forUser($userId);
+        $types        = DocumentRequest::TYPES;
+        $docFees      = \App\Models\DocumentFee::getAll();
+        $defaultGcash = \App\Models\GcashAccount::getDefault();
 
-        view('resident/documents', compact('requests', 'types'));
+        view('resident/documents', compact('requests', 'types', 'docFees', 'defaultGcash'));
     }
 
     /** POST /documents — file a new request. */
@@ -69,16 +71,47 @@ class DocumentRequestController
             }
         }
 
-        $reference = DocumentRequest::create($userId, $type, $purpose, $notes, $deliveryMethod);
+        // Calculate document fee snapshot
+        $feeInfo   = \App\Models\DocumentFee::getFeeForType($type);
+        $feeAmount = $feeInfo['is_free'] ? 0.00 : (float) $feeInfo['amount'];
+        $isFree    = $feeAmount <= 0.00;
+
+        $chosenMethod = trim($_POST['payment_method'] ?? ($isFree ? 'free' : 'pickup'));
+
+        if ($isFree) {
+            $paymentMethod = 'free';
+        } else {
+            // For digital soft copy, online payment (GCash) is required
+            if ($deliveryMethod === 'digital') {
+                $paymentMethod = 'gcash';
+            } else {
+                $paymentMethod = in_array($chosenMethod, ['gcash', 'pickup'], true) ? $chosenMethod : 'pickup';
+            }
+        }
+
+        $defaultGcash = \App\Models\GcashAccount::getDefault();
+        $gcashAccountId = $defaultGcash ? (int) $defaultGcash['id'] : null;
+
+        $reference = DocumentRequest::create(
+            $userId,
+            $type,
+            $purpose,
+            $notes,
+            $deliveryMethod,
+            $feeAmount,
+            $paymentMethod,
+            $gcashAccountId
+        );
 
         // Tell back office there is work waiting
         $deliveryText = $deliveryMethod === 'digital' ? ' (Digital Soft Copy)' : ' (Personal Pickup)';
+        $feeText = $isFree ? ' [LIBRE]' : sprintf(' [₱%.2f via %s]', $feeAmount, strtoupper($paymentMethod));
         (new NotificationService())->notifyBackOffice(
             'notify_content',
             'system',
             t('documents.notify_staff_title'),
             t('documents.notify_staff_body', [
-                'type'      => DocumentRequest::label($type) . $deliveryText,
+                'type'      => DocumentRequest::label($type) . $deliveryText . $feeText,
                 'reference' => $reference,
             ]),
             0,
@@ -108,6 +141,13 @@ class DocumentRequestController
         if (!$isStaff && (int) $request['user_id'] !== $userId) {
             http_response_code(403);
             exit('Access Denied.');
+        }
+
+        // SERVER-SIDE CHECK: For digital delivery with fee, payment must be verified before resident can download
+        if (!$isStaff && $request['delivery_method'] === 'digital' && !DocumentRequest::isPaymentVerified($request)) {
+            http_response_code(403);
+            flash('error', 'Kailangan munang maberipika ang inyong bayad bago ma-download ang dokumento.');
+            redirect('/documents');
         }
 
         $storageService = new DocumentStorageService();
@@ -144,6 +184,13 @@ class DocumentRequestController
             exit('Access Denied.');
         }
 
+        // SERVER-SIDE CHECK: For digital delivery with fee, payment must be verified before resident can preview
+        if (!$isStaff && $request['delivery_method'] === 'digital' && !DocumentRequest::isPaymentVerified($request)) {
+            http_response_code(403);
+            flash('error', 'Kailangan munang maberipika ang inyong bayad bago ma-preview ang dokumento.');
+            redirect('/documents');
+        }
+
         $storageService = new DocumentStorageService();
         $file = $storageService->getFile($id);
 
@@ -157,18 +204,20 @@ class DocumentRequestController
 
     // ── Admin ────────────────────────────────────────────────────────────
 
-    /** GET /admin/documents — the queue with delivery and search filters. */
+    /** GET /admin/documents — the queue with delivery, payment, and search filters. */
     public function adminIndex(): void
     {
-        $status       = trim($_GET['status'] ?? '');
-        $delivery     = trim($_GET['delivery'] ?? '');
-        $search       = trim($_GET['search'] ?? '');
+        $status        = trim($_GET['status'] ?? '');
+        $delivery      = trim($_GET['delivery'] ?? '');
+        $paymentStatus = trim($_GET['payment_status'] ?? '');
+        $search        = trim($_GET['search'] ?? '');
 
-        $requests     = DocumentRequest::queue($status, $delivery, $search);
-        $pageTitle    = t('admin_documents.title');
-        $pendingCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn();
+        $requests            = DocumentRequest::queue($status, $delivery, $search, $paymentStatus);
+        $pageTitle           = t('admin_documents.title');
+        $pendingCount        = (int) db()->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn();
+        $pendingPaymentCount = (int) db()->query("SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAYMENT_PROOF_SUBMITTED'")->fetchColumn();
 
-        view('admin/documents/index', compact('requests', 'status', 'delivery', 'search', 'pageTitle', 'pendingCount'));
+        view('admin/documents/index', compact('requests', 'status', 'delivery', 'paymentStatus', 'search', 'pageTitle', 'pendingCount', 'pendingPaymentCount'));
     }
 
     /**
@@ -186,6 +235,18 @@ class DocumentRequestController
         $request = DocumentRequest::find($id);
         if ($request === null) {
             flash('error', t('flash.not_found'));
+            redirect('/admin/documents');
+        }
+
+        // CRITICAL SERVER-SIDE CHECK: For digital delivery, payment must be verified before marking ready or released
+        if ($request['delivery_method'] === 'digital' && in_array($to, ['ready', 'released'], true) && !DocumentRequest::isPaymentVerified($request)) {
+            flash('error', 'Hindi pa beripikado ang bayad ng residente. Kailangan munang beripikahin ang bayad (PAID_VERIFIED) bago maging handa (Ready) ang digital na dokumento.');
+            redirect('/admin/documents');
+        }
+
+        // CRITICAL SERVER-SIDE CHECK: For pickup delivery, cannot mark released/collected if payment is unpaid or pay at pickup
+        if ($to === 'released' && !DocumentRequest::isPaymentVerified($request)) {
+            flash('error', 'Hindi pa nababayaran ang dokumentong ito. Kumpirmahin muna ang bayad ng residente (Mark Paid at Pickup) bago markahang nakuha (Collected).');
             redirect('/admin/documents');
         }
 
@@ -233,6 +294,13 @@ class DocumentRequestController
         $request = DocumentRequest::find($id);
         if ($request === null) {
             flash('error', t('flash.not_found'));
+            redirect('/admin/documents');
+        }
+
+        // CRITICAL SERVER-SIDE PAYMENT CHECK BEFORE DIGITAL RELEASE
+        if ($request['delivery_method'] === 'digital' && !DocumentRequest::isPaymentVerified($request)) {
+            http_response_code(403);
+            flash('error', 'Hindi pa beripikado ang bayad ng residente. Kailangan munang beripikahin ang bayad bago ipadala o i-upload ang opisyal na digital na dokumento.');
             redirect('/admin/documents');
         }
 

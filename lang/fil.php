@@ -613,6 +613,7 @@ return [
         'residents'   => 'Mga Residente',
         'feedback'    => 'Puna',
         'documents'   => 'Request ng Dokumento',
+        'payments'    => 'Pagbabayad',
         'safety'      => 'Safety Check-In',
         'evacuation'  => 'Evacuation Center',
         'reports'     => 'Mga Ulat',

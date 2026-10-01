@@ -164,6 +164,8 @@ return [
     // Document requests: Personal Pickup & Digital Soft Copy delivery
     ['GET',  '/documents',                        'DocumentRequestController@index',        ['auth', 'verified']],
     ['POST', '/documents',                        'DocumentRequestController@store',        ['auth', 'verified']],
+    ['POST', '/documents/{id}/payment',           'PaymentController@residentUploadProof',  ['auth', 'verified']],
+    ['GET',  '/documents/{id}/acknowledgement',   'PaymentController@acknowledgement',      ['auth', 'verified']],
     ['GET',  '/documents/{id}/download',          'DocumentRequestController@download',     ['auth', 'verified']],
     ['GET',  '/documents/{id}/preview',           'DocumentRequestController@preview',      ['auth', 'verified']],
     ['GET',  '/admin/documents',                  'DocumentRequestController@adminIndex',   ['auth', 'role:admin,staff']],
@@ -174,6 +176,23 @@ return [
     ['GET',  '/admin/documents/{id}/download',    'DocumentRequestController@adminDownload',['auth', 'role:admin,staff']],
     ['GET',  '/admin/documents/{id}/preview',     'DocumentRequestController@adminPreview', ['auth', 'role:admin,staff']],
     ['GET',  '/admin/documents/{id}/details',     'DocumentRequestController@details',      ['auth', 'role:admin,staff']],
+
+    // Payment Management System
+    ['GET',  '/admin/payments',                   'PaymentController@adminIndex',       ['auth', 'role:admin,staff']],
+    ['POST', '/admin/payments/{id}/verify',       'PaymentController@verify',           ['auth', 'role:admin,staff']],
+    ['POST', '/admin/payments/{id}/reject',       'PaymentController@reject',           ['auth', 'role:admin,staff']],
+    ['POST', '/admin/payments/{id}/mark-pickup',  'PaymentController@markPaidAtPickup', ['auth', 'role:admin,staff']],
+    ['POST', '/admin/payments/{id}/waive',        'PaymentController@waive',            ['auth', 'role:admin']],
+    ['POST', '/admin/payments/{id}/refund',       'PaymentController@refund',           ['auth', 'role:admin']],
+    ['GET',  '/admin/payments/{id}/receipt',      'PaymentController@receiptPreview',   ['auth', 'role:admin,staff']],
+    ['GET',  '/admin/payments/fees',              'PaymentController@feesIndex',        ['auth', 'role:admin']],
+    ['POST', '/admin/payments/fees',              'PaymentController@feesUpdate',       ['auth', 'role:admin']],
+    ['GET',  '/admin/payments/gcash',             'PaymentController@gcashIndex',       ['auth', 'role:admin,staff']],
+    ['POST', '/admin/payments/gcash',             'PaymentController@gcashStore',       ['auth', 'role:admin,staff']],
+    ['POST', '/admin/payments/gcash/{id}',        'PaymentController@gcashUpdate',      ['auth', 'role:admin,staff']],
+    ['POST', '/admin/payments/gcash/{id}/default','PaymentController@gcashSetDefault',  ['auth', 'role:admin,staff']],
+    ['POST', '/admin/payments/gcash/{id}/toggle', 'PaymentController@gcashToggle',      ['auth', 'role:admin,staff']],
+    ['GET',  '/admin/payments/export',            'PaymentController@exportCsv',        ['auth', 'role:admin']],
 
     // Emergency: where this resident's purok evacuates to, and the one-tap
     // "Ligtas ako" answer after a storm.

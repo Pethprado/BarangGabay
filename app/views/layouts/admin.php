@@ -206,6 +206,18 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
                 <?php endif; ?>
             </a>
 
+            <a href="<?= e(route('admin/payments')) ?>"
+               class="sidebar-link <?= $isActive('/admin/payments', false) ?>">
+                <i class="bi bi-wallet2 nav-icon"></i>
+                <span><?= e(t('admin_nav.payments', 'Pagbabayad')) ?></span>
+                <?php
+                try {
+                    $__payPending = (int) db()->query("SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAYMENT_PROOF_SUBMITTED'")->fetchColumn();
+                    if ($__payPending > 0): ?>
+                <span class="sidebar-badge" style="background:#e11d48;color:#fff;"><?= (int) $__payPending ?></span>
+                <?php endif; } catch (\Throwable) {} ?>
+            </a>
+
             <a href="<?= e(route('admin/safety')) ?>"
                class="sidebar-link <?= $isActive('/admin/safety', false) ?>">
                 <i class="bi bi-shield-check nav-icon"></i>
