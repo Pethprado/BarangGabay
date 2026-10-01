@@ -28,9 +28,10 @@ class DocumentRequestController
         $requests     = DocumentRequest::forUser($userId);
         $types        = DocumentRequest::TYPES;
         $docFees      = \App\Models\DocumentFee::getAll();
-        $defaultGcash = \App\Models\GcashAccount::getDefault();
+        $defaultGcash  = \App\Models\GcashAccount::getDefault();
+        $gcashAccounts = \App\Models\GcashAccount::getActive();
 
-        view('resident/documents', compact('requests', 'types', 'docFees', 'defaultGcash'));
+        view('resident/documents', compact('requests', 'types', 'docFees', 'defaultGcash', 'gcashAccounts'));
     }
 
     /** POST /documents — file a new request. */
@@ -81,16 +82,19 @@ class DocumentRequestController
         if ($isFree) {
             $paymentMethod = 'free';
         } else {
-            // For digital soft copy, online payment (PayPal preferred) is required
+            // For digital soft copy, online payment (GCash or PayPal) is required
             if ($deliveryMethod === 'digital') {
-                $paymentMethod = in_array($chosenMethod, ['paypal', 'gcash'], true) ? $chosenMethod : 'paypal';
+                $paymentMethod = in_array($chosenMethod, ['gcash', 'paypal'], true) ? $chosenMethod : 'gcash';
             } else {
-                $paymentMethod = in_array($chosenMethod, ['paypal', 'gcash', 'pickup'], true) ? $chosenMethod : 'pickup';
+                $paymentMethod = in_array($chosenMethod, ['gcash', 'paypal', 'pickup'], true) ? $chosenMethod : 'pickup';
             }
         }
 
-        $defaultGcash = \App\Models\GcashAccount::getDefault();
-        $gcashAccountId = $defaultGcash ? (int) $defaultGcash['id'] : null;
+        $chosenGcashId = !empty($_POST['gcash_account_id']) ? (int) $_POST['gcash_account_id'] : null;
+        if (!$chosenGcashId) {
+            $defaultGcash = \App\Models\GcashAccount::getDefault();
+            $chosenGcashId = $defaultGcash ? (int) $defaultGcash['id'] : null;
+        }
 
         $created = DocumentRequest::create(
             $userId,
@@ -100,7 +104,7 @@ class DocumentRequestController
             $deliveryMethod,
             $feeAmount,
             $paymentMethod,
-            $gcashAccountId
+            $chosenGcashId
         );
 
         $newId     = (int) $created['id'];

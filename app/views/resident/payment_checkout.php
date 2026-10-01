@@ -34,14 +34,19 @@ $isRejected = $payStatus === 'PAYMENT_REJECTED';
 $isFailed   = in_array($payStatus, ['FAILED'], true) || (isset($_GET['status']) && $_GET['status'] === 'failed');
 $isCancelled= in_array($payStatus, ['CANCELLED'], true) || (isset($_GET['status']) && $_GET['status'] === 'cancelled');
 
-// Active GCash Account Details (as secondary option)
-$accountName  = (string) ($gcash['account_name'] ?? 'Barangay Bayogo Official');
-$mobileNumber = (string) ($gcash['mobile_number'] ?? '0917 123 4567');
-$cleanMobile  = preg_replace('/[^0-9]/', '', $mobileNumber);
-$qrImageBase64= (string) ($gcash['qr_image_data'] ?? '');
-$qrMimeType   = (string) ($gcash['qr_mime_type'] ?? 'image/png');
-$hasQr        = !empty($qrImageBase64);
-$qrSrc        = $hasQr ? ('data:' . $qrMimeType . ';base64,' . $qrImageBase64) : '';
+// Active GCash Account Details
+$accountName   = (string) ($gcash['account_name'] ?? 'Barangay Bayogo Official');
+$mobileNumber  = (string) ($gcash['mobile_number'] ?? '0954 296 8658');
+$cleanMobile   = preg_replace('/[^0-9]/', '', $mobileNumber);
+if ($cleanMobile === '') {
+    $cleanMobile = '09542968658';
+}
+$qrImageBase64 = (string) ($gcash['qr_image_data'] ?? '');
+$qrMimeType    = (string) ($gcash['qr_mime_type'] ?? 'image/png');
+$hasQr         = !empty($qrImageBase64);
+$qrSrc         = $hasQr ? ('data:' . $qrMimeType . ';base64,' . $qrImageBase64) : ('https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=' . urlencode($cleanMobile));
+$gcashAccounts = $gcashAccounts ?? \App\Models\GcashAccount::getActive();
+$initialTab    = (isset($_GET['tab']) && $_GET['tab'] === 'paypal') || (($payment['payment_method'] ?? '') === 'paypal') ? 'paypal' : 'gcash';
 
 ob_start();
 ?>
@@ -162,9 +167,9 @@ ob_start();
                         <span class="font-mono font-bold text-blue-600 dark:text-blue-400"><?= e($payRef) ?></span>
                     </div>
                     <div class="py-3 flex justify-between">
-                        <span class="text-slate-400">Primary Provider:</span>
-                        <span class="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400">
-                            <i class="bi bi-paypal text-blue-500"></i> PayPal Checkout
+                        <span class="text-slate-400">Payment Option:</span>
+                        <span id="summaryProviderText" class="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400">
+                            <?= $initialTab === 'paypal' ? '<i class="bi bi-paypal text-blue-500"></i> PayPal & Cards' : '<span class="h-2 w-2 rounded-full bg-blue-600 inline-block"></span> GCash Online' ?>
                         </span>
                     </div>
                     <div class="py-3 flex justify-between">
@@ -327,11 +332,192 @@ ob_start();
                 <!-- Client-Side Dynamic Alert Box -->
                 <div id="dynamicAlertBox" class="hidden rounded-2xl border p-4 text-xs transition"></div>
 
-                <!-- ================= PRIMARY: PAYPAL CHECKOUT CARD ================= -->
-                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <!-- Payment Method Selection Tabs -->
+                <div class="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mb-5">
+                    <button type="button" id="tabBtnGcash" onclick="switchPaymentTab('gcash')"
+                            class="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition shadow-sm <?= $initialTab === 'gcash' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900' ?>">
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white font-black text-[10px]">G</span>
+                        <span>GCash Online Checkout</span>
+                        <span class="rounded bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[9px] px-1.5 py-0.5 font-bold">Direkta</span>
+                    </button>
+                    <button type="button" id="tabBtnPaypal" onclick="switchPaymentTab('paypal')"
+                            class="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold <?= $initialTab === 'paypal' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900' ?> transition">
+                        <i class="bi bi-paypal text-blue-500"></i>
+                        <span>PayPal & Cards</span>
+                    </button>
+                </div>
+
+                <!-- ================= PANEL 1: GCASH ONLINE CHECKOUT ================= -->
+                <div id="panelGcash" class="<?= $initialTab === 'gcash' ? '' : 'hidden' ?> space-y-5">
+                    
+                    <div class="rounded-2xl border-2 border-blue-600/30 bg-white p-6 shadow-md dark:border-blue-900 dark:bg-slate-900">
+                        
+                        <div class="flex flex-wrap items-center justify-between border-b border-slate-100 pb-3 mb-4 dark:border-slate-800 gap-2">
+                            <div class="flex items-center gap-2.5">
+                                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white font-black text-sm shadow-sm">G</span>
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-900 dark:text-white">Opisyal na GCash Payment</h3>
+                                    <p class="text-[11px] text-slate-500"><?= e($accountName) ?></p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs text-slate-500">Halaga:</span>
+                                <span class="text-lg font-black text-blue-600 dark:text-blue-400 ml-1">₱<?= number_format($fee, 2) ?></span>
+                            </div>
+                        </div>
+
+                        <!-- Automatic Open GCash Action (Click to open GCash directly) -->
+                        <div class="mb-5 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-4 text-white shadow-lg shadow-blue-500/20">
+                            <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                                <div class="text-center sm:text-left">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white mb-1">
+                                        <i class="bi bi-lightning-charge-fill text-amber-300"></i> Automatic GCash
+                                    </span>
+                                    <h4 class="text-sm font-black tracking-tight">Magbayad gamit ang GCash App</h4>
+                                    <p class="text-[11px] text-blue-100 mt-0.5">
+                                        Awtomatikong magbubukas ang app at kokopyahin ang numero at halaga.
+                                    </p>
+                                </div>
+                                <button type="button" onclick="openGcashApp()"
+                                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-xs font-black text-blue-700 shadow-md hover:bg-blue-50 hover:shadow-lg active:scale-95 transition">
+                                    <i class="bi bi-box-arrow-up-right text-sm"></i>
+                                    <span>Buksan ang GCash App</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Account Selection & Details Card -->
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-800/50 mb-5">
+                            <?php if (!empty($gcashAccounts) && count($gcashAccounts) > 1): ?>
+                            <!-- Multi-Account Picker -->
+                            <div class="mb-3.5 pb-3.5 border-b border-slate-200 dark:border-slate-700">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                    <i class="bi bi-people-fill text-blue-600 me-1"></i>Piliin ang Barangay GCash Account na babayaran:
+                                </label>
+                                <select id="gcashAccountSwitcher" onchange="switchGcashAccount(this.value)"
+                                        class="w-full text-xs font-semibold rounded-xl border border-slate-300 bg-white p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                                    <?php foreach ($gcashAccounts as $ga):
+                                        $selected = ((int) $ga['id'] === (int) ($gcash['id'] ?? 0));
+                                    ?>
+                                    <option value="<?= (int) $ga['id'] ?>" <?= $selected ? 'selected' : '' ?>>
+                                        <?= e($ga['account_name']) ?> — <?= e($ga['mobile_number']) ?> <?= ((int)($ga['is_default'] ?? 0) === 1) ? '★ (Default)' : '' ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php endif; ?>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                <!-- Account Name -->
+                                <div class="rounded-lg bg-white p-2.5 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800">
+                                    <div class="text-[10px] font-bold uppercase text-slate-400">Account Name</div>
+                                    <div class="text-xs font-bold text-slate-900 dark:text-white mt-0.5 truncate"><?= e($accountName) ?></div>
+                                </div>
+
+                                <!-- Exact Amount with Copy -->
+                                <div class="rounded-lg bg-white p-2.5 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800 flex items-center justify-between">
+                                    <div>
+                                        <div class="text-[10px] font-bold uppercase text-slate-400">Halagang Babayaran</div>
+                                        <div class="text-xs font-black text-blue-600 dark:text-blue-400 mt-0.5">₱<?= number_format($fee, 2) ?></div>
+                                    </div>
+                                    <button type="button" id="copyAmtBtn" onclick="copyAmount()"
+                                            class="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100 transition dark:bg-blue-950 dark:text-blue-300">
+                                        <i class="bi bi-copy"></i> Copy Amount
+                                    </button>
+                                </div>
+
+                                <!-- GCash Number with Copy (Span 2) -->
+                                <div class="sm:col-span-2 rounded-lg bg-white p-3 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800 flex items-center justify-between">
+                                    <div>
+                                        <div class="text-[10px] font-bold uppercase text-slate-400">GCash Mobile Number</div>
+                                        <div class="text-base font-mono font-black text-slate-900 dark:text-white tracking-wider mt-0.5"><?= e($mobileNumber) ?></div>
+                                    </div>
+                                    <button type="button" id="copyNumBtn" onclick="copyGcashNumber()"
+                                            class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 active:scale-95 transition">
+                                        <i class="bi bi-copy"></i> Copy Number
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- GCash Official QR Code Box -->
+                        <div class="mb-5 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-center dark:border-slate-800 dark:bg-slate-900/50">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
+                                <i class="bi bi-qr-code text-blue-600 me-1"></i>GCash QR Code ng Barangay
+                            </span>
+                            <div class="relative inline-block mx-auto rounded-2xl bg-white p-3 shadow-md border border-slate-200/80 dark:border-slate-700">
+                                <img id="gcashQrImage" src="<?= e($qrSrc) ?>" alt="Barangay GCash QR Code"
+                                     class="h-48 w-48 object-contain rounded-xl cursor-pointer hover:opacity-95 transition"
+                                     onclick="openQrModal('<?= e($qrSrc) ?>', '<?= e($accountName) ?>')">
+                            </div>
+                            <div class="mt-3 flex items-center justify-center gap-2">
+                                <button type="button" onclick="openQrModal('<?= e($qrSrc) ?>', '<?= e($accountName) ?>')"
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                    <i class="bi bi-arrows-fullscreen"></i> Palakihin ang QR
+                                </button>
+                                <a href="<?= e($qrSrc) ?>" download="GCash_QR_<?= e($cleanMobile) ?>.png"
+                                   class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                    <i class="bi bi-download"></i> I-download ang QR
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Upload Proof Form -->
+                        <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
+                                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-white text-[10px]">2</span>
+                                <span>Isumite ang GCash Reference at Resibo</span>
+                            </h4>
+                            <p class="text-xs text-slate-500 mb-3">
+                                Pagkatapos mag-transfer sa GCash, ilagay ang Reference Number at i-upload ang screenshot ng GCash resibo.
+                            </p>
+
+                            <form method="post" action="<?= e(route('documents/' . $reqId . '/payment')) ?>" enctype="multipart/form-data" class="space-y-3.5">
+                                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                <input type="hidden" name="amount_reported" value="<?= number_format($fee, 2, '.', '') ?>">
+                                <input type="hidden" name="payment_method" value="gcash">
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                                        GCash Reference Number <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="text" name="gcash_reference_no" required maxlength="50"
+                                           placeholder="Hal: 1002 9384 7561 o 902183746251"
+                                           class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                    <p class="text-[10px] text-slate-400 mt-1">Makikita sa GCash transaction receipt o text mula sa 2882.</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                                        Screenshot ng GCash Resibo <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="file" name="receipt_file" accept="image/jpeg,image/png,image/jpg,application/pdf" required
+                                           onchange="previewReceiptImage(this)"
+                                           class="w-full rounded-xl border border-slate-300 bg-slate-50 p-2 text-xs text-slate-800 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                    
+                                    <!-- Live Image Preview Target -->
+                                    <div id="receiptPreviewContainer" class="mt-2.5 hidden">
+                                        <div class="text-[10px] font-semibold text-slate-400 mb-1">Preview ng Resibo:</div>
+                                        <img id="receiptPreviewImg" src="" alt="Receipt Preview"
+                                             class="h-32 rounded-lg border border-slate-200 shadow-sm object-contain bg-white dark:border-slate-700">
+                                    </div>
+                                </div>
+
+                                <button type="submit"
+                                        class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 py-3 text-xs font-bold text-white shadow-md hover:from-blue-800 hover:to-indigo-800 active:scale-[0.99] transition">
+                                    <i class="bi bi-shield-check text-sm"></i>
+                                    <span>Isumite ang GCash Patunay ng Bayad</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= PANEL 2: PAYPAL CHECKOUT CARD ================= -->
+                <div id="panelPaypal" class="<?= $initialTab === 'paypal' ? '' : 'hidden' ?> rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-5 dark:border-slate-800">
                         <div>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">PAYMENT</span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">PAYPAL & CARDS</span>
                             <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                 <span><?= e($docLabel) ?></span>
                             </h3>
@@ -340,8 +526,8 @@ ob_start();
                             </div>
                         </div>
                         <div class="text-right">
-                            <span class="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                                Online Payment
+                            <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                                <i class="bi bi-paypal me-1"></i>PayPal Checkout
                             </span>
                         </div>
                     </div>
@@ -349,7 +535,7 @@ ob_start();
                     <!-- PayPal Checkout UI Container -->
                     <div class="space-y-4">
                         <div class="text-xs text-slate-600 dark:text-slate-300">
-                            Magbayad nang direkta gamit ang inyong <strong>PayPal account</strong>, o magbayad bilang guest gamit ang anumang <strong>Debit o Credit Card</strong>:
+                            Magbayad nang direkta gamit ang inyong <strong>PayPal account</strong>, o magbayad bilang guest gamit ang anumang <strong>Debit o Credit Card</strong> (Visa/Mastercard):
                         </div>
 
                         <!-- PayPal Button Render Target -->
@@ -386,54 +572,7 @@ ob_start();
                             <i class="bi bi-lock-fill me-1 text-slate-400"></i> Secure payment processed by PayPal. Do not ask residents for PayPal passwords inside BARANGGABAY.
                         </div>
                     </div>
-                </div>
-
-                <!-- ================= SECONDARY OPTION: MANUAL GCASH ACCORDION ================= -->
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <button type="button" onclick="toggleGcashAccordion()"
-                            class="w-full flex items-center justify-between text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 transition">
-                        <span class="flex items-center gap-2">
-                            <span class="flex h-6 w-6 items-center justify-center rounded-md bg-blue-600 text-white font-black text-[10px]">G</span>
-                            <span>Alternatibo: Magbayad sa pamamagitan ng GCash Reference at Resibo</span>
-                        </span>
-                        <i id="gcashAccordionIcon" class="bi bi-chevron-down transition"></i>
-                    </button>
-
-                    <div id="gcashAccordionBody" class="hidden mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
-                        <div class="rounded-xl bg-blue-50/60 p-3.5 text-xs text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
-                            <strong>GCash Account:</strong> <?= e($accountName) ?> (<?= e($mobileNumber) ?>)<br>
-                            Halaga: <strong>₱<?= number_format($fee, 2) ?></strong>
-                        </div>
-
-                        <!-- Manual Upload Form -->
-                        <form method="post" action="<?= e(route('documents/' . $reqId . '/payment')) ?>" enctype="multipart/form-data" class="space-y-3">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="amount_reported" value="<?= number_format($fee, 2, '.', '') ?>">
-
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
-                                    GCash Reference Number <span class="text-rose-500">*</span>
-                                </label>
-                                <input type="text" name="gcash_reference_no" required
-                                       placeholder="Hal: 1234 567 89012"
-                                       class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs font-mono font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
-                                    Screenshot ng GCash Resibo <span class="text-rose-500">*</span>
-                                </label>
-                                <input type="file" name="receipt_file" accept="image/jpeg,image/png,image/jpg,application/pdf" required
-                                       class="w-full rounded-xl border border-slate-300 bg-slate-50 p-2 text-xs text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                            </div>
-
-                            <button type="submit"
-                                    class="w-full rounded-xl bg-slate-800 py-2.5 text-xs font-bold text-white hover:bg-slate-900 transition">
-                                Isumite ang GCash Receipt
-                            </button>
-                        </form>
-                    </div>
-                </div>
+                </div>            </div>
 
             <?php endif; ?>
 
@@ -464,17 +603,121 @@ function showDynamicAlert(type, title, message) {
     box.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-function toggleGcashAccordion() {
-    var body = document.getElementById('gcashAccordionBody');
-    var icon = document.getElementById('gcashAccordionIcon');
-    if (!body) return;
-    if (body.classList.contains('hidden')) {
-        body.classList.remove('hidden');
-        if (icon) icon.className = 'bi bi-chevron-up transition';
-    } else {
-        body.classList.add('hidden');
-        if (icon) icon.className = 'bi bi-chevron-down transition';
+function openGcashApp() {
+    var formattedNum = '<?= e($mobileNumber) ?>';
+    var cleanNum = '<?= e($cleanMobile) ?>';
+    var feeFormatted = '₱<?= number_format($fee, 2) ?>';
+
+    // 1. Copy mobile number to clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(cleanNum).catch(function(e) {
+            console.warn('Clipboard write failed:', e);
+        });
     }
+
+    // 2. Alert resident
+    showDynamicAlert(
+        'success',
+        'Binubuksan ang GCash App...',
+        'Awtomatikong nakopya sa inyong clipboard ang Numero: <strong>' + formattedNum + '</strong> at Halaga: <strong>' + feeFormatted + '</strong>.<br>' +
+        'Kung hindi kusang nagbukas ang app sa iyong device, i-scan ang QR Code sa ibaba o gamitin ang mga Copy button.'
+    );
+
+    // 3. Trigger GCash app scheme
+    window.location.href = 'gcash://';
+}
+
+function copyGcashNumber() {
+    var cleanNum = '<?= e($cleanMobile) ?>';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(cleanNum);
+    }
+    var btn = document.getElementById('copyNumBtn');
+    if (btn) {
+        var orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2"></i> Nakopya!';
+        setTimeout(function() { btn.innerHTML = orig; }, 1800);
+    }
+}
+
+function copyAmount() {
+    var amt = '<?= number_format($fee, 2, '.', '') ?>';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(amt);
+    }
+    var btn = document.getElementById('copyAmtBtn');
+    if (btn) {
+        var orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2"></i> Nakopya!';
+        setTimeout(function() { btn.innerHTML = orig; }, 1800);
+    }
+}
+
+function previewReceiptImage(input) {
+    var preview = document.getElementById('receiptPreviewImg');
+    var container = document.getElementById('receiptPreviewContainer');
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            if (preview) preview.src = e.target.result;
+            if (container) container.classList.remove('hidden');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function switchPaymentTab(tab) {
+    var gcashTab = document.getElementById('panelGcash');
+    var paypalTab = document.getElementById('panelPaypal');
+    var btnGcash = document.getElementById('tabBtnGcash');
+    var btnPaypal = document.getElementById('tabBtnPaypal');
+    var summaryProvider = document.getElementById('summaryProviderText');
+
+    if (tab === 'gcash') {
+        if (gcashTab) gcashTab.classList.remove('hidden');
+        if (paypalTab) paypalTab.classList.add('hidden');
+
+        if (btnGcash) {
+            btnGcash.className = 'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition shadow-sm bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900';
+        }
+        if (btnPaypal) {
+            btnPaypal.className = 'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition';
+        }
+        if (summaryProvider) {
+            summaryProvider.innerHTML = '<span class="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400"><span class="h-2 w-2 rounded-full bg-blue-600 inline-block"></span> GCash Online Checkout</span>';
+        }
+    } else {
+        if (gcashTab) gcashTab.classList.add('hidden');
+        if (paypalTab) paypalTab.classList.remove('hidden');
+
+        if (btnPaypal) {
+            btnPaypal.className = 'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition shadow-sm bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900';
+        }
+        if (btnGcash) {
+            btnGcash.className = 'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition';
+        }
+        if (summaryProvider) {
+            summaryProvider.innerHTML = '<span class="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400"><i class="bi bi-paypal text-blue-500"></i> PayPal & Cards</span>';
+        }
+    }
+}
+
+function switchGcashAccount(accId) {
+    window.location.href = '?gcash_account_id=' + encodeURIComponent(accId) + '&tab=gcash';
+}
+
+function openQrModal(src, title) {
+    var modal = document.getElementById('qrZoomModal');
+    var img = document.getElementById('modalQrImg');
+    var titleEl = document.getElementById('qrModalTitle');
+    if (img) img.src = src;
+    if (titleEl) titleEl.innerText = title || 'Barangay GCash QR Code';
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeQrModal() {
+    var modal = document.getElementById('qrZoomModal');
+    if (modal) modal.classList.add('hidden');
 }
 
 // Initialize PayPal Buttons
@@ -649,6 +892,26 @@ function runSandboxSimulation() {
 </script>
 <?php endif; ?>
 
+<!-- QR Zoom Modal -->
+<div id="qrZoomModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="relative max-w-sm w-full bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl text-center">
+        <button type="button" onclick="closeQrModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        <h4 id="qrModalTitle" class="text-sm font-bold text-slate-900 dark:text-white mb-1">Barangay GCash QR Code</h4>
+        <p class="text-xs text-slate-500 mb-4">I-scan gamit ang GCash app sa inyong telepono</p>
+        <div class="inline-block p-3 rounded-2xl bg-white border border-slate-200 shadow-inner">
+            <img id="modalQrImg" src="" alt="GCash QR" class="w-64 h-64 object-contain mx-auto">
+        </div>
+        <div class="mt-4">
+            <button type="button" onclick="closeQrModal()" class="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition">
+                Isara (Close)
+            </button>
+        </div>
+    </div>
+</div>
+
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layouts/main.php';
+

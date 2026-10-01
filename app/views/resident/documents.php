@@ -7,7 +7,8 @@
 $requests     = $requests ?? [];
 $types        = $types    ?? [];
 $docFees      = $docFees  ?? \App\Models\DocumentFee::getAll();
-$defaultGcash = $defaultGcash ?? \App\Models\GcashAccount::getDefault();
+$defaultGcash  = $defaultGcash ?? \App\Models\GcashAccount::getDefault();
+$gcashAccounts = $gcashAccounts ?? \App\Models\GcashAccount::getActive();
 
 $statusClass = [
     'awaiting_payment' => 'bg-indigo-50 text-indigo-800 border-indigo-200',
@@ -137,17 +138,46 @@ ob_start();
                 </div>
 
                 <div class="grid gap-2 mt-2">
-                    <!-- Online Payment (PayPal Checkout) -->
-                    <label id="optPaypalWrapper" class="payment-method-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-blue-600 bg-white p-2.5 transition">
-                        <input type="radio" name="payment_method" value="paypal" checked
+                    <!-- Online Payment (GCash Checkout) -->
+                    <label id="optGcashWrapper" class="payment-method-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-blue-600 bg-blue-50/40 p-2.5 transition">
+                        <input type="radio" name="payment_method" value="gcash" checked
                                class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5">
-                                <span class="text-xs font-bold text-slate-900">Magbayad Online gamit ang PayPal</span>
-                                <span class="rounded bg-blue-100 text-blue-800 px-1.5 py-0.2 text-[9px] font-bold">PayPal</span>
+                                <span class="text-xs font-bold text-slate-900">Magbayad Online gamit ang GCash</span>
+                                <span class="rounded bg-blue-600 text-white px-1.5 py-0.2 text-[9px] font-bold">GCash</span>
                             </div>
                             <p class="mt-0.5 text-[11px] text-slate-500 leading-tight">
-                                Magbayad gamit ang PayPal account o anumang debit/credit card. Ligtas at beripikado.
+                                Awtomatikong buksan ang GCash app, i-scan ang official QR code, o kopyahin ang mobile number.
+                            </p>
+                            <?php if (!empty($gcashAccounts) && count($gcashAccounts) > 1): ?>
+                            <div class="mt-2 pt-2 border-t border-blue-100">
+                                <label class="block text-[10px] font-bold text-blue-900 mb-1">
+                                    Piliin ang Barangay GCash Account na babayaran:
+                                </label>
+                                <select name="gcash_account_id" class="w-full text-xs rounded-lg border border-slate-300 bg-white py-1 px-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                    <?php foreach ($gcashAccounts as $ga): ?>
+                                    <option value="<?= (int) $ga['id'] ?>" <?= ((int)($ga['is_default'] ?? 0) === 1) ? 'selected' : '' ?>>
+                                        <?= e($ga['account_name']) ?> (<?= e($ga['mobile_number']) ?>)
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </label>
+
+                    <!-- Online Payment (PayPal Checkout & Cards) -->
+                    <label id="optPaypalWrapper" class="payment-method-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 bg-white p-2.5 transition hover:border-slate-300">
+                        <input type="radio" name="payment_method" value="paypal"
+                               class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-bold text-slate-900">Magbayad gamit ang PayPal o Card</span>
+                                <span class="rounded bg-amber-500 text-white px-1.5 py-0.2 text-[9px] font-bold">PayPal</span>
+                            </div>
+                            <p class="mt-0.5 text-[11px] text-slate-500 leading-tight">
+                                Magbayad gamit ang inyong PayPal account o anumang debit/credit card (Visa/Mastercard).
                             </p>
                         </div>
                     </label>
@@ -170,7 +200,7 @@ ob_start();
 
                 <!-- Digital Lock Notice -->
                 <div id="digitalPaymentNotice" class="mt-2 text-[11px] text-indigo-700 font-medium hidden">
-                    <i class="bi bi-shield-lock me-1"></i>Para sa <strong>Digital Soft Copy</strong>, kailangang online PayPal payment upang mai-release ang digital na kopya online.
+                    <i class="bi bi-shield-lock me-1"></i>Para sa <strong>Digital Soft Copy</strong>, kailangang online payment (GCash o PayPal) upang mai-release ang digital na kopya online.
                 </div>
             </div>
 
@@ -400,7 +430,7 @@ ob_start();
                                 </span>
                                 <div>
                                     <h4 class="text-sm font-bold text-slate-900">
-                                        <?= $isRejected ? 'Tinanggihan ang Resibo — Kailangan ng Bagong Patunay' : 'Kailangan ng Pagbabayad sa GCash (Payment Required)' ?>
+                                        <?= $isRejected ? 'Tinanggihan ang Resibo — Kailangan ng Bagong Patunay' : 'Kailangan ng Pagbabayad Online (Payment Required)' ?>
                                     </h4>
                                     <p class="text-xs text-slate-600 mt-0.5">
                                         Halagang babayaran: <strong class="text-indigo-700 font-bold">₱<?= number_format($fee, 2) ?></strong>
@@ -417,7 +447,7 @@ ob_start();
                                     </div>
                                     <?php else: ?>
                                     <p class="text-[11px] text-slate-500 mt-1">
-                                        I-click ang button upang buksan ang opisyal na GCash Checkout at i-scan ang QR code o kopyahin ang mobile number.
+                                        I-click ang button upang buksan ang online checkout (awtomatikong buksan ang GCash app, i-scan ang official QR code, o magbayad via PayPal/Card).
                                     </p>
                                     <?php endif; ?>
                                 </div>
@@ -426,7 +456,7 @@ ob_start();
                                 <a href="<?= e(route('documents/' . $reqId . '/payment')) ?>"
                                    class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:from-blue-800 hover:to-indigo-800 transition active:scale-[0.98]">
                                     <i class="bi bi-wallet2"></i>
-                                    <span><?= $isRejected ? 'Mag-upload Muli sa Checkout' : 'Magpatuloy sa GCash Payment' ?></span>
+                                    <span><?= $isRejected ? 'Mag-upload Muli sa Checkout' : 'Magpatuloy sa Pagbabayad (Checkout)' ?></span>
                                     <i class="bi bi-arrow-right"></i>
                                 </a>
                             </div>
@@ -717,12 +747,12 @@ function handleDeliveryChange() {
     const gcashRadio = document.querySelector('input[name="payment_method"][value="gcash"]');
 
     if (delMethod === 'digital' && !isFree) {
-        // Digital soft copy requires Online GCash
+        // Digital soft copy requires Online Payment (GCash or PayPal)
         if (optPickup) {
             optPickup.classList.add('hidden');
         }
-        if (gcashRadio) {
-            gcashRadio.checked = true;
+        if (pickupRadio && pickupRadio.checked) {
+            if (gcashRadio) gcashRadio.checked = true;
         }
         if (digitalNotice) {
             digitalNotice.classList.remove('hidden');
@@ -769,7 +799,7 @@ function updatePaymentCardStyles() {
 function updateSummaryAndButton() {
     const select = document.getElementById('document_type');
     const selectedOpt = select ? select.options[select.selectedIndex] : null;
-    const docName = selectedOpt ? selectedOpt.text.replace(/\(₱.*?\)/, '').trim() : 'Dokumento';
+    const docName = selectedOpt ? selectedOpt.text.replace(/\(₱.*?\)/, '').replace(/\(LIBRE\)/, '').trim() : 'Dokumento';
     const amount = selectedOpt ? parseFloat(selectedOpt.getAttribute('data-amount') || '0') : 0;
     const isFree = selectedOpt ? (selectedOpt.getAttribute('data-free') === '1' || amount <= 0) : true;
 
@@ -805,15 +835,25 @@ function updateSummaryAndButton() {
         }
         if (submitBtnText) submitBtnText.innerText = 'Isumite ang Kahilingan (Submit Request)';
         if (submitBtnIcon) submitBtnIcon.className = 'bi bi-send-fill text-base';
-    } else if (payMethod === 'paypal' || payMethod === 'gcash') {
-        if (summaryPayment) summaryPayment.innerText = 'Online PayPal Payment';
+    } else if (payMethod === 'gcash') {
+        if (summaryPayment) summaryPayment.innerText = 'Online GCash Payment';
+        if (summaryFee) summaryFee.innerText = '₱' + amount.toFixed(2);
+        if (summaryTotal) summaryTotal.innerText = '₱' + amount.toFixed(2);
+        if (summaryBadge) {
+            summaryBadge.innerText = 'GCASH';
+            summaryBadge.className = 'rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800';
+        }
+        if (submitBtnText) submitBtnText.innerText = 'Isumite at Magbayad sa GCash (Submit & Pay via GCash)';
+        if (submitBtnIcon) submitBtnIcon.className = 'bi bi-arrow-right-circle-fill text-base';
+    } else if (payMethod === 'paypal') {
+        if (summaryPayment) summaryPayment.innerText = 'Online PayPal / Card';
         if (summaryFee) summaryFee.innerText = '₱' + amount.toFixed(2);
         if (summaryTotal) summaryTotal.innerText = '₱' + amount.toFixed(2);
         if (summaryBadge) {
             summaryBadge.innerText = 'PAYPAL';
-            summaryBadge.className = 'rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800';
+            summaryBadge.className = 'rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800';
         }
-        if (submitBtnText) submitBtnText.innerText = 'Isumite at Magpatuloy sa Pagbabayad (Submit & Continue to Payment)';
+        if (submitBtnText) submitBtnText.innerText = 'Isumite at Magpatuloy sa PayPal (Submit & Continue to PayPal)';
         if (submitBtnIcon) submitBtnIcon.className = 'bi bi-arrow-right-circle-fill text-base';
     } else {
         if (summaryPayment) summaryPayment.innerText = 'Magbayad sa Counter (Pay Upon Pickup)';

@@ -658,9 +658,21 @@ class PaymentController
             $payment = DocumentPayment::find($paymentId);
         }
 
-        // Load active GCash account if needed
+        // Load active GCash accounts so resident/staff can choose who to pay
+        $gcashAccounts = GcashAccount::getActive();
         $gcash = null;
-        if (!empty($payment['gcash_account_id'])) {
+
+        if (isset($_GET['gcash_account_id'])) {
+            $switchId = (int) $_GET['gcash_account_id'];
+            $switchAcc = GcashAccount::find($switchId);
+            if ($switchAcc && (int) $switchAcc['is_active'] === 1) {
+                $gcash = $switchAcc;
+                db()->prepare('UPDATE document_payments SET gcash_account_id = ? WHERE id = ?')
+                    ->execute([$switchId, (int) $payment['id']]);
+            }
+        }
+
+        if (!$gcash && !empty($payment['gcash_account_id'])) {
             $gcash = GcashAccount::find((int) $payment['gcash_account_id']);
         }
         if (!$gcash) {
@@ -677,6 +689,7 @@ class PaymentController
             'request',
             'payment',
             'gcash',
+            'gcashAccounts',
             'pageTitle',
             'paypalClientId',
             'paypalMode',

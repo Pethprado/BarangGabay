@@ -81,22 +81,20 @@ ob_start();
 
                 <!-- QR Code Box -->
                 <div class="text-center p-3 rounded-2 bg-light border mb-3">
-                    <?php if ($hasQr):
-                        $mime = $acc['qr_mime_type'] ?: 'image/png';
-                        $src  = 'data:' . $mime . ';base64,' . $acc['qr_image_data'];
+                    <?php
+                        $cleanMob = preg_replace('/[^0-9]/', '', (string)$acc['mobile_number']);
+                        if ($cleanMob === '') $cleanMob = '09542968658';
+                        $src = $hasQr ? ('data:' . ($acc['qr_mime_type'] ?: 'image/png') . ';base64,' . $acc['qr_image_data']) : ('https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($cleanMob));
                     ?>
                     <img src="<?= $src ?>" alt="GCash QR Code" class="img-fluid rounded border shadow-sm mb-2" style="max-height:160px;cursor:pointer;" onclick="openQrModal('<?= $src ?>', '<?= e((string) $acc['account_name']) ?>')">
-                    <div>
-                        <button type="button" class="btn btn-outline-primary btn-xs py-0 px-2 fw-semibold" style="font-size:.72rem;" onclick="openQrModal('<?= $src ?>', '<?= e((string) $acc['account_name']) ?>')">
+                    <div class="d-flex justify-content-center gap-1">
+                        <button type="button" class="btn btn-outline-primary btn-xs py-1 px-2 fw-semibold" style="font-size:.72rem;" onclick="openQrModal('<?= $src ?>', '<?= e((string) $acc['account_name']) ?>')">
                             <i class="bi bi-zoom-in me-1"></i>Palakihin ang QR
                         </button>
+                        <button type="button" class="btn btn-outline-info btn-xs py-1 px-2 fw-semibold" style="font-size:.72rem;" onclick="navigator.clipboard.writeText('<?= e((string) $acc['mobile_number']) ?>');window.location.href='gcash://';">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Buksan ang GCash
+                        </button>
                     </div>
-                    <?php else: ?>
-                    <div class="py-4 text-muted small">
-                        <i class="bi bi-image" style="font-size:2rem;color:#cbd5e1;display:block;"></i>
-                        Walang naka-upload na QR Code
-                    </div>
-                    <?php endif; ?>
                 </div>
 
                 <!-- Card Actions -->

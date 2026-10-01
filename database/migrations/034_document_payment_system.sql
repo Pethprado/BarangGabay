@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS gcash_accounts (
 
 -- Seed default GCash account if none exists
 INSERT INTO gcash_accounts (account_name, mobile_number, description, is_default, is_active, created_at, updated_at)
-SELECT 'Barangay Bayogo Official', '0917 123 4567', 'Official Barangay Treasurer GCash Account', 1, 1, NOW(), NOW()
+SELECT 'Barangay Bayogo Official', '0954 296 8658', 'Official Barangay Treasurer GCash Account', 1, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM gcash_accounts LIMIT 1);
 
 -- 4. Document Payments Table

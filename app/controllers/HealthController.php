@@ -27,7 +27,7 @@ class HealthController
             'app'         => 'ok',
             'php'         => PHP_VERSION,
             'timestamp'   => date('c'),
-            'version'     => '2.6.1-paypal-schema-sync',
+            'version'     => '2.7.0-gcash-paypal-hybrid',
             'paypal_mode' => \App\Services\PayPalService::getMode(),
         ];
 
