@@ -27,7 +27,7 @@ class HealthController
             'app'       => 'ok',
             'php'       => PHP_VERSION,
             'timestamp' => date('c'),
-            'version'   => '2.4.1-payments-verified',
+            'version'   => '2.4.2-payments-verified',
         ];
 
         try {

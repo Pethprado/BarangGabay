@@ -217,6 +217,50 @@ class PaymentController
     }
 
     /**
+     * POST /admin/documents/{id}/pickup-payment — Staff marks cash received from Document Requests table
+     */
+    public function markRequestPaidAtPickup(array $params): void
+    {
+        check_csrf();
+
+        $requestId = (int) ($params['id'] ?? 0);
+        $staffId   = (int) ($_SESSION['user_id'] ?? 0);
+        $note      = trim($_POST['note'] ?? 'Cash payment received at barangay counter.');
+
+        $req = DocumentRequest::find($requestId);
+        if (!$req) {
+            flash('error', t('flash.not_found'));
+            redirect('/admin/documents');
+        }
+
+        // Find or create the payment record for this request
+        $payment = DocumentPayment::findByRequest($requestId);
+        if (!$payment) {
+            $paymentId = DocumentPayment::createForRequest(
+                $requestId,
+                (int) $req['user_id'],
+                (string) $req['document_type'],
+                (float) ($req['fee_amount'] ?? 0),
+                'pickup'
+            );
+            $payment = DocumentPayment::find($paymentId);
+        }
+
+        if ($payment && DocumentPayment::markPaidAtPickup((int)$payment['id'], $staffId, $note)) {
+            AuditLog::record(
+                $staffId,
+                'payment.paid_at_pickup',
+                sprintf('Collected cash payment for request %s (₱%.2f)', (string) $req['reference_no'], (float) ($req['fee_amount'] ?? 0))
+            );
+            flash('success', sprintf('Naitampok na bayad na sa counter ang ₱%.2f para sa request %s.', (float) ($req['fee_amount'] ?? 0), (string) $req['reference_no']));
+        } else {
+            flash('error', 'Hindi na-update ang estado ng bayad.');
+        }
+
+        redirect('/admin/documents');
+    }
+
+    /**
      * POST /admin/payments/{id}/waive — Admin waives fee
      */
     public function waive(array $params): void
@@ -298,7 +342,7 @@ class PaymentController
     {
         $id     = (int) ($params['id'] ?? 0);
         $userId = (int) ($_SESSION['user_id'] ?? 0);
-        $role   = (string) ($_SESSION['user_role'] ?? '');
+        $role   = (string) ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '');
 
         $payment = DocumentPayment::find($id);
         if (!$payment || empty($payment['receipt_file_data'])) {
@@ -672,7 +716,7 @@ class PaymentController
     {
         $requestId = (int) ($params['id'] ?? 0);
         $userId    = (int) ($_SESSION['user_id'] ?? 0);
-        $role      = (string) ($_SESSION['user_role'] ?? '');
+        $role      = (string) ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '');
 
         $request = DocumentRequest::find($requestId);
         if (!$request) {

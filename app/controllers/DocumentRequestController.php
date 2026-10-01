@@ -128,7 +128,7 @@ class DocumentRequestController
     {
         $id     = (int) ($params['id'] ?? 0);
         $userId = (int) ($_SESSION['user_id'] ?? 0);
-        $role   = (string) ($_SESSION['user_role'] ?? '');
+        $role   = (string) ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '');
 
         $request = DocumentRequest::find($id);
         if ($request === null) {
@@ -170,7 +170,7 @@ class DocumentRequestController
     {
         $id     = (int) ($params['id'] ?? 0);
         $userId = (int) ($_SESSION['user_id'] ?? 0);
-        $role   = (string) ($_SESSION['user_role'] ?? '');
+        $role   = (string) ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '');
 
         $request = DocumentRequest::find($id);
         if ($request === null) {

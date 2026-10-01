@@ -176,6 +176,7 @@ return [
     ['GET',  '/admin/documents/{id}/download',    'DocumentRequestController@adminDownload',['auth', 'role:admin,staff']],
     ['GET',  '/admin/documents/{id}/preview',     'DocumentRequestController@adminPreview', ['auth', 'role:admin,staff']],
     ['GET',  '/admin/documents/{id}/details',     'DocumentRequestController@details',      ['auth', 'role:admin,staff']],
+    ['POST', '/admin/documents/{id}/pickup-payment','PaymentController@markRequestPaidAtPickup',['auth', 'role:admin,staff']],
 
     // Payment Management System
     ['GET',  '/admin/payments',                   'PaymentController@adminIndex',       ['auth', 'role:admin,staff']],
