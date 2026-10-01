@@ -24,10 +24,11 @@ class HealthController
 
         // Render deployment diagnostic check
         $result = [
-            'app'       => 'ok',
-            'php'       => PHP_VERSION,
-            'timestamp' => date('c'),
-            'version'   => '2.5.2-checkout-layout-fix',
+            'app'         => 'ok',
+            'php'         => PHP_VERSION,
+            'timestamp'   => date('c'),
+            'version'     => '2.6.0-paypal-checkout',
+            'paypal_mode' => \App\Services\PayPalService::getMode(),
         ];
 
         try {
@@ -43,12 +44,12 @@ class HealthController
                 $result['user_columns'] = $colStmt->fetchAll(\PDO::FETCH_COLUMN);
             }
 
-            if (isset($_GET['payments'])) {
-                $pTblStmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_name IN ('document_fees', 'gcash_accounts', 'document_payments', 'payment_audit_logs')");
+            if (isset($_GET['payments']) || isset($_GET['paypal'])) {
+                $pTblStmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_name IN ('document_fees', 'gcash_accounts', 'document_payments', 'payment_audit_logs', 'payment_webhook_events')");
                 $result['payment_tables'] = $pTblStmt->fetchAll(\PDO::FETCH_COLUMN);
 
-                $dpColStmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name='document_requests' AND column_name IN ('fee_amount', 'payment_method', 'payment_status', 'payment_id')");
-                $result['document_request_payment_cols'] = $dpColStmt->fetchAll(\PDO::FETCH_COLUMN);
+                $dpColStmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name='document_payments' AND column_name IN ('provider', 'currency', 'paypal_order_id', 'paypal_capture_id', 'paypal_payer_id', 'paypal_payer_email')");
+                $result['paypal_payment_cols'] = $dpColStmt->fetchAll(\PDO::FETCH_COLUMN);
 
                 $feesStmt = $pdo->query("SELECT document_type, amount, is_free FROM document_fees");
                 $result['seeded_fees'] = $feesStmt->fetchAll(\PDO::FETCH_ASSOC);

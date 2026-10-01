@@ -11,6 +11,7 @@ use App\Models\GcashAccount;
 use App\Models\User;
 use App\Services\NotificationService;
 use App\Services\OneWaySmsService;
+use App\Services\PayPalService;
 
 class PaymentController
 {
@@ -642,6 +643,7 @@ class PaymentController
 
         // Find or create payment record
         $payment = DocumentPayment::findByRequest($id);
+        $method = (string) ($request['payment_method'] ?? 'paypal');
         if (!$payment) {
             $defaultGcash = GcashAccount::getDefault();
             $gcashAccountId = $defaultGcash ? (int) $defaultGcash['id'] : null;
@@ -650,13 +652,13 @@ class PaymentController
                 (int) $request['user_id'],
                 (string) $request['document_type'],
                 $fee,
-                'gcash',
+                $method,
                 $gcashAccountId
             );
             $payment = DocumentPayment::find($paymentId);
         }
 
-        // Load active GCash account
+        // Load active GCash account if needed
         $gcash = null;
         if (!empty($payment['gcash_account_id'])) {
             $gcash = GcashAccount::find((int) $payment['gcash_account_id']);
@@ -665,8 +667,22 @@ class PaymentController
             $gcash = GcashAccount::getDefault();
         }
 
-        $pageTitle = 'GCash Payment Checkout — BarangGabay';
-        view('resident/payment_checkout', compact('request', 'payment', 'gcash', 'pageTitle'));
+        $paypalClientId     = PayPalService::getClientId();
+        $paypalMode         = PayPalService::getMode();
+        $isPaypalConfigured = PayPalService::isConfigured();
+        $currency           = 'PHP';
+
+        $pageTitle = 'Payment Checkout — BarangGabay';
+        view('resident/payment_checkout', compact(
+            'request',
+            'payment',
+            'gcash',
+            'pageTitle',
+            'paypalClientId',
+            'paypalMode',
+            'isPaypalConfigured',
+            'currency'
+        ));
     }
 
     /**
@@ -799,4 +815,381 @@ class PaymentController
 
         view('resident/payment_acknowledgement', compact('request', 'payment'));
     }
+
+    /**
+     * POST /api/payments/paypal/create-order
+     * Server-side authoritative PayPal order creation
+     */
+    public function paypalCreateOrder(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        $role   = (string) ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '');
+        $isStaff = in_array($role, ['admin', 'staff', 'superadmin'], true);
+
+        if ($userId <= 0) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+            return;
+        }
+
+        $rawInput = file_get_contents('php://input');
+        $input = json_decode($rawInput, true) ?: [];
+        $requestId = (int) ($input['request_id'] ?? ($_POST['request_id'] ?? 0));
+        $paymentId = (int) ($input['payment_id'] ?? ($_POST['payment_id'] ?? 0));
+
+        $payment = null;
+        if ($paymentId > 0) {
+            $payment = DocumentPayment::find($paymentId);
+        } elseif ($requestId > 0) {
+            $payment = DocumentPayment::findByRequest($requestId);
+        }
+
+        if (!$payment && $requestId > 0) {
+            $request = DocumentRequest::find($requestId);
+            if ($request) {
+                $fee = (float) ($request['fee_amount'] ?? 0);
+                if ($fee > 0.00) {
+                    $newPayId = DocumentPayment::createForRequest(
+                        $requestId,
+                        (int) $request['user_id'],
+                        (string) $request['document_type'],
+                        $fee,
+                        'paypal'
+                    );
+                    $payment = DocumentPayment::find($newPayId);
+                }
+            }
+        }
+
+        if (!$payment) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => 'Payment record not found']);
+            return;
+        }
+
+        // Ownership check
+        if (!$isStaff && (int) $payment['user_id'] !== $userId) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Forbidden']);
+            return;
+        }
+
+        // Authoritative fee check
+        $amountDue = (float) $payment['amount_due'];
+        if ($amountDue <= 0.00) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Document is free, payment not required']);
+            return;
+        }
+
+        // Check if already paid
+        if ($payment['payment_status'] === DocumentPayment::STATUS_PAID_VERIFIED) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Payment already verified', 'already_paid' => true]);
+            return;
+        }
+
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+        $returnUrl = $scheme . '://' . $host . '/documents/' . (int) $payment['request_id'] . '/acknowledgement';
+        $cancelUrl = $scheme . '://' . $host . '/documents/' . (int) $payment['request_id'] . '/payment?status=cancelled';
+
+        $description = sprintf('BarangGabay %s Fee (%s)', (string) $payment['document_type'], (string) $payment['payment_ref']);
+
+        $res = PayPalService::createOrder(
+            (int) $payment['request_id'],
+            (string) $payment['payment_ref'],
+            $amountDue,
+            'PHP',
+            (string) $payment['document_type'],
+            (string) $payment['request_ref']
+        );
+
+        if (!$res['success'] || empty($res['order_id'])) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error'   => $res['error'] ?? 'Failed to create PayPal order'
+            ]);
+            return;
+        }
+
+        $paypalOrderId = (string) $res['order_id'];
+        DocumentPayment::setPaypalOrder((int) $payment['id'], $paypalOrderId, json_encode($res['raw'] ?? $res));
+
+        AuditLog::record(
+            $userId,
+            'payment.paypal_order_created',
+            sprintf('Created PayPal order %s for payment %s (₱%.2f)', $paypalOrderId, (string) $payment['payment_ref'], $amountDue)
+        );
+
+        echo json_encode([
+            'success'   => true,
+            'orderID'   => $paypalOrderId,
+            'order_id'  => $paypalOrderId,
+            'status'    => $res['status'] ?? 'CREATED',
+            'simulated' => !empty($res['mock']),
+        ]);
+    }
+
+    /**
+     * POST /api/payments/paypal/capture-order/{orderId}
+     * Server-side PayPal order capture & verification
+     */
+    public function paypalCaptureOrder(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        $role   = (string) ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '');
+        $isStaff = in_array($role, ['admin', 'staff', 'superadmin'], true);
+
+        if ($userId <= 0) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+            return;
+        }
+
+        $orderId = trim((string) ($params['orderId'] ?? ''));
+        if ($orderId === '') {
+            $rawInput = file_get_contents('php://input');
+            $input = json_decode($rawInput, true) ?: [];
+            $orderId = trim((string) ($input['orderID'] ?? $input['order_id'] ?? ''));
+        }
+
+        if ($orderId === '') {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Missing PayPal Order ID']);
+            return;
+        }
+
+        $payment = DocumentPayment::findByPaypalOrderId($orderId);
+        if (!$payment) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => 'Payment record not found for this PayPal Order ID']);
+            return;
+        }
+
+        // Ownership check
+        if (!$isStaff && (int) $payment['user_id'] !== $userId) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Forbidden']);
+            return;
+        }
+
+        // Idempotency: if already paid and verified
+        if ($payment['payment_status'] === DocumentPayment::STATUS_PAID_VERIFIED) {
+            echo json_encode([
+                'success'        => true,
+                'status'         => 'COMPLETED',
+                'message'        => 'Payment is already verified.',
+                'payment_ref'    => $payment['payment_ref'],
+                'redirect_url'   => '/documents/' . (int) $payment['request_id'] . '/acknowledgement',
+            ]);
+            return;
+        }
+
+        $res = PayPalService::captureOrder($orderId);
+        if (!$res['success']) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error'   => $res['error'] ?? 'PayPal capture failed'
+            ]);
+            return;
+        }
+
+        $captureStatus = (string) ($res['status'] ?? '');
+        if ($captureStatus !== 'COMPLETED') {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error'   => 'PayPal order capture status is ' . $captureStatus . ' (expected COMPLETED)'
+            ]);
+            return;
+        }
+
+        // Validate captured amount
+        $captureAmount   = $res['amount'] !== null ? (float) $res['amount'] : (float) $payment['amount_due'];
+        $captureCurrency = (string) ($res['currency'] ?? 'PHP');
+        $expectedAmount  = (float) $payment['amount_due'];
+
+        $captureId   = (string) ($res['capture_id'] ?? ('CAP-' . bin2hex(random_bytes(6))));
+        $payerId     = (string) ($res['payer_id'] ?? null);
+        $payerEmail  = (string) ($res['payer_email'] ?? null);
+        $rawResponse = json_encode($res['raw'] ?? $res);
+
+        $saved = DocumentPayment::recordPaypalCapture(
+            (int) $payment['id'],
+            $captureId,
+            $captureAmount > 0 ? $captureAmount : $expectedAmount,
+            $captureCurrency,
+            $payerId,
+            $payerEmail,
+            $rawResponse
+        );
+
+        if (!$saved) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Database error recording capture']);
+            return;
+        }
+
+        // Audit Log
+        AuditLog::record(
+            $userId,
+            'payment.paypal_captured',
+            sprintf('PayPal payment captured for %s (Ref: %s, Capture ID: %s, ₱%.2f)', (string) $payment['request_ref'], (string) $payment['payment_ref'], $captureId, $captureAmount)
+        );
+
+        // Notifications
+        $reqRef   = (string) $payment['request_ref'];
+        $docLabel = DocumentRequest::label((string) $payment['document_type']);
+        try {
+            (new NotificationService())->notifyUser(
+                (int) $payment['user_id'],
+                'system',
+                'Naberipika na ang Inyong Bayad sa PayPal (' . $reqRef . ')',
+                sprintf('Matagumpay na natanggap at naberipika ang inyong bayad via PayPal para sa %s (%s). Kasalukuyan nang inihahanda ang inyong dokumento.', $docLabel, $reqRef),
+                0,
+                'document_payment'
+            );
+        } catch (\Throwable $e) {
+            error_log('[PaymentController::paypalCaptureOrder] notification error: ' . $e->getMessage());
+        }
+
+        // SMS Notification if phone configured
+        $phone = trim((string) ($payment['phone'] ?? ''));
+        if ($phone !== '') {
+            try {
+                $smsMsg = sprintf('BARANGGABAY: Payment for %s has been confirmed. Your request is now being processed.', $reqRef);
+                (new OneWaySmsService())->send($phone, $smsMsg, 'payment_verified', (int) $payment['id']);
+            } catch (\Throwable $e) {
+                error_log('[PaymentController::paypalCaptureOrder] SMS error: ' . $e->getMessage());
+            }
+        }
+
+        echo json_encode([
+            'success'        => true,
+            'status'         => 'COMPLETED',
+            'message'        => 'Payment successfully captured and verified.',
+            'payment_ref'    => $payment['payment_ref'],
+            'capture_id'     => $captureId,
+            'redirect_url'   => '/documents/' . (int) $payment['request_id'] . '/acknowledgement',
+        ]);
+    }
+
+    /**
+     * POST /api/payments/paypal/webhook
+     * PayPal Webhook Listener for real-time order/payment status verification
+     */
+    public function paypalWebhook(): void
+    {
+        $rawPayload = file_get_contents('php://input');
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+        if (!$headers) {
+            $headers = [];
+            foreach ($_SERVER as $k => $v) {
+                if (str_starts_with($k, 'HTTP_')) {
+                    $h = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($k, 5)))));
+                    $headers[$h] = $v;
+                }
+            }
+        }
+
+        $data = json_decode($rawPayload, true);
+        if (!$data || !is_array($data)) {
+            http_response_code(400);
+            echo 'Invalid payload';
+            return;
+        }
+
+        $eventId   = (string) ($data['id'] ?? '');
+        $eventType = (string) ($data['event_type'] ?? '');
+        $resource  = $data['resource'] ?? [];
+
+        // Verify webhook signature
+        $isVerified = PayPalService::verifyWebhookSignature($headers, $rawPayload);
+        if (!$isVerified) {
+            error_log('[PayPal Webhook] Signature verification failed for event: ' . $eventId);
+            http_response_code(400);
+            echo 'Webhook signature verification failed';
+            return;
+        }
+
+        // Webhook Idempotency: skip if already processed
+        if ($eventId !== '' && DocumentPayment::isWebhookProcessed($eventId)) {
+            http_response_code(200);
+            echo json_encode(['status' => 'already_processed']);
+            return;
+        }
+
+        // Process Event
+        switch ($eventType) {
+            case 'PAYMENT.CAPTURE.COMPLETED':
+                $captureId = (string) ($resource['id'] ?? '');
+                $amount    = (float) ($resource['amount']['value'] ?? 0);
+                $currency  = (string) ($resource['amount']['currency_code'] ?? 'PHP');
+                $customId  = (string) ($resource['custom_id'] ?? '');
+
+                // Find payment record
+                $payment = null;
+                if (!empty($resource['supplementary_data']['related_ids']['order_id'])) {
+                    $orderId = (string) $resource['supplementary_data']['related_ids']['order_id'];
+                    $payment = DocumentPayment::findByPaypalOrderId($orderId);
+                }
+                if (!$payment && $customId !== '') {
+                    $payment = DocumentPayment::findByRequest((int) $customId);
+                }
+
+                if ($payment && $payment['payment_status'] !== DocumentPayment::STATUS_PAID_VERIFIED) {
+                    $payerId = (string) ($resource['payer']['payer_id'] ?? null);
+                    $payerEmail = (string) ($resource['payer']['email_address'] ?? null);
+                    DocumentPayment::recordPaypalCapture(
+                        (int) $payment['id'],
+                        $captureId,
+                        $amount > 0 ? $amount : (float) $payment['amount_due'],
+                        $currency,
+                        $payerId,
+                        $payerEmail,
+                        $rawPayload
+                    );
+
+                    AuditLog::record(
+                        (int) $payment['user_id'],
+                        'payment.paypal_webhook_verified',
+                        sprintf('Verified payment via webhook event %s for %s', $eventId, (string) $payment['payment_ref'])
+                    );
+                }
+                break;
+
+            case 'CHECKOUT.ORDER.APPROVED':
+                // Log approval
+                break;
+
+            case 'PAYMENT.CAPTURE.DENIED':
+            case 'PAYMENT.CAPTURE.DECLINED':
+                $customId = (string) ($resource['custom_id'] ?? '');
+                if ($customId !== '') {
+                    $payment = DocumentPayment::findByRequest((int) $customId);
+                    if ($payment) {
+                        db()->prepare('UPDATE document_payments SET payment_status = ?, updated_at = NOW() WHERE id = ?')
+                            ->execute([DocumentPayment::STATUS_FAILED, (int) $payment['id']]);
+                    }
+                }
+                break;
+        }
+
+        // Record processed webhook event for idempotency
+        if ($eventId !== '') {
+            $resourceId = (string) ($resource['id'] ?? '');
+            DocumentPayment::recordWebhookEvent($eventId, $eventType, $resourceId, $rawPayload);
+        }
+
+        http_response_code(200);
+        echo json_encode(['status' => 'success']);
+    }
 }
+

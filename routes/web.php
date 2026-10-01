@@ -197,6 +197,13 @@ return [
     ['POST', '/admin/payments/gcash/{id}/toggle', 'PaymentController@gcashToggle',      ['auth', 'role:admin,staff']],
     ['GET',  '/admin/payments/export',            'PaymentController@exportCsv',        ['auth', 'role:admin']],
 
+    // PayPal Checkout API endpoints
+    ['POST', '/api/payments/paypal/create-order',            'PaymentController@paypalCreateOrder',  ['auth', 'verified']],
+    ['POST', '/api/payments/paypal/capture-order/{orderId}', 'PaymentController@paypalCaptureOrder', ['auth', 'verified']],
+    ['POST', '/api/payments/paypal/capture-order',          'PaymentController@paypalCaptureOrder', ['auth', 'verified']],
+    ['POST', '/api/payments/paypal/webhook',                'PaymentController@paypalWebhook',      []],
+    ['POST', '/payments/paypal/webhook',                    'PaymentController@paypalWebhook',      []],
+
     // Emergency: where this resident's purok evacuates to, and the one-tap
     // "Ligtas ako" answer after a storm.
     ['GET',  '/evacuation',                      'EmergencyController@centers',            ['auth', 'verified']],

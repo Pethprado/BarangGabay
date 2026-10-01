@@ -9,10 +9,14 @@ class DocumentPayment
 {
     public const STATUS_FREE             = 'FREE';
     public const STATUS_UNPAID           = 'UNPAID';
+    public const STATUS_PAYMENT_PENDING  = 'PAYMENT_PENDING';
+    public const STATUS_APPROVED         = 'APPROVED';
     public const STATUS_PROOF_SUBMITTED  = 'PAYMENT_PROOF_SUBMITTED';
     public const STATUS_UNDER_REVIEW     = 'UNDER_REVIEW';
     public const STATUS_PAID_VERIFIED    = 'PAID_VERIFIED';
     public const STATUS_PAYMENT_REJECTED = 'PAYMENT_REJECTED';
+    public const STATUS_FAILED           = 'FAILED';
+    public const STATUS_CANCELLED        = 'CANCELLED';
     public const STATUS_PAY_AT_PICKUP    = 'PAY_AT_PICKUP';
     public const STATUS_PAID_AT_PICKUP   = 'PAID_AT_PICKUP';
     public const STATUS_WAIVED           = 'WAIVED';
@@ -21,10 +25,14 @@ class DocumentPayment
     public const STATUS_LABELS = [
         self::STATUS_FREE             => 'Libre',
         self::STATUS_UNPAID           => 'Kailangang Bayaran (Unpaid)',
+        self::STATUS_PAYMENT_PENDING  => 'Naghihintay ng Bayad sa PayPal (Pending)',
+        self::STATUS_APPROVED         => 'Inaprubahan (Approved)',
         self::STATUS_PROOF_SUBMITTED  => 'Naipadala ang Patunay (Proof Submitted)',
         self::STATUS_UNDER_REVIEW     => 'Sinusuri (Under Review)',
         self::STATUS_PAID_VERIFIED    => 'Bayad na (Verified Paid)',
         self::STATUS_PAYMENT_REJECTED => 'Tinanggihan ang Resibo (Rejected)',
+        self::STATUS_FAILED           => 'Bigo ang Pagbabayad (Payment Failed)',
+        self::STATUS_CANCELLED        => 'Kinansela (Cancelled)',
         self::STATUS_PAY_AT_PICKUP    => 'Magbabayad sa Counter (Pay at Pickup)',
         self::STATUS_PAID_AT_PICKUP   => 'Nabayaran sa Counter (Paid at Pickup)',
         self::STATUS_WAIVED           => 'Pinalampas / Libre (Waived)',
@@ -58,17 +66,19 @@ class DocumentPayment
         $paymentRef = self::generatePaymentRef();
         $isFree = $amountDue <= 0.00;
         
+        $provider = ($method === 'paypal') ? 'paypal' : ($method === 'gcash' ? 'gcash' : 'manual');
         $initialStatus = match ($method) {
             'free'   => self::STATUS_FREE,
             'pickup' => self::STATUS_PAY_AT_PICKUP,
+            'paypal' => $isFree ? self::STATUS_FREE : self::STATUS_PAYMENT_PENDING,
             default  => $isFree ? self::STATUS_FREE : self::STATUS_UNPAID,
         };
 
         $pdo = db();
         $stmt = $pdo->prepare(
             'INSERT INTO document_payments 
-             (payment_ref, request_id, user_id, document_type, amount_due, payment_method, gcash_account_id, payment_status, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+             (payment_ref, request_id, user_id, document_type, amount_due, payment_method, provider, gcash_account_id, payment_status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
         );
         $stmt->execute([
             $paymentRef,
@@ -77,6 +87,7 @@ class DocumentPayment
             $docType,
             $amountDue,
             $method,
+            $provider,
             $gcashAccountId,
             $initialStatus,
         ]);
@@ -127,6 +138,26 @@ class DocumentPayment
               WHERE p.id = ? LIMIT 1'
         );
         $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+    /**
+     * Find payment record by payment_ref.
+     */
+    public static function findByPaymentRef(string $paymentRef): ?array
+    {
+        $stmt = db()->prepare(
+            'SELECT p.*, r.reference_no AS request_ref, r.status AS document_status, r.delivery_method,
+                    u.full_name, u.email, u.phone, u.zone,
+                    g.account_name AS gcash_account_name, g.mobile_number AS gcash_mobile_number,
+                    vu.full_name AS verified_by_name
+               FROM document_payments p
+               JOIN document_requests r ON r.id = p.request_id
+               JOIN users u ON u.id = p.user_id
+          LEFT JOIN gcash_accounts g ON g.id = p.gcash_account_id
+          LEFT JOIN users vu ON vu.id = p.verified_by
+              WHERE p.payment_ref = ? LIMIT 1'
+        );
+        $stmt->execute([trim($paymentRef)]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
@@ -714,6 +745,164 @@ class DocumentPayment
         } catch (\Throwable $e) {
             error_log('[DocumentPayment::getTransactions] ' . $e->getMessage());
             return [];
+        }
+    }
+
+    /**
+     * Store PayPal Order ID on payment record.
+     */
+    public static function setPaypalOrder(int $paymentId, string $orderId, ?string $raw = null): bool
+    {
+        try {
+            $pdo = db();
+            $stmt = $pdo->prepare(
+                'UPDATE document_payments 
+                    SET paypal_order_id = ?, 
+                        provider = \'paypal\',
+                        payment_status = ?,
+                        paypal_raw_response = COALESCE(?, paypal_raw_response),
+                        updated_at = NOW() 
+                  WHERE id = ?'
+            );
+            return $stmt->execute([$orderId, self::STATUS_PAYMENT_PENDING, $raw, $paymentId]);
+        } catch (\Throwable $e) {
+            error_log('[DocumentPayment::setPaypalOrder] ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Find payment record by PayPal Order ID.
+     */
+    public static function findByPaypalOrderId(string $orderId): ?array
+    {
+        try {
+            $stmt = db()->prepare(
+                'SELECT p.*, r.reference_no AS request_ref, r.status AS document_status, r.delivery_method,
+                        u.full_name, u.email, u.phone, u.zone
+                   FROM document_payments p
+                   JOIN document_requests r ON r.id = p.request_id
+                   JOIN users u ON u.id = p.user_id
+                  WHERE p.paypal_order_id = ? LIMIT 1'
+            );
+            $stmt->execute([$orderId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Record verified PayPal capture and automatically activate document request.
+     */
+    public static function recordPaypalCapture(
+        int $paymentId,
+        string $captureId,
+        float $amount,
+        string $currency = 'PHP',
+        ?string $payerId = null,
+        ?string $payerEmail = null,
+        ?string $raw = null
+    ): bool {
+        $payment = self::find($paymentId);
+        if (!$payment) {
+            return false;
+        }
+
+        $oldStatus = (string) $payment['payment_status'];
+        $newStatus = self::STATUS_PAID_VERIFIED;
+
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare(
+                'UPDATE document_payments 
+                    SET payment_status = ?,
+                        amount_reported = ?,
+                        currency = ?,
+                        paypal_capture_id = ?,
+                        paypal_payer_id = COALESCE(?, paypal_payer_id),
+                        paypal_payer_email = COALESCE(?, paypal_payer_email),
+                        paypal_raw_response = COALESCE(?, paypal_raw_response),
+                        verified_at = NOW(),
+                        updated_at = NOW()
+                  WHERE id = ?'
+            );
+            $stmt->execute([
+                $newStatus,
+                $amount,
+                $currency,
+                $captureId,
+                $payerId,
+                $payerEmail,
+                $raw,
+                $paymentId,
+            ]);
+
+            // Activate document request from awaiting_payment to pending (WAITING for processing)
+            $pdo->prepare(
+                'UPDATE document_requests 
+                    SET payment_status = ?, 
+                        status = CASE WHEN status = \'awaiting_payment\' THEN \'pending\' ELSE status END,
+                        updated_at = NOW() 
+                  WHERE id = ?'
+            )->execute([$newStatus, (int) $payment['request_id']]);
+
+            $details = sprintf(
+                'PayPal payment captured: Capture ID %s, Amount %s %.2f, Payer: %s (%s)',
+                $captureId,
+                $currency,
+                $amount,
+                $payerEmail ?: 'n/a',
+                $payerId ?: 'n/a'
+            );
+
+            self::logAudit(
+                (int) $payment['request_id'],
+                $paymentId,
+                (int) $payment['user_id'],
+                'paypal_capture_completed',
+                $oldStatus,
+                $newStatus,
+                $details
+            );
+
+            $pdo->commit();
+            return true;
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            error_log('[DocumentPayment::recordPaypalCapture] ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if webhook event was already processed (idempotency).
+     */
+    public static function isWebhookProcessed(string $eventId): bool
+    {
+        try {
+            $stmt = db()->prepare('SELECT 1 FROM payment_webhook_events WHERE event_id = ? LIMIT 1');
+            $stmt->execute([$eventId]);
+            return (bool) $stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Record processed webhook event.
+     */
+    public static function recordWebhookEvent(string $eventId, string $eventType, ?string $resourceId, ?string $payload): bool
+    {
+        try {
+            $stmt = db()->prepare(
+                'INSERT INTO payment_webhook_events (event_id, event_type, provider, resource_id, payload, created_at)
+                 VALUES (?, ?, \'paypal\', ?, ?, NOW())'
+            );
+            return $stmt->execute([$eventId, $eventType, $resourceId, $payload]);
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 }

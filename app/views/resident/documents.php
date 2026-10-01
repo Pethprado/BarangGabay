@@ -137,17 +137,17 @@ ob_start();
                 </div>
 
                 <div class="grid gap-2 mt-2">
-                    <!-- Online Payment (GCash) -->
-                    <label id="optGcashWrapper" class="payment-method-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-blue-600 bg-white p-2.5 transition">
-                        <input type="radio" name="payment_method" value="gcash" checked
+                    <!-- Online Payment (PayPal Checkout) -->
+                    <label id="optPaypalWrapper" class="payment-method-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-blue-600 bg-white p-2.5 transition">
+                        <input type="radio" name="payment_method" value="paypal" checked
                                class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5">
-                                <span class="text-xs font-bold text-slate-900">Magbayad Online gamit ang GCash</span>
-                                <span class="rounded bg-blue-100 text-blue-800 px-1.5 py-0.2 text-[9px] font-bold">Online</span>
+                                <span class="text-xs font-bold text-slate-900">Magbayad Online gamit ang PayPal</span>
+                                <span class="rounded bg-blue-100 text-blue-800 px-1.5 py-0.2 text-[9px] font-bold">PayPal</span>
                             </div>
                             <p class="mt-0.5 text-[11px] text-slate-500 leading-tight">
-                                I-scan ang QR code o mag-send sa GCash number, saka i-upload ang resibo.
+                                Magbayad gamit ang PayPal account o anumang debit/credit card. Ligtas at beripikado.
                             </p>
                         </div>
                     </label>
@@ -170,7 +170,7 @@ ob_start();
 
                 <!-- Digital Lock Notice -->
                 <div id="digitalPaymentNotice" class="mt-2 text-[11px] text-indigo-700 font-medium hidden">
-                    <i class="bi bi-shield-lock me-1"></i>Para sa <strong>Digital Soft Copy</strong>, kailangang online GCash payment upang mai-release ang digital na kopya online.
+                    <i class="bi bi-shield-lock me-1"></i>Para sa <strong>Digital Soft Copy</strong>, kailangang online PayPal payment upang mai-release ang digital na kopya online.
                 </div>
             </div>
 
@@ -805,12 +805,12 @@ function updateSummaryAndButton() {
         }
         if (submitBtnText) submitBtnText.innerText = 'Isumite ang Kahilingan (Submit Request)';
         if (submitBtnIcon) submitBtnIcon.className = 'bi bi-send-fill text-base';
-    } else if (payMethod === 'gcash') {
-        if (summaryPayment) summaryPayment.innerText = 'Online GCash Payment';
+    } else if (payMethod === 'paypal' || payMethod === 'gcash') {
+        if (summaryPayment) summaryPayment.innerText = 'Online PayPal Payment';
         if (summaryFee) summaryFee.innerText = '₱' + amount.toFixed(2);
         if (summaryTotal) summaryTotal.innerText = '₱' + amount.toFixed(2);
         if (summaryBadge) {
-            summaryBadge.innerText = 'GCASH';
+            summaryBadge.innerText = 'PAYPAL';
             summaryBadge.className = 'rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800';
         }
         if (submitBtnText) submitBtnText.innerText = 'Isumite at Magpatuloy sa Pagbabayad (Submit & Continue to Payment)';

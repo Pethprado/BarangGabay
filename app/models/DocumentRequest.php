@@ -121,11 +121,12 @@ class DocumentRequest
         $payStatus = match ($paymentMethod) {
             'free'   => DocumentPayment::STATUS_FREE,
             'pickup' => DocumentPayment::STATUS_PAY_AT_PICKUP,
+            'paypal' => $isFree ? DocumentPayment::STATUS_FREE : DocumentPayment::STATUS_PAYMENT_PENDING,
             default  => $isFree ? DocumentPayment::STATUS_FREE : DocumentPayment::STATUS_UNPAID,
         };
 
-        // For online GCash payment, document status starts at awaiting_payment until verified!
-        $initialDocStatus = ($paymentMethod === 'gcash' && !$isFree) ? 'awaiting_payment' : 'pending';
+        // For online payment (PayPal / GCash), document status starts at awaiting_payment until verified!
+        $initialDocStatus = (in_array($paymentMethod, ['paypal', 'gcash'], true) && !$isFree) ? 'awaiting_payment' : 'pending';
 
         $pdo = db();
         $stmt = $pdo->prepare(

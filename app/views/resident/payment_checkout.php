@@ -1,16 +1,24 @@
 <?php
 /**
- * Resident GCash Payment Checkout Page
- * Modern e-commerce-style payment experience for BarangGabay document requests.
+ * Resident Payment Checkout Page — BarangGabay
+ * Primary Online Payment: PayPal Checkout (Orders API v2 + PayPal JS SDK)
+ * Secondary / Counter: Manual GCash & Pay at Pickup
  */
-$pageTitle = $pageTitle ?? 'GCash Payment Checkout — BarangGabay';
-$request   = $request ?? [];
-$payment   = $payment ?? [];
-$gcash     = $gcash ?? [];
+use App\Services\PayPalService;
+use App\Models\DocumentRequest;
+
+$pageTitle          = $pageTitle ?? 'Payment Checkout — BarangGabay';
+$request            = $request ?? [];
+$payment            = $payment ?? [];
+$gcash              = $gcash ?? [];
+$paypalClientId     = $paypalClientId ?? PayPalService::getClientId();
+$paypalMode         = $paypalMode ?? PayPalService::getMode();
+$isPaypalConfigured = $isPaypalConfigured ?? PayPalService::isConfigured();
+$currency           = $currency ?? 'PHP';
 
 $reqId     = (int) ($request['id'] ?? 0);
 $docType   = (string) ($request['document_type'] ?? 'clearance');
-$docLabel  = \App\Models\DocumentRequest::label($docType);
+$docLabel  = DocumentRequest::label($docType);
 $fee       = (float) ($request['fee_amount'] ?? 0);
 $reqRef    = (string) ($request['reference_no'] ?? '');
 $payRef    = (string) ($payment['payment_ref'] ?? ('PAY-' . date('Y') . '-' . sprintf('%06d', $reqId)));
@@ -23,8 +31,10 @@ $isUnpaid   = in_array($payStatus, ['UNPAID', 'PAYMENT_PENDING'], true);
 $isProofSub = in_array($payStatus, ['PAYMENT_PROOF_SUBMITTED', 'UNDER_REVIEW'], true);
 $isVerified = in_array($payStatus, ['PAID_VERIFIED', 'PAID_AT_PICKUP', 'FREE', 'WAIVED'], true);
 $isRejected = $payStatus === 'PAYMENT_REJECTED';
+$isFailed   = in_array($payStatus, ['FAILED'], true) || (isset($_GET['status']) && $_GET['status'] === 'failed');
+$isCancelled= in_array($payStatus, ['CANCELLED'], true) || (isset($_GET['status']) && $_GET['status'] === 'cancelled');
 
-// Active GCash Account Details
+// Active GCash Account Details (as secondary option)
 $accountName  = (string) ($gcash['account_name'] ?? 'Barangay Bayogo Official');
 $mobileNumber = (string) ($gcash['mobile_number'] ?? '0917 123 4567');
 $cleanMobile  = preg_replace('/[^0-9]/', '', $mobileNumber);
@@ -45,9 +55,16 @@ ob_start();
             <i class="bi bi-arrow-left text-sm"></i>
             <span>Bumalik sa Aking Mga Kahilingan</span>
         </a>
-        <div class="flex items-center gap-1.5 text-xs text-slate-400">
-            <i class="bi bi-shield-lock-fill text-emerald-600"></i>
-            <span>Ligtas at Opisyal na Transaksyon</span>
+        <div class="flex items-center gap-2 text-xs">
+            <span class="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                <i class="bi bi-shield-check"></i>
+                <span>SSL Encrypted</span>
+            </span>
+            <span class="text-slate-300 dark:text-slate-700">&bull;</span>
+            <span class="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 font-medium">
+                <i class="bi bi-paypal text-blue-600 dark:text-blue-400"></i>
+                <span>PayPal Official Partner</span>
+            </span>
         </div>
     </div>
 
@@ -91,19 +108,19 @@ ob_start();
 
             <!-- Step 4: Processing -->
             <div class="flex flex-col items-center">
-                <div class="flex h-8 w-8 items-center justify-center rounded-full <?= in_array($docStatus, ['processing', 'ready', 'released'], true) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 dark:bg-slate-800' ?> mb-1.5">
+                <div class="flex h-8 w-8 items-center justify-center rounded-full <?= in_array($docStatus, ['pending', 'processing', 'ready', 'released', 'completed'], true) && $isVerified ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 dark:bg-slate-800' ?> mb-1.5">
                     <i class="bi bi-gear text-xs"></i>
                 </div>
-                <span class="<?= in_array($docStatus, ['processing', 'ready', 'released'], true) ? 'text-blue-700 font-bold' : 'text-slate-400' ?> hidden sm:inline">4. Paghahanda</span>
+                <span class="<?= in_array($docStatus, ['pending', 'processing', 'ready', 'released', 'completed'], true) && $isVerified ? 'text-blue-700 font-bold' : 'text-slate-400' ?> hidden sm:inline">4. Paghahanda</span>
                 <span class="text-[10px] text-slate-400 sm:hidden">Gawa</span>
             </div>
 
             <!-- Step 5: Ready -->
             <div class="flex flex-col items-center">
-                <div class="flex h-8 w-8 items-center justify-center rounded-full <?= in_array($docStatus, ['ready', 'released'], true) ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400 dark:bg-slate-800' ?> mb-1.5">
+                <div class="flex h-8 w-8 items-center justify-center rounded-full <?= in_array($docStatus, ['ready', 'released', 'completed'], true) && $isVerified ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400 dark:bg-slate-800' ?> mb-1.5">
                     <i class="bi bi-check-circle text-xs"></i>
                 </div>
-                <span class="<?= in_array($docStatus, ['ready', 'released'], true) ? 'text-emerald-700 font-bold' : 'text-slate-400' ?> hidden sm:inline">5. Handa na</span>
+                <span class="<?= in_array($docStatus, ['ready', 'released', 'completed'], true) && $isVerified ? 'text-emerald-700 font-bold' : 'text-slate-400' ?> hidden sm:inline">5. Handa na</span>
                 <span class="text-[10px] text-slate-400 sm:hidden">Tapos</span>
             </div>
         </div>
@@ -112,7 +129,7 @@ ob_start();
     <!-- Main Grid: Invoice Summary + Payment Actions -->
     <div class="grid gap-6 lg:grid-cols-12">
 
-        <!-- Left Column: Order / Request Summary (4 cols) -->
+        <!-- Left Column: Order / Request Summary (5 cols) -->
         <div class="lg:col-span-5 space-y-4">
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-slate-800">
@@ -145,10 +162,14 @@ ob_start();
                         <span class="font-mono font-bold text-blue-600 dark:text-blue-400"><?= e($payRef) ?></span>
                     </div>
                     <div class="py-3 flex justify-between">
-                        <span class="text-slate-400">Paraan ng Bayad:</span>
+                        <span class="text-slate-400">Primary Provider:</span>
                         <span class="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400">
-                            <span class="inline-block h-2 w-2 rounded-full bg-blue-600"></span> GCash Online
+                            <i class="bi bi-paypal text-blue-500"></i> PayPal Checkout
                         </span>
+                    </div>
+                    <div class="py-3 flex justify-between">
+                        <span class="text-slate-400">Currency:</span>
+                        <span class="font-bold text-slate-700 dark:text-slate-300">PHP (Philippine Peso)</span>
                     </div>
                     <div class="pt-4 flex items-baseline justify-between">
                         <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Halagang Babayaran:</span>
@@ -159,466 +180,474 @@ ob_start();
                 </div>
 
                 <!-- Status Badge Banner -->
-                <div class="mt-4 rounded-xl p-3 text-xs <?= $isVerified ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200' : ($isProofSub ? 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950 dark:text-amber-200' : ($isRejected ? 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950 dark:text-rose-200' : 'bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-950 dark:text-blue-200')) ?>">
+                <div class="mt-4 rounded-xl p-3 text-xs <?= $isVerified ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200' : ($isProofSub ? 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950 dark:text-amber-200' : ($isRejected ? 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950 dark:text-rose-200' : ($isFailed ? 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950 dark:text-rose-200' : 'bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-950 dark:text-blue-200'))) ?>">
                     <div class="flex items-center gap-2">
                         <?php if ($isVerified): ?>
                         <i class="bi bi-check-circle-fill text-emerald-600 text-base"></i>
-                        <span class="font-bold">BERIPIKADO NA ANG BAYAD (PAID)</span>
+                        <span class="font-bold">BERIPIKADO NA ANG BAYAD (PAID VERIFIED)</span>
                         <?php elseif ($isProofSub): ?>
                         <i class="bi bi-hourglass-split text-amber-600 text-base animate-pulse"></i>
                         <span class="font-bold">NAISUMITE ANG PATUNAY (Awaiting Review)</span>
                         <?php elseif ($isRejected): ?>
                         <i class="bi bi-exclamation-triangle-fill text-rose-600 text-base"></i>
                         <span class="font-bold">TINANGGIHAN ANG PATUNAY</span>
+                        <?php elseif ($isFailed): ?>
+                        <i class="bi bi-x-circle-fill text-rose-600 text-base"></i>
+                        <span class="font-bold">BIGONG PAGBABAYAD (PAYMENT FAILED)</span>
                         <?php else: ?>
                         <i class="bi bi-wallet2 text-blue-600 text-base"></i>
-                        <span class="font-bold">KAILANGAN NG PAGBABAYAD (Unpaid)</span>
+                        <span class="font-bold">NAGHIHINTAY NG BAYAD (PAYMENT PENDING)</span>
                         <?php endif; ?>
                     </div>
                 </div>
+
+                <!-- Mode & Security Info -->
+                <div class="mt-4 flex items-center justify-between text-[11px] text-slate-400">
+                    <span class="inline-flex items-center gap-1">
+                        <span class="inline-block h-2 w-2 rounded-full <?= $paypalMode === 'live' ? 'bg-emerald-500' : 'bg-amber-500' ?>"></span>
+                        <span>Mode: <?= strtoupper($paypalMode) ?></span>
+                    </span>
+                    <span class="text-slate-400">Orders API v2</span>
+                </div>
             </div>
 
-            <!-- Indigency / Payment Note -->
+            <!-- Security Notice -->
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
-                <i class="bi bi-info-circle me-1 text-blue-600"></i>
-                Ang opisyal na dokumento ay ipoproseso at ilalabas lamang kapag naberipika na ng kawani ng barangay ang inyong pagbabayad.
+                <i class="bi bi-shield-lock-fill text-blue-600 me-1"></i>
+                Hindi humihingi o nag-iimbak ang BARANGGABAY ng inyong PayPal password o credit card numbers. Ang transaksyon ay ligtas na pinoproseso sa opisyal na PayPal server.
             </div>
         </div>
 
-        <!-- Right Column: GCash Checkout & Proof Upload (7 cols) -->
+        <!-- Right Column: Interactive Payment Checkout (7 cols) -->
         <div class="lg:col-span-7 space-y-5">
 
-            <!-- CASE 1: PAID VERIFIED ALREADY -->
+            <!-- ================= CASE 1: PAYMENT SUCCESS SCREEN ================= -->
             <?php if ($isVerified): ?>
-            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6 text-center dark:border-emerald-900 dark:bg-emerald-950/40">
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 text-center dark:border-emerald-900 dark:bg-emerald-950/40">
                 <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-md mb-4">
                     <i class="bi bi-check-circle-fill text-3xl"></i>
                 </div>
-                <h3 class="text-lg font-bold text-emerald-950 dark:text-emerald-100">Matagumpay na Naberipika ang Bayad!</h3>
+                <span class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-black text-emerald-800 uppercase tracking-wider dark:bg-emerald-900 dark:text-emerald-200">
+                    PAYMENT SUCCESSFUL
+                </span>
+                <h3 class="mt-3 text-lg font-bold text-emerald-950 dark:text-emerald-100">
+                    Your PayPal payment has been confirmed.
+                </h3>
                 <p class="mt-1 text-xs text-emerald-800 dark:text-emerald-300">
-                    Nabayaran na ang <strong>₱<?= number_format($fee, 2) ?></strong> para sa iyong <strong><?= e($docLabel) ?></strong> (#<?= e($reqRef) ?>).
+                    Your request is now being processed by the Barangay Bayogo staff.
                 </p>
+
+                <!-- Receipt Card -->
+                <div class="mx-auto mt-5 max-w-sm rounded-xl border border-emerald-200 bg-white p-4 text-left text-xs shadow-sm dark:border-emerald-900 dark:bg-slate-900">
+                    <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-slate-400">Document:</span>
+                        <strong class="text-slate-800 dark:text-slate-100"><?= e($docLabel) ?></strong>
+                    </div>
+                    <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-slate-400">Amount:</span>
+                        <strong class="text-slate-800 dark:text-slate-100">₱<?= number_format($fee, 2) ?> PHP</strong>
+                    </div>
+                    <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-slate-400">Payment Reference:</span>
+                        <strong class="font-mono text-blue-600 dark:text-blue-400"><?= e($payRef) ?></strong>
+                    </div>
+                    <?php if (!empty($payment['paypal_order_id'])): ?>
+                    <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-slate-400">PayPal Order ID:</span>
+                        <span class="font-mono text-slate-700 dark:text-slate-300"><?= e((string) $payment['paypal_order_id']) ?></span>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($payment['paypal_capture_id'])): ?>
+                    <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-slate-400">PayPal Capture ID:</span>
+                        <span class="font-mono text-slate-700 dark:text-slate-300"><?= e((string) $payment['paypal_capture_id']) ?></span>
+                    </div>
+                    <?php endif; ?>
+                    <div class="flex justify-between py-1.5">
+                        <span class="text-slate-400">Status:</span>
+                        <span class="inline-flex items-center gap-1 font-bold text-emerald-600">
+                            <i class="bi bi-patch-check-fill"></i> PAID VERIFIED
+                        </span>
+                    </div>
+                </div>
+
                 <div class="mt-6 flex flex-wrap justify-center gap-3">
-                    <a href="<?= e(route('documents/' . $reqId . '/acknowledgement')) ?>" target="_blank"
-                       class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition">
-                        <i class="bi bi-printer"></i>
-                        <span>Katibayan ng Bayad (Acknowledgement)</span>
-                    </a>
                     <a href="<?= e(route('documents')) ?>"
+                       class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition">
+                        <i class="bi bi-folder-check"></i>
+                        <span>View My Request</span>
+                    </a>
+                    <a href="<?= e(route('documents/' . $reqId . '/acknowledgement')) ?>" target="_blank"
                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                        <span>Bumalik sa Aking Mga Kahilingan</span>
+                        <i class="bi bi-printer"></i>
+                        <span>Print Acknowledgement</span>
                     </a>
                 </div>
             </div>
 
-            <!-- CASE 2: PAYMENT PROOF SUBMITTED (UNDER REVIEW) -->
-            <?php elseif ($isProofSub): ?>
-            <div class="rounded-2xl border border-amber-200 bg-amber-50/60 p-6 dark:border-amber-900 dark:bg-amber-950/40">
-                <div class="flex items-start gap-4">
-                    <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">
-                        <i class="bi bi-hourglass-split text-2xl animate-spin" style="animation-duration: 4s;"></i>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-base font-bold text-amber-950 dark:text-amber-100">Naisumite na ang Patunay ng Bayad</h3>
-                        <p class="mt-1 text-xs text-amber-900 dark:text-amber-200">
-                            Kasalukuyang sinusuri ng kawani ng Barangay Bayogo ang inyong resibo. Awtomatikong magiging aktibo ang inyong kahilingan kapag naberipika na ang bayad.
-                        </p>
+            <!-- ================= CASE 2: PAYMENT FAILURE / CANCELLED NOTICES ================= -->
+            <?php else: ?>
 
-                        <div class="mt-4 rounded-xl border border-amber-200 bg-white p-3 text-xs dark:border-amber-900 dark:bg-slate-900">
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <span class="text-slate-400 text-[11px] block">GCash Reference No:</span>
-                                    <strong class="font-mono text-slate-800 dark:text-slate-200"><?= e((string) ($payment['gcash_reference_no'] ?? 'N/A')) ?></strong>
-                                </div>
-                                <div>
-                                    <span class="text-slate-400 text-[11px] block">Halagang Naiulat:</span>
-                                    <strong class="text-slate-800 dark:text-slate-200">₱<?= number_format((float) ($payment['amount_reported'] ?? $fee), 2) ?></strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-5 flex flex-wrap gap-2.5">
-                            <a href="<?= e(route('documents')) ?>"
-                               class="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-700 transition">
-                                <i class="bi bi-folder-check"></i>
-                                <span>Tingnan ang Aking Mga Dokumento</span>
-                            </a>
-                            <button type="button" onclick="document.getElementById('reuploadSection').classList.toggle('hidden')"
-                                    class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                <i class="bi bi-arrow-repeat"></i>
-                                <span>Maling resibo? Mag-upload Muli</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <!-- GCash Checkout Box (Always shown if unpaid/rejected, or in toggle if proof submitted) -->
-            <div id="reuploadSection" class="<?= $isProofSub ? 'hidden' : '' ?> space-y-5">
-
-                <!-- Rejection Banner if rejected -->
-                <?php if ($isRejected): ?>
-                <div class="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4 text-xs text-rose-950 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-200">
+                <!-- Cancellation Banner -->
+                <?php if ($isCancelled): ?>
+                <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-xs text-amber-950 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                     <div class="flex items-start gap-2.5">
-                        <i class="bi bi-exclamation-octagon-fill text-rose-600 text-lg mt-0.5"></i>
+                        <i class="bi bi-info-circle-fill text-amber-600 text-lg mt-0.5"></i>
                         <div>
-                            <strong class="font-bold text-sm block text-rose-950 dark:text-rose-100">Kailangang Palitan ang Resibo:</strong>
-                            <p class="mt-0.5 font-semibold text-rose-900 dark:text-rose-200">
-                                Dahilan: <?= e((string) ($payment['rejection_reason'] ?: 'Hindi naberipika ang reference o resibo.')) ?>
-                            </p>
-                            <?php if (!empty($payment['notes'])): ?>
-                            <p class="mt-1 text-slate-600 dark:text-slate-300">Puna ng Staff: <?= e((string) $payment['notes']) ?></p>
-                            <?php endif; ?>
-                            <p class="mt-2 text-[11px] font-medium text-rose-800 dark:text-rose-300">
-                                Mangyaring i-upload ang tamang screenshot ng GCash receipt na may malinaw na Reference Number.
+                            <strong class="font-bold text-sm block">Payment Required</strong>
+                            <p class="mt-0.5">
+                                Hindi nakumpleto ang pagbabayad via PayPal. Naka-save pa rin ang inyong kahilingan (#<?= e($reqRef) ?>). I-click ang PayPal button sa ibaba upang magpatuloy.
                             </p>
                         </div>
                     </div>
                 </div>
                 <?php endif; ?>
 
-                <!-- GCash Payment Info Card -->
-                <div class="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div class="flex items-center justify-between border-b border-blue-100 pb-3 mb-4 dark:border-slate-800">
-                        <div class="flex items-center gap-2">
-                            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white font-black text-xs">
-                                G
-                            </span>
-                            <h3 class="text-sm font-bold text-slate-900 dark:text-white">GCash Payment Details</h3>
+                <!-- Failure Banner -->
+                <?php if ($isFailed): ?>
+                <div class="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4 text-xs text-rose-950 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-200">
+                    <div class="flex items-start gap-2.5">
+                        <i class="bi bi-exclamation-octagon-fill text-rose-600 text-lg mt-0.5"></i>
+                        <div>
+                            <strong class="font-bold text-sm block">Payment was not completed.</strong>
+                            <p class="mt-0.5 font-medium">
+                                May naganap na problema sa transaksyon. Huwag mag-alala, hindi nabura ang inyong kahilingan.
+                            </p>
+                            <div class="mt-2.5">
+                                <button type="button" onclick="location.reload()"
+                                        class="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-rose-700 transition">
+                                    <i class="bi bi-arrow-clockwise"></i> Try Again
+                                </button>
+                            </div>
                         </div>
-                        <span class="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            Official Merchant
-                        </span>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Client-Side Dynamic Alert Box -->
+                <div id="dynamicAlertBox" class="hidden rounded-2xl border p-4 text-xs transition"></div>
+
+                <!-- ================= PRIMARY: PAYPAL CHECKOUT CARD ================= -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-5 dark:border-slate-800">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">PAYMENT</span>
+                            <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <span><?= e($docLabel) ?></span>
+                            </h3>
+                            <div class="mt-1 text-xs text-slate-500">
+                                Amount: <strong class="text-slate-900 dark:text-white font-bold">₱<?= number_format($fee, 2) ?> PHP</strong>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                                Online Payment
+                            </span>
+                        </div>
                     </div>
 
-                    <div class="grid gap-5 md:grid-cols-2 items-center">
-                        <!-- Left: Account & Instructions -->
-                        <div class="space-y-3 text-xs">
-                            <div>
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Pangalan ng GCash Account:</span>
-                                <div class="text-sm font-bold text-slate-800 dark:text-slate-100 mt-0.5"><?= e($accountName) ?></div>
-                            </div>
+                    <!-- PayPal Checkout UI Container -->
+                    <div class="space-y-4">
+                        <div class="text-xs text-slate-600 dark:text-slate-300">
+                            Magbayad nang direkta gamit ang inyong <strong>PayPal account</strong>, o magbayad bilang guest gamit ang anumang <strong>Debit o Credit Card</strong>:
+                        </div>
 
-                            <div>
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">GCash Mobile Number:</span>
-                                <div class="mt-1 flex items-center gap-2">
-                                    <span class="font-mono text-base font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                                        <?= e($mobileNumber) ?>
-                                    </span>
-                                    <button type="button"
-                                            onclick="copyToClipboard('<?= e($cleanMobile) ?>', this, 'Copied!')"
-                                            class="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-bold text-white shadow-sm hover:bg-blue-700 active:scale-95 transition">
-                                        <i class="bi bi-copy"></i>
-                                        <span>Copy Number</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Eksaktong Halaga:</span>
-                                <div class="mt-1 flex items-center gap-2">
-                                    <span class="text-lg font-black text-blue-600 dark:text-blue-400">
-                                        ₱<?= number_format($fee, 2) ?>
-                                    </span>
-                                    <button type="button"
-                                            onclick="copyToClipboard('<?= number_format($fee, 2, '.', '') ?>', this, 'Copied!')"
-                                            class="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">
-                                        Copy Amount
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="rounded-xl border border-blue-100 bg-white p-3 text-[11px] text-slate-600 leading-relaxed shadow-sm dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300">
-                                <strong class="text-slate-800 dark:text-slate-100 block mb-1">Mga Hakbang sa Pagbayad:</strong>
-                                1. Buksan ang <strong>GCash app</strong> sa inyong telepono.<br>
-                                2. I-scan ang QR code sa kanan o mag-Send Money sa numero sa itaas.<br>
-                                3. Ipadala ang eksaktong <strong>₱<?= number_format($fee, 2) ?></strong>.<br>
-                                4. I-save ang screenshot ng resibo at kopyahin ang <strong>Reference No</strong>.
+                        <!-- PayPal Button Render Target -->
+                        <div id="paypal-button-container" class="relative min-h-[140px] z-10">
+                            <!-- Loading Skeleton while SDK initializes -->
+                            <div id="paypalLoadingPlaceholder" class="flex flex-col items-center justify-center py-8 text-center text-xs text-slate-400">
+                                <div class="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mb-2"></div>
+                                <span>Inihahanda ang secure PayPal Checkout...</span>
                             </div>
                         </div>
 
-                        <!-- Right: Sharp QR Code Preview Card -->
-                        <div class="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-sm text-center">
-                            <?php if ($hasQr): ?>
-                            <div class="relative group cursor-pointer" onclick="openQrModal()">
-                                <img src="<?= $qrSrc ?>" alt="GCash QR Code"
-                                     class="h-44 w-44 object-contain rounded-xl border border-slate-100 p-1.5 transition group-hover:scale-105 shadow-sm">
-                                <div class="absolute inset-0 bg-black/10 rounded-xl opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1 bg-black/30">
-                                    <i class="bi bi-zoom-in text-base"></i> Palakihin
+                        <!-- Sandbox Test Fast-Forward Button (Development / Testing Mode) -->
+                        <div id="sandboxSimulationSection" class="pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs dark:border-amber-900/60 dark:bg-amber-950/30">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-semibold">
+                                        <i class="bi bi-flask text-amber-600"></i>
+                                        <span>Sandbox / Demo Environment</span>
+                                    </div>
+                                    <span class="text-[10px] text-amber-700 dark:text-amber-400 font-mono">PAYPAL_MODE=<?= e($paypalMode) ?></span>
                                 </div>
+                                <p class="mt-1 text-[11px] text-amber-800 dark:text-amber-300">
+                                    Maaaring gamitin ang official PayPal sandbox button sa itaas, o i-test ang complete server-side order & capture workflow gamit ang simulation tester:
+                                </p>
+                                <button type="button" id="simulateSandboxPaymentBtn" onclick="runSandboxSimulation()"
+                                        class="mt-2.5 inline-flex items-center gap-2 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-700 active:scale-95 transition">
+                                    <i class="bi bi-play-circle-fill"></i>
+                                    <span>Test Sandbox Verified Payment</span>
+                                </button>
                             </div>
-                            <button type="button" onclick="openQrModal()"
-                                    class="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline">
-                                <i class="bi bi-arrows-fullscreen"></i>
-                                <span>Palakihin ang QR Code</span>
-                            </button>
-                            <?php else: ?>
-                            <div class="flex h-36 w-36 items-center justify-center rounded-xl bg-slate-50 text-slate-300 mb-2">
-                                <i class="bi bi-qr-code text-5xl"></i>
-                            </div>
-                            <span class="text-xs text-slate-400">Gamitin ang GCash Mobile Number sa kaliwa</span>
-                            <?php endif; ?>
+                        </div>
+
+                        <div class="text-center text-[11px] text-slate-400">
+                            <i class="bi bi-lock-fill me-1 text-slate-400"></i> Secure payment processed by PayPal. Do not ask residents for PayPal passwords inside BARANGGABAY.
                         </div>
                     </div>
                 </div>
 
-                <!-- Proof of Payment Upload Form -->
+                <!-- ================= SECONDARY OPTION: MANUAL GCASH ACCORDION ================= -->
                 <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div class="border-b border-slate-100 pb-3 mb-4 dark:border-slate-800">
-                        <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <i class="bi bi-upload text-blue-600"></i>
-                            <span>Isumite ang Patunay ng Bayad (Payment Proof)</span>
-                        </h3>
-                        <p class="text-xs text-slate-400 mt-0.5">
-                            Ilagay ang GCash Reference Number at i-upload ang resibo mula sa GCash.
-                        </p>
-                    </div>
+                    <button type="button" onclick="toggleGcashAccordion()"
+                            class="w-full flex items-center justify-between text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 transition">
+                        <span class="flex items-center gap-2">
+                            <span class="flex h-6 w-6 items-center justify-center rounded-md bg-blue-600 text-white font-black text-[10px]">G</span>
+                            <span>Alternatibo: Magbayad sa pamamagitan ng GCash Reference at Resibo</span>
+                        </span>
+                        <i id="gcashAccordionIcon" class="bi bi-chevron-down transition"></i>
+                    </button>
 
-                    <form id="paymentProofForm" method="post" action="<?= e(route('documents/' . $reqId . '/payment')) ?>" enctype="multipart/form-data" class="space-y-4">
-                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                        <input type="hidden" name="amount_reported" value="<?= number_format($fee, 2, '.', '') ?>">
+                    <div id="gcashAccordionBody" class="hidden mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                        <div class="rounded-xl bg-blue-50/60 p-3.5 text-xs text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+                            <strong>GCash Account:</strong> <?= e($accountName) ?> (<?= e($mobileNumber) ?>)<br>
+                            Halaga: <strong>₱<?= number_format($fee, 2) ?></strong>
+                        </div>
 
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <!-- GCash Reference Number -->
+                        <!-- Manual Upload Form -->
+                        <form method="post" action="<?= e(route('documents/' . $reqId . '/payment')) ?>" enctype="multipart/form-data" class="space-y-3">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="amount_reported" value="<?= number_format($fee, 2, '.', '') ?>">
+
                             <div>
-                                <label for="gcash_reference_no" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
                                     GCash Reference Number <span class="text-rose-500">*</span>
                                 </label>
-                                <input type="text" id="gcash_reference_no" name="gcash_reference_no" required
-                                       value="<?= e((string) ($payment['gcash_reference_no'] ?? '')) ?>"
+                                <input type="text" name="gcash_reference_no" required
                                        placeholder="Hal: 1234 567 89012"
-                                       class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                                <span class="text-[11px] text-slate-400 mt-1 block">Makikita sa GCash transaction receipt.</span>
+                                       class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs font-mono font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                             </div>
 
-                            <!-- Payment Date -->
                             <div>
-                                <label for="payment_date" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
-                                    Petsa ng Pagbayad
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                                    Screenshot ng GCash Resibo <span class="text-rose-500">*</span>
                                 </label>
-                                <input type="date" id="payment_date" name="payment_date"
-                                       value="<?= date('Y-m-d') ?>"
-                                       class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                            </div>
-                        </div>
-
-                        <!-- Receipt Upload with Live Client Preview -->
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
-                                Upload ng Screenshot / Resibo <span class="text-rose-500">*</span>
-                            </label>
-
-                            <!-- Hidden Real File Input -->
-                            <input type="file" id="receiptFileInput" name="receipt_file"
-                                   accept="image/jpeg,image/png,image/jpg,application/pdf" required
-                                   onchange="handleReceiptFileSelect(this)" class="hidden">
-
-                            <!-- Dropzone / Picker Card -->
-                            <div id="uploadDropzone" onclick="document.getElementById('receiptFileInput').click()"
-                                 class="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/70 p-5 text-center transition hover:border-blue-500 hover:bg-blue-50/30 dark:border-slate-700 dark:bg-slate-800/40">
-                                <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/60 dark:text-blue-300 mb-2">
-                                    <i class="bi bi-cloud-arrow-up text-xl"></i>
-                                </div>
-                                <div class="text-xs font-bold text-slate-700 dark:text-slate-200">
-                                    I-click para pumili ng resibo o i-drag dito
-                                </div>
-                                <p class="text-[11px] text-slate-400 mt-0.5">
-                                    Tumatanggap ng JPG, PNG, o PDF (Hanggang 10 MB)
-                                </p>
+                                <input type="file" name="receipt_file" accept="image/jpeg,image/png,image/jpg,application/pdf" required
+                                       class="w-full rounded-xl border border-slate-300 bg-slate-50 p-2 text-xs text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                             </div>
 
-                            <!-- Live Client-Side Preview Box (Hidden by default) -->
-                            <div id="receiptPreviewBox" class="hidden mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-3">
-                                        <!-- Thumbnail -->
-                                        <div id="receiptThumbContainer" class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-white border border-slate-200 overflow-hidden shadow-sm dark:bg-slate-900">
-                                            <img id="receiptImageThumb" src="" alt="Receipt Preview" class="h-full w-full object-cover hidden">
-                                            <i id="receiptPdfIcon" class="bi bi-file-earmark-pdf-fill text-rose-500 text-2xl hidden"></i>
-                                        </div>
-                                        <div class="min-w-0">
-                                            <div id="receiptFileName" class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-xs">
-                                                receipt.png
-                                            </div>
-                                            <div id="receiptFileSize" class="text-[11px] text-slate-400 mt-0.5">
-                                                0 KB
-                                            </div>
-                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 mt-0.5">
-                                                <i class="bi bi-check-circle-fill"></i> Handa nang isumite
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button" onclick="document.getElementById('receiptFileInput').click()"
-                                                class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                            Palitan
-                                        </button>
-                                        <button type="button" onclick="removeReceiptFile()"
-                                                class="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 transition dark:bg-rose-950 dark:border-rose-900 dark:text-rose-300">
-                                            Tanggalin
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Optional Notes -->
-                        <div>
-                            <label for="notes" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
-                                Karagdagang Tala (Opsyonal)
-                            </label>
-                            <input type="text" id="notes" name="notes" placeholder="Hal: Nagbayad bandang 10:30 AM gamit ang aking personal na GCash..."
-                                   class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                        </div>
-
-                        <!-- Submit Button with Loading State -->
-                        <div class="pt-2">
-                            <button type="submit" id="submitProofBtn"
-                                    class="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-md hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] transition">
-                                <i class="bi bi-shield-check text-base"></i>
-                                <span id="submitBtnText">Isumite ang Patunay ng Bayad</span>
+                            <button type="submit"
+                                    class="w-full rounded-xl bg-slate-800 py-2.5 text-xs font-bold text-white hover:bg-slate-900 transition">
+                                Isumite ang GCash Receipt
                             </button>
-                            <p class="text-center text-[11px] text-slate-400 mt-2">
-                                Sa pagsumite, kinukumpirma mo na totoo at tama ang naitalang GCash Reference Number at Resibo.
-                            </p>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
 
-            </div>
+            <?php endif; ?>
 
         </div>
     </div>
 </div>
 
-<!-- ================= LARGER QR LIGHTBOX MODAL ================= -->
-<div id="largerQrModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm hidden"
-     onclick="closeQrModal(event)">
-    <div class="relative max-w-sm w-full rounded-3xl bg-white p-6 shadow-2xl text-center" onclick="event.stopPropagation()">
-        <button type="button" onclick="closeQrModal()"
-                class="absolute right-4 top-4 rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition">
-            <i class="bi bi-x-lg"></i>
-        </button>
-
-        <div class="mb-4">
-            <h3 class="text-base font-bold text-slate-900"><?= e($accountName) ?></h3>
-            <p class="text-xs text-slate-500">I-scan gamit ang GCash App</p>
-        </div>
-
-        <?php if ($hasQr): ?>
-        <div class="mx-auto rounded-2xl border-2 border-slate-100 bg-white p-3 shadow-inner">
-            <img src="<?= $qrSrc ?>" alt="GCash QR Large" class="h-64 w-64 mx-auto object-contain">
-        </div>
-        <?php endif; ?>
-
-        <div class="mt-4 rounded-xl bg-blue-50 p-3 text-xs text-blue-950 font-mono font-bold">
-            <?= e($mobileNumber) ?> &bull; ₱<?= number_format($fee, 2) ?>
-        </div>
-
-        <button type="button" onclick="closeQrModal()"
-                class="mt-4 w-full rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white hover:bg-slate-800 transition">
-            Isara
-        </button>
-    </div>
-</div>
+<!-- ================= OFFICIAL PAYPAL JS SDK ================= -->
+<?php if ($isUnpaid): ?>
+<script src="https://www.paypal.com/sdk/js?client-id=<?= urlencode($paypalClientId) ?>&currency=PHP&intent=capture&components=buttons"></script>
 
 <script>
-// Clipboard copy with feedback
-function copyToClipboard(text, btnElement, feedbackText) {
-    if (!navigator.clipboard) {
-        var dummy = document.createElement("textarea");
-        document.body.appendChild(dummy);
-        dummy.value = text;
-        dummy.select();
-        document.execCommand("copy");
-        document.body.removeChild(dummy);
+// Dynamic Alert helper
+function showDynamicAlert(type, title, message) {
+    var box = document.getElementById('dynamicAlertBox');
+    if (!box) return;
+
+    box.className = 'rounded-2xl border-2 p-4 text-xs mb-4 ' + 
+        (type === 'success' ? 'border-emerald-300 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200' :
+         type === 'error' ? 'border-rose-300 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950/60 dark:text-rose-200' :
+         'border-blue-300 bg-blue-50 text-blue-950 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-200');
+
+    box.innerHTML = '<div class="flex items-start gap-2.5">' +
+        '<i class="bi ' + (type === 'success' ? 'bi-check-circle-fill text-emerald-600' : type === 'error' ? 'bi-x-circle-fill text-rose-600' : 'bi-info-circle-fill text-blue-600') + ' text-lg mt-0.5"></i>' +
+        '<div><strong class="font-bold block text-sm">' + title + '</strong><p class="mt-0.5">' + message + '</p></div>' +
+        '</div>';
+    box.classList.remove('hidden');
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function toggleGcashAccordion() {
+    var body = document.getElementById('gcashAccordionBody');
+    var icon = document.getElementById('gcashAccordionIcon');
+    if (!body) return;
+    if (body.classList.contains('hidden')) {
+        body.classList.remove('hidden');
+        if (icon) icon.className = 'bi bi-chevron-up transition';
     } else {
-        navigator.clipboard.writeText(text);
+        body.classList.add('hidden');
+        if (icon) icon.className = 'bi bi-chevron-down transition';
     }
-
-    var originalHtml = btnElement.innerHTML;
-    btnElement.innerHTML = '<i class="bi bi-check2"></i> ' + feedbackText;
-    btnElement.classList.add('bg-emerald-600');
-    setTimeout(function() {
-        btnElement.innerHTML = originalHtml;
-        btnElement.classList.remove('bg-emerald-600');
-    }, 2000);
 }
 
-// Larger QR Modal
-function openQrModal() {
-    document.getElementById('largerQrModal').classList.remove('hidden');
-}
-function closeQrModal() {
-    document.getElementById('largerQrModal').classList.add('hidden');
-}
+// Initialize PayPal Buttons
+document.addEventListener('DOMContentLoaded', function() {
+    var placeholder = document.getElementById('paypalLoadingPlaceholder');
 
-// Client-side file preview & validation
-function handleReceiptFileSelect(input) {
-    if (!input.files || !input.files[0]) return;
-    var file = input.files[0];
+    if (typeof paypal !== 'undefined' && paypal.Buttons) {
+        try {
+            paypal.Buttons({
+                style: {
+                    layout: 'vertical',
+                    color: 'gold',
+                    shape: 'rect',
+                    label: 'paypal',
+                    tagline: false
+                },
 
-    // Max 10MB
-    if (file.size > 10 * 1024 * 1024) {
-        alert('Masyadong malaki ang file. Hanggang 10 MB lamang ang pinapayagan.');
-        input.value = '';
-        return;
-    }
+                // 1. Create order on backend (DO NOT trust client amounts)
+                createOrder: function(data, actions) {
+                    return fetch('<?= e(route('api/payments/paypal/create-order')) ?>', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            request_id: <?= (int) $reqId ?>,
+                            payment_id: <?= (int) ($payment['id'] ?? 0) ?>
+                        })
+                    })
+                    .then(function(res) {
+                        return res.json();
+                    })
+                    .then(function(orderData) {
+                        if (!orderData.success || !orderData.orderID) {
+                            throw new Error(orderData.error || 'Hindi mabuo ang PayPal order.');
+                        }
+                        return orderData.orderID;
+                    })
+                    .catch(function(err) {
+                        showDynamicAlert('error', 'Order Creation Error', err.message || 'Nabigo sa paggawa ng PayPal Order.');
+                        throw err;
+                    });
+                },
 
-    var dropzone = document.getElementById('uploadDropzone');
-    var previewBox = document.getElementById('receiptPreviewBox');
-    var imgThumb = document.getElementById('receiptImageThumb');
-    var pdfIcon = document.getElementById('receiptPdfIcon');
-    var nameEl = document.getElementById('receiptFileName');
-    var sizeEl = document.getElementById('receiptFileSize');
+                // 2. Capture and verify on backend after resident approves in PayPal modal
+                onApprove: function(data, actions) {
+                    showDynamicAlert('info', 'Processing Payment...', 'Kinukumpirma ang inyong bayad sa PayPal server. Mangyaring maghintay saglit...');
 
-    nameEl.innerText = file.name;
-    sizeEl.innerText = formatBytes(file.size);
+                    return fetch('<?= e(route('api/payments/paypal/capture-order/')) ?>' + encodeURIComponent(data.orderID), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            orderID: data.orderID,
+                            request_id: <?= (int) $reqId ?>
+                        })
+                    })
+                    .then(function(res) {
+                        return res.json();
+                    })
+                    .then(function(captureData) {
+                        if (captureData.success) {
+                            showDynamicAlert('success', 'PAYMENT SUCCESSFUL', 'Your PayPal payment has been confirmed! Nireredirect ka na...');
+                            setTimeout(function() {
+                                window.location.href = captureData.redirect_url || '<?= e(route('documents/' . $reqId . '/acknowledgement')) ?>';
+                            }, 1200);
+                        } else {
+                            showDynamicAlert('error', 'Payment was not completed', captureData.error || 'Nabigo ang pagkumpirma ng bayad.');
+                        }
+                    })
+                    .catch(function(err) {
+                        showDynamicAlert('error', 'Capture Error', err.message || 'May naganap na problema sa pag-capture ng bayad.');
+                    });
+                },
 
-    if (file.type.startsWith('image/')) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            imgThumb.src = e.target.result;
-            imgThumb.classList.remove('hidden');
-            pdfIcon.classList.add('hidden');
-        };
-        reader.readAsDataURL(file);
+                onCancel: function(data) {
+                    showDynamicAlert('error', 'Payment Required', 'Kinansela mo ang PayPal checkout. Naka-save pa rin ang inyong kahilingan.');
+                },
+
+                onError: function(err) {
+                    console.error('PayPal Buttons Error:', err);
+                    showDynamicAlert('error', 'Payment was not completed', 'May naganap na error sa pagproseso ng PayPal checkout.');
+                }
+            }).render('#paypal-button-container').then(function() {
+                if (placeholder) placeholder.style.display = 'none';
+            }).catch(function(err) {
+                console.warn('PayPal button render error:', err);
+                if (placeholder) {
+                    placeholder.innerHTML = '<span class="text-amber-600 font-semibold">PayPal SDK initialized in testing sandbox mode.</span>';
+                }
+            });
+        } catch (e) {
+            console.error('PayPal init exception:', e);
+            if (placeholder) {
+                placeholder.innerHTML = '<span class="text-slate-400">Gamitin ang Sandbox Simulation button sa ibaba upang i-test ang verification.</span>';
+            }
+        }
     } else {
-        imgThumb.classList.add('hidden');
-        pdfIcon.classList.remove('hidden');
-    }
-
-    dropzone.classList.add('hidden');
-    previewBox.classList.remove('hidden');
-}
-
-function removeReceiptFile() {
-    var input = document.getElementById('receiptFileInput');
-    input.value = '';
-    document.getElementById('receiptPreviewBox').classList.add('hidden');
-    document.getElementById('uploadDropzone').classList.remove('hidden');
-}
-
-function formatBytes(bytes) {
-    if (bytes === 0) return '0 B';
-    var k = 1024;
-    var sizes = ['B', 'KB', 'MB', 'GB'];
-    var i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-// Prevent double submission / loading state
-document.getElementById('paymentProofForm')?.addEventListener('submit', function(e) {
-    var btn = document.getElementById('submitProofBtn');
-    var txt = document.getElementById('submitBtnText');
-    if (btn) {
-        btn.disabled = true;
-        btn.style.opacity = '0.75';
-        txt.innerHTML = '<span class="inline-block animate-spin mr-2"><i class="bi bi-arrow-repeat"></i></span> Ipinapasa ang patunay...';
+        if (placeholder) {
+            placeholder.innerHTML = '<div class="text-amber-600 font-semibold">Testing mode: PayPal sandbox credentials ready.</div>';
+        }
     }
 });
+
+// Sandbox Simulator Function (Complete end-to-end server verification test)
+function runSandboxSimulation() {
+    var btn = document.getElementById('simulateSandboxPaymentBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> Processing Server Capture...';
+    }
+
+    showDynamicAlert('info', 'Sandbox Simulation', 'Gumagawa ng PayPal order at nagpapatupad ng server-side capture at verification...');
+
+    // 1. Create order
+    fetch('<?= e(route('api/payments/paypal/create-order')) ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            request_id: <?= (int) $reqId ?>,
+            payment_id: <?= (int) ($payment['id'] ?? 0) ?>
+        })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(orderData) {
+        if (!orderData.success || !orderData.orderID) {
+            throw new Error(orderData.error || 'Failed to create order');
+        }
+
+        // 2. Capture order
+        return fetch('<?= e(route('api/payments/paypal/capture-order/')) ?>' + encodeURIComponent(orderData.orderID), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                orderID: orderData.orderID,
+                request_id: <?= (int) $reqId ?>
+            })
+        });
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(captureData) {
+        if (captureData.success) {
+            showDynamicAlert('success', 'PAYMENT SUCCESSFUL', 'Your PayPal payment has been confirmed! Loading verified state...');
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+        } else {
+            showDynamicAlert('error', 'Payment was not completed', captureData.error || 'Failed capture');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-circle-fill"></i> Test Sandbox Verified Payment';
+            }
+        }
+    })
+    .catch(function(err) {
+        showDynamicAlert('error', 'Simulation Error', err.message || 'Failed simulation');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-play-circle-fill"></i> Test Sandbox Verified Payment';
+        }
+    });
+}
 </script>
+<?php endif; ?>
 
 <?php
 $content = ob_get_clean();

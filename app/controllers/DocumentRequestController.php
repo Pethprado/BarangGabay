@@ -81,11 +81,11 @@ class DocumentRequestController
         if ($isFree) {
             $paymentMethod = 'free';
         } else {
-            // For digital soft copy, online payment (GCash) is required
+            // For digital soft copy, online payment (PayPal preferred) is required
             if ($deliveryMethod === 'digital') {
-                $paymentMethod = 'gcash';
+                $paymentMethod = in_array($chosenMethod, ['paypal', 'gcash'], true) ? $chosenMethod : 'paypal';
             } else {
-                $paymentMethod = in_array($chosenMethod, ['gcash', 'pickup'], true) ? $chosenMethod : 'pickup';
+                $paymentMethod = in_array($chosenMethod, ['paypal', 'gcash', 'pickup'], true) ? $chosenMethod : 'pickup';
             }
         }
 
@@ -122,9 +122,9 @@ class DocumentRequestController
             $userId
         );
 
-        // If GCash Online payment is required: redirect immediately to the checkout page!
-        if ($paymentMethod === 'gcash' && !$isFree) {
-            flash('info', 'Nalikha na ang inyong kahilingan (' . $reference . '). Kumpletuhin ang pagbabayad gamit ang GCash sa ibaba.');
+        // If Online payment (PayPal / GCash) is required: redirect immediately to the checkout page!
+        if (in_array($paymentMethod, ['paypal', 'gcash'], true) && !$isFree) {
+            flash('info', 'Nalikha na ang inyong kahilingan (' . $reference . '). Kumpletuhin ang pagbabayad gamit ang PayPal Checkout sa ibaba.');
             redirect('/documents/' . $newId . '/payment');
         }
 

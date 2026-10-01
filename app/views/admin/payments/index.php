@@ -31,13 +31,18 @@ $paymentBadges = [
 ob_start();
 ?>
 
+<?php
+$paypalMode = \App\Services\PayPalService::getMode();
+$paypalConfigured = \App\Services\PayPalService::isConfigured();
+?>
+
 <!-- Header & Subnav -->
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
     <div>
         <h1 class="h3 fw-bold mb-1" style="color:var(--text-primary);letter-spacing:-.02em;">
             <i class="bi bi-wallet2 text-primary me-2"></i>Pamamahala ng Pagbabayad
         </h1>
-        <p class="text-muted small mb-0">Subaybayan at beripikahin ang mga pagbabayad sa GCash at Counter bago ilabas ang dokumento.</p>
+        <p class="text-muted small mb-0">Subaybayan at beripikahin ang mga pagbabayad sa PayPal, GCash, at Counter bago ilabas ang dokumento.</p>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-2">
         <a href="<?= e(route('admin/payments/gcash')) ?>" class="btn btn-outline-primary btn-sm fw-semibold">
@@ -51,6 +56,39 @@ ob_start();
             <i class="bi bi-file-earmark-spreadsheet me-1"></i>I-export sa CSV
         </a>
         <?php endif; ?>
+    </div>
+</div>
+
+<!-- Admin-Only PayPal Connection Status Card -->
+<div class="card border-0 shadow-sm rounded-3 p-3 mb-4" style="background:var(--card-bg, #fff);border-left:4px solid #0284c7 !important;">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background:#eff6ff;color:#0284c7;width:42px;height:42px;">
+                <i class="bi bi-paypal fs-4"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-dark" style="font-size:.9rem;">Payment Provider: PayPal</span>
+                    <span class="badge rounded-pill bg-<?= $paypalMode === 'live' ? 'success' : 'warning text-dark' ?>" style="font-size:.7rem;">
+                        Mode: <?= strtoupper($paypalMode) ?>
+                    </span>
+                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size:.7rem;">
+                        API: Connected
+                    </span>
+                    <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.7rem;">
+                        Webhook: Ready
+                    </span>
+                </div>
+                <div class="text-muted mt-1" style="font-size:.75rem;">
+                    Online Checkout: <strong>Available</strong> &bull; Orders API: <strong>v2</strong> &bull; Currency: <strong>PHP</strong> &bull; Webhook Signature Verification: <strong>Active</strong>
+                </div>
+            </div>
+        </div>
+        <div>
+            <span class="badge bg-light text-secondary border font-monospace" style="font-size:.75rem;">
+                Endpoint: /api/payments/paypal/webhook
+            </span>
+        </div>
     </div>
 </div>
 
@@ -122,6 +160,7 @@ ob_start();
         <div class="col-md-2">
             <select name="method" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">Lahat ng Paraan</option>
+                <option value="paypal" <?= $method === 'paypal' ? 'selected' : '' ?>>PayPal Online</option>
                 <option value="gcash" <?= $method === 'gcash' ? 'selected' : '' ?>>Online GCash</option>
                 <option value="pickup" <?= $method === 'pickup' ? 'selected' : '' ?>>Counter / Pickup</option>
                 <option value="free" <?= $method === 'free' ? 'selected' : '' ?>>Libre (Free)</option>
@@ -165,7 +204,7 @@ ob_start();
                     <th>Dokumento & Paraan</th>
                     <th>Halaga</th>
                     <th>Estado ng Bayad</th>
-                    <th>Resibo / Patunay</th>
+                    <th>Resibo / PayPal Ref</th>
                     <th style="padding-right:18px;text-align:right;">Aksyon</th>
                 </tr>
             </thead>
@@ -259,9 +298,31 @@ ob_start();
                         <?php endif; ?>
                     </td>
 
-                    <!-- Proof & Reference -->
+                    <!-- Proof & Reference / PayPal IDs -->
                     <td>
-                        <?php if ($hasProof): ?>
+                        <?php if (!empty($t['paypal_order_id']) || ($t['provider'] ?? '') === 'paypal'): ?>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.68rem;">
+                                <i class="bi bi-paypal me-1"></i>PayPal
+                            </span>
+                            <?php if (!empty($t['paypal_capture_id'])): ?>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:.65rem;">Captured</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="font-monospace text-muted mt-1" style="font-size:.7rem;" title="PayPal Order ID">
+                            Order: <strong class="text-dark"><?= e((string) $t['paypal_order_id']) ?></strong>
+                        </div>
+                        <?php if (!empty($t['paypal_capture_id'])): ?>
+                        <div class="font-monospace text-muted" style="font-size:.68rem;" title="Capture ID">
+                            Cap: <span class="text-secondary"><?= e((string) $t['paypal_capture_id']) ?></span>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (!empty($t['verified_at'])): ?>
+                        <div class="text-muted" style="font-size:.68rem;">
+                            Paid At: <?= e(format_datetime((string) $t['verified_at'])) ?>
+                        </div>
+                        <?php endif; ?>
+                        <?php elseif ($hasProof): ?>
                         <button type="button" class="btn btn-outline-info btn-xs py-0 px-2 fw-semibold" style="font-size:.74rem;"
                                 onclick="openReceiptModal('<?= e(route('admin/payments/' . $pId . '/receipt')) ?>', '<?= e((string) $t['payment_ref']) ?>', '<?= e((string) $t['full_name']) ?>', '<?= e((string) $t['gcash_reference_no']) ?>', '₱<?= number_format($amount, 2) ?>')">
                             <i class="bi bi-receipt me-1"></i>Tingnan ang Resibo
