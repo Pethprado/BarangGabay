@@ -622,4 +622,4 @@ document.getElementById('paymentProofForm')?.addEventListener('submit', function
 
 <?php
 $content = ob_get_clean();
-require __DIR__ . '/../layouts/app.php';
+require __DIR__ . '/../layouts/main.php';
