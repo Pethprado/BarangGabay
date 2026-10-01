@@ -209,7 +209,7 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
             <a href="<?= e(route('admin/payments')) ?>"
                class="sidebar-link <?= $isActive('/admin/payments', false) ?>">
                 <i class="bi bi-wallet2 nav-icon"></i>
-                <span><?= e(t('admin_nav.payments', 'Pagbabayad')) ?></span>
+                <span><?= e(t('admin_nav.payments')) ?></span>
                 <?php
                 try {
                     $__payPending = (int) db()->query("SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAYMENT_PROOF_SUBMITTED'")->fetchColumn();
