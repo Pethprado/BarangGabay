@@ -607,6 +607,69 @@ class PaymentController
     // ── Resident Payment Actions ─────────────────────────────────────────
 
     /**
+     * GET /documents/{id}/payment — Dedicated GCash Payment Checkout Page
+     */
+    public function checkout(array $params): void
+    {
+        $id     = (int) ($params['id'] ?? 0);
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        $role   = (string) ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '');
+
+        $request = DocumentRequest::find($id);
+        if (!$request) {
+            flash('error', t('flash.not_found'));
+            redirect('/documents');
+        }
+
+        $isStaff = in_array($role, ['admin', 'staff', 'superadmin'], true);
+        if (!$isStaff && (int) $request['user_id'] !== $userId) {
+            http_response_code(403);
+            exit('Access Denied.');
+        }
+
+        // If free document, no checkout needed
+        $fee = (float) ($request['fee_amount'] ?? 0);
+        if ($fee <= 0.00 || ($request['payment_status'] ?? '') === 'FREE') {
+            flash('info', 'Ang dokumentong ito ay libre. Hindi kailangan ng pagbabayad.');
+            redirect('/documents');
+        }
+
+        // If pay upon pickup, no online checkout needed
+        if (($request['payment_method'] ?? '') === 'pickup' && ($request['delivery_method'] ?? '') === 'pickup') {
+            flash('info', 'Ang inyong kahilingan ay nakatakda para sa Pay Upon Pickup sa Barangay Hall.');
+            redirect('/documents');
+        }
+
+        // Find or create payment record
+        $payment = DocumentPayment::findByRequest($id);
+        if (!$payment) {
+            $defaultGcash = GcashAccount::getDefault();
+            $gcashAccountId = $defaultGcash ? (int) $defaultGcash['id'] : null;
+            $paymentId = DocumentPayment::createForRequest(
+                $id,
+                (int) $request['user_id'],
+                (string) $request['document_type'],
+                $fee,
+                'gcash',
+                $gcashAccountId
+            );
+            $payment = DocumentPayment::find($paymentId);
+        }
+
+        // Load active GCash account
+        $gcash = null;
+        if (!empty($payment['gcash_account_id'])) {
+            $gcash = GcashAccount::find((int) $payment['gcash_account_id']);
+        }
+        if (!$gcash) {
+            $gcash = GcashAccount::getDefault();
+        }
+
+        $pageTitle = 'GCash Payment Checkout — BarangGabay';
+        view('resident/payment_checkout', compact('request', 'payment', 'gcash', 'pageTitle'));
+    }
+
+    /**
      * POST /documents/{id}/payment — Resident uploads proof of payment
      */
     public function residentUploadProof(array $params): void
@@ -634,20 +697,20 @@ class PaymentController
 
         if ($gcashRef === '') {
             flash('error', 'Kailangan ilagay ang GCash Reference Number.');
-            redirect('/documents');
+            redirect('/documents/' . $requestId . '/payment');
         }
 
         // Validate receipt file
         if (!isset($_FILES['receipt_file']) || $_FILES['receipt_file']['error'] !== UPLOAD_ERR_OK) {
             flash('error', 'Kailangan mag-upload ng larawan o PDF ng inyong resibo.');
-            redirect('/documents');
+            redirect('/documents/' . $requestId . '/payment');
         }
 
         $file     = $_FILES['receipt_file'];
         $maxBytes = 10485760; // 10MB
         if ((int) $file['size'] > $maxBytes) {
             flash('error', 'Ang sukat ng resibo ay dapat hindi hihigit sa 10MB.');
-            redirect('/documents');
+            redirect('/documents/' . $requestId . '/payment');
         }
 
         $tmpPath = (string) $file['tmp_name'];
@@ -658,13 +721,13 @@ class PaymentController
         $allowedMimes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
         if (!in_array($mime, $allowedMimes, true)) {
             flash('error', 'Tanging JPG, PNG, o PDF lamang ang tinatanggap para sa resibo.');
-            redirect('/documents');
+            redirect('/documents/' . $requestId . '/payment');
         }
 
         $rawBytes = file_get_contents($tmpPath);
         if ($rawBytes === false) {
             flash('error', 'Hindi mabasa ang na-upload na resibo.');
-            redirect('/documents');
+            redirect('/documents/' . $requestId . '/payment');
         }
 
         $fileHash = hash('sha256', $rawBytes);
@@ -702,11 +765,9 @@ class PaymentController
             }
 
             flash('success', 'Naisumite na ang inyong patunay ng bayad. Mangyaring hintayin ang pagsusuri at beripikasyon ng kawani ng barangay.');
-        } else {
-            flash('error', 'Nagka-problema sa pagsumite ng patunay ng bayad.');
         }
 
-        redirect('/documents');
+        redirect('/documents/' . $requestId . '/payment');
     }
 
     /**

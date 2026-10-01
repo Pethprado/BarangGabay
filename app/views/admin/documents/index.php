@@ -10,6 +10,7 @@ $delivery = (string) ($delivery ?? '');
 $search   = (string) ($search ?? '');
 
 $statusClass = [
+    'awaiting_payment' => 'background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;',
     'pending'    => 'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;',
     'processing' => 'background:#fef3c7;color:#92400e;border:1px solid #fde68a;',
     'ready'      => 'background:#dcfce7;color:#166534;border:1px solid #bbf7d0;',
@@ -376,7 +377,11 @@ ob_start();
                 <!-- Status Update & Details Actions -->
                 <td style="text-align:right;padding-right:16px;">
                     <div class="d-flex gap-1 justify-content-end align-items-center flex-wrap">
-                        <?php if ($next !== []): ?>
+                        <?php if ($st === 'awaiting_payment'): ?>
+                        <span class="text-muted me-2" style="font-size:.74rem;font-weight:600;" title="Payment must be confirmed before staff can process this request">
+                            <i class="bi bi-clock-history me-1 text-primary"></i> Awaiting Payment
+                        </span>
+                        <?php elseif ($next !== []): ?>
                         <form method="post"
                               action="<?= e(route('admin/documents/' . $id . '/status')) ?>"
                               class="d-flex gap-1 align-items-center"

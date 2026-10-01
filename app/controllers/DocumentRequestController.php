@@ -92,7 +92,7 @@ class DocumentRequestController
         $defaultGcash = \App\Models\GcashAccount::getDefault();
         $gcashAccountId = $defaultGcash ? (int) $defaultGcash['id'] : null;
 
-        $reference = DocumentRequest::create(
+        $created = DocumentRequest::create(
             $userId,
             $type,
             $purpose,
@@ -102,6 +102,9 @@ class DocumentRequestController
             $paymentMethod,
             $gcashAccountId
         );
+
+        $newId     = (int) $created['id'];
+        $reference = (string) $created['reference'];
 
         // Tell back office there is work waiting
         $deliveryText = $deliveryMethod === 'digital' ? ' (Digital Soft Copy)' : ' (Personal Pickup)';
@@ -118,6 +121,12 @@ class DocumentRequestController
             'document_request',
             $userId
         );
+
+        // If GCash Online payment is required: redirect immediately to the checkout page!
+        if ($paymentMethod === 'gcash' && !$isFree) {
+            flash('info', 'Nalikha na ang inyong kahilingan (' . $reference . '). Kumpletuhin ang pagbabayad gamit ang GCash sa ibaba.');
+            redirect('/documents/' . $newId . '/payment');
+        }
 
         flash('success', t('documents.filed', ['reference' => $reference]));
         redirect('/documents');

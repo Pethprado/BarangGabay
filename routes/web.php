@@ -164,6 +164,8 @@ return [
     // Document requests: Personal Pickup & Digital Soft Copy delivery
     ['GET',  '/documents',                        'DocumentRequestController@index',        ['auth', 'verified']],
     ['POST', '/documents',                        'DocumentRequestController@store',        ['auth', 'verified']],
+    ['GET',  '/documents/{id}/payment',           'PaymentController@checkout',             ['auth', 'verified']],
+    ['GET',  '/documents/{id}/checkout',          'PaymentController@checkout',             ['auth', 'verified']],
     ['POST', '/documents/{id}/payment',           'PaymentController@residentUploadProof',  ['auth', 'verified']],
     ['GET',  '/documents/{id}/acknowledgement',   'PaymentController@acknowledgement',      ['auth', 'verified']],
     ['GET',  '/documents/{id}/download',          'DocumentRequestController@download',     ['auth', 'verified']],

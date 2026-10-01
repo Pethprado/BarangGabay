@@ -1268,6 +1268,7 @@ return [
         'notify_ready_digital' => 'Handa na ang inyong digital soft copy para sa :type (:reference). Maaari na itong i-download mula sa inyong portal.',
         'notify_released_digital'=> 'Matagumpay na natapos ang inyong digital :type (:reference).',
         'err_delivery'         => 'Pumili po ng paraan ng pagtanggap ng dokumento.',
+        'status_awaiting_payment' => 'Naghihintay ng Bayad',
         'status_pending'    => 'Naghihintay',
         'status_processing' => 'Inihahanda',
         'status_ready'      => 'Pwede nang kunin',

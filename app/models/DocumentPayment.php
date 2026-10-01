@@ -259,9 +259,13 @@ class DocumentPayment
             );
             $stmt->execute([$newStatus, $staffId, $note ? trim($note) : null, $paymentId]);
 
-            // Update request row
+            // Update request row: mark verified and activate to pending if awaiting payment
             $pdo->prepare(
-                'UPDATE document_requests SET payment_status = ?, updated_at = NOW() WHERE id = ?'
+                'UPDATE document_requests 
+                    SET payment_status = ?, 
+                        status = CASE WHEN status = \'awaiting_payment\' THEN \'pending\' ELSE status END,
+                        updated_at = NOW() 
+                  WHERE id = ?'
             )->execute([$newStatus, (int) $payment['request_id']]);
 
             $details = sprintf('Payment verified by Staff ID #%d', $staffId);
@@ -415,7 +419,11 @@ class DocumentPayment
             $stmt->execute([$newStatus, trim($reason), $staffId, $paymentId]);
 
             $pdo->prepare(
-                'UPDATE document_requests SET payment_status = ?, updated_at = NOW() WHERE id = ?'
+                'UPDATE document_requests 
+                    SET payment_status = ?, 
+                        status = CASE WHEN status = \'awaiting_payment\' THEN \'pending\' ELSE status END,
+                        updated_at = NOW() 
+                  WHERE id = ?'
             )->execute([$newStatus, (int) $payment['request_id']]);
 
             self::logAudit(

@@ -32,11 +32,12 @@ class DocumentRequest
      * Where a request can go next.
      */
     public const TRANSITIONS = [
-        'pending'    => ['processing', 'ready', 'rejected'],
-        'processing' => ['ready', 'rejected'],
-        'ready'      => ['released', 'rejected'],
-        'released'   => [],
-        'rejected'   => [],
+        'awaiting_payment' => ['pending', 'rejected'],
+        'pending'          => ['processing', 'ready', 'rejected'],
+        'processing'       => ['ready', 'rejected'],
+        'ready'            => ['released', 'rejected'],
+        'released'         => [],
+        'rejected'         => [],
     ];
 
     public static function label(string $type): string
@@ -123,6 +124,9 @@ class DocumentRequest
             default  => $isFree ? DocumentPayment::STATUS_FREE : DocumentPayment::STATUS_UNPAID,
         };
 
+        // For online GCash payment, document status starts at awaiting_payment until verified!
+        $initialDocStatus = ($paymentMethod === 'gcash' && !$isFree) ? 'awaiting_payment' : 'pending';
+
         $pdo = db();
         $stmt = $pdo->prepare(
             'INSERT INTO document_requests
@@ -135,7 +139,7 @@ class DocumentRequest
             $docType,
             $cleanPurp,
             $cleanNote,
-            'pending',
+            $initialDocStatus,
             $method,
             $feeAmount,
             $paymentMethod,
@@ -152,11 +156,19 @@ class DocumentRequest
             $userId,
             'requested',
             null,
-            'pending',
+            $initialDocStatus,
             sprintf('Submitted request for %s via %s. Fee: ₱%.2f (%s)', self::label($docType), self::deliveryLabel($method), $feeAmount, strtoupper($paymentMethod))
         );
 
-        return $reference;
+        return [
+            'id'             => $newId,
+            'reference'      => $reference,
+            'payment_id'     => $paymentId,
+            'payment_method' => $paymentMethod,
+            'status'         => $initialDocStatus,
+            'fee_amount'     => $feeAmount,
+            'is_free'        => $isFree,
+        ];
     }
 
     /** One request, with requester's details, staff names, and payment details. */
@@ -244,7 +256,7 @@ class DocumentRequest
             $params[] = $like;
         }
 
-        $sql .= " ORDER BY CASE r.status WHEN 'pending' THEN 1 WHEN 'processing' THEN 2 WHEN 'ready' THEN 3 WHEN 'released' THEN 4 WHEN 'rejected' THEN 5 ELSE 6 END,
+        $sql .= " ORDER BY CASE r.status WHEN 'pending' THEN 1 WHEN 'processing' THEN 2 WHEN 'ready' THEN 3 WHEN 'awaiting_payment' THEN 4 WHEN 'released' THEN 5 WHEN 'rejected' THEN 6 ELSE 7 END,
                            r.requested_at ASC";
 
         $stmt = db()->prepare($sql);

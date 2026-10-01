@@ -10,6 +10,7 @@ $docFees      = $docFees  ?? \App\Models\DocumentFee::getAll();
 $defaultGcash = $defaultGcash ?? \App\Models\GcashAccount::getDefault();
 
 $statusClass = [
+    'awaiting_payment' => 'bg-indigo-50 text-indigo-800 border-indigo-200',
     'pending'    => 'bg-slate-100 text-slate-700 border-slate-200',
     'processing' => 'bg-amber-50 text-amber-800 border-amber-200',
     'ready'      => 'bg-emerald-50 text-emerald-800 border-emerald-200',
@@ -200,10 +201,42 @@ ob_start();
                           class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"></textarea>
             </div>
 
-            <button type="submit"
-                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 px-4 py-3 text-sm font-bold text-white shadow-md transition hover:from-blue-800 hover:to-indigo-800 hover:shadow-lg active:scale-[0.99]">
-                <i class="bi bi-send-fill"></i>
-                <span><?= e(t('documents.submit')) ?></span>
+            <!-- Request & Payment Summary Before Submit -->
+            <div id="requestSummaryBox" class="mb-5 rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 p-4">
+                <div class="flex items-center justify-between border-b border-blue-200/60 pb-2 mb-2.5">
+                    <span class="text-xs font-bold uppercase tracking-wider text-blue-950 flex items-center gap-1.5">
+                        <i class="bi bi-receipt text-blue-600"></i> Buod ng Kahilingan (Summary)
+                    </span>
+                    <span id="summaryBadge" class="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">GCash</span>
+                </div>
+                <div class="space-y-1.5 text-xs">
+                    <div class="flex justify-between text-slate-600">
+                        <span>Dokumento:</span>
+                        <strong id="summaryDocName" class="text-slate-800 font-semibold">Barangay Clearance</strong>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Paraan ng Pagkuha:</span>
+                        <strong id="summaryDelivery" class="text-slate-800 font-semibold">Personal Pickup</strong>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Paraan ng Pagbayad:</span>
+                        <strong id="summaryPayment" class="text-slate-800 font-semibold">Online GCash Payment</strong>
+                    </div>
+                    <div class="flex justify-between text-slate-600 border-t border-blue-100 pt-1.5 mt-1.5">
+                        <span>Document Fee:</span>
+                        <strong id="summaryFee" class="text-slate-800 font-semibold">₱50.00</strong>
+                    </div>
+                    <div class="flex justify-between text-sm font-black text-blue-950 pt-1 border-t border-blue-200/60">
+                        <span>Kabuuang Halaga (Total):</span>
+                        <strong id="summaryTotal" class="text-blue-700 font-black">₱50.00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" id="submitRequestBtn"
+                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 px-4 py-3.5 text-sm font-bold text-white shadow-md transition hover:from-blue-800 hover:to-indigo-800 hover:shadow-lg active:scale-[0.99]">
+                <i class="bi bi-arrow-right-circle-fill text-base" id="submitBtnIcon"></i>
+                <span id="submitBtnText">Isumite at Magpatuloy sa Pagbabayad (Submit & Continue to Payment)</span>
             </button>
         </form>
 
@@ -255,15 +288,19 @@ ob_start();
                 $isAtPickup= $payStatus === 'PAY_AT_PICKUP';
 
                 // Status label
-                $statusLabel = $isDigital && $st === 'ready'
-                    ? t('documents.status_ready_digital')
-                    : ($isDigital && $st === 'released' ? t('documents.status_released_digital') : t('documents.status_' . $st));
+                $statusLabel = match ($st) {
+                    'awaiting_payment' => 'Naghihintay ng Bayad (Awaiting Payment)',
+                    'ready'            => ($isDigital ? t('documents.status_ready_digital') : t('documents.status_ready')),
+                    'released'         => ($isDigital ? t('documents.status_released_digital') : t('documents.status_released')),
+                    default            => t('documents.status_' . $st),
+                };
 
                 $borderHighlight = match ($st) {
-                    'ready'    => 'border-emerald-300 ring-1 ring-emerald-100',
-                    'released' => 'border-blue-200',
-                    'processing' => 'border-amber-200',
-                    default    => 'border-slate-200',
+                    'awaiting_payment' => 'border-indigo-300 ring-1 ring-indigo-100',
+                    'ready'            => 'border-emerald-300 ring-1 ring-emerald-100',
+                    'released'         => 'border-blue-200',
+                    'processing'       => 'border-amber-200',
+                    default            => 'border-slate-200',
                 };
             ?>
             <article class="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md <?= $borderHighlight ?>">
@@ -353,116 +390,47 @@ ob_start();
                 <!-- ================= PAYMENT SECTION FOR RESIDENT ================= -->
                 <?php if (!$isFree): ?>
 
-                    <!-- Case 1: Unpaid or Rejected (Needs Receipt Upload) -->
-                    <?php if ($isUnpaid || $isRejected): ?>
-                    <div class="mt-4 rounded-xl border-2 border-rose-100 bg-gradient-to-br from-rose-50/40 to-amber-50/30 p-4">
-                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-rose-100/80 pb-3 mb-3">
-                            <div class="flex items-center gap-2">
-                                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-600 text-white font-bold text-sm">
-                                    <i class="bi bi-wallet2"></i>
+                    <!-- Case 1: Unpaid, Awaiting Payment, or Rejected (Continue to Checkout) -->
+                    <?php if ($isUnpaid || $isRejected || $st === 'awaiting_payment'): ?>
+                    <div class="mt-4 rounded-xl border-2 <?= $isRejected ? 'border-rose-200 bg-rose-50/40' : 'border-indigo-100 bg-gradient-to-br from-indigo-50/60 via-blue-50/40 to-white' ?> p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex items-start gap-3">
+                                <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl <?= $isRejected ? 'bg-rose-600' : 'bg-gradient-to-br from-blue-600 to-indigo-700' ?> text-white font-bold text-base shadow-sm">
+                                    <i class="bi <?= $isRejected ? 'bi-exclamation-triangle-fill' : 'bi-qr-code-scan' ?>"></i>
                                 </span>
                                 <div>
-                                    <h4 class="text-sm font-bold text-slate-900">Kailangan ng Pagbabayad (Payment Required)</h4>
-                                    <p class="text-xs text-slate-500">Ibayad ang eksaktong halaga sa GCash bago ilabas ang dokumento.</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[10px] uppercase font-bold text-slate-400">Halagang Babayaran:</span>
-                                <div class="text-lg font-black text-rose-600">₱<?= number_format($fee, 2) ?></div>
-                            </div>
-                        </div>
-
-                        <!-- If rejected: show reason banner -->
-                        <?php if ($isRejected): ?>
-                        <div class="mb-3.5 rounded-xl border border-rose-300 bg-rose-100/70 p-3 text-xs text-rose-950">
-                            <div class="flex items-start gap-2">
-                                <i class="bi bi-exclamation-octagon-fill text-rose-600 text-base mt-0.5"></i>
-                                <div>
-                                    <strong class="font-bold">Tinanggihan ang Iyong Naunang Patunay ng Bayad:</strong>
-                                    <p class="mt-0.5 font-medium text-rose-900">Dahilan: <?= e((string) ($r['rejection_reason'] ?: 'Kailangang suriin muli ang resibo.')) ?></p>
-                                    <?php if (!empty($r['rejection_note'])): ?>
-                                    <p class="mt-0.5 text-rose-800 text-[11px]">Paliwanag ng Staff: <?= e((string) $r['rejection_note']) ?></p>
+                                    <h4 class="text-sm font-bold text-slate-900">
+                                        <?= $isRejected ? 'Tinanggihan ang Resibo — Kailangan ng Bagong Patunay' : 'Kailangan ng Pagbabayad sa GCash (Payment Required)' ?>
+                                    </h4>
+                                    <p class="text-xs text-slate-600 mt-0.5">
+                                        Halagang babayaran: <strong class="text-indigo-700 font-bold">₱<?= number_format($fee, 2) ?></strong>
+                                        <?php if (!empty($r['payment_ref'])): ?>
+                                        &bull; Ref: <code class="font-mono text-slate-700 font-semibold"><?= e((string) $r['payment_ref']) ?></code>
+                                        <?php endif; ?>
+                                    </p>
+                                    <?php if ($isRejected): ?>
+                                    <div class="mt-2 rounded-lg bg-rose-100/80 p-2.5 text-xs text-rose-900">
+                                        <strong class="font-bold">Dahilan:</strong> <?= e((string) ($r['rejection_reason'] ?: 'Kailangang suriin muli ang resibo.')) ?>
+                                        <?php if (!empty($r['rejection_note'])): ?>
+                                        <div class="mt-0.5 text-[11px] text-rose-800">Tala ng Staff: <?= e((string) $r['rejection_note']) ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php else: ?>
+                                    <p class="text-[11px] text-slate-500 mt-1">
+                                        I-click ang button upang buksan ang opisyal na GCash Checkout at i-scan ang QR code o kopyahin ang mobile number.
+                                    </p>
                                     <?php endif; ?>
-                                    <p class="mt-1 text-[11px] text-rose-900">Mangyaring mag-upload muli ng malinaw at wastong resibo sa ibaba.</p>
                                 </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="<?= e(route('documents/' . $reqId . '/payment')) ?>"
+                                   class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:from-blue-800 hover:to-indigo-800 transition active:scale-[0.98]">
+                                    <i class="bi bi-wallet2"></i>
+                                    <span><?= $isRejected ? 'Mag-upload Muli sa Checkout' : 'Magpatuloy sa GCash Payment' ?></span>
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
                             </div>
                         </div>
-                        <?php endif; ?>
-
-                        <!-- GCash Account Details Card -->
-                        <div class="grid gap-3 sm:grid-cols-2 bg-white rounded-xl p-3 border border-slate-200/80 mb-3.5">
-                            <div>
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">GCash Account Name:</span>
-                                <div class="font-bold text-slate-800 text-sm mt-0.5"><?= e((string) ($r['gcash_account_name'] ?: 'Barangay Bayogo Official')) ?></div>
-
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mt-2">GCash Mobile Number:</span>
-                                <div class="flex items-center gap-2 mt-0.5">
-                                    <span class="font-mono font-bold text-slate-900 text-sm"><?= e((string) ($r['gcash_mobile_number'] ?: '0917 123 4567')) ?></span>
-                                    <button type="button" 
-                                            onclick="navigator.clipboard.writeText('<?= e((string) ($r['gcash_mobile_number'] ?: '09171234567')) ?>');this.innerText='Copied!';setTimeout(()=>this.innerText='Copy',1500)"
-                                            class="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-200">
-                                        Copy
-                                    </button>
-                                </div>
-
-                                <div class="mt-3 text-[11px] text-slate-500 leading-tight">
-                                    1. Mag-send ng eksaktong <strong>₱<?= number_format($fee, 2) ?></strong> sa GCash number o i-scan ang QR.<br>
-                                    2. I-save ang screenshot / resibo.<br>
-                                    3. I-upload ang resibo at ilagay ang GCash Ref# sa tabi.
-                                </div>
-                            </div>
-
-                            <!-- QR Code Preview -->
-                            <div class="flex flex-col items-center justify-center p-2 rounded-lg bg-slate-50 border border-slate-100 text-center">
-                                <?php if (!empty($r['qr_image_data'])):
-                                    $qrSrc = 'data:' . ($r['qr_mime_type'] ?: 'image/png') . ';base64,' . $r['qr_image_data'];
-                                ?>
-                                <img src="<?= $qrSrc ?>" alt="GCash QR" class="h-28 w-28 object-contain rounded border bg-white p-1 cursor-pointer shadow-sm hover:scale-105 transition"
-                                     onclick="viewLargerQr('<?= $qrSrc ?>', '<?= e((string)$r['gcash_account_name']) ?>')">
-                                <button type="button" onclick="viewLargerQr('<?= $qrSrc ?>', '<?= e((string)$r['gcash_account_name']) ?>')"
-                                        class="mt-1.5 text-[11px] font-bold text-blue-600 hover:underline">
-                                    <i class="bi bi-zoom-in me-1"></i>Palakihin ang QR
-                                </button>
-                                <?php else: ?>
-                                <i class="bi bi-qr-code text-slate-300 text-4xl mb-1"></i>
-                                <span class="text-[11px] text-slate-400">Gamitin ang GCash Number sa kaliwa</span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- Receipt Upload Form -->
-                        <form method="post" action="<?= e(route('documents/' . $reqId . '/payment')) ?>" enctype="multipart/form-data" class="space-y-3">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="amount_reported" value="<?= number_format($fee, 2, '.', '') ?>">
-
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">
-                                        GCash Reference Number <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="text" name="gcash_reference_no" required placeholder="Hal: 1234 567 89012"
-                                           class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-200">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">
-                                        Upload ng Resibo / Screenshot <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="file" name="receipt_file" accept="image/jpeg,image/png,image/jpg,application/pdf" required
-                                           class="w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 file:mr-2 file:rounded-lg file:border-0 file:bg-blue-50 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-blue-700">
-                                </div>
-                            </div>
-
-                            <div>
-                                <input type="text" name="notes" placeholder="Opsyonal na tala o detalhe..."
-                                       class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-200">
-                            </div>
-
-                            <button type="submit"
-                                    class="w-full flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.99]">
-                                <i class="bi bi-upload"></i>
-                                <span>Isumite ang Patunay ng Bayad</span>
-                            </button>
-                        </form>
                     </div>
 
                     <!-- Case 2: Payment Proof Submitted (Under Review) -->
@@ -798,16 +766,85 @@ function updatePaymentCardStyles() {
     });
 }
 
+function updateSummaryAndButton() {
+    const select = document.getElementById('document_type');
+    const selectedOpt = select ? select.options[select.selectedIndex] : null;
+    const docName = selectedOpt ? selectedOpt.text.replace(/\(₱.*?\)/, '').trim() : 'Dokumento';
+    const amount = selectedOpt ? parseFloat(selectedOpt.getAttribute('data-amount') || '0') : 0;
+    const isFree = selectedOpt ? (selectedOpt.getAttribute('data-free') === '1' || amount <= 0) : true;
+
+    const delRadio = document.querySelector('input[name="delivery_method"]:checked');
+    const delMethod = delRadio ? delRadio.value : 'pickup';
+    const deliveryLabel = delMethod === 'digital' ? 'Digital Soft Copy (Online)' : 'Personal Pickup (Counter)';
+
+    const payRadio = document.querySelector('input[name="payment_method"]:checked');
+    const payMethod = payRadio ? payRadio.value : 'gcash';
+
+    // Summary fields
+    const summaryDocName = document.getElementById('summaryDocName');
+    const summaryDelivery = document.getElementById('summaryDelivery');
+    const summaryPayment = document.getElementById('summaryPayment');
+    const summaryFee = document.getElementById('summaryFee');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const summaryBadge = document.getElementById('summaryBadge');
+
+    const submitBtn = document.getElementById('submitRequestBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const submitBtnIcon = document.getElementById('submitBtnIcon');
+
+    if (summaryDocName) summaryDocName.innerText = docName;
+    if (summaryDelivery) summaryDelivery.innerText = deliveryLabel;
+
+    if (isFree) {
+        if (summaryPayment) summaryPayment.innerText = 'Libre (Walang Bayad)';
+        if (summaryFee) summaryFee.innerText = '₱0.00';
+        if (summaryTotal) summaryTotal.innerText = '₱0.00 (LIBRE)';
+        if (summaryBadge) {
+            summaryBadge.innerText = 'LIBRE';
+            summaryBadge.className = 'rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800';
+        }
+        if (submitBtnText) submitBtnText.innerText = 'Isumite ang Kahilingan (Submit Request)';
+        if (submitBtnIcon) submitBtnIcon.className = 'bi bi-send-fill text-base';
+    } else if (payMethod === 'gcash') {
+        if (summaryPayment) summaryPayment.innerText = 'Online GCash Payment';
+        if (summaryFee) summaryFee.innerText = '₱' + amount.toFixed(2);
+        if (summaryTotal) summaryTotal.innerText = '₱' + amount.toFixed(2);
+        if (summaryBadge) {
+            summaryBadge.innerText = 'GCASH';
+            summaryBadge.className = 'rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800';
+        }
+        if (submitBtnText) submitBtnText.innerText = 'Isumite at Magpatuloy sa Pagbabayad (Submit & Continue to Payment)';
+        if (submitBtnIcon) submitBtnIcon.className = 'bi bi-arrow-right-circle-fill text-base';
+    } else {
+        if (summaryPayment) summaryPayment.innerText = 'Magbayad sa Counter (Pay Upon Pickup)';
+        if (summaryFee) summaryFee.innerText = '₱' + amount.toFixed(2);
+        if (summaryTotal) summaryTotal.innerText = '₱' + amount.toFixed(2);
+        if (summaryBadge) {
+            summaryBadge.innerText = 'CASH COUNTER';
+            summaryBadge.className = 'rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-800';
+        }
+        if (submitBtnText) submitBtnText.innerText = 'Isumite ang Kahilingan (Submit Request)';
+        if (submitBtnIcon) submitBtnIcon.className = 'bi bi-send-fill text-base';
+    }
+}
+
 document.querySelectorAll('input[name="delivery_method"]').forEach(r => {
-    r.addEventListener('change', handleDeliveryChange);
+    r.addEventListener('change', () => {
+        handleDeliveryChange();
+        updateSummaryAndButton();
+    });
 });
 document.querySelectorAll('input[name="payment_method"]').forEach(r => {
-    r.addEventListener('change', updatePaymentCardStyles);
+    r.addEventListener('change', () => {
+        updatePaymentCardStyles();
+        updateSummaryAndButton();
+    });
 });
 
 // Run on load
 document.addEventListener('DOMContentLoaded', () => {
     handleDocTypeChange();
+    updateSummaryAndButton();
 });
 </script>
 

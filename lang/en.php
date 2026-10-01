@@ -1296,6 +1296,7 @@ return [
         'notify_ready_digital' => 'Your digital :type (:reference) is ready for download in your portal.',
         'notify_released_digital'=> 'Your digital :type (:reference) has been marked completed.',
         'err_delivery'         => 'Please select a delivery method.',
+        'status_awaiting_payment' => 'Awaiting Payment',
         'status_pending'    => 'Waiting',
         'status_processing' => 'Being prepared',
         'status_ready'      => 'Ready to collect',
