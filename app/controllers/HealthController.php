@@ -27,7 +27,7 @@ class HealthController
             'app'       => 'ok',
             'php'       => PHP_VERSION,
             'timestamp' => date('c'),
-            'version'   => '2.5.0-checkout-flow',
+            'version'   => '2.5.1-checkout-return-fix',
         ];
 
         try {

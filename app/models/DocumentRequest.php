@@ -110,7 +110,7 @@ class DocumentRequest
         float $feeAmount = 0.00,
         string $paymentMethod = 'free',
         ?int $gcashAccountId = null
-    ): string {
+    ): array {
         $reference = 'BRG-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
         $method    = \array_key_exists($deliveryMethod, self::DELIVERY_METHODS) ? $deliveryMethod : 'pickup';
         $docType   = \array_key_exists($type, self::TYPES) ? $type : 'other';
