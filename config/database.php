@@ -555,8 +555,29 @@ function syncPostgresSchema(PDO $pdo): void
         "CREATE INDEX IF NOT EXISTS idx_dp_request ON document_payments(request_id)",
         "CREATE INDEX IF NOT EXISTS idx_dp_user ON document_payments(user_id)",
         "CREATE INDEX IF NOT EXISTS idx_dp_status ON document_payments(payment_status)",
-        "CREATE INDEX IF NOT EXISTS idx_dp_gcash_ref ON document_payments(gcash_reference_no)",
         "CREATE INDEX IF NOT EXISTS idx_dp_hash ON document_payments(receipt_file_hash)",
+
+        // 19. PayPal Checkout Integration columns and indexes
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS provider VARCHAR(30) NOT NULL DEFAULT 'manual'",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'PHP'",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paypal_order_id VARCHAR(100) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paypal_capture_id VARCHAR(100) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paypal_payer_id VARCHAR(100) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paypal_payer_email VARCHAR(255) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paypal_raw_response TEXT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_dp_paypal_order ON document_payments(paypal_order_id)",
+        "CREATE INDEX IF NOT EXISTS idx_dp_paypal_capture ON document_payments(paypal_capture_id)",
+
+        "CREATE TABLE IF NOT EXISTS payment_webhook_events (
+            id SERIAL PRIMARY KEY,
+            event_id VARCHAR(100) NOT NULL UNIQUE,
+            event_type VARCHAR(100) NOT NULL,
+            provider VARCHAR(30) NOT NULL DEFAULT 'paypal',
+            resource_id VARCHAR(100) NULL,
+            payload TEXT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_pwe_event_id ON payment_webhook_events(event_id)",
 
         "CREATE TABLE IF NOT EXISTS payment_audit_logs (
             id SERIAL PRIMARY KEY,
