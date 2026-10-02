@@ -25,23 +25,63 @@ class User
 
     public static function create(array $data): int
     {
+        $firstName  = trim($data['first_name'] ?? '');
+        $middleName = trim($data['middle_name'] ?? '');
+        $lastName   = trim($data['last_name'] ?? '');
+        $suffix     = trim($data['suffix'] ?? '');
+
+        $fullName = trim($data['full_name'] ?? '');
+        if ($fullName === '' && ($firstName !== '' || $lastName !== '')) {
+            $fullName = trim("$firstName " . ($middleName ? "$middleName " : "") . "$lastName" . ($suffix ? " $suffix" : ""));
+        }
+
+        $houseNo  = trim($data['house_no'] ?? '');
+        $street   = trim($data['street'] ?? '');
+        $purok    = trim($data['purok'] ?? ($data['zone'] ?? ''));
+        $barangay = trim($data['barangay'] ?? 'Bayogo');
+        $city     = trim($data['city'] ?? 'Madrid');
+        $province = trim($data['province'] ?? 'Surigao del Sur');
+
+        $address = trim($data['address'] ?? '');
+        if ($address === '' && ($houseNo !== '' || $street !== '' || $purok !== '')) {
+            $addrParts = array_filter([$houseNo ? "House/Block $houseNo" : '', $street, $purok ? "Purok $purok" : '', $barangay, $city, $province]);
+            $address = implode(', ', $addrParts);
+        }
+
         $stmt = db()->prepare(
             'INSERT INTO users
-             (full_name, email, password_hash, phone, address, zone, role, status,
+             (full_name, first_name, middle_name, last_name, suffix,
+              date_of_birth, sex, civil_status,
+              email, password_hash, phone, address, house_no, street, purok, barangay, city, province,
+              household_no, is_household_head, head_relationship,
+              zone, role, status,
               id_photo_url, id_verified_by_ai, id_ai_status,
               avatar_url, email_verified, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW(), NOW())'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW(), NOW())'
         );
         $stmt->execute([
-            $data['full_name'],
+            $fullName,
+            $firstName  ?: null,
+            $middleName ?: null,
+            $lastName   ?: null,
+            $suffix     ?: null,
+            !empty($data['date_of_birth']) ? $data['date_of_birth'] : null,
+            !empty($data['sex']) ? $data['sex'] : null,
+            !empty($data['civil_status']) ? $data['civil_status'] : null,
             $data['email'],
             $data['password_hash'],
             $data['phone']             ?? null,
-            $data['address']           ?? null,
-            // No default purok: see barangay_subdivisions() in helpers.php.
-            // Recording a resident in a made-up subdivision is worse than
-            // recording none.
-            $data['zone']              ?? null,
+            $address                   ?: null,
+            $houseNo                   ?: null,
+            $street                    ?: null,
+            $purok                     ?: null,
+            $barangay                  ?: 'Bayogo',
+            $city                      ?: 'Madrid',
+            $province                  ?: 'Surigao del Sur',
+            !empty($data['household_no']) ? $data['household_no'] : null,
+            !empty($data['is_household_head']) ? 1 : 0,
+            !empty($data['head_relationship']) ? $data['head_relationship'] : null,
+            $purok                     ?: ($data['zone'] ?? null),
             $data['role']              ?? 'resident',
             $data['status']            ?? 'pending',
             $data['id_photo_url']      ?? null,
@@ -50,6 +90,75 @@ class User
             $data['avatar_url']        ?? null,
         ]);
         return (int) db()->lastInsertId();
+    }
+
+    /**
+     * Requirement 9: Dynamically calculate age from Date of Birth.
+     * Never stores age permanently in DB to prevent stale birthday data.
+     */
+    public static function getAge(?string $dob): ?int
+    {
+        if (empty($dob)) {
+            return null;
+        }
+        try {
+            $birthDate = new \DateTime($dob);
+            $today     = new \DateTime('today');
+            if ($birthDate > $today) {
+                return 0;
+            }
+            return (int) $birthDate->diff($today)->y;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Requirement 11 & 12: Check if resident profile is verified and locked.
+     */
+    public static function isVerified(array|int $user): bool
+    {
+        if (is_int($user)) {
+            $user = self::find($user);
+        }
+        if (!$user) {
+            return false;
+        }
+        return ($user['status'] ?? '') === 'verified';
+    }
+
+    /**
+     * Formats official resident address for documents and display.
+     */
+    public static function formatAddress(array $user): string
+    {
+        if (!empty($user['house_no']) || !empty($user['street']) || !empty($user['purok'])) {
+            $parts = array_filter([
+                !empty($user['house_no']) ? "House/Block " . $user['house_no'] : '',
+                $user['street'] ?? '',
+                !empty($user['purok']) ? "Purok " . $user['purok'] : (!empty($user['zone']) ? "Purok " . $user['zone'] : ''),
+                $user['barangay'] ?? 'Barangay Bayogo',
+                $user['city'] ?? 'Madrid',
+                $user['province'] ?? 'Surigao del Sur',
+            ]);
+            return implode(', ', $parts);
+        }
+        return (string) ($user['address'] ?? 'Barangay Bayogo, Madrid, Surigao del Sur');
+    }
+
+    /**
+     * Formats official full name.
+     */
+    public static function formatFullName(array $user): string
+    {
+        if (!empty($user['first_name']) || !empty($user['last_name'])) {
+            $fn = $user['first_name'] ?? '';
+            $mn = $user['middle_name'] ?? '';
+            $ln = $user['last_name'] ?? '';
+            $sx = $user['suffix'] ?? '';
+            return trim("$fn " . ($mn ? "$mn " : "") . "$ln" . ($sx ? " $sx" : ""));
+        }
+        return (string) ($user['full_name'] ?? '');
     }
 
     // ── Self-service account updates (/admin/account) ────────────────

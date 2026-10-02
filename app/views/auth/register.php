@@ -387,25 +387,168 @@ $flashOk  = flash('success');
 
             <div class="row g-3">
 
-                <!-- Full Name -->
-                <div class="col-12">
-                    <label for="full_name" class="form-label">
-                        Buong Pangalan <span class="req">*</span>
-                    </label>
-                    <input type="text" id="full_name" name="full_name"
-                           class="form-control <?= !empty($errors['full_name']) ? 'is-invalid' : '' ?>"
-                           placeholder="Juan Dela Cruz"
-                           value="<?= e(old('full_name')) ?>"
-                           required autocomplete="name">
-                    <?php if (!empty($errors['full_name'])): ?>
-                    <div class="invalid-feedback"><?= e($errors['full_name']) ?></div>
+                <!-- Section 1: Personal Information -->
+                <div class="col-12 mt-1">
+                    <h6 class="fw-bold text-dark border-bottom pb-1 mb-2 d-flex align-items-center gap-1" style="font-size:.9rem; color:var(--green)!important;">
+                        <i class="bi bi-person-badge"></i> 1. Impormasyon ng Residente (Personal Info)
+                    </h6>
+                </div>
+
+                <div class="col-sm-6">
+                    <label for="first_name" class="form-label">Pangalan (First Name) <span class="req">*</span></label>
+                    <input type="text" id="first_name" name="first_name"
+                           class="form-control <?= !empty($errors['first_name']) ? 'is-invalid' : '' ?>"
+                           placeholder="Hal. Juan"
+                           value="<?= e(old('first_name')) ?>" required autocomplete="given-name">
+                    <?php if (!empty($errors['first_name'])): ?>
+                    <div class="invalid-feedback"><?= e($errors['first_name']) ?></div>
                     <?php endif; ?>
                 </div>
 
+                <div class="col-sm-6">
+                    <label for="middle_name" class="form-label">Gitnang Pangalan (Middle Name)</label>
+                    <input type="text" id="middle_name" name="middle_name"
+                           class="form-control"
+                           placeholder="Hal. Protacio (opsyonal)"
+                           value="<?= e(old('middle_name')) ?>" autocomplete="additional-name">
+                </div>
+
+                <div class="col-sm-8">
+                    <label for="last_name" class="form-label">Apelyido (Last Name) <span class="req">*</span></label>
+                    <input type="text" id="last_name" name="last_name"
+                           class="form-control <?= !empty($errors['last_name']) ? 'is-invalid' : '' ?>"
+                           placeholder="Hal. Dela Cruz"
+                           value="<?= e(old('last_name')) ?>" required autocomplete="family-name">
+                    <?php if (!empty($errors['last_name'])): ?>
+                    <div class="invalid-feedback"><?= e($errors['last_name']) ?></div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="col-sm-4">
+                    <label for="suffix" class="form-label">Suffix</label>
+                    <input type="text" id="suffix" name="suffix"
+                           class="form-control"
+                           placeholder="Jr., Sr., III"
+                           value="<?= e(old('suffix')) ?>">
+                </div>
+
+                <!-- Date of Birth & Dynamic Age Display -->
+                <div class="col-sm-4">
+                    <label for="date_of_birth" class="form-label">Petsa ng Kapanganakan (DOB) <span class="req">*</span></label>
+                    <input type="date" id="date_of_birth" name="date_of_birth"
+                           class="form-control <?= !empty($errors['date_of_birth']) ? 'is-invalid' : '' ?>"
+                           value="<?= e(old('date_of_birth')) ?>" required>
+                    <?php if (!empty($errors['date_of_birth'])): ?>
+                    <div class="invalid-feedback"><?= e($errors['date_of_birth']) ?></div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="col-sm-4">
+                    <label for="sex" class="form-label">Kasarian (Sex) <span class="req">*</span></label>
+                    <select id="sex" name="sex" class="form-select <?= !empty($errors['sex']) ? 'is-invalid' : '' ?>" required>
+                        <option value="">— Pumili —</option>
+                        <option value="Male" <?= old('sex') === 'Male' ? 'selected' : '' ?>>Lalaki (Male)</option>
+                        <option value="Female" <?= old('sex') === 'Female' ? 'selected' : '' ?>>Babae (Female)</option>
+                        <option value="Other" <?= old('sex') === 'Other' ? 'selected' : '' ?>>Iba pa (Other)</option>
+                    </select>
+                </div>
+
+                <div class="col-sm-4">
+                    <label for="civil_status" class="form-label">Civil Status <span class="req">*</span></label>
+                    <select id="civil_status" name="civil_status" class="form-select <?= !empty($errors['civil_status']) ? 'is-invalid' : '' ?>" required>
+                        <option value="">— Pumili —</option>
+                        <option value="Single" <?= old('civil_status') === 'Single' ? 'selected' : '' ?>>Walang Asawa (Single)</option>
+                        <option value="Married" <?= old('civil_status') === 'Married' ? 'selected' : '' ?>>May Asawa (Married)</option>
+                        <option value="Widowed" <?= old('civil_status') === 'Widowed' ? 'selected' : '' ?>>Biyudo / Biyuda (Widowed)</option>
+                        <option value="Separated" <?= old('civil_status') === 'Separated' ? 'selected' : '' ?>>Hiwalay (Separated)</option>
+                    </select>
+                </div>
+
+                <!-- Section 2: Address & Household Information -->
+                <div class="col-12 mt-3">
+                    <h6 class="fw-bold text-dark border-bottom pb-1 mb-2 d-flex align-items-center gap-1" style="font-size:.9rem; color:var(--green)!important;">
+                        <i class="bi bi-house-door"></i> 2. Tirahan at Sambahayan (Address & Household)
+                    </h6>
+                </div>
+
+                <div class="col-sm-6">
+                    <label for="house_no" class="form-label">House / Block / Lot No.</label>
+                    <input type="text" id="house_no" name="house_no"
+                           class="form-control"
+                           placeholder="Hal. Blk 2 Lot 14"
+                           value="<?= e(old('house_no')) ?>">
+                </div>
+
+                <div class="col-sm-6">
+                    <label for="street" class="form-label">Street / Kalye</label>
+                    <input type="text" id="street" name="street"
+                           class="form-control"
+                           placeholder="Hal. Rizal Street"
+                           value="<?= e(old('street')) ?>">
+                </div>
+
+                <?php
+                $puroks  = barangay_subdivisions();
+                $selZone = old('zone', '');
+                ?>
+                <div class="col-sm-6">
+                    <label for="zone" class="form-label">Purok / Sitio <span class="req">*</span></label>
+                    <?php if ($puroks !== []): ?>
+                    <select id="zone" name="zone" class="form-select" required>
+                        <option value="">— Pumili ng Purok —</option>
+                        <?php foreach ($puroks as $z): ?>
+                        <option value="<?= e($z) ?>" <?= $selZone === $z ? 'selected' : '' ?>>
+                            <?= e($z) ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php else: ?>
+                    <input type="text" id="zone" name="zone" class="form-control"
+                           maxlength="50"
+                           value="<?= e($selZone) ?>"
+                           placeholder="Hal. Purok 1" required>
+                    <?php endif; ?>
+                </div>
+
+                <div class="col-sm-6">
+                    <label for="household_no" class="form-label">Household Number</label>
+                    <input type="text" id="household_no" name="household_no"
+                           class="form-control"
+                           placeholder="Hal. HH-0042 (opsyonal)"
+                           value="<?= e(old('household_no')) ?>">
+                </div>
+
+                <div class="col-sm-6">
+                    <label class="form-label d-block">Ikaw ba ang Punong Sambahayan (Head of Household)?</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="is_household_head" id="head_yes" value="1" <?= old('is_household_head') === '1' ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="head_yes">Oo (Yes)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="is_household_head" id="head_no" value="0" <?= old('is_household_head') !== '1' ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="head_no">Hindi (No)</label>
+                    </div>
+                </div>
+
+                <div class="col-sm-6">
+                    <label for="head_relationship" class="form-label">Relasyon sa Head (kung Hindi)</label>
+                    <input type="text" id="head_relationship" name="head_relationship"
+                           class="form-control"
+                           placeholder="Hal. Asawa, Anak, Kapatid"
+                           value="<?= e(old('head_relationship')) ?>">
+                </div>
+
+                <!-- Section 3: Contact & Account Security -->
+                <div class="col-12 mt-3">
+                    <h6 class="fw-bold text-dark border-bottom pb-1 mb-2 d-flex align-items-center gap-1" style="font-size:.9rem; color:var(--green)!important;">
+                        <i class="bi bi-shield-lock"></i> 3. Contact at Seguridad (Account Details)
+                    </h6>
+                </div>
+
                 <!-- Email -->
-                <div class="col-12">
+                <div class="col-sm-6">
                     <label for="reg_email" class="form-label">
-                        Email address <span class="req">*</span>
+                        Email Address <span class="req">*</span>
                     </label>
                     <input type="email" id="reg_email" name="email"
                            class="form-control <?= !empty($errors['email']) ? 'is-invalid' : '' ?>"
@@ -414,6 +557,24 @@ $flashOk  = flash('success');
                            required autocomplete="email">
                     <?php if (!empty($errors['email'])): ?>
                     <div class="invalid-feedback"><?= e($errors['email']) ?></div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Phone -->
+                <div class="col-sm-6">
+                    <label for="phone" class="form-label">
+                        Numero ng Telepono (Mobile) <span class="req">*</span>
+                    </label>
+                    <div class="input-group auth-ig">
+                        <span class="input-group-text"><i class="bi bi-phone" style="font-size:.9rem;"></i></span>
+                        <input type="tel" id="phone" name="phone"
+                               class="form-control <?= !empty($errors['phone']) ? 'is-invalid' : '' ?>"
+                               placeholder="09XX XXX XXXX"
+                               value="<?= e(old('phone')) ?>"
+                               required autocomplete="tel">
+                    </div>
+                    <?php if (!empty($errors['phone'])): ?>
+                    <div class="text-danger mt-1" style="font-size:.8rem;"><?= e($errors['phone']) ?></div>
                     <?php endif; ?>
                 </div>
 
@@ -460,78 +621,6 @@ $flashOk  = flash('success');
                            required autocomplete="new-password">
                     <?php if (!empty($errors['password_confirmation'])): ?>
                     <div class="invalid-feedback"><?= e($errors['password_confirmation']) ?></div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Phone -->
-                <div class="col-sm-6">
-                    <label for="phone" class="form-label">
-                        Numero ng Telepono <span class="req">*</span>
-                    </label>
-                    <div class="input-group auth-ig">
-                        <span class="input-group-text"><i class="bi bi-phone" style="font-size:.9rem;"></i></span>
-                        <input type="tel" id="phone" name="phone"
-                               class="form-control <?= !empty($errors['phone']) ? 'is-invalid' : '' ?>"
-                               placeholder="09XX XXX XXXX"
-                               value="<?= e(old('phone')) ?>"
-                               required autocomplete="tel">
-                    </div>
-                    <?php if (!empty($errors['phone'])): ?>
-                    <div class="text-danger mt-1" style="font-size:.8rem;"><?= e($errors['phone']) ?></div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Purok / Sitio -->
-                <?php
-                /*
-                 * A dropdown when the barangay's subdivisions are known, a
-                 * free-text box when they are not.
-                 *
-                 * Bayogo's seven puroks come from barangay_subdivisions() in
-                 * app/helpers.php — one list, shared with the profile page and
-                 * the SMS recipient filter, so they can never disagree about
-                 * which puroks exist.
-                 *
-                 * The free-text branch stays for the case where that list is
-                 * emptied (a barangay mid-reorganisation, or this code reused
-                 * elsewhere): better an open box than a dropdown of names that
-                 * do not match the place.
-                 */
-                $puroks  = barangay_subdivisions();
-                $selZone = old('zone', '');
-                ?>
-                <div class="col-sm-6">
-                    <label for="zone" class="form-label">Purok / Sitio</label>
-                    <?php if ($puroks !== []): ?>
-                    <select id="zone" name="zone" class="form-select">
-                        <option value="">—</option>
-                        <?php foreach ($puroks as $z): ?>
-                        <option value="<?= e($z) ?>" <?= $selZone === $z ? 'selected' : '' ?>>
-                            <?= e($z) ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <?php else: ?>
-                    <input type="text" id="zone" name="zone" class="form-control"
-                           maxlength="50"
-                           value="<?= e($selZone) ?>"
-                           placeholder="Hal. Purok 1"
-                           autocomplete="address-level4">
-                    <div class="form-text">Opsyonal. Ilagay ang inyong purok o sitio sa Barangay Bayogo.</div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Address -->
-                <div class="col-12">
-                    <label for="address" class="form-label">
-                        Kumpletong Address <span class="req">*</span>
-                    </label>
-                    <textarea id="address" name="address" rows="2"
-                              class="form-control <?= !empty($errors['address']) ? 'is-invalid' : '' ?>"
-                              placeholder="Blk/Lot, Purok/Sitio, Barangay Bayogo, Madrid, Surigao del Sur"
-                              required><?= e(old('address')) ?></textarea>
-                    <?php if (!empty($errors['address'])): ?>
-                    <div class="invalid-feedback"><?= e($errors['address']) ?></div>
                     <?php endif; ?>
                 </div>
 

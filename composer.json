@@ -11,7 +11,8 @@
     "vlucas/phpdotenv": "^5.6",
     "intervention/image": "^2.7",
     "pragmarx/google2fa": "^8.0",
-    "bacon/bacon-qr-code": "^3.0"
+    "bacon/bacon-qr-code": "^3.0",
+    "fpdf/fpdf": "^1.90"
   },
   "autoload": {
     "psr-4": {

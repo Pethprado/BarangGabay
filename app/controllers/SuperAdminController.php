@@ -222,6 +222,7 @@ class SuperAdminController
         $text = [
             'system_name', 'system_tagline', 'location_name', 'location_full',
             'maintenance_message', 'date_format', 'time_format',
+            'barangay_captain_name', 'barangay_secretary_name',
         ];
 
         $values = [];
@@ -229,6 +230,14 @@ class SuperAdminController
             if (array_key_exists($key, $_POST)) {
                 $values[$key] = trim((string) $_POST[$key]);
             }
+        }
+
+        // Document Services & Delivery Settings
+        $values['doc_delivery_enabled'] = !empty($_POST['doc_delivery_enabled']) ? 1 : 0;
+        $values['doc_pickup_enabled']   = !empty($_POST['doc_pickup_enabled']) ? 1 : 0;
+        $values['doc_digital_enabled']  = !empty($_POST['doc_digital_enabled']) ? 1 : 0;
+        if (isset($_POST['doc_delivery_fee'])) {
+            $values['doc_delivery_fee'] = max(0.0, (float) $_POST['doc_delivery_fee']);
         }
 
         if (($values['system_name'] ?? 'x') === '') {

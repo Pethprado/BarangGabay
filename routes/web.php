@@ -164,14 +164,19 @@ return [
     // Document requests: Personal Pickup & Digital Soft Copy delivery
     ['GET',  '/documents',                        'DocumentRequestController@index',        ['auth', 'verified']],
     ['POST', '/documents',                        'DocumentRequestController@store',        ['auth', 'verified']],
+    ['GET',  '/documents/history',                'DocumentRequestController@history',      ['auth', 'verified']],
     ['GET',  '/documents/{id}/payment',           'PaymentController@checkout',             ['auth', 'verified']],
     ['GET',  '/documents/{id}/checkout',          'PaymentController@checkout',             ['auth', 'verified']],
     ['POST', '/documents/{id}/payment',           'PaymentController@residentUploadProof',  ['auth', 'verified']],
     ['GET',  '/documents/{id}/acknowledgement',   'PaymentController@acknowledgement',      ['auth', 'verified']],
     ['GET',  '/documents/{id}/download',          'DocumentRequestController@download',     ['auth', 'verified']],
     ['GET',  '/documents/{id}/preview',           'DocumentRequestController@preview',      ['auth', 'verified']],
+    ['GET',  '/documents/{ref}/verify',           'DocumentRequestController@verifyPublic', []],
     ['GET',  '/admin/documents',                  'DocumentRequestController@adminIndex',   ['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/status',      'DocumentRequestController@updateStatus', ['auth', 'role:admin,staff']],
+    ['POST', '/admin/documents/{id}/approve',     'DocumentRequestController@approve',      ['auth', 'role:admin,staff']],
+    ['POST', '/admin/documents/{id}/claim',       'DocumentRequestController@claim',        ['auth', 'role:admin,staff']],
+    ['POST', '/admin/documents/{id}/delivery-status','DocumentRequestController@updateDelivery',['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/upload',      'DocumentRequestController@uploadFile',   ['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/replace',     'DocumentRequestController@replaceFile',  ['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/remove-file', 'DocumentRequestController@removeFile',   ['auth', 'role:admin,staff']],
@@ -179,6 +184,13 @@ return [
     ['GET',  '/admin/documents/{id}/preview',     'DocumentRequestController@adminPreview', ['auth', 'role:admin,staff']],
     ['GET',  '/admin/documents/{id}/details',     'DocumentRequestController@details',      ['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/pickup-payment','PaymentController@markRequestPaidAtPickup',['auth', 'role:admin,staff']],
+
+    // Profile Updates Management
+    ['POST', '/profile/request-update',           'ResidentController@requestProfileUpdate', ['auth', 'verified']],
+    ['GET',  '/admin/profile-updates',            'ResidentController@profileUpdatesIndex',  ['auth', 'role:admin,staff']],
+    ['POST', '/admin/profile-updates/{id}/approve','ResidentController@approveProfileUpdate', ['auth', 'role:admin,staff']],
+    ['POST', '/admin/profile-updates/{id}/reject', 'ResidentController@rejectProfileUpdate',  ['auth', 'role:admin,staff']],
+    ['GET',  '/admin/profile-updates/{id}/document','ResidentController@downloadProfileDoc', ['auth', 'role:admin,staff']],
 
     // Payment Management System
     ['GET',  '/admin/payments',                   'PaymentController@adminIndex',       ['auth', 'role:admin,staff']],

@@ -41,14 +41,50 @@ ob_start();
         <p class="mt-1 text-sm text-slate-500"><?= e(t('documents.subtitle')) ?></p>
     </div>
     <div class="flex items-center gap-2">
+        <a href="<?= e(route('documents/history')) ?>"
+           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <i class="bi bi-clock-history text-blue-600"></i>
+            <span>Kasaysayan (History)</span>
+        </a>
         <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-            <i class="bi bi-clock-history"></i>
+            <i class="bi bi-folder2"></i>
             <?= count($requests) ?> <?= count($requests) === 1 ? 'Request' : 'Requests' ?>
         </span>
     </div>
 </div>
 
-<div class="grid gap-6 lg:grid-cols-[400px_1fr]">
+<?php 
+$isVerifiedResident = (($user['status'] ?? '') === 'verified');
+if (!$isVerifiedResident): 
+?>
+<!-- Verification Alert Banner -->
+<div class="mb-6 rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-5 shadow-sm">
+    <div class="flex items-start gap-4">
+        <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white font-bold text-2xl shadow-sm">
+            <i class="bi bi-shield-exclamation"></i>
+        </div>
+        <div class="flex-1">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-base font-bold text-amber-950">Kailangan ng Beripikasyon ng Residente (Account Verification Required)</h3>
+                <span class="rounded-full bg-amber-200/80 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-900">
+                    Estado: <?= e(strtoupper($user['status'] ?? 'UNVERIFIED')) ?>
+                </span>
+            </div>
+            <p class="text-xs text-amber-800 mt-1.5 leading-relaxed">
+                Ayon sa patakaran ng Pamahalaang Barangay, ang mga <strong>ganap na beripikadong residente</strong> lamang ang pinahihintulutang humiling ng mga opisyal na sertipiko at clearance. Mangyaring kumpletuhin ang inyong impormasyon at magsumite ng Valid ID upang masuri ng kawani ng barangay.
+            </p>
+            <div class="mt-3.5 flex flex-wrap items-center gap-3">
+                <a href="<?= e(route('profile')) ?>"
+                   class="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-amber-700">
+                    <i class="bi bi-person-badge-fill"></i> Pumunta sa Profile & Magsumite ng ID
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<div class="grid gap-6 lg:grid-cols-[420px_1fr]">
 
     <!-- ── Request form ──────────────────────────────────────────── -->
     <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-4 lg:self-start">
@@ -60,6 +96,33 @@ ob_start();
                 <h2 class="text-base font-bold text-slate-900"><?= e(t('documents.form_title')) ?></h2>
                 <p class="text-xs text-slate-500"><?= e(t('documents.form_help')) ?></p>
             </div>
+        </div>
+
+        <!-- 🔒 Auto-Loaded Resident Profile Information -->
+        <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5">
+            <div class="flex items-center justify-between border-b border-emerald-200/60 pb-2 mb-2">
+                <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                    <i class="bi bi-shield-lock-fill text-emerald-600"></i> Auto-Loaded mula sa Profile
+                </span>
+                <span class="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                    <?= $isVerifiedResident ? '🔒 Beripikado' : 'Hindi Beripikado' ?>
+                </span>
+            </div>
+            <div class="space-y-1 text-xs text-slate-700">
+                <div><span class="text-slate-500">Pangalan:</span> <strong class="text-slate-900"><?= e(\App\Models\User::formatFullName($user ?? [])) ?></strong></div>
+                <div class="flex justify-between">
+                    <span><span class="text-slate-500">Kaarawan:</span> <strong><?= !empty($user['date_of_birth']) ? date('M d, Y', strtotime($user['date_of_birth'])) : 'N/A' ?></strong></span>
+                    <span><span class="text-slate-500">Edad:</span> <strong class="text-blue-700"><?= \App\Models\User::getAge($user['date_of_birth'] ?? null) !== null ? \App\Models\User::getAge($user['date_of_birth']) . ' taong gulang' : 'N/A' ?></strong></span>
+                </div>
+                <div><span class="text-slate-500">Kasarian / Katayuan:</span> <strong><?= e(ucfirst($user['sex'] ?? '—')) ?> &bull; <?= e(ucfirst($user['civil_status'] ?? '—')) ?></strong></div>
+                <div><span class="text-slate-500">Tirahan:</span> <strong class="text-slate-900"><?= e(\App\Models\User::formatAddress($user ?? [])) ?></strong></div>
+                <?php if (!empty($user['household_no'])): ?>
+                <div><span class="text-slate-500">Household No:</span> <strong class="font-mono text-indigo-700"><?= e($user['household_no']) ?></strong></div>
+                <?php endif; ?>
+            </div>
+            <p class="mt-2 text-[10px] text-emerald-800 leading-tight">
+                * Awtomatikong gagamitin ang inyong opisyal na impormasyon sa bubuuing sertipiko. Hindi na kailangang mag-type muli.
+            </p>
         </div>
 
         <form method="post" action="<?= e(route('documents')) ?>" id="docRequestForm">
@@ -86,6 +149,19 @@ ob_start();
                     </option>
                     <?php endforeach; ?>
                 </select>
+
+                <!-- Document Details Panel (Requirements, Processing Time, Description) -->
+                <div id="docDetailsPanel" class="mt-2.5 rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-xs">
+                    <div class="flex items-center gap-1.5 font-bold text-slate-800 mb-1">
+                        <i class="bi bi-info-circle-fill text-blue-600"></i>
+                        <span id="docDetailTitle">Detalye ng Dokumento</span>
+                    </div>
+                    <p id="docDetailDesc" class="text-slate-600 leading-relaxed mb-2"></p>
+                    <div class="space-y-1 border-t border-slate-200/80 pt-2 text-[11px]">
+                        <div><strong class="text-slate-700">📋 Mga Kinakailangan (Requirements):</strong> <span id="docDetailReqs" class="text-slate-600"></span></div>
+                        <div><strong class="text-slate-700">⏱️ Processing Time:</strong> <span id="docDetailTime" class="text-blue-700 font-semibold"></span></div>
+                    </div>
+                </div>
             </div>
 
             <!-- Delivery Method Selector (Cards) -->
@@ -125,7 +201,39 @@ ob_start();
                             </p>
                         </div>
                     </label>
+
+                    <?php if ($deliveryEnabled): ?>
+                    <!-- Delivery to Home Option -->
+                    <label class="delivery-option-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 bg-slate-50/50 p-3 transition hover:border-sky-300 hover:bg-white">
+                        <input type="radio" name="delivery_method" value="delivery" onchange="handleDeliveryChange()"
+                               class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-sm font-bold text-slate-900">Delivery sa Tirahan (Home Delivery)</span>
+                                <span class="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">+₱<?= number_format($deliveryFee, 2) ?></span>
+                            </div>
+                            <p class="mt-0.5 text-xs text-slate-500 leading-normal">
+                                Direktang ihahatid ng opisyal na kawani sa inyong tahanan sa loob ng barangay.
+                            </p>
+                        </div>
+                    </label>
+                    <?php endif; ?>
                 </div>
+
+                <?php if ($deliveryEnabled): ?>
+                <!-- Delivery Address Box (Toggled by Delivery radio) -->
+                <div id="deliveryAddressSection" class="mt-3 rounded-xl border border-sky-200 bg-sky-50/60 p-3 hidden">
+                    <label class="block text-xs font-bold text-sky-950 mb-1">
+                        <i class="bi bi-geo-alt-fill text-sky-600 me-1"></i>Lugar ng Paghahatid (Delivery Address) <span class="text-red-500">*</span>
+                    </label>
+                    <textarea name="delivery_address" id="delivery_address" rows="2"
+                              class="w-full text-xs rounded-lg border border-slate-300 bg-white p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                              placeholder="Ilagay ang kompletong delivery address..."><?= e(\App\Models\User::formatAddress($user ?? [])) ?></textarea>
+                    <p class="text-[10px] text-sky-700 mt-1">
+                        * Awtomatikong inilagay ang inyong rehistradong tirahan. Maaari itong i-edit kung nais ipahatid sa ibang bahay sa loob ng barangay.
+                    </p>
+                </div>
+                <?php endif; ?>
             </div>
 
             <!-- Payment Method Selector (Shown only when document has fee) -->
@@ -705,16 +813,64 @@ function closeQrModal() {
     document.getElementById('qrModal').classList.add('hidden');
 }
 
+// Document metadata descriptions
+const docMetadata = {
+    barangay_clearance: {
+        title: 'Barangay Clearance',
+        desc: 'Opisyal na patunay na ang residente ay may magandang reputasyon, walang nakabinbing kaso o reklamo sa barangay, at lehitimong naninirahan.',
+        reqs: '1 Valid Government ID, Katibayan ng Paninirahan (Billing/Cedula)',
+        time: '1-2 Araw ng Trabaho (Instant sa Digital Soft Copy kapag naaprubahan)'
+    },
+    residency: {
+        title: 'Certificate of Residency',
+        desc: 'Katibayan na ang indibidwal ay lehitimong naninirahan sa nasasakupang purok/sitio ng Barangay Poblacion sa loob ng takdang panahon.',
+        reqs: '1 Valid Government ID o Katibayan mula sa Purok Leader',
+        time: '1 Araw ng Trabaho'
+    },
+    indigency: {
+        title: 'Certificate of Indigency',
+        desc: 'Opisyal na sertipiko para sa mga residenteng kabilang sa low-income o indigent families, ginagamit para sa medical assistance, scholarship, o financial aid.',
+        reqs: '1 Valid ID, Rekomendasyon mula sa Purok Leader o Barangay Health Worker',
+        time: '1 Araw ng Trabaho (LIBRE)'
+    },
+    business_clearance: {
+        title: 'Barangay Business Clearance',
+        desc: 'Pahintulot at clearance para sa pagtatayo o pagpapatakbo ng lehitimong negosyo o komersyo sa loob ng barangay.',
+        reqs: 'DTI / SEC Registration, Contract of Lease o Land Title',
+        time: '2-3 Araw ng Trabaho'
+    }
+};
+
+const deliveryFeeAmount = <?= json_encode((float) ($deliveryFee ?? 40.00)) ?>;
+const isResidentVerified = <?= json_encode((bool) $isVerifiedResident) ?>;
+
 // Dynamic Fee and Payment Option Handler
 function handleDocTypeChange() {
     const select = document.getElementById('document_type');
     const selectedOpt = select.options[select.selectedIndex];
+    const docKey = select.value;
     const amount = parseFloat(selectedOpt.getAttribute('data-amount') || '0');
     const isFree = selectedOpt.getAttribute('data-free') === '1' || amount <= 0;
 
     const badge = document.getElementById('feeBadge');
     const paySec = document.getElementById('paymentMethodSection');
     const freeBanner = document.getElementById('freeDocumentBanner');
+
+    // Update Details Box
+    const meta = docMetadata[docKey] || {
+        title: selectedOpt.text.replace(/\(₱.*?\)/, '').replace(/\(LIBRE\)/, '').trim(),
+        desc: 'Opisyal na dokumento ng Pamahalaang Barangay.',
+        reqs: '1 Valid ID',
+        time: '1-2 Araw ng Trabaho'
+    };
+    const titleEl = document.getElementById('docDetailTitle');
+    const descEl  = document.getElementById('docDetailDesc');
+    const reqsEl  = document.getElementById('docDetailReqs');
+    const timeEl  = document.getElementById('docDetailTime');
+    if (titleEl) titleEl.innerText = meta.title;
+    if (descEl) descEl.innerText = meta.desc;
+    if (reqsEl) reqsEl.innerText = meta.reqs;
+    if (timeEl) timeEl.innerText = meta.time;
 
     if (isFree) {
         badge.innerText = 'LIBRE';
@@ -743,11 +899,20 @@ function handleDeliveryChange() {
     const optPickup = document.getElementById('optPickupWrapper');
     const optGcash = document.getElementById('optGcashWrapper');
     const digitalNotice = document.getElementById('digitalPaymentNotice');
+    const delAddressSec = document.getElementById('deliveryAddressSection');
     const pickupRadio = document.querySelector('input[name="payment_method"][value="pickup"]');
     const gcashRadio = document.querySelector('input[name="payment_method"][value="gcash"]');
 
-    if (delMethod === 'digital' && !isFree) {
-        // Digital soft copy requires Online Payment (GCash or PayPal)
+    if (delAddressSec) {
+        if (delMethod === 'delivery') {
+            delAddressSec.classList.remove('hidden');
+        } else {
+            delAddressSec.classList.add('hidden');
+        }
+    }
+
+    if ((delMethod === 'digital' || delMethod === 'delivery') && !isFree) {
+        // Digital soft copy or Delivery requires Online Payment (GCash or PayPal)
         if (optPickup) {
             optPickup.classList.add('hidden');
         }
@@ -756,6 +921,9 @@ function handleDeliveryChange() {
         }
         if (digitalNotice) {
             digitalNotice.classList.remove('hidden');
+            digitalNotice.innerHTML = delMethod === 'delivery' 
+                ? '<i class="bi bi-truck me-1"></i>Para sa <strong>Home Delivery</strong>, mangyaring magbayad online (GCash o PayPal).'
+                : '<i class="bi bi-shield-lock me-1"></i>Para sa <strong>Digital Soft Copy</strong>, kailangang online payment (GCash o PayPal) upang mai-release ang digital na kopya online.';
         }
     } else {
         if (optPickup) {
@@ -800,15 +968,26 @@ function updateSummaryAndButton() {
     const select = document.getElementById('document_type');
     const selectedOpt = select ? select.options[select.selectedIndex] : null;
     const docName = selectedOpt ? selectedOpt.text.replace(/\(₱.*?\)/, '').replace(/\(LIBRE\)/, '').trim() : 'Dokumento';
-    const amount = selectedOpt ? parseFloat(selectedOpt.getAttribute('data-amount') || '0') : 0;
-    const isFree = selectedOpt ? (selectedOpt.getAttribute('data-free') === '1' || amount <= 0) : true;
+    let docFee = selectedOpt ? parseFloat(selectedOpt.getAttribute('data-amount') || '0') : 0;
+    const isDocFree = selectedOpt ? (selectedOpt.getAttribute('data-free') === '1' || docFee <= 0) : true;
 
     const delRadio = document.querySelector('input[name="delivery_method"]:checked');
     const delMethod = delRadio ? delRadio.value : 'pickup';
-    const deliveryLabel = delMethod === 'digital' ? 'Digital Soft Copy (Online)' : 'Personal Pickup (Counter)';
+    let deliveryLabel = 'Personal Pickup (Counter)';
+    let extraFee = 0;
+
+    if (delMethod === 'digital') {
+        deliveryLabel = 'Digital Soft Copy (Online)';
+    } else if (delMethod === 'delivery') {
+        deliveryLabel = 'Home Delivery (+₱' + deliveryFeeAmount.toFixed(2) + ')';
+        extraFee = deliveryFeeAmount;
+    }
 
     const payRadio = document.querySelector('input[name="payment_method"]:checked');
     const payMethod = payRadio ? payRadio.value : 'gcash';
+
+    const totalFee = (isDocFree ? 0 : docFee) + extraFee;
+    const isOverallFree = totalFee <= 0;
 
     // Summary fields
     const summaryDocName = document.getElementById('summaryDocName');
@@ -825,7 +1004,18 @@ function updateSummaryAndButton() {
     if (summaryDocName) summaryDocName.innerText = docName;
     if (summaryDelivery) summaryDelivery.innerText = deliveryLabel;
 
-    if (isFree) {
+    if (!isResidentVerified) {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            submitBtn.classList.remove('hover:from-blue-800', 'hover:to-indigo-800');
+        }
+        if (submitBtnText) submitBtnText.innerText = 'Kailangan munang Maberipika ang Profile';
+        if (submitBtnIcon) submitBtnIcon.className = 'bi bi-lock-fill text-base';
+        return;
+    }
+
+    if (isOverallFree) {
         if (summaryPayment) summaryPayment.innerText = 'Libre (Walang Bayad)';
         if (summaryFee) summaryFee.innerText = '₱0.00';
         if (summaryTotal) summaryTotal.innerText = '₱0.00 (LIBRE)';
@@ -837,8 +1027,8 @@ function updateSummaryAndButton() {
         if (submitBtnIcon) submitBtnIcon.className = 'bi bi-send-fill text-base';
     } else if (payMethod === 'gcash') {
         if (summaryPayment) summaryPayment.innerText = 'Online GCash Payment';
-        if (summaryFee) summaryFee.innerText = '₱' + amount.toFixed(2);
-        if (summaryTotal) summaryTotal.innerText = '₱' + amount.toFixed(2);
+        if (summaryFee) summaryFee.innerText = '₱' + (isDocFree ? '0.00' : docFee.toFixed(2)) + (extraFee > 0 ? ' + ₱' + extraFee.toFixed(2) + ' Del.' : '');
+        if (summaryTotal) summaryTotal.innerText = '₱' + totalFee.toFixed(2);
         if (summaryBadge) {
             summaryBadge.innerText = 'GCASH';
             summaryBadge.className = 'rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800';
@@ -847,8 +1037,8 @@ function updateSummaryAndButton() {
         if (submitBtnIcon) submitBtnIcon.className = 'bi bi-arrow-right-circle-fill text-base';
     } else if (payMethod === 'paypal') {
         if (summaryPayment) summaryPayment.innerText = 'Online PayPal / Card';
-        if (summaryFee) summaryFee.innerText = '₱' + amount.toFixed(2);
-        if (summaryTotal) summaryTotal.innerText = '₱' + amount.toFixed(2);
+        if (summaryFee) summaryFee.innerText = '₱' + (isDocFree ? '0.00' : docFee.toFixed(2)) + (extraFee > 0 ? ' + ₱' + extraFee.toFixed(2) + ' Del.' : '');
+        if (summaryTotal) summaryTotal.innerText = '₱' + totalFee.toFixed(2);
         if (summaryBadge) {
             summaryBadge.innerText = 'PAYPAL';
             summaryBadge.className = 'rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800';
@@ -857,8 +1047,8 @@ function updateSummaryAndButton() {
         if (submitBtnIcon) submitBtnIcon.className = 'bi bi-arrow-right-circle-fill text-base';
     } else {
         if (summaryPayment) summaryPayment.innerText = 'Magbayad sa Counter (Pay Upon Pickup)';
-        if (summaryFee) summaryFee.innerText = '₱' + amount.toFixed(2);
-        if (summaryTotal) summaryTotal.innerText = '₱' + amount.toFixed(2);
+        if (summaryFee) summaryFee.innerText = '₱' + docFee.toFixed(2);
+        if (summaryTotal) summaryTotal.innerText = '₱' + docFee.toFixed(2);
         if (summaryBadge) {
             summaryBadge.innerText = 'CASH COUNTER';
             summaryBadge.className = 'rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-800';

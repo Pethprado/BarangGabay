@@ -18,10 +18,11 @@ $statusClass = [
     'rejected'   => 'background:#fee2e2;color:#991b1b;border:1px solid #fecaca;',
 ];
 
-$totalCount   = count($requests);
-$pickupCount  = count(array_filter($requests, fn($r) => ($r['delivery_method'] ?? 'pickup') === 'pickup'));
-$digitalCount = count(array_filter($requests, fn($r) => ($r['delivery_method'] ?? 'pickup') === 'digital'));
-$openCount    = count(array_filter($requests, fn($r) => in_array($r['status'] ?? '', ['pending', 'processing'], true)));
+$totalCount    = count($requests);
+$pickupCount   = count(array_filter($requests, fn($r) => ($r['delivery_method'] ?? 'pickup') === 'pickup'));
+$digitalCount  = count(array_filter($requests, fn($r) => ($r['delivery_method'] ?? 'pickup') === 'digital'));
+$deliveryCount = count(array_filter($requests, fn($r) => ($r['delivery_method'] ?? 'pickup') === 'delivery'));
+$openCount     = count(array_filter($requests, fn($r) => in_array($r['status'] ?? '', ['pending', 'processing', 'under_review'], true)));
 
 ob_start();
 ?>
@@ -50,6 +51,11 @@ ob_start();
                 <span class="status-badge" style="background:#f8fafc;color:#334155;font-size:.8rem;border:1px solid #e2e8f0;">
                     <i class="bi bi-building me-1"></i> <strong><?= $pickupCount ?></strong> Pickup
                 </span>
+                <?php if ($deliveryCount > 0): ?>
+                <span class="status-badge" style="background:#e0f2fe;color:#0369a1;font-size:.8rem;border:1px solid #bae6fd;">
+                    <i class="bi bi-truck me-1"></i> <strong><?= $deliveryCount ?></strong> Delivery
+                </span>
+                <?php endif; ?>
                 <?php if ($openCount > 0): ?>
                 <span class="status-badge" style="background:#fef3c7;color:#b45309;font-size:.8rem;border:1px solid #fde68a;">
                     <i class="bi bi-hourglass-split me-1"></i> <strong><?= $openCount ?></strong> Waiting Staff
@@ -66,7 +72,7 @@ ob_start();
                 <?php
                 $statusFilters = ['' => t('admin_documents.filter_all')];
                 foreach (array_keys(\App\Models\DocumentRequest::TRANSITIONS) as $s) {
-                    $statusFilters[$s] = t('documents.status_' . $s);
+                    $statusFilters[$s] = \App\Models\DocumentRequest::statusLabel($s);
                 }
                 foreach ($statusFilters as $k => $lbl):
                     $active = $status === $k;
@@ -95,6 +101,7 @@ ob_start();
                         <option value=""><?= e(t('admin_documents.filter_all')) ?> Delivery</option>
                         <option value="pickup" <?= $delivery === 'pickup' ? 'selected' : '' ?>><?= e(t('admin_documents.filter_pickup')) ?></option>
                         <option value="digital" <?= $delivery === 'digital' ? 'selected' : '' ?>><?= e(t('admin_documents.filter_digital')) ?></option>
+                        <option value="delivery" <?= $delivery === 'delivery' ? 'selected' : '' ?>>Delivery</option>
                     </select>
 
                     <select name="payment_status" class="form-select form-select-sm" style="font-size:.8rem;min-width:130px;max-width:150px;" onchange="this.form.submit()">
@@ -188,6 +195,11 @@ ob_start();
                             <?= e((string) $r['reference_no']) ?>
                         </span>
                     </div>
+                    <?php if (!empty($r['certificate_no'])): ?>
+                    <div class="mt-0.5" style="font-size:.73rem;font-weight:700;color:#4338ca;">
+                        <i class="bi bi-patch-check-fill me-0.5 text-primary"></i> <?= e((string) $r['certificate_no']) ?>
+                    </div>
+                    <?php endif; ?>
                     <div class="text-muted" style="font-size:.72rem;">
                         <i class="bi bi-calendar3 me-1"></i><?= e(format_datetime((string) $r['requested_at'])) ?>
                     </div>
@@ -208,7 +220,21 @@ ob_start();
 
                 <!-- Delivery Method Badge -->
                 <td>
-                    <?php if ($isDigital): ?>
+                    <?php if ($deliv === 'delivery'): ?>
+                    <span class="status-badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-weight:700;font-size:.74rem;">
+                        <i class="bi bi-truck me-1"></i> Delivery
+                    </span>
+                    <?php if (!empty($r['delivery_address'])): ?>
+                    <div class="text-muted text-truncate mt-0.5" style="max-width:130px;font-size:.68rem;" title="<?= e((string)$r['delivery_address']) ?>">
+                        <i class="bi bi-geo-alt"></i> <?= e((string)$r['delivery_address']) ?>
+                    </div>
+                    <?php endif; ?>
+                    <div class="mt-0.5">
+                        <span class="badge" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;font-size:.66rem;font-weight:700;">
+                            <?= e(strtoupper((string)($r['delivery_status'] ?? 'pending'))) ?>
+                        </span>
+                    </div>
+                    <?php elseif ($isDigital): ?>
                     <span class="status-badge" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;font-weight:700;font-size:.74rem;" title="Resident requested digital copy online">
                         <i class="bi bi-file-earmark-arrow-down me-1"></i> <?= e(t('documents.badge_digital')) ?>
                     </span>
@@ -377,6 +403,42 @@ ob_start();
                 <!-- Status Update & Details Actions -->
                 <td style="text-align:right;padding-right:16px;">
                     <div class="d-flex gap-1 justify-content-end align-items-center flex-wrap">
+                        <!-- Quick Action 1: Approve & Generate PDF Certificate -->
+                        <?php if (in_array($st, ['pending', 'under_review', 'processing', 'needs_information'], true)): ?>
+                        <form method="post" action="<?= e(route('admin/documents/' . $id . '/approve')) ?>" style="display:inline;"
+                              onsubmit="return confirm('Aprubahan ang kahilingan at awtomatikong gumawa ng opisyal na PDF na may QR Code para kay <?= e(addslashes((string)$r['full_name'])) ?>?');">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="return_status" value="<?= e($status) ?>">
+                            <input type="hidden" name="return_delivery" value="<?= e($delivery) ?>">
+                            <input type="hidden" name="return_search" value="<?= e($search) ?>">
+                            <button type="submit" class="btn btn-xs btn-success py-1 px-2 fw-bold text-white shadow-sm" style="font-size:.72rem;" title="Aprubahan at Gumawa ng PDF">
+                                <i class="bi bi-shield-fill-check me-0.5"></i> Aprubahan & I-generate
+                            </button>
+                        </form>
+                        <?php endif; ?>
+
+                        <!-- Quick Action 2: Mark as Claimed (Barangay Hall Pickup) -->
+                        <?php if ($deliv === 'pickup' && in_array($st, ['ready', 'ready_for_pickup'], true)): ?>
+                        <form method="post" action="<?= e(route('admin/documents/' . $id . '/claim')) ?>" style="display:inline;"
+                              onsubmit="return confirm('Kumpirmahin na nakuha na (Claimed) ng residente ang pisikal na dokumento sa Barangay Hall?');">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="return_status" value="<?= e($status) ?>">
+                            <input type="hidden" name="return_delivery" value="<?= e($delivery) ?>">
+                            <input type="hidden" name="return_search" value="<?= e($search) ?>">
+                            <button type="submit" class="btn btn-xs btn-primary py-1 px-2 fw-bold text-white shadow-sm" style="font-size:.72rem;" title="Mark as Claimed at Hall">
+                                <i class="bi bi-check2-all me-0.5"></i> Mark Claimed
+                            </button>
+                        </form>
+                        <?php endif; ?>
+
+                        <!-- Quick Action 3: Delivery Status Modal Trigger -->
+                        <?php if ($deliv === 'delivery'): ?>
+                        <button type="button" class="btn btn-xs btn-outline-info py-1 px-1.5 fw-bold" style="font-size:.72rem;"
+                                onclick="openDeliveryModal(<?= $id ?>, '<?= e(addslashes((string)$r['reference_no'])) ?>', '<?= e(addslashes((string)($r['delivery_status'] ?? 'pending'))) ?>', '<?= e(addslashes((string)($r['delivered_by'] ?? ''))) ?>')">
+                            <i class="bi bi-truck me-0.5"></i> Delivery
+                        </button>
+                        <?php endif; ?>
+
                         <?php if ($st === 'awaiting_payment'): ?>
                         <span class="text-muted me-2" style="font-size:.74rem;font-weight:600;" title="Payment must be confirmed before staff can process this request">
                             <i class="bi bi-clock-history me-1 text-primary"></i> Awaiting Payment
@@ -599,7 +661,84 @@ ob_start();
     </div>
 </div>
 
+<!-- ========================================================================= -->
+<!-- 3. DELIVERY STATUS UPDATE MODAL                                           -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="deliveryStatusModal" tabindex="-1" aria-labelledby="deliveryModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 40px rgba(0,0,0,0.15);">
+            <form method="post" id="deliveryStatusForm">
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="return_status" value="<?= e($status) ?>">
+                <input type="hidden" name="return_delivery" value="<?= e($delivery) ?>">
+                <input type="hidden" name="return_search" value="<?= e($search) ?>">
+
+                <div class="modal-header" style="background:#f0f9ff;border-bottom:1px solid #bae6fd;border-radius:16px 16px 0 0;padding:16px 20px;">
+                    <div>
+                        <h5 class="modal-title mb-0" id="deliveryModalTitle" style="font-weight:700;font-size:1.05rem;color:#0369a1;">
+                            <i class="bi bi-truck me-1"></i> I-update ang Estado ng Delivery
+                        </h5>
+                        <p class="text-muted mb-0 mt-0.5" id="deliveryModalSubtitle" style="font-size:.78rem;"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body" style="padding:20px;">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:.82rem;font-weight:700;color:var(--text-primary);">
+                            Estado ng Paghahatid (Delivery Status) <span class="text-danger">*</span>
+                        </label>
+                        <select name="delivery_status" id="modal_delivery_status" class="form-select" required>
+                            <option value="pending">Pending (Nakabinbin)</option>
+                            <option value="preparing">Preparing (Inihahanda ng Kawani)</option>
+                            <option value="out_for_delivery">Out for Delivery (Dala na ng Courier/Kagawad)</option>
+                            <option value="delivered">Delivered (Matagumpay na Nakarating)</option>
+                            <option value="failed">Failed Delivery (Hindi Nakarating / Walang Tao)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:.82rem;font-weight:700;color:var(--text-primary);">
+                            Pangalan ng Naghatid (Delivered / Dispatched By)
+                        </label>
+                        <input type="text" name="delivered_by" id="modal_delivered_by" class="form-control" placeholder="Pangalan ng Kagawad / Tanod / Staff">
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size:.82rem;font-weight:700;color:var(--text-primary);">
+                            Tala o Komento ng Kawani (Staff Note / Tracking Info)
+                        </label>
+                        <textarea name="staff_note" id="modal_delivery_note" rows="2" class="form-control" placeholder="Hal: Naihatid sa mismong residente, pumirma sa delivery logbook."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:12px 20px;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Kanselahin</button>
+                    <button type="submit" class="btn btn-sm btn-primary fw-bold">
+                        <i class="bi bi-check2-circle me-1"></i> I-save ang Estado
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+function openDeliveryModal(id, ref, currentStatus, currentDeliveredBy) {
+    const modalEl = document.getElementById('deliveryStatusModal');
+    const form = document.getElementById('deliveryStatusForm');
+    const subtitle = document.getElementById('deliveryModalSubtitle');
+    const statusSelect = document.getElementById('modal_delivery_status');
+    const deliveredByInput = document.getElementById('modal_delivered_by');
+
+    form.action = '<?= e(route('admin/documents/')) ?>' + id + '/delivery-status';
+    subtitle.innerHTML = 'Reference: <strong>' + ref + '</strong>';
+    if (statusSelect) statusSelect.value = currentStatus || 'pending';
+    if (deliveredByInput) deliveredByInput.value = currentDeliveredBy || '';
+
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
 // Open Upload/Replace Modal
 function openUploadModal(request, isReplace) {
     const modalEl = document.getElementById('uploadDocumentModal');

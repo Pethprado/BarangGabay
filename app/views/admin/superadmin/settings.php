@@ -222,6 +222,78 @@ ob_start();
         </div>
     </div>
 
+    <!-- ── Document Issuance, Delivery & Signatories ───────────────────── -->
+    <div class="set-section mt-3">
+        <p class="set-legend">
+            <i class="bi bi-file-earmark-check me-1" style="color:var(--brand-primary);"></i>Mga Setting ng Pag-iisyu ng Dokumento at Delivery
+        </p>
+        <p class="set-help">Pamahalaan ang mga paraan ng pagkuha ng dokumento, delivery fee, at mga opisyal na lalagda sa mga sertipiko.</p>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" role="switch" id="docDigital"
+                           name="doc_digital_enabled" value="1"
+                           <?= (int) ($settings['doc_digital_enabled'] ?? 1) === 1 ? 'checked' : '' ?>
+                           style="cursor:pointer;">
+                    <label class="form-check-label" for="docDigital" style="font-weight:600;font-size:.84rem;cursor:pointer;">
+                        Digital Soft Copy (Online Download)
+                    </label>
+                </div>
+                <p class="form-text" style="font-size:.72rem;">Pahintulutan ang mga residente na makakuha ng digital PDF copy online.</p>
+            </div>
+
+            <div class="col-md-4">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" role="switch" id="docPickup"
+                           name="doc_pickup_enabled" value="1"
+                           <?= (int) ($settings['doc_pickup_enabled'] ?? 1) === 1 ? 'checked' : '' ?>
+                           style="cursor:pointer;">
+                    <label class="form-check-label" for="docPickup" style="font-weight:600;font-size:.84rem;cursor:pointer;">
+                        Personal Pickup sa Barangay Hall
+                    </label>
+                </div>
+                <p class="form-text" style="font-size:.72rem;">Pahintulutan ang personal na pagkuha ng pisikal na kopya sa counter.</p>
+            </div>
+
+            <div class="col-md-4">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" role="switch" id="docDelivery"
+                           name="doc_delivery_enabled" value="1"
+                           <?= (int) ($settings['doc_delivery_enabled'] ?? 1) === 1 ? 'checked' : '' ?>
+                           style="cursor:pointer;">
+                    <label class="form-check-label" for="docDelivery" style="font-weight:600;font-size:.84rem;cursor:pointer;">
+                        Serbisyo ng Home Delivery
+                    </label>
+                </div>
+                <p class="form-text" style="font-size:.72rem;">I-enable ang delivery ng opisyal na sertipiko diretso sa tirahan.</p>
+            </div>
+        </div>
+
+        <div class="row g-3 mt-1 border-top pt-2">
+            <div class="col-md-4">
+                <label class="form-label" style="font-size:.78rem;font-weight:600;">Karagdagang Bayad sa Delivery (₱)</label>
+                <input type="number" step="0.50" min="0" name="doc_delivery_fee"
+                       value="<?= e($val('doc_delivery_fee', '40.00')) ?>"
+                       class="form-control" style="border-radius:8px;">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label" style="font-size:.78rem;font-weight:600;">Pangalan ng Punong Barangay (Kapitan)</label>
+                <input type="text" name="barangay_captain_name"
+                       value="<?= e($val('barangay_captain_name', 'HON. JUAN DELA CRUZ')) ?>"
+                       class="form-control" style="border-radius:8px;">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label" style="font-size:.78rem;font-weight:600;">Pangalan ng Barangay Secretary</label>
+                <input type="text" name="barangay_secretary_name"
+                       value="<?= e($val('barangay_secretary_name', 'MARIA SANTOS')) ?>"
+                       class="form-control" style="border-radius:8px;">
+            </div>
+        </div>
+    </div>
+
     <!-- ── Maintenance mode ────────────────────────────────────────────── -->
     <div class="danger-zone mt-3">
         <p class="set-legend dz-title" style="margin-bottom:4px;">

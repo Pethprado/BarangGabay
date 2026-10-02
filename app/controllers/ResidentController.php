@@ -306,8 +306,10 @@ class ResidentController
 
     public function profile(): void
     {
-        $user = User::find((int) $_SESSION['user_id']);
-        view('resident/profile', ['user' => $user]);
+        $userId         = (int) $_SESSION['user_id'];
+        $user           = User::find($userId);
+        $updateRequests = \App\Models\ProfileUpdateRequest::forUser($userId);
+        view('resident/profile', compact('user', 'updateRequests'));
     }
 
     public function updateProfile(): void
@@ -315,6 +317,7 @@ class ResidentController
         check_csrf();
 
         $userId = (int) $_SESSION['user_id'];
+        $user   = User::find($userId);
         $action = \trim($_POST['_action'] ?? 'update_profile');
 
         if ($action === 'change_password') {
@@ -327,7 +330,28 @@ class ResidentController
             return;
         }
 
-        // Default: update basic profile fields
+        // Requirement 12: Backend protection for verified resident fields
+        if (User::isVerified($user)) {
+            $submittedName    = trim($_POST['full_name'] ?? '');
+            $submittedAddress = trim($_POST['address'] ?? '');
+            $currentName      = trim((string) ($user['full_name'] ?? ''));
+            $currentAddress   = trim((string) ($user['address'] ?? ''));
+
+            if (($submittedName !== '' && $submittedName !== $currentName) ||
+                ($submittedAddress !== '' && $submittedAddress !== $currentAddress)) {
+                flash('error', 'Naka-lock ang inyong beripikadong impormasyon. Mangyaring gamitin ang "Request Profile Update" kalakip ang patunay upang magsumite ng pagbabago.');
+                redirect('/profile');
+            }
+
+            // Only contact phone can be updated directly
+            $phone = trim($_POST['phone'] ?? '');
+            db()->prepare('UPDATE users SET phone = ?, updated_at = NOW() WHERE id = ?')->execute([$phone ?: null, $userId]);
+            AuditLog::record($userId, 'user.profile.update', 'Updated contact phone number');
+            flash('success', 'Na-update na ang inyong contact number.');
+            redirect('/profile');
+        }
+
+        // Unverified users can edit draft profile
         $fullName = \trim($_POST['full_name'] ?? '');
         $phone    = \trim($_POST['phone']     ?? '');
         $address  = \trim($_POST['address']   ?? '');
@@ -863,4 +887,202 @@ class ResidentController
         redirect('/admin/residents');
     }
 
+    /**
+     * POST /profile/request-update
+     * Resident submits a profile update request for verified locked fields.
+     */
+    public function requestProfileUpdate(): void
+    {
+        check_csrf();
+
+        $userId = (int) $_SESSION['user_id'];
+        $user   = User::find($userId);
+
+        if (!$user) {
+            flash('error', 'User not found.');
+            redirect('/login');
+        }
+
+        $reason = trim($_POST['reason'] ?? '');
+        if (mb_strlen($reason) < 5) {
+            flash('error', 'Mangyaring magbigay ng malinaw na dahilan (hindi bababa sa 5 karakter) para sa pagbabago ng impormasyon.');
+            redirect('/profile');
+        }
+
+        // Collect proposed changes
+        $allowedFields = [
+            'first_name', 'middle_name', 'last_name', 'suffix',
+            'date_of_birth', 'sex', 'civil_status',
+            'house_no', 'street', 'purok', 'household_no',
+            'phone',
+        ];
+
+        $requestedChanges = [];
+        $currentValues    = [];
+
+        foreach ($allowedFields as $field) {
+            if (isset($_POST[$field])) {
+                $val = trim((string) $_POST[$field]);
+                $curr = trim((string) ($user[$field] ?? ''));
+                if ($val !== '' && $val !== $curr) {
+                    $requestedChanges[$field] = $val;
+                    $currentValues[$field]    = $curr;
+                }
+            }
+        }
+
+        if (empty($requestedChanges)) {
+            flash('info', 'Walang nakitang pagbabago sa mga patlang.');
+            redirect('/profile');
+        }
+
+        $file = !empty($_FILES['supporting_doc']['tmp_name']) ? $_FILES['supporting_doc'] : null;
+
+        $reqId = \App\Models\ProfileUpdateRequest::create(
+            $userId,
+            $requestedChanges,
+            $currentValues,
+            $reason,
+            $file
+        );
+
+        AuditLog::record(
+            $userId,
+            'resident.profile_update.request',
+            sprintf('Submitted Profile Update Request #%d. Dahilan: %s', $reqId, $reason)
+        );
+
+        // Tell back-office
+        try {
+            (new \App\Services\NotificationService())->notifyBackOffice(
+                'notify_registrations',
+                'verification',
+                'Bagong Kahilingan sa Pagbabago ng Profile',
+                sprintf('May bagong profile update request mula kay %s.', (string) ($user['full_name'] ?? 'Residente')),
+                0,
+                'profile_update',
+                $userId
+            );
+        } catch (\Throwable $e) {}
+
+        flash('success', 'Naisumite na ang inyong kahilingan para sa pagbabago ng profile. Susuriin ito ng Barangay Administrator.');
+        redirect('/profile');
+    }
+
+    /**
+     * GET /admin/profile-updates
+     * Back-office queue for resident profile update requests.
+     */
+    public function profileUpdatesIndex(): void
+    {
+        $status = trim($_GET['status'] ?? 'pending');
+        $search = trim($_GET['search'] ?? '');
+
+        $requests = \App\Models\ProfileUpdateRequest::queue($status, $search);
+        $pendingCount = \App\Models\ProfileUpdateRequest::countPending();
+
+        view('admin/residents/profile_updates', compact('requests', 'status', 'search', 'pendingCount'));
+    }
+
+    /**
+     * POST /admin/profile-updates/{id}/approve
+     */
+    public function approveProfileUpdate(array $params): void
+    {
+        check_csrf();
+
+        $id      = (int) ($params['id'] ?? 0);
+        $adminId = (int) $_SESSION['user_id'];
+        $notes   = trim($_POST['admin_notes'] ?? '');
+
+        $req = \App\Models\ProfileUpdateRequest::find($id);
+        if (!$req) {
+            flash('error', 'Hindi nahanap ang kahilingan.');
+            redirect('/admin/profile-updates');
+        }
+
+        if (\App\Models\ProfileUpdateRequest::approve($id, $adminId, $notes)) {
+            // Notify resident
+            try {
+                (new \App\Services\NotificationService())->notifyUser(
+                    (int) $req['user_id'],
+                    'system',
+                    'Naaprubahan ang Profile Update',
+                    'Naaprubahan na ng Barangay Administrator ang inyong kahilingan sa pagbabago ng profile. Na-update na ang inyong talaan.',
+                    0,
+                    'profile_update'
+                );
+            } catch (\Throwable $e) {}
+
+            flash('success', 'Matagumpay na naaprubahan ang pagbabago ng profile ng residente at na-update ang database.');
+        } else {
+            flash('error', 'Nabigong aprubahan ang kahilingan.');
+        }
+
+        redirect('/admin/profile-updates');
+    }
+
+    /**
+     * POST /admin/profile-updates/{id}/reject
+     */
+    public function rejectProfileUpdate(array $params): void
+    {
+        check_csrf();
+
+        $id      = (int) ($params['id'] ?? 0);
+        $adminId = (int) $_SESSION['user_id'];
+        $reason  = trim($_POST['rejection_reason'] ?? '');
+        $notes   = trim($_POST['admin_notes'] ?? '');
+
+        if ($reason === '') {
+            flash('error', 'Kinakailangan ang dahilan ng pagtanggi (rejection reason).');
+            redirect('/admin/profile-updates');
+        }
+
+        $req = \App\Models\ProfileUpdateRequest::find($id);
+        if (!$req) {
+            flash('error', 'Hindi nahanap ang kahilingan.');
+            redirect('/admin/profile-updates');
+        }
+
+        if (\App\Models\ProfileUpdateRequest::reject($id, $adminId, $reason, $notes)) {
+            try {
+                (new \App\Services\NotificationService())->notifyUser(
+                    (int) $req['user_id'],
+                    'system',
+                    'Hindi Naaprubahan ang Profile Update',
+                    'Hindi naaprubahan ang inyong kahilingan sa pagbabago ng profile. Dahilan: ' . $reason,
+                    0,
+                    'profile_update'
+                );
+            } catch (\Throwable $e) {}
+
+            flash('info', 'Tinanggihan ang kahilingan sa pagbabago ng profile.');
+        } else {
+            flash('error', 'Nabigong tanggihan ang kahilingan.');
+        }
+
+        redirect('/admin/profile-updates');
+    }
+
+    /**
+     * GET /admin/profile-updates/{id}/document
+     * Download or view supporting document attached to profile update request.
+     */
+    public function downloadProfileDoc(array $params): void
+    {
+        $id  = (int) ($params['id'] ?? 0);
+        $doc = \App\Models\ProfileUpdateRequest::getDocumentData($id);
+
+        if (!$doc) {
+            http_response_code(404);
+            exit('Walang kalakip na dokumento o hindi nahanap.');
+        }
+
+        header('Content-Type: ' . $doc['type']);
+        header('Content-Length: ' . strlen($doc['data']));
+        header('Content-Disposition: inline; filename="' . addslashes($doc['name']) . '"');
+        echo $doc['data'];
+        exit;
+    }
 }

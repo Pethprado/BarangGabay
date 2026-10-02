@@ -24,20 +24,27 @@ class DocumentRequest
 
     /** Delivery methods supported by the system. */
     public const DELIVERY_METHODS = [
-        'pickup'  => 'Personal Pickup',
-        'digital' => 'Digital Soft Copy',
+        'pickup'   => 'Barangay Hall Pickup',
+        'digital'  => 'Digital Copy',
+        'delivery' => 'Delivery',
     ];
 
     /**
      * Where a request can go next.
      */
     public const TRANSITIONS = [
-        'awaiting_payment' => ['pending', 'rejected'],
-        'pending'          => ['processing', 'ready', 'rejected'],
-        'processing'       => ['ready', 'rejected'],
-        'ready'            => ['released', 'rejected'],
-        'released'         => [],
+        'awaiting_payment' => ['pending', 'rejected', 'cancelled'],
+        'pending'          => ['under_review', 'processing', 'needs_information', 'approved', 'ready', 'rejected', 'cancelled'],
+        'under_review'     => ['needs_information', 'approved', 'ready', 'rejected', 'cancelled'],
+        'processing'       => ['needs_information', 'approved', 'ready', 'rejected', 'cancelled'],
+        'needs_information'=> ['pending', 'under_review', 'processing', 'approved', 'ready', 'rejected', 'cancelled'],
+        'approved'         => ['ready', 'released', 'completed', 'rejected', 'cancelled'],
+        'ready'            => ['released', 'completed', 'out_for_delivery', 'rejected', 'cancelled'],
+        'out_for_delivery' => ['completed', 'released', 'ready', 'cancelled'],
+        'released'         => ['completed'],
+        'completed'        => [],
         'rejected'         => [],
+        'cancelled'        => [],
     ];
 
     public static function label(string $type): string
@@ -47,11 +54,18 @@ class DocumentRequest
 
     public static function deliveryLabel(string $method): string
     {
-        return self::DELIVERY_METHODS[$method] ?? 'Personal Pickup';
+        return self::DELIVERY_METHODS[$method] ?? 'Barangay Hall Pickup';
     }
 
     public static function canMove(string $from, string $to): bool
     {
+        // Aliases for seamless backward compatibility
+        if ($from === 'processing' && $to === 'under_review') return true;
+        if ($from === 'under_review' && $to === 'processing') return true;
+        if ($from === 'ready' && $to === 'ready') return true;
+        if ($to === 'completed' && ($from === 'ready' || $from === 'released' || $from === 'out_for_delivery')) return true;
+        if ($to === 'released' && ($from === 'ready' || $from === 'completed' || $from === 'out_for_delivery')) return true;
+
         return \in_array($to, self::TRANSITIONS[$from] ?? [], true);
     }
 
@@ -109,7 +123,9 @@ class DocumentRequest
         string $deliveryMethod = 'pickup',
         float $feeAmount = 0.00,
         string $paymentMethod = 'free',
-        ?int $gcashAccountId = null
+        ?int $gcashAccountId = null,
+        ?string $deliveryAddress = null,
+        float $deliveryFee = 0.00
     ): array {
         $reference = 'BRG-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
         $method    = \array_key_exists($deliveryMethod, self::DELIVERY_METHODS) ? $deliveryMethod : 'pickup';
@@ -131,8 +147,9 @@ class DocumentRequest
         $pdo = db();
         $stmt = $pdo->prepare(
             'INSERT INTO document_requests
-             (reference_no, user_id, document_type, purpose, notes, status, delivery_method, fee_amount, payment_method, payment_status, requested_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+             (reference_no, user_id, document_type, purpose, notes, status, delivery_method,
+              delivery_address, delivery_fee, fee_amount, payment_method, payment_status, requested_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
         );
         $stmt->execute([
             $reference,
@@ -142,6 +159,8 @@ class DocumentRequest
             $cleanNote,
             $initialDocStatus,
             $method,
+            $deliveryAddress ?: null,
+            $deliveryFee,
             $feeAmount,
             $paymentMethod,
             $payStatus,
@@ -170,6 +189,236 @@ class DocumentRequest
             'fee_amount'     => $feeAmount,
             'is_free'        => $isFree,
         ];
+    }
+
+    /**
+     * Requirement 16 & 2: Automatically generate official certificate on approval.
+     */
+    public static function approveAndGenerate(int $id, int $staffId, ?string $staffNote = null): array
+    {
+        $request = self::find($id);
+        if (!$request) {
+            return ['success' => false, 'error' => 'Hindi nahanap ang request.'];
+        }
+
+        // Check payment if required for digital release
+        if ($request['delivery_method'] === 'digital' && !self::isPaymentVerified($request)) {
+            return ['success' => false, 'error' => 'Kailangan munang beripikado ang bayad bago maaprubahan ang digital soft copy.'];
+        }
+
+        $resident = User::find((int) $request['user_id']);
+        if (!$resident) {
+            return ['success' => false, 'error' => 'Hindi nahanap ang residente.'];
+        }
+
+        // Generate sequential certificate number if not yet assigned
+        $certNo = !empty($request['certificate_no'])
+            ? (string) $request['certificate_no']
+            : \App\Services\CertificateGeneratorService::generateCertificateNumber((string) $request['document_type']);
+
+        $request['certificate_no'] = $certNo;
+
+        // Auto-generate official PDF certificate
+        $pdfBinary = \App\Services\CertificateGeneratorService::generatePdf($request, $resident);
+
+        $docTitleSlug = str_replace([' ', '/'], '_', self::label((string) $request['document_type']));
+        $cleanFileName = sprintf('%s_%s.pdf', $docTitleSlug, $certNo);
+
+        // Store into database blob via DocumentStorageService (survives Render restarts)
+        $storageService = new \App\Services\DocumentStorageService();
+        $stored = $storageService->storeRaw($id, $pdfBinary, $cleanFileName, 'application/pdf');
+
+        $method = (string) ($request['delivery_method'] ?? 'pickup');
+        $newStatus = 'ready'; // ready for pickup, or available for download
+        $deliveryStatus = ($method === 'delivery') ? 'Preparing' : null;
+
+        $pdo = db();
+        $stmt = $pdo->prepare(
+            'UPDATE document_requests
+             SET status = ?, certificate_no = ?,
+                 document_file_url = ?, document_file_name = ?, document_file_type = ?, document_file_size = ?,
+                 document_uploaded_at = NOW(), document_uploaded_by = ?,
+                 issued_at = NOW(), issued_by = ?, handled_by = ?, ready_at = NOW(),
+                 delivery_status = COALESCE(?, delivery_status),
+                 staff_note = COALESCE(?, staff_note),
+                 updated_at = NOW()
+             WHERE id = ?'
+        );
+        $stmt->execute([
+            $newStatus,
+            $certNo,
+            $stored['url'],
+            $stored['clean_name'],
+            $stored['mime'],
+            $stored['size'],
+            $staffId,
+            $staffId,
+            $staffId,
+            $deliveryStatus,
+            $staffNote ?: null,
+            $id,
+        ]);
+
+        self::logActivity(
+            $id,
+            $staffId,
+            'approved_generated',
+            (string) $request['status'],
+            $newStatus,
+            sprintf('Approved request and automatically generated official certificate %s (%s)', $certNo, $stored['clean_name'])
+        );
+
+        // Tell resident
+        $noticeMsg = match ($method) {
+            'digital'  => "Naaprubahan na ang inyong {$certNo} at handa nang i-download ang inyong opisyal na kopya.",
+            'delivery' => "Naaprubahan na ang inyong {$certNo} at kasalukuyan nang inihahanda para sa delivery.",
+            default    => "Naaprubahan na ang inyong {$certNo} at handa nang kunin sa Barangay Hall.",
+        };
+
+        try {
+            (new \App\Services\NotificationService())->notifyUser(
+                (int) $request['user_id'],
+                'system',
+                'Naaprubahan ang Inyong Dokumento (' . $certNo . ')',
+                $noticeMsg,
+                0,
+                'document_request'
+            );
+        } catch (\Throwable $e) {}
+
+        return [
+            'success'        => true,
+            'certificate_no' => $certNo,
+            'file_name'      => $stored['clean_name'],
+            'url'            => $stored['url'],
+        ];
+    }
+
+    /**
+     * Requirement 6: Barangay Hall Pickup — Mark as Claimed.
+     */
+    public static function markAsClaimed(int $id, int $staffId, ?string $notes = null): bool
+    {
+        $request = self::find($id);
+        if (!$request) {
+            return false;
+        }
+
+        $pdo = db();
+        $stmt = $pdo->prepare(
+            'UPDATE document_requests
+             SET status = "released", claimed_at = NOW(), claimed_by = ?, released_at = NOW(), completed_at = NOW(),
+                 staff_note = COALESCE(?, staff_note), updated_at = NOW()
+             WHERE id = ?'
+        );
+        $stmt->execute([$staffId, $notes ?: null, $id]);
+
+        self::logActivity(
+            $id,
+            $staffId,
+            'claimed',
+            (string) $request['status'],
+            'released',
+            sprintf('Marked document %s as claimed at Barangay Hall.', (string) ($request['certificate_no'] ?? $request['reference_no']))
+        );
+
+        try {
+            (new \App\Services\NotificationService())->notifyUser(
+                (int) $request['user_id'],
+                'system',
+                'Nakuha na ang Dokumento',
+                'Matagumpay na naitala ang pagkuha sa inyong opisyal na dokumento (' . (string) ($request['certificate_no'] ?? $request['reference_no']) . ') sa Barangay Hall. Maraming salamat!',
+                0,
+                'document_request'
+            );
+        } catch (\Throwable $e) {}
+
+        return true;
+    }
+
+    /**
+     * Requirement 7: Delivery management status updates.
+     */
+    public static function updateDelivery(int $id, string $deliveryStatus, ?string $deliveredBy, int $staffId, ?string $notes = null): bool
+    {
+        $request = self::find($id);
+        if (!$request) {
+            return false;
+        }
+
+        $dispatchedAt = ($deliveryStatus === 'Out for Delivery') ? ', dispatched_at = NOW()' : '';
+        $deliveredAt  = ($deliveryStatus === 'Delivered') ? ', delivered_at = NOW(), completed_at = NOW(), released_at = NOW(), status = "released"' : '';
+
+        $pdo = db();
+        $sql = "UPDATE document_requests
+                SET delivery_status = ?, delivered_by = COALESCE(?, delivered_by),
+                    staff_note = COALESCE(?, staff_note), updated_at = NOW()
+                    {$dispatchedAt} {$deliveredAt}
+                WHERE id = ?";
+        $pdo->prepare($sql)->execute([$deliveryStatus, $deliveredBy ?: null, $notes ?: null, $id]);
+
+        self::logActivity(
+            $id,
+            $staffId,
+            'delivery_update',
+            (string) $request['status'],
+            ($deliveryStatus === 'Delivered') ? 'released' : (string) $request['status'],
+            sprintf('Updated delivery status to "%s"%s', $deliveryStatus, $deliveredBy ? " by $deliveredBy" : '')
+        );
+
+        try {
+            $msg = match ($deliveryStatus) {
+                'Out for Delivery' => 'Ang inyong dokumento (' . (string) ($request['certificate_no'] ?? $request['reference_no']) . ') ay papalabas na para i-deliver!',
+                'Delivered'        => 'Matagumpay nang nai-deliver ang inyong dokumento (' . (string) ($request['certificate_no'] ?? $request['reference_no']) . ').',
+                default            => 'Na-update ang estado ng inyong delivery sa: ' . $deliveryStatus,
+            };
+            (new \App\Services\NotificationService())->notifyUser(
+                (int) $request['user_id'],
+                'system',
+                'Delivery Update: ' . $deliveryStatus,
+                $msg,
+                0,
+                'document_request'
+            );
+        } catch (\Throwable $e) {}
+
+        return true;
+    }
+
+    /**
+     * Requirement 1: Modern Government Portal Status Badges.
+     */
+    public static function statusBadgeHtml(array $request): string
+    {
+        $status = (string) ($request['status'] ?? 'pending');
+        $method = (string) ($request['delivery_method'] ?? 'pickup');
+        $delivStatus = (string) ($request['delivery_status'] ?? '');
+
+        if ($method === 'delivery' && !empty($delivStatus)) {
+            return match ($delivStatus) {
+                'Out for Delivery' => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200"><i class="bi bi-truck"></i> Out for Delivery</span>',
+                'Delivered'        => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="bi bi-check2-circle"></i> Delivered</span>',
+                'Failed Delivery'  => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200"><i class="bi bi-exclamation-triangle"></i> Failed Delivery</span>',
+                default            => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200"><i class="bi bi-box-seam"></i> Preparing Delivery</span>',
+            };
+        }
+
+        return match ($status) {
+            'pending'          => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="bi bi-hourglass-split"></i> Pending</span>',
+            'under_review',
+            'processing'       => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200"><i class="bi bi-arrow-repeat"></i> Under Review</span>',
+            'needs_information'=> '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200"><i class="bi bi-info-circle"></i> Needs Information</span>',
+            'approved'         => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="bi bi-check-circle"></i> Approved</span>',
+            'ready'            => ($method === 'digital')
+                ? '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200"><i class="bi bi-download"></i> Available for Download</span>'
+                : '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-100 text-cyan-800 border border-cyan-200"><i class="bi bi-building"></i> Ready for Pickup</span>',
+            'out_for_delivery' => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200"><i class="bi bi-truck"></i> Out for Delivery</span>',
+            'released',
+            'completed'        => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="bi bi-check2-all"></i> Completed</span>',
+            'rejected'         => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200"><i class="bi bi-x-circle"></i> Rejected</span>',
+            'cancelled'        => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200"><i class="bi bi-slash-circle"></i> Cancelled</span>',
+            default            => '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">' . htmlspecialchars(ucfirst($status)) . '</span>',
+        };
     }
 
     /** One request, with requester's details, staff names, and payment details. */

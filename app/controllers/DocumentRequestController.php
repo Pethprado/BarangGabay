@@ -24,14 +24,17 @@ class DocumentRequestController
     /** GET /documents — the request form and this resident's own history. */
     public function index(): void
     {
-        $userId       = (int) ($_SESSION['user_id'] ?? 0);
-        $requests     = DocumentRequest::forUser($userId);
-        $types        = DocumentRequest::TYPES;
-        $docFees      = \App\Models\DocumentFee::getAll();
-        $defaultGcash  = \App\Models\GcashAccount::getDefault();
-        $gcashAccounts = \App\Models\GcashAccount::getActive();
+        $userId          = (int) ($_SESSION['user_id'] ?? 0);
+        $user            = \App\Models\User::find($userId);
+        $requests        = DocumentRequest::forUser($userId);
+        $types           = DocumentRequest::TYPES;
+        $docFees         = \App\Models\DocumentFee::getAll();
+        $defaultGcash    = \App\Models\GcashAccount::getDefault();
+        $gcashAccounts   = \App\Models\GcashAccount::getActive();
+        $deliveryEnabled = (bool) \App\Models\Setting::get('doc_delivery_enabled', true);
+        $deliveryFee     = (float) \App\Models\Setting::get('doc_delivery_fee', 40.00);
 
-        view('resident/documents', compact('requests', 'types', 'docFees', 'defaultGcash', 'gcashAccounts'));
+        view('resident/documents', compact('user', 'requests', 'types', 'docFees', 'defaultGcash', 'gcashAccounts', 'deliveryEnabled', 'deliveryFee'));
     }
 
     /** POST /documents — file a new request. */
@@ -39,7 +42,15 @@ class DocumentRequestController
     {
         check_csrf();
 
-        $userId         = (int) ($_SESSION['user_id'] ?? 0);
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        $user   = \App\Models\User::find($userId);
+
+        // Requirement 11: Resident Verification Gate
+        if (!$user || ($user['status'] ?? '') !== 'verified') {
+            flash('warning', 'Ang inyong resident account ay hindi pa ganap na beripikado. Ang mga beripikadong residente lamang ang maaaring humiling ng opisyal na dokumento ng barangay.');
+            redirect('/documents');
+        }
+
         $type           = trim($_POST['document_type'] ?? '');
         $purpose        = trim($_POST['purpose'] ?? '');
         $notes          = trim($_POST['notes'] ?? '');
@@ -75,15 +86,32 @@ class DocumentRequestController
         // Calculate document fee snapshot
         $feeInfo   = \App\Models\DocumentFee::getFeeForType($type);
         $feeAmount = $feeInfo['is_free'] ? 0.00 : (float) $feeInfo['amount'];
-        $isFree    = $feeAmount <= 0.00;
 
+        // Delivery handling
+        $deliveryAddress = null;
+        $deliveryFee     = 0.00;
+        if ($deliveryMethod === 'delivery') {
+            $isDeliveryEnabled = (bool) \App\Models\Setting::get('doc_delivery_enabled', true);
+            if (!$isDeliveryEnabled) {
+                flash('error', 'Kasalukuyang hindi available ang serbisyong delivery.');
+                redirect('/documents');
+            }
+            $deliveryAddress = trim($_POST['delivery_address'] ?? '');
+            if ($deliveryAddress === '') {
+                $deliveryAddress = \App\Models\User::formatAddress($user);
+            }
+            $deliveryFee = (float) \App\Models\Setting::get('doc_delivery_fee', 40.00);
+            $feeAmount += $deliveryFee;
+        }
+
+        $isFree       = $feeAmount <= 0.00;
         $chosenMethod = trim($_POST['payment_method'] ?? ($isFree ? 'free' : 'pickup'));
 
         if ($isFree) {
             $paymentMethod = 'free';
         } else {
-            // For digital soft copy, online payment (GCash or PayPal) is required
-            if ($deliveryMethod === 'digital') {
+            // For digital soft copy or delivery, online payment (GCash or PayPal) is standard
+            if ($deliveryMethod === 'digital' || $deliveryMethod === 'delivery') {
                 $paymentMethod = in_array($chosenMethod, ['gcash', 'paypal'], true) ? $chosenMethod : 'gcash';
             } else {
                 $paymentMethod = in_array($chosenMethod, ['gcash', 'paypal', 'pickup'], true) ? $chosenMethod : 'pickup';
@@ -104,7 +132,9 @@ class DocumentRequestController
             $deliveryMethod,
             $feeAmount,
             $paymentMethod,
-            $chosenGcashId
+            $chosenGcashId,
+            $deliveryAddress,
+            $deliveryFee
         );
 
         $newId     = (int) $created['id'];
@@ -597,5 +627,101 @@ class DocumentRequestController
             $params['search'] = (string) $_POST['return_search'];
         }
         return http_build_query($params);
+    }
+
+    /**
+     * POST /admin/documents/{id}/approve — Requirement 16: One-click Approve & Auto-Generate.
+     */
+    public function approve(array $params): void
+    {
+        check_csrf();
+
+        $id      = (int) ($params['id'] ?? 0);
+        $staffId = (int) ($_SESSION['user_id'] ?? 0);
+        $note    = trim($_POST['staff_note'] ?? '');
+
+        $res = DocumentRequest::approveAndGenerate($id, $staffId, $note);
+        if (!$res['success']) {
+            flash('error', $res['error'] ?? 'Nabigong aprubahan ang kahilingan.');
+        } else {
+            flash('success', sprintf('Matagumpay na naaprubahan ang kahilingan at awtomatikong nailikha ang opisyal na sertipiko: %s.', $res['certificate_no']));
+        }
+
+        $redirectQuery = $this->buildRedirectQuery();
+        redirect('/admin/documents' . ($redirectQuery ? '?' . $redirectQuery : ''));
+    }
+
+    /**
+     * POST /admin/documents/{id}/claim — Requirement 6: Barangay Hall Pickup Claimed.
+     */
+    public function claim(array $params): void
+    {
+        check_csrf();
+
+        $id      = (int) ($params['id'] ?? 0);
+        $staffId = (int) ($_SESSION['user_id'] ?? 0);
+        $note    = trim($_POST['staff_note'] ?? '');
+
+        if (DocumentRequest::markAsClaimed($id, $staffId, $note)) {
+            flash('success', 'Matagumpay na minarkahan bilang nakuha na (Claimed) sa Barangay Hall.');
+        } else {
+            flash('error', 'Nabigong markahan bilang nakuha.');
+        }
+
+        $redirectQuery = $this->buildRedirectQuery();
+        redirect('/admin/documents' . ($redirectQuery ? '?' . $redirectQuery : ''));
+    }
+
+    /**
+     * POST /admin/documents/{id}/delivery-status — Requirement 7: Delivery management.
+     */
+    public function updateDelivery(array $params): void
+    {
+        check_csrf();
+
+        $id             = (int) ($params['id'] ?? 0);
+        $staffId        = (int) ($_SESSION['user_id'] ?? 0);
+        $deliveryStatus = trim($_POST['delivery_status'] ?? '');
+        $deliveredBy    = trim($_POST['delivered_by'] ?? '');
+        $notes          = trim($_POST['staff_note'] ?? '');
+
+        if (DocumentRequest::updateDelivery($id, $deliveryStatus, $deliveredBy, $staffId, $notes)) {
+            flash('success', sprintf('Na-update ang estado ng delivery sa: %s.', $deliveryStatus));
+        } else {
+            flash('error', 'Nabigong i-update ang delivery.');
+        }
+
+        $redirectQuery = $this->buildRedirectQuery();
+        redirect('/admin/documents' . ($redirectQuery ? '?' . $redirectQuery : ''));
+    }
+
+    /**
+     * GET /documents/history — Requirement 18: Resident Document History.
+     */
+    public function history(): void
+    {
+        $userId   = (int) ($_SESSION['user_id'] ?? 0);
+        $requests = DocumentRequest::forUser($userId);
+        view('resident/document_history', compact('requests'));
+    }
+
+    /**
+     * GET /documents/{ref}/verify — Public QR verification endpoint.
+     */
+    public function verifyPublic(array $params): void
+    {
+        $ref = trim((string) ($params['ref'] ?? ''));
+        $stmt = db()->prepare(
+            'SELECT r.*, u.full_name, u.zone, u.address, su.full_name AS issued_by_name
+             FROM document_requests r
+             JOIN users u ON u.id = r.user_id
+             LEFT JOIN users su ON su.id = r.issued_by
+             WHERE r.certificate_no = ? OR r.reference_no = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$ref, $ref]);
+        $doc = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        view('public/verify_certificate', compact('doc', 'ref'));
     }
 }

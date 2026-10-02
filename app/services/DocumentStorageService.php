@@ -201,6 +201,66 @@ class DocumentStorageService
     }
 
     /**
+     * Store raw file bytes (such as an automatically generated official PDF)
+     * into database blob and disk cache.
+     *
+     * @param int $requestId
+     * @param string $rawBytes
+     * @param string $fileName
+     * @param string $mime
+     * @return array{stored: bool, clean_name: string, mime: string, size: int, url: string}
+     */
+    public function storeRaw(int $requestId, string $rawBytes, string $fileName, string $mime = 'application/pdf'): array
+    {
+        $cleanName = mb_substr(preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $fileName), 0, 200);
+        $size      = strlen($rawBytes);
+
+        $pdo = db();
+        $checkStmt = $pdo->prepare('SELECT id FROM document_request_files WHERE request_id = ? LIMIT 1');
+        $checkStmt->execute([$requestId]);
+        $existingId = $checkStmt->fetchColumn();
+
+        if ($existingId) {
+            $stmt = $pdo->prepare(
+                'UPDATE document_request_files
+                    SET file_name = ?, file_type = ?, file_size = ?, file_data = ?, updated_at = NOW()
+                  WHERE request_id = ?'
+            );
+            $stmt->bindValue(1, $cleanName, PDO::PARAM_STR);
+            $stmt->bindValue(2, $mime, PDO::PARAM_STR);
+            $stmt->bindValue(3, $size, PDO::PARAM_INT);
+            $stmt->bindValue(4, $rawBytes, PDO::PARAM_LOB);
+            $stmt->bindValue(5, (int) $requestId, PDO::PARAM_INT);
+            $stmt->execute();
+        } else {
+            $stmt = $pdo->prepare(
+                'INSERT INTO document_request_files
+                 (request_id, file_name, file_type, file_size, file_data, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, NOW(), NOW())'
+            );
+            $stmt->bindValue(1, (int) $requestId, PDO::PARAM_INT);
+            $stmt->bindValue(2, $cleanName, PDO::PARAM_STR);
+            $stmt->bindValue(3, $mime, PDO::PARAM_STR);
+            $stmt->bindValue(4, $size, PDO::PARAM_INT);
+            $stmt->bindValue(5, $rawBytes, PDO::PARAM_LOB);
+            $stmt->execute();
+        }
+
+        $diskPath = $this->getDiskCachePath((int) $requestId, $cleanName);
+        if ($diskPath !== null) {
+            @file_put_contents($diskPath, $rawBytes);
+        }
+
+        return [
+            'stored'     => true,
+            'clean_name' => $cleanName,
+            'mime'       => $mime,
+            'size'       => $size,
+            'url'        => '/documents/' . $requestId . '/download',
+        ];
+    }
+
+    /**
      * Retrieve document file row from database.
      *
      * @param int $requestId

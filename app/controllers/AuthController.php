@@ -424,32 +424,49 @@ class AuthController
     {
         check_csrf();
 
+        // Personal Information
+        $firstName   = trim($_POST['first_name'] ?? '');
+        $middleName  = trim($_POST['middle_name'] ?? '');
+        $lastName    = trim($_POST['last_name'] ?? '');
+        $suffix      = trim($_POST['suffix'] ?? '');
+        $dob         = trim($_POST['date_of_birth'] ?? '');
+        $sex         = trim($_POST['sex'] ?? '');
+        $civilStatus = trim($_POST['civil_status'] ?? '');
+
+        // Address & Household
+        $houseNo          = trim($_POST['house_no'] ?? '');
+        $street           = trim($_POST['street'] ?? '');
+        $zone             = mb_substr(trim($_POST['zone'] ?? ($_POST['purok'] ?? '')), 0, 50);
+        $puroks           = barangay_subdivisions();
+        if ($puroks !== [] && $zone !== '' && !in_array($zone, $puroks, true)) {
+            $zone = '';
+        }
+        $householdNo      = trim($_POST['household_no'] ?? '');
+        $isHouseholdHead  = !empty($_POST['is_household_head']) ? 1 : 0;
+        $headRelationship = trim($_POST['head_relationship'] ?? '');
+
+        // Full Name & Address composition / fallback
         $fullName = trim($_POST['full_name'] ?? '');
+        if ($fullName === '' && ($firstName !== '' || $lastName !== '')) {
+            $fullName = trim("$firstName " . ($middleName ? "$middleName " : "") . "$lastName" . ($suffix ? " $suffix" : ""));
+        }
+
+        $address = trim($_POST['address'] ?? '');
+        if ($address === '' && ($houseNo !== '' || $street !== '' || $zone !== '')) {
+            $addrParts = array_filter([$houseNo ? "House/Block $houseNo" : '', $street, $zone ? "Purok $zone" : '', 'Barangay Bayogo', 'Madrid', 'Surigao del Sur']);
+            $address = implode(', ', $addrParts);
+        }
+
         $email    = filter_var(trim($_POST['email'] ?? ''), FILTER_VALIDATE_EMAIL);
         $password = $_POST['password'] ?? '';
         $confirm  = $_POST['password_confirmation'] ?? '';
         $phone    = trim($_POST['phone'] ?? '');
-        $address  = trim($_POST['address'] ?? '');
-        /*
-         * Purok, optional, and checked against the barangay's own list.
-         *
-         * The form renders a dropdown when barangay_subdivisions() is
-         * populated, but a dropdown is a suggestion to the browser and not a
-         * constraint on what arrives here — so anything that is not one of the
-         * seven puroks is dropped rather than stored. When the list is empty
-         * the field is a free-text box and the value is simply trimmed.
-         */
-        $zone     = mb_substr(trim($_POST['zone'] ?? ''), 0, 50);
-        $puroks   = barangay_subdivisions();
-        if ($puroks !== [] && $zone !== '' && !in_array($zone, $puroks, true)) {
-            $zone = '';
-        }
         $terms    = !empty($_POST['terms']);
 
         $errors = [];
 
         if (!$fullName) {
-            $errors['full_name'] = 'Buong pangalan ay kinakailangan.';
+            $errors['full_name'] = 'Buong pangalan o First/Last Name ay kinakailangan.';
         } elseif (mb_strlen($fullName) > 150) {
             $errors['full_name'] = 'Ang pangalan ay hindi dapat humigit sa 150 karakter.';
         }
@@ -490,11 +507,23 @@ class AuthController
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
             $_SESSION['_old']   = [
-                'full_name' => $fullName,
-                'email'     => $_POST['email'] ?? '',
-                'phone'     => $phone,
-                'address'   => $address,
-                'zone'      => $zone,
+                'full_name'         => $fullName,
+                'first_name'        => $firstName,
+                'middle_name'       => $middleName,
+                'last_name'         => $lastName,
+                'suffix'            => $suffix,
+                'date_of_birth'     => $dob,
+                'sex'               => $sex,
+                'civil_status'      => $civilStatus,
+                'email'             => $_POST['email'] ?? '',
+                'phone'             => $phone,
+                'house_no'          => $houseNo,
+                'street'            => $street,
+                'address'           => $address,
+                'zone'              => $zone,
+                'household_no'      => $householdNo,
+                'is_household_head' => $isHouseholdHead,
+                'head_relationship' => $headRelationship,
             ];
             flash('error', 'Mangyaring itama ang mga may markang patlang at subukan muli.');
             redirect('/register');
@@ -531,11 +560,23 @@ class AuthController
 
                     $_SESSION['errors'] = ['id_photo' => $errorMsg];
                     $_SESSION['_old']   = [
-                        'full_name' => $fullName,
-                        'email'     => $_POST['email'] ?? '',
-                        'phone'     => $phone,
-                        'address'   => $address,
-                        'zone'      => $zone,
+                        'full_name'         => $fullName,
+                        'first_name'        => $firstName,
+                        'middle_name'       => $middleName,
+                        'last_name'         => $lastName,
+                        'suffix'            => $suffix,
+                        'date_of_birth'     => $dob,
+                        'sex'               => $sex,
+                        'civil_status'      => $civilStatus,
+                        'email'             => $_POST['email'] ?? '',
+                        'phone'             => $phone,
+                        'house_no'          => $houseNo,
+                        'street'            => $street,
+                        'address'           => $address,
+                        'zone'              => $zone,
+                        'household_no'      => $householdNo,
+                        'is_household_head' => $isHouseholdHead,
+                        'head_relationship' => $headRelationship,
                     ];
                     flash('error', 'Hindi tinanggap ang iyong Valid ID. Pakiupload ng tunay na government ID.');
                     redirect('/register');
@@ -566,11 +607,23 @@ class AuthController
             } catch (\Throwable $e) {
                 $_SESSION['errors'] = ['id_photo' => 'Nabigong i-upload ang ID. Mag-upload ng JPEG, PNG, o PDF (max 10MB).'];
                 $_SESSION['_old']   = [
-                    'full_name' => $fullName,
-                    'email'     => $_POST['email'] ?? '',
-                    'phone'     => $phone,
-                    'address'   => $address,
-                    'zone'      => $zone,
+                    'full_name'         => $fullName,
+                    'first_name'        => $firstName,
+                    'middle_name'       => $middleName,
+                    'last_name'         => $lastName,
+                    'suffix'            => $suffix,
+                    'date_of_birth'     => $dob,
+                    'sex'               => $sex,
+                    'civil_status'      => $civilStatus,
+                    'email'             => $_POST['email'] ?? '',
+                    'phone'             => $phone,
+                    'house_no'          => $houseNo,
+                    'street'            => $street,
+                    'address'           => $address,
+                    'zone'              => $zone,
+                    'household_no'      => $householdNo,
+                    'is_household_head' => $isHouseholdHead,
+                    'head_relationship' => $headRelationship,
                 ];
                 flash('error', 'Nabigong i-upload ang ID. Subukan muli.');
                 redirect('/register');
@@ -578,17 +631,33 @@ class AuthController
         }
 
         $userId = User::create([
-            'full_name'        => $fullName,
-            'email'            => (string) $email,
-            'password_hash'    => password_hash($password, PASSWORD_BCRYPT),
-            'phone'            => $phone,
-            'address'          => $address,
-            'zone'             => $zone,
-            'id_photo_url'     => $idPhotoUrl,
-            'id_verified_by_ai'=> $aiResult !== null ? json_encode($aiResult) : null,
-            'id_ai_status'     => $idAiStatus,
-            'status'           => 'pending',
-            'role'             => 'resident',
+            'full_name'          => $fullName,
+            'first_name'         => $firstName,
+            'middle_name'        => $middleName,
+            'last_name'          => $lastName,
+            'suffix'             => $suffix,
+            'date_of_birth'      => $dob ?: null,
+            'sex'                => $sex ?: null,
+            'civil_status'       => $civilStatus ?: null,
+            'email'              => (string) $email,
+            'password_hash'      => password_hash($password, PASSWORD_BCRYPT),
+            'phone'              => $phone,
+            'address'            => $address,
+            'house_no'           => $houseNo,
+            'street'             => $street,
+            'purok'              => $zone,
+            'barangay'           => 'Bayogo',
+            'city'               => 'Madrid',
+            'province'           => 'Surigao del Sur',
+            'household_no'       => $householdNo ?: null,
+            'is_household_head'  => $isHouseholdHead,
+            'head_relationship'  => $headRelationship ?: null,
+            'zone'               => $zone,
+            'id_photo_url'       => $idPhotoUrl,
+            'id_verified_by_ai'  => $aiResult !== null ? json_encode($aiResult) : null,
+            'id_ai_status'       => $idAiStatus,
+            'status'             => 'pending',
+            'role'               => 'resident',
         ]);
 
         AuditLog::record($userId, 'user.register', "New resident registration: {$email}");
