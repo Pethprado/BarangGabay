@@ -172,7 +172,7 @@ class ProfileUpdateRequest
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
 
-        $sql .= ' ORDER BY CASE p.status WHEN "pending" THEN 1 WHEN "needs_info" THEN 2 ELSE 3 END, p.created_at DESC';
+        $sql .= " ORDER BY CASE p.status WHEN 'pending' THEN 1 WHEN 'needs_info' THEN 2 ELSE 3 END, p.created_at DESC";
 
         $stmt = db()->prepare($sql);
         $stmt->execute($params);
