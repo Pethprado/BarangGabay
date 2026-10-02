@@ -57,6 +57,27 @@ class DocumentRequest
         return self::DELIVERY_METHODS[$method] ?? 'Barangay Hall Pickup';
     }
 
+    public static function statusLabel(string $status): string
+    {
+        return match ($status) {
+            'awaiting_payment'       => 'Naghihintay ng Bayad (Awaiting Payment)',
+            'pending'                => 'Nakabinbin (Pending)',
+            'under_review'           => 'Sinusuri (Under Review)',
+            'processing'             => 'Ipinoproseso (Processing)',
+            'needs_information'      => 'Kailangan ng Impormasyon (Needs Info)',
+            'approved'               => 'Naaprubahan (Approved)',
+            'ready'                  => 'Handa na (Ready)',
+            'ready_for_pickup'       => 'Handa nang Kunin (Ready for Pickup)',
+            'available_for_download' => 'Mada-download na (Available for Download)',
+            'out_for_delivery'       => 'Paihatid na (Out for Delivery)',
+            'released'               => 'Nai-release na (Released)',
+            'completed'              => 'Nakumpleto na (Completed)',
+            'rejected'               => 'Tinanggihan (Rejected)',
+            'cancelled'              => 'Kinansela (Cancelled)',
+            default                  => ucfirst(str_replace('_', ' ', $status)),
+        };
+    }
+
     public static function canMove(string $from, string $to): bool
     {
         // Aliases for seamless backward compatibility
