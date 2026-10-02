@@ -209,12 +209,14 @@ return [
     ['POST', '/admin/payments/gcash/{id}/toggle', 'PaymentController@gcashToggle',      ['auth', 'role:admin,staff']],
     ['GET',  '/admin/payments/export',            'PaymentController@exportCsv',        ['auth', 'role:admin']],
 
-    // PayPal Checkout API endpoints
-    ['POST', '/api/payments/paypal/create-order',            'PaymentController@paypalCreateOrder',  ['auth', 'verified']],
-    ['POST', '/api/payments/paypal/capture-order/{orderId}', 'PaymentController@paypalCaptureOrder', ['auth', 'verified']],
-    ['POST', '/api/payments/paypal/capture-order',          'PaymentController@paypalCaptureOrder', ['auth', 'verified']],
-    ['POST', '/api/payments/paypal/webhook',                'PaymentController@paypalWebhook',      []],
-    ['POST', '/payments/paypal/webhook',                    'PaymentController@paypalWebhook',      []],
+    // PayMongo GCash Online Payment Endpoints
+    ['POST', '/api/payments/paymongo/create-checkout',      'PaymentController@paymongoCreateCheckout', ['auth', 'verified']],
+    ['GET',  '/payments/paymongo/return',                   'PaymentController@paymongoReturn',         ['auth']],
+    ['GET',  '/documents/payment/success',                  'PaymentController@paymentSuccess',         ['auth', 'verified']],
+    ['GET',  '/documents/payment/cancel',                   'PaymentController@paymentCancel',          ['auth', 'verified']],
+    ['GET',  '/api/payments/status/{id}',                   'PaymentController@apiPaymentStatus',       ['auth', 'verified']],
+    ['POST', '/api/payments/paymongo/webhook',              'PaymentController@paymongoWebhook',        []],
+    ['POST', '/payments/paymongo/webhook',                  'PaymentController@paymongoWebhook',        []],
 
     // Emergency: where this resident's purok evacuates to, and the one-tap
     // "Ligtas ako" answer after a storm.

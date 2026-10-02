@@ -11,6 +11,7 @@ use App\Models\GcashAccount;
 use App\Models\User;
 use App\Services\NotificationService;
 use App\Services\OneWaySmsService;
+use App\Services\PayMongoService;
 use App\Services\PayPalService;
 
 class PaymentController
@@ -682,7 +683,11 @@ class PaymentController
         $paypalClientId     = PayPalService::getClientId();
         $paypalMode         = PayPalService::getMode();
         $isPaypalConfigured = PayPalService::isConfigured();
-        $currency           = 'PHP';
+
+        // PayMongo (Primary payment gateway)
+        $isPaymongoConfigured = PayMongoService::isConfigured();
+        $paymongoMode         = PayMongoService::getMode();
+        $currency             = 'PHP';
 
         $pageTitle = 'Payment Checkout — BarangGabay';
         view('resident/payment_checkout', compact(
@@ -694,6 +699,8 @@ class PaymentController
             'paypalClientId',
             'paypalMode',
             'isPaypalConfigured',
+            'isPaymongoConfigured',
+            'paymongoMode',
             'currency'
         ));
     }
@@ -1203,6 +1210,660 @@ class PaymentController
 
         http_response_code(200);
         echo json_encode(['status' => 'success']);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ══  PayMongo Integration (Primary Payment Gateway)  ═════════════════
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * POST /api/payments/paymongo/create-checkout
+     *
+     * Creates a PayMongo Checkout Session and returns the checkout URL.
+     * The resident is redirected to PayMongo's hosted page where they can
+     * pay via GCash, card, or QR PH.
+     */
+    public function paymongoCreateCheckout(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        $role   = (string) ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '');
+        $isStaff = in_array($role, ['admin', 'staff', 'superadmin'], true);
+
+        if ($userId <= 0) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+            return;
+        }
+
+        $rawInput  = file_get_contents('php://input');
+        $input     = json_decode($rawInput, true) ?: [];
+        $requestId = (int) ($input['request_id'] ?? ($_POST['request_id'] ?? 0));
+        $paymentId = (int) ($input['payment_id'] ?? ($_POST['payment_id'] ?? 0));
+
+        // Find existing payment or create one
+        $payment = null;
+        if ($paymentId > 0) {
+            $payment = DocumentPayment::find($paymentId);
+        } elseif ($requestId > 0) {
+            $payment = DocumentPayment::findByRequest($requestId);
+        }
+
+        if (!$payment && $requestId > 0) {
+            $request = DocumentRequest::find($requestId);
+            if ($request) {
+                $fee = (float) ($request['fee_amount'] ?? 0);
+                if ($fee > 0.00) {
+                    $newPayId = DocumentPayment::createForRequest(
+                        $requestId,
+                        (int) $request['user_id'],
+                        (string) $request['document_type'],
+                        $fee,
+                        'gcash' // PayMongo processes GCash
+                    );
+                    $payment = DocumentPayment::find($newPayId);
+                }
+            }
+        }
+
+        if (!$payment) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => 'Payment record not found']);
+            return;
+        }
+
+        // Ownership check
+        if (!$isStaff && (int) $payment['user_id'] !== $userId) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Forbidden']);
+            return;
+        }
+
+        // Fee check
+        $amountDue = (float) $payment['amount_due'];
+        if ($amountDue <= 0.00) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Document is free, payment not required']);
+            return;
+        }
+
+        // Already paid check
+        if ($payment['payment_status'] === DocumentPayment::STATUS_PAID_VERIFIED) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Payment already verified', 'already_paid' => true]);
+            return;
+        }
+
+        // Build return URLs matching official requirements
+        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+        $base   = $scheme . '://' . $host;
+
+        $successUrl = $base . '/documents/payment/success?request_id=' . (int) $payment['request_id'];
+        $cancelUrl  = $base . '/documents/payment/cancel?request_id=' . (int) $payment['request_id'];
+
+        $docLabel = DocumentRequest::label((string) $payment['document_type']);
+
+        $res = PayMongoService::createCheckoutSession(
+            (int) $payment['request_id'],
+            (string) $payment['payment_ref'],
+            $amountDue,
+            $docLabel,
+            (string) $payment['request_ref'],
+            $successUrl,
+            $cancelUrl
+        );
+
+        if (!$res['success'] || empty($res['checkout_id'])) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error'   => $res['error'] ?? 'Failed to create PayMongo checkout session'
+            ]);
+            return;
+        }
+
+        $checkoutId  = (string) $res['checkout_id'];
+        $checkoutUrl = (string) $res['checkout_url'];
+
+        DocumentPayment::setPaymongoCheckout((int) $payment['id'], $checkoutId, json_encode($res['raw'] ?? $res));
+
+        // Update payment method to reflect PayMongo
+        db()->prepare('UPDATE document_payments SET payment_method = ? WHERE id = ?')
+            ->execute(['gcash', (int) $payment['id']]);
+        db()->prepare('UPDATE document_requests SET payment_method = ? WHERE id = ?')
+            ->execute(['gcash', (int) $payment['request_id']]);
+
+        AuditLog::record(
+            $userId,
+            'payment.paymongo_checkout_created',
+            sprintf('Created PayMongo checkout %s for payment %s (₱%.2f)', $checkoutId, (string) $payment['payment_ref'], $amountDue)
+        );
+
+        echo json_encode([
+            'success'      => true,
+            'checkout_id'  => $checkoutId,
+            'checkout_url' => $checkoutUrl,
+            'simulated'    => !empty($res['mock']),
+        ]);
+    }
+
+    /**
+     * GET /payments/paymongo/return
+     *
+     * Return URL handler after PayMongo checkout completes.
+     * Retrieves the checkout session to verify payment status,
+     * then redirects to acknowledgement page.
+     */
+    public function paymongoReturn(): void
+    {
+        $checkoutId = trim((string) ($_GET['checkout_id'] ?? ''));
+        $requestId  = (int) ($_GET['request_id'] ?? 0);
+        $userId     = (int) ($_SESSION['user_id'] ?? 0);
+
+        if ($requestId <= 0) {
+            flash('error', 'Invalid return URL.');
+            redirect('/documents');
+        }
+
+        $request = DocumentRequest::find($requestId);
+        if (!$request || (int) $request['user_id'] !== $userId) {
+            flash('error', t('flash.not_found'));
+            redirect('/documents');
+        }
+
+        $payment = DocumentPayment::findByRequest($requestId);
+        if (!$payment) {
+            flash('error', 'Walang natagpuang talaan ng pagbabayad.');
+            redirect('/documents');
+        }
+
+        // If already verified (by webhook or previous return), go straight to acknowledgement
+        if ($payment['payment_status'] === DocumentPayment::STATUS_PAID_VERIFIED) {
+            redirect('/documents/' . $requestId . '/acknowledgement');
+        }
+
+        // PayMongo does not interpolate template placeholders in query strings;
+        // ignore literal '{checkout_id}' or empty values and use the saved database checkout ID
+        if ($checkoutId === '' || str_starts_with($checkoutId, '{')) {
+            $checkoutId = '';
+        }
+        $effectiveCheckoutId = $checkoutId ?: (string) ($payment['paymongo_checkout_id'] ?? '');
+        if ($effectiveCheckoutId !== '') {
+            $sessionResult = PayMongoService::retrieveCheckoutSession($effectiveCheckoutId);
+
+            if ($sessionResult['success']) {
+                $sessionStatus = (string) ($sessionResult['status'] ?? '');
+
+                // If the checkout session has payments and is paid
+                if (in_array($sessionStatus, ['paid', 'active'], true) && !empty($sessionResult['payments'])) {
+                    $firstPayment = $sessionResult['payments'][0] ?? [];
+                    $payAttrs     = $firstPayment['attributes'] ?? [];
+                    $payId        = (string) ($firstPayment['id'] ?? '');
+                    $intentId     = (string) ($payAttrs['payment_intent_id'] ?? ($sessionResult['payment_intent_id'] ?? ''));
+                    $amtCentavos  = (int) ($payAttrs['amount'] ?? 0);
+                    $amount       = $amtCentavos > 0 ? $amtCentavos / 100.0 : (float) $payment['amount_due'];
+                    $currency     = (string) ($payAttrs['currency'] ?? 'PHP');
+                    $sourceType   = (string) ($payAttrs['source']['type'] ?? ($payAttrs['payment_method_type'] ?? 'gcash'));
+
+                    $saved = DocumentPayment::recordPaymongoPayment(
+                        (int) $payment['id'],
+                        $payId ?: null,
+                        $intentId ?: null,
+                        $amount,
+                        strtoupper($currency),
+                        $sourceType,
+                        json_encode($sessionResult['raw'] ?? $sessionResult)
+                    );
+
+                    if ($saved) {
+                        // Send notifications
+                        $reqRef   = (string) $payment['request_ref'];
+                        $docLabel = DocumentRequest::label((string) $payment['document_type']);
+                        try {
+                            (new NotificationService())->notifyUser(
+                                (int) $payment['user_id'],
+                                'system',
+                                'Naberipika na ang Inyong Bayad via PayMongo (' . $reqRef . ')',
+                                sprintf('Matagumpay na natanggap at naberipika ang inyong bayad via %s para sa %s (%s). Kasalukuyan nang inihahanda ang inyong dokumento.', ucfirst($sourceType), $docLabel, $reqRef),
+                                0,
+                                'document_payment'
+                            );
+                        } catch (\Throwable $e) {
+                            error_log('[PaymentController::paymongoReturn] notification error: ' . $e->getMessage());
+                        }
+
+                        // SMS
+                        $phone = trim((string) ($payment['phone'] ?? ''));
+                        if ($phone !== '') {
+                            try {
+                                $smsMsg = sprintf('BARANGGABAY: Bayad para sa %s ay natanggap na. Inihahanda na ang inyong dokumento.', $reqRef);
+                                (new OneWaySmsService())->send($phone, $smsMsg, 'payment_verified', (int) $payment['id']);
+                            } catch (\Throwable $e) {
+                                error_log('[PaymentController::paymongoReturn] SMS error: ' . $e->getMessage());
+                            }
+                        }
+
+                        AuditLog::record(
+                            $userId,
+                            'payment.paymongo_return_verified',
+                            sprintf('PayMongo payment verified on return for %s (₱%.2f via %s)', $reqRef, $amount, $sourceType)
+                        );
+
+                        flash('success', 'Matagumpay na natanggap ang inyong bayad. Salamat!');
+                        redirect('/documents/' . $requestId . '/acknowledgement');
+                    }
+                }
+
+                // If expired or cancelled
+                if ($sessionStatus === 'expired') {
+                    flash('warning', 'Nag-expire na ang inyong checkout session. Mangyaring subukang muli.');
+                    redirect('/documents/' . $requestId . '/payment');
+                }
+            }
+        }
+
+        // Fallback: if we can't verify yet, show the checkout page with pending status
+        flash('info', 'Sinusuri pa ang inyong bayad. Mangyaring hintayin ang kumpirmasyon.');
+        redirect('/documents/' . $requestId . '/payment');
+    }
+
+    /**
+     * POST /payments/paymongo/webhook
+     *
+     * PayMongo Webhook Listener.
+     * Handles:
+     * - checkout_session.payment.paid
+     * - payment.paid
+     * - payment.failed
+     */
+    public function paymongoWebhook(): void
+    {
+        $rawPayload = file_get_contents('php://input');
+        $headers    = function_exists('getallheaders') ? getallheaders() : [];
+        if (!$headers) {
+            $headers = [];
+            foreach ($_SERVER as $k => $v) {
+                if (str_starts_with($k, 'HTTP_')) {
+                    $h = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($k, 5)))));
+                    $headers[$h] = $v;
+                }
+            }
+        }
+
+        $data = json_decode($rawPayload, true);
+        if (!$data || !is_array($data)) {
+            http_response_code(400);
+            echo 'Invalid payload';
+            return;
+        }
+
+        // Verify webhook signature
+        $isVerified = PayMongoService::verifyWebhookSignature($headers, $rawPayload);
+        if (!$isVerified) {
+            error_log('[PayMongo Webhook] Signature verification failed.');
+            http_response_code(400);
+            echo 'Webhook signature verification failed';
+            return;
+        }
+
+        // Parse the event
+        $event = PayMongoService::parseWebhookEvent($data);
+
+        $eventId   = $event['event_id'];
+        $eventType = $event['event_type'];
+
+        // Idempotency: skip if already processed
+        if ($eventId !== '' && DocumentPayment::isWebhookProcessed($eventId)) {
+            http_response_code(200);
+            echo json_encode(['status' => 'already_processed']);
+            return;
+        }
+
+        switch ($eventType) {
+            case 'checkout_session.payment.paid':
+            case 'payment.paid':
+                $this->handlePaymongoPaymentPaid($event, $rawPayload);
+                break;
+
+            case 'payment.failed':
+                $this->handlePaymongoPaymentFailed($event);
+                break;
+
+            default:
+                // Log unhandled event types for debugging
+                error_log('[PayMongo Webhook] Unhandled event type: ' . $eventType);
+                break;
+        }
+
+        // Record webhook event for idempotency
+        if ($eventId !== '') {
+            $resourceId = $event['payment_id'] ?? ($event['checkout_session_id'] ?? '');
+            DocumentPayment::recordWebhookEvent($eventId, $eventType, $resourceId, $rawPayload, 'paymongo');
+        }
+
+        http_response_code(200);
+        echo json_encode(['status' => 'success']);
+    }
+
+    /**
+     * Handle PayMongo payment.paid / checkout_session.payment.paid webhook event.
+     */
+    private function handlePaymongoPaymentPaid(array $event, string $rawPayload): void
+    {
+        $payment = null;
+        $metadata = $event['metadata'];
+
+        // Try to find payment record by:
+        // 1. Checkout session ID (most reliable for checkout_session events)
+        if (!empty($event['checkout_session_id'])) {
+            $payment = DocumentPayment::findByPaymongoCheckoutId($event['checkout_session_id']);
+        }
+
+        // 2. Payment intent ID
+        if (!$payment && !empty($event['payment_intent_id'])) {
+            $payment = DocumentPayment::findByPaymongoPaymentIntentId($event['payment_intent_id']);
+        }
+
+        // 3. Metadata request_id
+        if (!$payment && !empty($metadata['request_id'])) {
+            $payment = DocumentPayment::findByRequest((int) $metadata['request_id']);
+        }
+
+        // 4. Metadata payment_ref
+        if (!$payment && !empty($metadata['payment_ref'])) {
+            $payment = DocumentPayment::findByPaymentRef((string) $metadata['payment_ref']);
+        }
+
+        if (!$payment) {
+            error_log('[PayMongo Webhook] Could not find payment record for event: ' . ($event['event_id'] ?? 'unknown'));
+            return;
+        }
+
+        // Already verified — skip
+        if ($payment['payment_status'] === DocumentPayment::STATUS_PAID_VERIFIED) {
+            return;
+        }
+
+        $amount = $event['amount'] ?? (float) $payment['amount_due'];
+
+        $saved = DocumentPayment::recordPaymongoPayment(
+            (int) $payment['id'],
+            $event['payment_id'],
+            $event['payment_intent_id'],
+            (float) $amount,
+            $event['currency'] ?? 'PHP',
+            $event['source_type'],
+            $rawPayload
+        );
+
+        if ($saved) {
+            $reqRef   = (string) $payment['request_ref'];
+            $docLabel = DocumentRequest::label((string) $payment['document_type']);
+            $source   = ucfirst($event['source_type'] ?? 'Online');
+
+            try {
+                (new NotificationService())->notifyUser(
+                    (int) $payment['user_id'],
+                    'system',
+                    'Naberipika na ang Inyong Bayad (' . $reqRef . ')',
+                    sprintf('Matagumpay na natanggap ang inyong bayad via %s para sa %s (%s).', $source, $docLabel, $reqRef),
+                    0,
+                    'document_payment'
+                );
+            } catch (\Throwable $e) {
+                error_log('[PayMongo Webhook] notification error: ' . $e->getMessage());
+            }
+
+            // SMS
+            $phone = trim((string) ($payment['phone'] ?? ''));
+            if ($phone !== '') {
+                try {
+                    $smsMsg = sprintf('BARANGGABAY: Bayad para sa %s ay natanggap at beripikado na. Inihahanda na ang inyong dokumento.', $reqRef);
+                    (new OneWaySmsService())->send($phone, $smsMsg, 'payment_verified', (int) $payment['id']);
+                } catch (\Throwable $e) {
+                    error_log('[PayMongo Webhook] SMS error: ' . $e->getMessage());
+                }
+            }
+
+            AuditLog::record(
+                (int) $payment['user_id'],
+                'payment.paymongo_webhook_verified',
+                sprintf('PayMongo webhook verified payment for %s (₱%.2f via %s)', $reqRef, (float) $amount, $source)
+            );
+        }
+    }
+
+    /**
+     * Handle PayMongo payment.failed webhook event.
+     */
+    private function handlePaymongoPaymentFailed(array $event): void
+    {
+        $payment = null;
+        $metadata = $event['metadata'];
+
+        if (!empty($event['checkout_session_id'])) {
+            $payment = DocumentPayment::findByPaymongoCheckoutId($event['checkout_session_id']);
+        }
+        if (!$payment && !empty($event['payment_intent_id'])) {
+            $payment = DocumentPayment::findByPaymongoPaymentIntentId($event['payment_intent_id']);
+        }
+        if (!$payment && !empty($metadata['request_id'])) {
+            $payment = DocumentPayment::findByRequest((int) $metadata['request_id']);
+        }
+
+        if ($payment && $payment['payment_status'] !== DocumentPayment::STATUS_PAID_VERIFIED) {
+            db()->prepare('UPDATE document_payments SET payment_status = ?, updated_at = NOW() WHERE id = ?')
+                ->execute([DocumentPayment::STATUS_FAILED, (int) $payment['id']]);
+
+            DocumentPayment::logAudit(
+                (int) $payment['request_id'],
+                (int) $payment['id'],
+                (int) $payment['user_id'],
+                'paymongo_payment_failed',
+                $payment['payment_status'],
+                DocumentPayment::STATUS_FAILED,
+                'PayMongo payment failed via webhook: ' . ($event['event_type'] ?? 'unknown')
+            );
+
+            // Notify resident of failure
+            try {
+                (new NotificationService())->notifyUser(
+                    (int) $payment['user_id'],
+                    'system',
+                    'Hindi Matagumpay ang Pagbabayad (' . (string) $payment['request_ref'] . ')',
+                    'Hindi matagumpay ang inyong pagbabayad. Mangyaring subukang muli sa pamamagitan ng checkout page.',
+                    0,
+                    'document_payment'
+                );
+            } catch (\Throwable $e) {
+                error_log('[PayMongo Webhook] fail notification error: ' . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * GET /documents/payment/success
+     *
+     * Resident returns from PayMongo checkout.
+     * Verifies payment via PayMongo API (if not already verified by webhook)
+     * and shows a clean, real-time status page.
+     */
+    public function paymentSuccess(): void
+    {
+        $userId    = (int) ($_SESSION['user_id'] ?? 0);
+        $requestId = (int) ($_GET['request_id'] ?? 0);
+
+        if ($requestId <= 0) {
+            flash('error', 'Invalid payment return.');
+            redirect('/documents');
+        }
+
+        $request = DocumentRequest::find($requestId);
+        if (!$request || (int) $request['user_id'] !== $userId) {
+            flash('error', t('flash.not_found'));
+            redirect('/documents');
+        }
+
+        $payment = DocumentPayment::findByRequest($requestId);
+        if (!$payment) {
+            flash('error', 'Walang natagpuang talaan ng pagbabayad.');
+            redirect('/documents');
+        }
+
+        // Active server-side sync with PayMongo if checkout ID exists and not yet verified
+        if ($payment['payment_status'] !== DocumentPayment::STATUS_PAID_VERIFIED && !empty($payment['paymongo_checkout_id'])) {
+            $sessionResult = PayMongoService::retrieveCheckoutSession((string) $payment['paymongo_checkout_id']);
+            if ($sessionResult['success'] && in_array((string)($sessionResult['status'] ?? ''), ['paid', 'active'], true) && !empty($sessionResult['payments'])) {
+                $firstPayment = $sessionResult['payments'][0] ?? [];
+                $payAttrs     = $firstPayment['attributes'] ?? [];
+                $payId        = (string) ($firstPayment['id'] ?? '');
+                $intentId     = (string) ($payAttrs['payment_intent_id'] ?? ($sessionResult['payment_intent_id'] ?? ''));
+                $amtCentavos  = (int) ($payAttrs['amount'] ?? 0);
+                $amount       = $amtCentavos > 0 ? $amtCentavos / 100.0 : (float) $payment['amount_due'];
+                $currency     = (string) ($payAttrs['currency'] ?? 'PHP');
+                $sourceType   = (string) ($payAttrs['source']['type'] ?? ($payAttrs['payment_method_type'] ?? 'gcash'));
+
+                DocumentPayment::recordPaymongoPayment(
+                    (int) $payment['id'],
+                    $payId ?: null,
+                    $intentId ?: null,
+                    $amount,
+                    strtoupper($currency),
+                    $sourceType,
+                    json_encode($sessionResult['raw'] ?? $sessionResult)
+                );
+                $payment = DocumentPayment::findByRequest($requestId);
+                $request = DocumentRequest::find($requestId);
+            }
+        }
+
+        $pageTitle = 'Katayuan ng Pagbabayad — BarangGabay';
+        view('resident/payment_success', compact('request', 'payment', 'pageTitle'));
+    }
+
+    /**
+     * GET /documents/payment/cancel
+     *
+     * Resident cancelled PayMongo checkout.
+     * Marks payment as cancelled (if still pending), and returns to checkout page for retry.
+     */
+    public function paymentCancel(): void
+    {
+        $userId    = (int) ($_SESSION['user_id'] ?? 0);
+        $requestId = (int) ($_GET['request_id'] ?? 0);
+
+        if ($requestId <= 0) {
+            redirect('/documents');
+        }
+
+        $request = DocumentRequest::find($requestId);
+        if (!$request || (int) $request['user_id'] !== $userId) {
+            redirect('/documents');
+        }
+
+        $payment = DocumentPayment::findByRequest($requestId);
+        if ($payment && in_array($payment['payment_status'], [DocumentPayment::STATUS_PENDING, DocumentPayment::STATUS_PROCESSING, DocumentPayment::STATUS_UNPAID], true)) {
+            db()->prepare('UPDATE document_payments SET payment_status = ?, updated_at = NOW() WHERE id = ?')
+                ->execute([DocumentPayment::STATUS_CANCELLED, (int) $payment['id']]);
+
+            DocumentPayment::logAudit(
+                $requestId,
+                (int) $payment['id'],
+                $userId,
+                'paymongo_payment_cancelled_by_user',
+                $payment['payment_status'],
+                DocumentPayment::STATUS_CANCELLED,
+                'Resident cancelled payment during PayMongo checkout session'
+            );
+        }
+
+        flash('warning', 'Kinansela mo ang online payment. Naka-save pa rin ang inyong kahilingan at maaari itong bayaran muli gamit ang GCash.');
+        redirect('/documents/' . $requestId . '/payment?status=cancelled');
+    }
+
+    /**
+     * GET /api/payments/status/{id}
+     *
+     * Real-time polling endpoint for payment status against our backend.
+     */
+    public function apiPaymentStatus(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $userId    = (int) ($_SESSION['user_id'] ?? 0);
+        $requestId = (int) ($params['id'] ?? 0);
+
+        if ($userId <= 0 || $requestId <= 0) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+            return;
+        }
+
+        $request = DocumentRequest::find($requestId);
+        if (!$request || (int) $request['user_id'] !== $userId) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => 'Not found']);
+            return;
+        }
+
+        $payment = DocumentPayment::findByRequest($requestId);
+        if (!$payment) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => 'Payment record not found']);
+            return;
+        }
+
+        // Active server-side check against PayMongo API if still pending
+        if ($payment['payment_status'] !== DocumentPayment::STATUS_PAID_VERIFIED && !empty($payment['paymongo_checkout_id'])) {
+            $sessionResult = PayMongoService::retrieveCheckoutSession((string) $payment['paymongo_checkout_id']);
+            if ($sessionResult['success'] && in_array((string)($sessionResult['status'] ?? ''), ['paid', 'active'], true) && !empty($sessionResult['payments'])) {
+                $firstPayment = $sessionResult['payments'][0] ?? [];
+                $payAttrs     = $firstPayment['attributes'] ?? [];
+                $payId        = (string) ($firstPayment['id'] ?? '');
+                $intentId     = (string) ($payAttrs['payment_intent_id'] ?? ($sessionResult['payment_intent_id'] ?? ''));
+                $amtCentavos  = (int) ($payAttrs['amount'] ?? 0);
+                $amount       = $amtCentavos > 0 ? $amtCentavos / 100.0 : (float) $payment['amount_due'];
+                $currency     = (string) ($payAttrs['currency'] ?? 'PHP');
+                $sourceType   = (string) ($payAttrs['source']['type'] ?? ($payAttrs['payment_method_type'] ?? 'gcash'));
+
+                DocumentPayment::recordPaymongoPayment(
+                    (int) $payment['id'],
+                    $payId ?: null,
+                    $intentId ?: null,
+                    $amount,
+                    strtoupper($currency),
+                    $sourceType,
+                    json_encode($sessionResult['raw'] ?? $sessionResult)
+                );
+
+                $payment = DocumentPayment::findByRequest($requestId);
+                $request = DocumentRequest::find($requestId);
+            }
+        }
+
+        $isPaid = in_array($payment['payment_status'], [
+            DocumentPayment::STATUS_PAID_VERIFIED,
+            DocumentPayment::STATUS_PAID,
+            DocumentPayment::STATUS_PAID_AT_PICKUP,
+            DocumentPayment::STATUS_NOT_REQUIRED,
+            DocumentPayment::STATUS_FREE,
+            DocumentPayment::STATUS_WAIVED
+        ], true);
+
+        echo json_encode([
+            'success'            => true,
+            'is_paid'            => $isPaid,
+            'payment_status'     => $payment['payment_status'],
+            'request_status'     => $request['status'] ?? 'pending_review',
+            'amount_due'         => number_format((float) $payment['amount_due'], 2),
+            'payment_ref'        => (string) ($payment['payment_ref'] ?? ''),
+            'payment_method'     => 'GCash via PayMongo',
+            'document_label'     => DocumentRequest::label((string) $request['document_type']),
+            'delivery_method'    => (string) ($request['delivery_method'] ?? 'digital'),
+            'updated_at'         => (string) ($payment['updated_at'] ?? ''),
+        ]);
     }
 }
 

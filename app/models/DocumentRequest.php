@@ -22,29 +22,30 @@ class DocumentRequest
         'other'      => 'Iba pa',
     ];
 
-    /** Delivery methods supported by the system. */
+    /** Delivery methods supported by the system (Digital Copy & Pickup at Barangay Hall). */
     public const DELIVERY_METHODS = [
-        'pickup'   => 'Barangay Hall Pickup',
-        'digital'  => 'Digital Copy',
-        'delivery' => 'Delivery',
+        'digital' => 'Digital Copy (Online)',
+        'pickup'  => 'Pickup at Barangay Hall',
     ];
 
     /**
      * Where a request can go next.
      */
     public const TRANSITIONS = [
-        'awaiting_payment' => ['pending', 'rejected', 'cancelled'],
-        'pending'          => ['under_review', 'processing', 'needs_information', 'approved', 'ready', 'rejected', 'cancelled'],
-        'under_review'     => ['needs_information', 'approved', 'ready', 'rejected', 'cancelled'],
-        'processing'       => ['needs_information', 'approved', 'ready', 'rejected', 'cancelled'],
-        'needs_information'=> ['pending', 'under_review', 'processing', 'approved', 'ready', 'rejected', 'cancelled'],
-        'approved'         => ['ready', 'released', 'completed', 'rejected', 'cancelled'],
-        'ready'            => ['released', 'completed', 'out_for_delivery', 'rejected', 'cancelled'],
-        'out_for_delivery' => ['completed', 'released', 'ready', 'cancelled'],
-        'released'         => ['completed'],
-        'completed'        => [],
-        'rejected'         => [],
-        'cancelled'        => [],
+        'awaiting_payment'       => ['pending_review', 'pending', 'rejected', 'cancelled'],
+        'pending_review'         => ['under_review', 'processing', 'needs_information', 'approved', 'ready', 'rejected', 'cancelled'],
+        'pending'                => ['pending_review', 'under_review', 'processing', 'needs_information', 'approved', 'ready', 'rejected', 'cancelled'],
+        'under_review'           => ['needs_information', 'approved', 'ready', 'rejected', 'cancelled'],
+        'processing'             => ['needs_information', 'approved', 'ready', 'rejected', 'cancelled'],
+        'needs_information'      => ['pending_review', 'pending', 'under_review', 'processing', 'approved', 'ready', 'rejected', 'cancelled'],
+        'approved'               => ['available_for_download', 'ready_for_pickup', 'ready', 'released', 'completed', 'rejected', 'cancelled'],
+        'ready'                  => ['available_for_download', 'ready_for_pickup', 'released', 'completed', 'rejected', 'cancelled'],
+        'ready_for_pickup'       => ['completed', 'released', 'cancelled'],
+        'available_for_download' => ['completed', 'released'],
+        'released'               => ['completed'],
+        'completed'              => [],
+        'rejected'               => [],
+        'cancelled'              => [],
     ];
 
     public static function label(string $type): string
@@ -54,24 +55,22 @@ class DocumentRequest
 
     public static function deliveryLabel(string $method): string
     {
-        return self::DELIVERY_METHODS[$method] ?? 'Barangay Hall Pickup';
+        return self::DELIVERY_METHODS[$method] ?? ($method === 'digital' ? 'Digital Copy' : 'Pickup at Barangay Hall');
     }
 
     public static function statusLabel(string $status): string
     {
-        return match ($status) {
+        $normalized = strtolower(trim($status));
+        return match ($normalized) {
+            'draft'                  => 'Draft',
             'awaiting_payment'       => 'Naghihintay ng Bayad (Awaiting Payment)',
-            'pending'                => 'Nakabinbin (Pending)',
-            'under_review'           => 'Sinusuri (Under Review)',
-            'processing'             => 'Ipinoproseso (Processing)',
+            'pending_review', 'pending' => 'Nakabinbin para sa Pagsusuri (Pending Review)',
+            'under_review', 'processing' => 'Sinusuri ng Barangay (Under Review)',
             'needs_information'      => 'Kailangan ng Impormasyon (Needs Info)',
             'approved'               => 'Naaprubahan (Approved)',
-            'ready'                  => 'Handa na (Ready)',
-            'ready_for_pickup'       => 'Handa nang Kunin (Ready for Pickup)',
+            'ready', 'ready_for_pickup' => 'Handa nang Kunin sa Hall (Ready for Pickup)',
             'available_for_download' => 'Mada-download na (Available for Download)',
-            'out_for_delivery'       => 'Paihatid na (Out for Delivery)',
-            'released'               => 'Nai-release na (Released)',
-            'completed'              => 'Nakumpleto na (Completed)',
+            'released', 'completed'  => 'Nakumpleto / Nakuha na (Completed)',
             'rejected'               => 'Tinanggihan (Rejected)',
             'cancelled'              => 'Kinansela (Cancelled)',
             default                  => ucfirst(str_replace('_', ' ', $status)),
@@ -80,14 +79,19 @@ class DocumentRequest
 
     public static function canMove(string $from, string $to): bool
     {
-        // Aliases for seamless backward compatibility
-        if ($from === 'processing' && $to === 'under_review') return true;
-        if ($from === 'under_review' && $to === 'processing') return true;
-        if ($from === 'ready' && $to === 'ready') return true;
-        if ($to === 'completed' && ($from === 'ready' || $from === 'released' || $from === 'out_for_delivery')) return true;
-        if ($to === 'released' && ($from === 'ready' || $from === 'completed' || $from === 'out_for_delivery')) return true;
+        $f = strtolower(trim($from));
+        $t = strtolower(trim($to));
 
-        return \in_array($to, self::TRANSITIONS[$from] ?? [], true);
+        if ($f === $t) return true;
+        // Aliases for seamless backward compatibility
+        if ($f === 'processing' && $t === 'under_review') return true;
+        if ($f === 'under_review' && $t === 'processing') return true;
+        if ($f === 'pending' && $t === 'pending_review') return true;
+        if ($f === 'pending_review' && $t === 'pending') return true;
+        if ($t === 'completed' && in_array($f, ['ready', 'ready_for_pickup', 'available_for_download', 'released', 'approved'], true)) return true;
+        if ($t === 'released' && in_array($f, ['ready', 'ready_for_pickup', 'available_for_download', 'completed', 'approved'], true)) return true;
+
+        return \in_array($t, self::TRANSITIONS[$f] ?? [], true);
     }
 
     /**
@@ -107,11 +111,13 @@ class DocumentRequest
             return true;
         }
 
-        $status = (string) ($request['payment_status'] ?? '');
+        $status = strtoupper(trim((string) ($request['payment_status'] ?? '')));
         return in_array($status, [
-            DocumentPayment::STATUS_FREE,
+            DocumentPayment::STATUS_PAID,
             DocumentPayment::STATUS_PAID_VERIFIED,
             DocumentPayment::STATUS_PAID_AT_PICKUP,
+            DocumentPayment::STATUS_NOT_REQUIRED,
+            DocumentPayment::STATUS_FREE,
             DocumentPayment::STATUS_WAIVED,
         ], true);
     }
@@ -156,14 +162,16 @@ class DocumentRequest
 
         $isFree = $feeAmount <= 0.00;
         $payStatus = match ($paymentMethod) {
-            'free'   => DocumentPayment::STATUS_FREE,
-            'pickup' => DocumentPayment::STATUS_PAY_AT_PICKUP,
-            'paypal' => $isFree ? DocumentPayment::STATUS_FREE : DocumentPayment::STATUS_PAYMENT_PENDING,
-            default  => $isFree ? DocumentPayment::STATUS_FREE : DocumentPayment::STATUS_UNPAID,
+            'free'              => DocumentPayment::STATUS_NOT_REQUIRED,
+            'pickup'            => DocumentPayment::STATUS_PAY_AT_PICKUP,
+            'paymongo', 'gcash' => $isFree ? DocumentPayment::STATUS_NOT_REQUIRED : DocumentPayment::STATUS_PENDING,
+            default             => $isFree ? DocumentPayment::STATUS_NOT_REQUIRED : DocumentPayment::STATUS_PENDING,
         };
 
-        // For online payment (PayPal / GCash), document status starts at awaiting_payment until verified!
-        $initialDocStatus = (in_array($paymentMethod, ['paypal', 'gcash'], true) && !$isFree) ? 'awaiting_payment' : 'pending';
+        // Requirement 21 & 23:
+        // Free documents start at pending_review with payment NOT_REQUIRED.
+        // Paid documents start at awaiting_payment with payment PENDING until PayMongo confirms!
+        $initialDocStatus = $isFree ? 'pending_review' : 'awaiting_payment';
 
         $pdo = db();
         $stmt = $pdo->prepare(

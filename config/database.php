@@ -675,6 +675,15 @@ function syncPostgresSchema(PDO $pdo): void
         )",
         "CREATE INDEX IF NOT EXISTS idx_pur_user ON profile_update_requests(user_id)",
         "CREATE INDEX IF NOT EXISTS idx_pur_status ON profile_update_requests(status)",
+
+        // 21. PayMongo Payment Gateway Integration
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paymongo_checkout_id VARCHAR(120) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paymongo_payment_intent_id VARCHAR(120) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paymongo_payment_id VARCHAR(120) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paymongo_source_type VARCHAR(40) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paymongo_raw_response TEXT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_dp_paymongo_checkout ON document_payments(paymongo_checkout_id)",
+        "CREATE INDEX IF NOT EXISTS idx_dp_paymongo_pi ON document_payments(paymongo_payment_intent_id)",
     ];
 
     foreach ($statements as $sql) {

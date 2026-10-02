@@ -1,1083 +1,954 @@
 <?php
 /**
- * Resident document requests — Personal Pickup or Digital Soft Copy with Payment System.
+ * Resident Document Request & History Page — BarangGabay
  *
- * Variables: $requests (list), $types (array<string,string>), $docFees (array), $defaultGcash (array|null)
+ * Requirements 2, 3, 4, 5, 6, 7, 10, 24, 25, 26, 27, 28, 49, 50, 51:
+ * - Top tabs: [ NEW REQUEST ] and [ MY REQUESTS ] (never display side-by-side)
+ * - 4-Step clean wizard for New Request:
+ *     Step 1: Choose Document (with fee, requirements, processing time)
+ *     Step 2: Review Resident Information (auto-loaded from DB profile, Verified badge)
+ *     Step 3: Purpose (with 'Other' text field) and Receiving Method (Digital Copy vs Pickup at Barangay Hall)
+ *     Step 4: Clean Order Summary & Pay with GCash button (double-click protected)
+ * - My Requests tab: compact table/cards + View Details modal with real-time status tracker.
  */
+use App\Models\DocumentRequest;
+use App\Models\DocumentPayment;
+use App\Models\User;
+
 $requests     = $requests ?? [];
 $types        = $types    ?? [];
 $docFees      = $docFees  ?? \App\Models\DocumentFee::getAll();
-$defaultGcash  = $defaultGcash ?? \App\Models\GcashAccount::getDefault();
-$gcashAccounts = $gcashAccounts ?? \App\Models\GcashAccount::getActive();
+$user         = $user     ?? [];
 
-$statusClass = [
-    'awaiting_payment' => 'bg-indigo-50 text-indigo-800 border-indigo-200',
-    'pending'    => 'bg-slate-100 text-slate-700 border-slate-200',
-    'processing' => 'bg-amber-50 text-amber-800 border-amber-200',
-    'ready'      => 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    'released'   => 'bg-blue-50 text-blue-800 border-blue-200',
-    'rejected'   => 'bg-rose-50 text-rose-800 border-rose-200',
-];
+$isVerifiedResident = (($user['status'] ?? '') === 'verified');
+$activeTab = $_GET['tab'] ?? (empty($requests) ? 'new' : 'requests');
+if (!in_array($activeTab, ['new', 'requests'], true)) {
+    $activeTab = 'new';
+}
 
-$paymentBadgeStyles = [
-    'FREE'                     => 'bg-slate-100 text-slate-700 border-slate-200',
-    'UNPAID'                   => 'bg-rose-50 text-rose-700 border-rose-200',
-    'PAYMENT_PROOF_SUBMITTED'  => 'bg-amber-50 text-amber-800 border-amber-200',
-    'UNDER_REVIEW'             => 'bg-blue-50 text-blue-800 border-blue-200',
-    'PAID_VERIFIED'            => 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    'PAYMENT_REJECTED'         => 'bg-rose-50 text-rose-800 border-rose-200',
-    'PAY_AT_PICKUP'            => 'bg-purple-50 text-purple-800 border-purple-200',
-    'PAID_AT_PICKUP'           => 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    'WAIVED'                   => 'bg-slate-100 text-slate-600 border-slate-200',
-    'REFUNDED'                 => 'bg-orange-50 text-orange-800 border-orange-200',
-];
-
+$pageTitle = 'Mga Dokumento at Kahilingan — BarangGabay';
 ob_start();
 ?>
 
-<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-    <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900"><?= e(t('documents.title')) ?></h1>
-        <p class="mt-1 text-sm text-slate-500"><?= e(t('documents.subtitle')) ?></p>
-    </div>
-    <div class="flex items-center gap-2">
-        <a href="<?= e(route('documents/history')) ?>"
-           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
-            <i class="bi bi-clock-history text-blue-600"></i>
-            <span>Kasaysayan (History)</span>
-        </a>
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-            <i class="bi bi-folder2"></i>
-            <?= count($requests) ?> <?= count($requests) === 1 ? 'Request' : 'Requests' ?>
-        </span>
-    </div>
-</div>
+<div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
 
-<?php 
-$isVerifiedResident = (($user['status'] ?? '') === 'verified');
-if (!$isVerifiedResident): 
-?>
-<!-- Verification Alert Banner -->
-<div class="mb-6 rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-5 shadow-sm">
-    <div class="flex items-start gap-4">
-        <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white font-bold text-2xl shadow-sm">
-            <i class="bi bi-shield-exclamation"></i>
-        </div>
-        <div class="flex-1">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-base font-bold text-amber-950">Kailangan ng Beripikasyon ng Residente (Account Verification Required)</h3>
-                <span class="rounded-full bg-amber-200/80 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-900">
-                    Estado: <?= e(strtoupper($user['status'] ?? 'UNVERIFIED')) ?>
-                </span>
-            </div>
-            <p class="text-xs text-amber-800 mt-1.5 leading-relaxed">
-                Ayon sa patakaran ng Pamahalaang Barangay, ang mga <strong>ganap na beripikadong residente</strong> lamang ang pinahihintulutang humiling ng mga opisyal na sertipiko at clearance. Mangyaring kumpletuhin ang inyong impormasyon at magsumite ng Valid ID upang masuri ng kawani ng barangay.
+    <!-- Page Header -->
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Mga Kahilingan ng Dokumento</h1>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Opisyal na serbisyo sa paghiling at pagbabayad ng mga clearance at sertipiko ng Barangay Bayogo.
             </p>
-            <div class="mt-3.5 flex flex-wrap items-center gap-3">
-                <a href="<?= e(route('profile')) ?>"
-                   class="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-amber-700">
-                    <i class="bi bi-person-badge-fill"></i> Pumunta sa Profile & Magsumite ng ID
-                </a>
-            </div>
         </div>
-    </div>
-</div>
-<?php endif; ?>
-
-<div class="grid gap-6 lg:grid-cols-[420px_1fr]">
-
-    <!-- ── Request form ──────────────────────────────────────────── -->
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-4 lg:self-start">
-        <div class="mb-4 flex items-center gap-3">
-            <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <i class="bi bi-file-earmark-plus" style="font-size: 1.15rem;"></i>
+        <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-100 dark:border-blue-900">
+                <i class="bi bi-wallet2"></i> GCash via PayMongo
             </span>
-            <div>
-                <h2 class="text-base font-bold text-slate-900"><?= e(t('documents.form_title')) ?></h2>
-                <p class="text-xs text-slate-500"><?= e(t('documents.form_help')) ?></p>
-            </div>
-        </div>
-
-        <!-- 🔒 Auto-Loaded Resident Profile Information -->
-        <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5">
-            <div class="flex items-center justify-between border-b border-emerald-200/60 pb-2 mb-2">
-                <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                    <i class="bi bi-shield-lock-fill text-emerald-600"></i> Auto-Loaded mula sa Profile
-                </span>
-                <span class="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                    <?= $isVerifiedResident ? '🔒 Beripikado' : 'Hindi Beripikado' ?>
-                </span>
-            </div>
-            <div class="space-y-1 text-xs text-slate-700">
-                <div><span class="text-slate-500">Pangalan:</span> <strong class="text-slate-900"><?= e(\App\Models\User::formatFullName($user ?? [])) ?></strong></div>
-                <div class="flex justify-between">
-                    <span><span class="text-slate-500">Kaarawan:</span> <strong><?= !empty($user['date_of_birth']) ? date('M d, Y', strtotime($user['date_of_birth'])) : 'N/A' ?></strong></span>
-                    <span><span class="text-slate-500">Edad:</span> <strong class="text-blue-700"><?= \App\Models\User::getAge($user['date_of_birth'] ?? null) !== null ? \App\Models\User::getAge($user['date_of_birth']) . ' taong gulang' : 'N/A' ?></strong></span>
-                </div>
-                <div><span class="text-slate-500">Kasarian / Katayuan:</span> <strong><?= e(ucfirst($user['sex'] ?? '—')) ?> &bull; <?= e(ucfirst($user['civil_status'] ?? '—')) ?></strong></div>
-                <div><span class="text-slate-500">Tirahan:</span> <strong class="text-slate-900"><?= e(\App\Models\User::formatAddress($user ?? [])) ?></strong></div>
-                <?php if (!empty($user['household_no'])): ?>
-                <div><span class="text-slate-500">Household No:</span> <strong class="font-mono text-indigo-700"><?= e($user['household_no']) ?></strong></div>
-                <?php endif; ?>
-            </div>
-            <p class="mt-2 text-[10px] text-emerald-800 leading-tight">
-                * Awtomatikong gagamitin ang inyong opisyal na impormasyon sa bubuuing sertipiko. Hindi na kailangang mag-type muli.
-            </p>
-        </div>
-
-        <form method="post" action="<?= e(route('documents')) ?>" id="docRequestForm">
-            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-
-            <!-- Document Type Selection -->
-            <div class="mb-4">
-                <div class="flex items-center justify-between mb-1">
-                    <label for="document_type" class="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                        <?= e(t('documents.field_type')) ?> <span class="text-red-500">*</span>
-                    </label>
-                    <span id="feeBadge" class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-100">
-                        ₱50.00
-                    </span>
-                </div>
-                <select id="document_type" name="document_type" required onchange="handleDocTypeChange()"
-                        class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-800 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100">
-                    <?php foreach ($types as $key => $label): 
-                        $f = $docFees[$key] ?? ['amount' => 50.0, 'is_free' => false];
-                        $feeTxt = $f['is_free'] || (float)$f['amount'] <= 0 ? ' (LIBRE)' : sprintf(' (₱%.2f)', (float)$f['amount']);
-                    ?>
-                    <option value="<?= e($key) ?>" data-amount="<?= (float)$f['amount'] ?>" data-free="<?= $f['is_free'] ? '1' : '0' ?>">
-                        <?= e($label) . $feeTxt ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-
-                <!-- Document Details Panel (Requirements, Processing Time, Description) -->
-                <div id="docDetailsPanel" class="mt-2.5 rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-xs">
-                    <div class="flex items-center gap-1.5 font-bold text-slate-800 mb-1">
-                        <i class="bi bi-info-circle-fill text-blue-600"></i>
-                        <span id="docDetailTitle">Detalye ng Dokumento</span>
-                    </div>
-                    <p id="docDetailDesc" class="text-slate-600 leading-relaxed mb-2"></p>
-                    <div class="space-y-1 border-t border-slate-200/80 pt-2 text-[11px]">
-                        <div><strong class="text-slate-700">📋 Mga Kinakailangan (Requirements):</strong> <span id="docDetailReqs" class="text-slate-600"></span></div>
-                        <div><strong class="text-slate-700">⏱️ Processing Time:</strong> <span id="docDetailTime" class="text-blue-700 font-semibold"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Delivery Method Selector (Cards) -->
-            <div class="mb-4">
-                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                    <?= e(t('documents.delivery_label')) ?> <span class="text-red-500">*</span>
-                </label>
-                <p class="mb-2 text-xs text-slate-400"><?= e(t('documents.delivery_help')) ?></p>
-
-                <div class="grid gap-2.5">
-                    <!-- Pickup Option -->
-                    <label class="delivery-option-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 bg-slate-50/50 p-3 transition hover:border-slate-300 hover:bg-white">
-                        <input type="radio" name="delivery_method" value="pickup" checked onchange="handleDeliveryChange()"
-                               class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-sm font-bold text-slate-900"><?= e(t('documents.delivery_pickup')) ?></span>
-                                <span class="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">Counter</span>
-                            </div>
-                            <p class="mt-0.5 text-xs text-slate-500 leading-normal">
-                                <?= e(t('documents.delivery_pickup_desc')) ?>
-                            </p>
-                        </div>
-                    </label>
-
-                    <!-- Digital Option -->
-                    <label class="delivery-option-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 bg-slate-50/50 p-3 transition hover:border-blue-300 hover:bg-white">
-                        <input type="radio" name="delivery_method" value="digital" onchange="handleDeliveryChange()"
-                               class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-sm font-bold text-slate-900"><?= e(t('documents.delivery_digital')) ?></span>
-                                <span class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700">Online Soft Copy</span>
-                            </div>
-                            <p class="mt-0.5 text-xs text-slate-500 leading-normal">
-                                <?= e(t('documents.delivery_digital_desc')) ?>
-                            </p>
-                        </div>
-                    </label>
-
-                    <?php if ($deliveryEnabled): ?>
-                    <!-- Delivery to Home Option -->
-                    <label class="delivery-option-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 bg-slate-50/50 p-3 transition hover:border-sky-300 hover:bg-white">
-                        <input type="radio" name="delivery_method" value="delivery" onchange="handleDeliveryChange()"
-                               class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-sm font-bold text-slate-900">Delivery sa Tirahan (Home Delivery)</span>
-                                <span class="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">+₱<?= number_format($deliveryFee, 2) ?></span>
-                            </div>
-                            <p class="mt-0.5 text-xs text-slate-500 leading-normal">
-                                Direktang ihahatid ng opisyal na kawani sa inyong tahanan sa loob ng barangay.
-                            </p>
-                        </div>
-                    </label>
-                    <?php endif; ?>
-                </div>
-
-                <?php if ($deliveryEnabled): ?>
-                <!-- Delivery Address Box (Toggled by Delivery radio) -->
-                <div id="deliveryAddressSection" class="mt-3 rounded-xl border border-sky-200 bg-sky-50/60 p-3 hidden">
-                    <label class="block text-xs font-bold text-sky-950 mb-1">
-                        <i class="bi bi-geo-alt-fill text-sky-600 me-1"></i>Lugar ng Paghahatid (Delivery Address) <span class="text-red-500">*</span>
-                    </label>
-                    <textarea name="delivery_address" id="delivery_address" rows="2"
-                              class="w-full text-xs rounded-lg border border-slate-300 bg-white p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                              placeholder="Ilagay ang kompletong delivery address..."><?= e(\App\Models\User::formatAddress($user ?? [])) ?></textarea>
-                    <p class="text-[10px] text-sky-700 mt-1">
-                        * Awtomatikong inilagay ang inyong rehistradong tirahan. Maaari itong i-edit kung nais ipahatid sa ibang bahay sa loob ng barangay.
-                    </p>
-                </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Payment Method Selector (Shown only when document has fee) -->
-            <div id="paymentMethodSection" class="mb-4 rounded-xl border border-blue-100 bg-blue-50/50 p-3.5">
-                <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-blue-950">
-                        <i class="bi bi-wallet2 text-blue-600 me-1"></i>Paraan ng Pagbabayad <span class="text-red-500">*</span>
-                    </label>
-                    <span id="paymentRequiredNotice" class="text-[10px] font-semibold text-blue-700"></span>
-                </div>
-
-                <div class="grid gap-2 mt-2">
-                    <!-- Online Payment (GCash Checkout) -->
-                    <label id="optGcashWrapper" class="payment-method-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-blue-600 bg-blue-50/40 p-2.5 transition">
-                        <input type="radio" name="payment_method" value="gcash" checked
-                               class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-xs font-bold text-slate-900">Magbayad Online gamit ang GCash</span>
-                                <span class="rounded bg-blue-600 text-white px-1.5 py-0.2 text-[9px] font-bold">GCash</span>
-                            </div>
-                            <p class="mt-0.5 text-[11px] text-slate-500 leading-tight">
-                                Awtomatikong buksan ang GCash app, i-scan ang official QR code, o kopyahin ang mobile number.
-                            </p>
-                            <?php if (!empty($gcashAccounts) && count($gcashAccounts) > 1): ?>
-                            <div class="mt-2 pt-2 border-t border-blue-100">
-                                <label class="block text-[10px] font-bold text-blue-900 mb-1">
-                                    Piliin ang Barangay GCash Account na babayaran:
-                                </label>
-                                <select name="gcash_account_id" class="w-full text-xs rounded-lg border border-slate-300 bg-white py-1 px-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                    <?php foreach ($gcashAccounts as $ga): ?>
-                                    <option value="<?= (int) $ga['id'] ?>" <?= ((int)($ga['is_default'] ?? 0) === 1) ? 'selected' : '' ?>>
-                                        <?= e($ga['account_name']) ?> (<?= e($ga['mobile_number']) ?>)
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                    </label>
-
-                    <!-- Online Payment (PayPal Checkout & Cards) -->
-                    <label id="optPaypalWrapper" class="payment-method-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 bg-white p-2.5 transition hover:border-slate-300">
-                        <input type="radio" name="payment_method" value="paypal"
-                               class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-xs font-bold text-slate-900">Magbayad gamit ang PayPal o Card</span>
-                                <span class="rounded bg-amber-500 text-white px-1.5 py-0.2 text-[9px] font-bold">PayPal</span>
-                            </div>
-                            <p class="mt-0.5 text-[11px] text-slate-500 leading-tight">
-                                Magbayad gamit ang inyong PayPal account o anumang debit/credit card (Visa/Mastercard).
-                            </p>
-                        </div>
-                    </label>
-
-                    <!-- Pay Upon Pickup (Counter) -->
-                    <label id="optPickupWrapper" class="payment-method-card relative flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 bg-white p-2.5 transition hover:border-slate-300">
-                        <input type="radio" name="payment_method" value="pickup"
-                               class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-xs font-bold text-slate-900">Magbayad sa Counter (Pay Upon Pickup)</span>
-                                <span class="rounded bg-slate-100 text-slate-700 px-1.5 py-0.2 text-[9px] font-bold">Cash</span>
-                            </div>
-                            <p class="mt-0.5 text-[11px] text-slate-500 leading-tight">
-                                Ibayad ang kaukulang halaga sa Barangay Hall pagkuha ng inyong dokumento.
-                            </p>
-                        </div>
-                    </label>
-                </div>
-
-                <!-- Digital Lock Notice -->
-                <div id="digitalPaymentNotice" class="mt-2 text-[11px] text-indigo-700 font-medium hidden">
-                    <i class="bi bi-shield-lock me-1"></i>Para sa <strong>Digital Soft Copy</strong>, kailangang online payment (GCash o PayPal) upang mai-release ang digital na kopya online.
-                </div>
-            </div>
-
-            <!-- Free Document Banner -->
-            <div id="freeDocumentBanner" class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-800 hidden">
-                <i class="bi bi-gift-fill text-emerald-600 me-1"></i>
-                Ang dokumentong ito ay <strong>LIBRE</strong> (walang kailangang bayaran). Direktang ipoproseso ng barangay.
-            </div>
-
-            <!-- Purpose -->
-            <div class="mb-4">
-                <label for="purpose" class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                    <?= e(t('documents.field_purpose')) ?> <span class="text-red-500">*</span>
-                </label>
-                <input type="text" id="purpose" name="purpose" required maxlength="255"
-                       placeholder="<?= e(t('documents.purpose_ph')) ?>"
-                       class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100">
-                <p class="mt-1 text-xs text-slate-400"><?= e(t('documents.purpose_help')) ?></p>
-            </div>
-
-            <!-- Additional Notes -->
-            <div class="mb-5">
-                <label for="notes" class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                    <?= e(t('documents.field_notes')) ?>
-                </label>
-                <textarea id="notes" name="notes" rows="3" maxlength="2000"
-                          placeholder="<?= e(t('documents.notes_ph')) ?>"
-                          class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 transition focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"></textarea>
-            </div>
-
-            <!-- Request & Payment Summary Before Submit -->
-            <div id="requestSummaryBox" class="mb-5 rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 p-4">
-                <div class="flex items-center justify-between border-b border-blue-200/60 pb-2 mb-2.5">
-                    <span class="text-xs font-bold uppercase tracking-wider text-blue-950 flex items-center gap-1.5">
-                        <i class="bi bi-receipt text-blue-600"></i> Buod ng Kahilingan (Summary)
-                    </span>
-                    <span id="summaryBadge" class="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">GCash</span>
-                </div>
-                <div class="space-y-1.5 text-xs">
-                    <div class="flex justify-between text-slate-600">
-                        <span>Dokumento:</span>
-                        <strong id="summaryDocName" class="text-slate-800 font-semibold">Barangay Clearance</strong>
-                    </div>
-                    <div class="flex justify-between text-slate-600">
-                        <span>Paraan ng Pagkuha:</span>
-                        <strong id="summaryDelivery" class="text-slate-800 font-semibold">Personal Pickup</strong>
-                    </div>
-                    <div class="flex justify-between text-slate-600">
-                        <span>Paraan ng Pagbayad:</span>
-                        <strong id="summaryPayment" class="text-slate-800 font-semibold">Online GCash Payment</strong>
-                    </div>
-                    <div class="flex justify-between text-slate-600 border-t border-blue-100 pt-1.5 mt-1.5">
-                        <span>Document Fee:</span>
-                        <strong id="summaryFee" class="text-slate-800 font-semibold">₱50.00</strong>
-                    </div>
-                    <div class="flex justify-between text-sm font-black text-blue-950 pt-1 border-t border-blue-200/60">
-                        <span>Kabuuang Halaga (Total):</span>
-                        <strong id="summaryTotal" class="text-blue-700 font-black">₱50.00</strong>
-                    </div>
-                </div>
-            </div>
-
-            <button type="submit" id="submitRequestBtn"
-                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 px-4 py-3.5 text-sm font-bold text-white shadow-md transition hover:from-blue-800 hover:to-indigo-800 hover:shadow-lg active:scale-[0.99]">
-                <i class="bi bi-arrow-right-circle-fill text-base" id="submitBtnIcon"></i>
-                <span id="submitBtnText">Isumite at Magpatuloy sa Pagbabayad (Submit & Continue to Payment)</span>
-            </button>
-        </form>
-
-        <div class="mt-5 border-t border-slate-100 pt-4">
-            <a href="<?= e(route('feedback')) ?>"
-               class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900">
-                <i class="bi bi-chat-dots"></i>
-                <span><?= e(t('documents.ask_staff')) ?></span>
-            </a>
-            <p class="mt-1.5 text-center text-[11px] text-slate-400"><?= e(t('documents.ask_staff_help')) ?></p>
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <i class="bi bi-folder2"></i> <?= count($requests) ?> <?= count($requests) === 1 ? 'Kahilingan' : 'Mga Kahilingan' ?>
+            </span>
         </div>
     </div>
 
-    <!-- ── My requests ───────────────────────────────────────────── -->
-    <div>
-        <div class="mb-3 flex items-center justify-between">
-            <h2 class="text-base font-bold text-slate-900"><?= e(t('documents.mine_title')) ?></h2>
-            <?php if ($requests !== []): ?>
-            <span class="text-xs text-slate-400"><?= count($requests) ?> na-itala</span>
-            <?php endif; ?>
-        </div>
-
-        <?php if ($requests === []): ?>
-        <div class="rounded-2xl border-2 border-dashed border-slate-200 bg-white p-12 text-center">
-            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
-                <i class="bi bi-file-earmark-text" style="font-size: 1.8rem;"></i>
+    <!-- Verification Required Alert (if resident is not verified) -->
+    <?php if (!$isVerifiedResident): ?>
+    <div class="mb-6 rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-5 shadow-sm dark:border-amber-900 dark:bg-amber-950/40">
+        <div class="flex items-start gap-4">
+            <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white font-bold text-xl shadow-sm">
+                <i class="bi bi-shield-exclamation"></i>
             </div>
-            <h3 class="mt-3 text-sm font-bold text-slate-700"><?= e(t('documents.none')) ?></h3>
-            <p class="mt-1 text-xs text-slate-400">Piliin ang kailangang sertipiko sa kaliwang bahagi upang magsimula.</p>
+            <div class="flex-1">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h3 class="text-sm font-bold text-amber-950 dark:text-amber-200">Kailangan ng Beripikasyon ng Residente (Account Verification Required)</h3>
+                    <span class="rounded-full bg-amber-200 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900">
+                        Estado: <?= e(strtoupper($user['status'] ?? 'UNVERIFIED')) ?>
+                    </span>
+                </div>
+                <p class="text-xs text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
+                    Ang mga ganap na <strong>beripikadong residente</strong> lamang ang pinahihintulutang humiling ng mga opisyal na sertipiko at clearance. Mangyaring kumpletuhin ang inyong impormasyon sa inyong profile.
+                </p>
+                <div class="mt-3">
+                    <a href="<?= e(route('profile')) ?>"
+                       class="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-700 transition">
+                        <i class="bi bi-person-badge-fill"></i> Pumunta sa Profile & Magsumite ng Valid ID
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Top Tabs: NEW REQUEST vs MY REQUESTS (Requirement 50) -->
+    <div class="mb-6 flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800">
+        <button type="button" id="tabBtnNew" onclick="switchMainTab('new')"
+                class="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all <?= $activeTab === 'new' ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' ?>">
+            <i class="bi bi-file-earmark-plus text-base"></i>
+            <span>HUMILING NG DOKUMENTO (NEW REQUEST)</span>
+        </button>
+        <button type="button" id="tabBtnRequests" onclick="switchMainTab('requests')"
+                class="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all <?= $activeTab === 'requests' ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' ?>">
+            <i class="bi bi-clock-history text-base"></i>
+            <span>AKING MGA KAHILINGAN (MY REQUESTS)</span>
+            <?php if (!empty($requests)): ?>
+            <span class="rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-xs font-black dark:bg-blue-950 dark:text-blue-300">
+                <?= count($requests) ?>
+            </span>
+            <?php endif; ?>
+        </button>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 1: NEW REQUEST (STEP-BY-STEP WIZARD)                              -->
+    <!-- ========================================================================= -->
+    <div id="sectionNewRequest" class="<?= $activeTab === 'new' ? '' : 'hidden' ?>">
+        
+        <?php if (!$isVerifiedResident): ?>
+        <div class="rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900">
+            <i class="bi bi-shield-lock text-4xl text-slate-400 mb-2 block"></i>
+            <h3 class="text-base font-bold text-slate-800 dark:text-white">Naka-lock ang Paghiling ng Dokumento</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-4 max-w-md mx-auto">
+                Kailangan munang beripikahin ng kawani ng barangay ang inyong resident profile bago magsimulang humiling.
+            </p>
+            <a href="<?= e(route('profile')) ?>" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700">
+                Kumpletuhin ang Beripikasyon
+            </a>
         </div>
         <?php else: ?>
 
-        <div class="space-y-4">
-            <?php foreach ($requests as $r):
-                $reqId    = (int) $r['id'];
-                $st       = (string) $r['status'];
-                $delivery = (string) ($r['delivery_method'] ?? 'pickup');
-                $isDigital= $delivery === 'digital';
-                $hasFile  = !empty($r['document_file_name']);
+        <!-- Wizard Stepper Indicators -->
+        <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div class="grid grid-cols-4 text-center text-xs font-bold">
+                <div id="stepIndicator1" class="flex flex-col items-center text-blue-600 dark:text-blue-400">
+                    <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white font-black text-xs shadow-sm mb-1">
+                        1
+                    </div>
+                    <span class="hidden sm:inline">Piliin ang Dokumento</span>
+                    <span class="sm:hidden text-[11px]">Dokumento</span>
+                </div>
+                <div id="stepIndicator2" class="flex flex-col items-center text-slate-400">
+                    <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400">
+                        2
+                    </div>
+                    <span class="hidden sm:inline">Impormasyon ng Residente</span>
+                    <span class="sm:hidden text-[11px]">Profile</span>
+                </div>
+                <div id="stepIndicator3" class="flex flex-col items-center text-slate-400">
+                    <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400">
+                        3
+                    </div>
+                    <span class="hidden sm:inline">Layunin & Pagtanggap</span>
+                    <span class="sm:hidden text-[11px]">Layunin</span>
+                </div>
+                <div id="stepIndicator4" class="flex flex-col items-center text-slate-400">
+                    <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400">
+                        4
+                    </div>
+                    <span class="hidden sm:inline">Bayaran gamit ang GCash</span>
+                    <span class="sm:hidden text-[11px]">Bayad</span>
+                </div>
+            </div>
+        </div>
 
-                // Payment fields
-                $fee       = (float) ($r['fee_amount'] ?? 0);
-                $payStatus = (string) ($r['payment_status'] ?? 'FREE');
-                $isFree    = $fee <= 0.0 || $payStatus === 'FREE';
-                $isVerified= in_array($payStatus, ['PAID_VERIFIED', 'PAID_AT_PICKUP', 'FREE', 'WAIVED'], true);
-                $isProofSub= $payStatus === 'PAYMENT_PROOF_SUBMITTED';
-                $isRejected= $payStatus === 'PAYMENT_REJECTED';
-                $isUnpaid  = $payStatus === 'UNPAID';
-                $isAtPickup= $payStatus === 'PAY_AT_PICKUP';
+        <!-- Wizard Card Form -->
+        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-md sm:p-8 dark:border-slate-800 dark:bg-slate-900">
+            <form id="wizardDocForm" onsubmit="event.preventDefault(); submitWizardForm();">
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="is_ajax" value="1">
+                <input type="hidden" name="payment_method" value="gcash">
 
-                // Status label
-                $statusLabel = match ($st) {
-                    'awaiting_payment' => 'Naghihintay ng Bayad (Awaiting Payment)',
-                    'ready'            => ($isDigital ? t('documents.status_ready_digital') : t('documents.status_ready')),
-                    'released'         => ($isDigital ? t('documents.status_released_digital') : t('documents.status_released')),
-                    default            => t('documents.status_' . $st),
-                };
-
-                $borderHighlight = match ($st) {
-                    'awaiting_payment' => 'border-indigo-300 ring-1 ring-indigo-100',
-                    'ready'            => 'border-emerald-300 ring-1 ring-emerald-100',
-                    'released'         => 'border-blue-200',
-                    'processing'       => 'border-amber-200',
-                    default            => 'border-slate-200',
-                };
-            ?>
-            <article class="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md <?= $borderHighlight ?>">
-                <!-- Header: Title, Reference, Badges -->
-                <div class="flex flex-wrap items-start justify-between gap-2.5">
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="text-base font-bold text-slate-900">
-                                <?= e(\App\Models\DocumentRequest::label((string) $r['document_type'])) ?>
-                            </h3>
-                            <!-- Delivery Badge -->
-                            <?php if ($isDigital): ?>
-                            <span class="inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] font-bold text-indigo-700">
-                                <i class="bi bi-file-earmark-arrow-down"></i> <?= e(t('documents.badge_digital')) ?>
-                            </span>
-                            <?php else: ?>
-                            <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                                <i class="bi bi-building"></i> <?= e(t('documents.badge_pickup')) ?>
-                            </span>
-                            <?php endif; ?>
-
-                            <!-- Payment Badge -->
-                            <span class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-bold <?= $paymentBadgeStyles[$payStatus] ?? 'bg-slate-100 text-slate-700' ?>">
-                                <i class="bi bi-wallet2"></i>
-                                <?php if ($isFree): ?>
-                                Libre (Free)
-                                <?php elseif ($isVerified): ?>
-                                Bayad na ✓ (₱<?= number_format($fee, 2) ?>)
-                                <?php elseif ($isProofSub): ?>
-                                Naisumite ang Patunay (Awaiting Review)
-                                <?php elseif ($isRejected): ?>
-                                Tinanggihan ang Patunay
-                                <?php elseif ($isAtPickup): ?>
-                                Magbabayad sa Counter (₱<?= number_format($fee, 2) ?>)
-                                <?php else: ?>
-                                Kailangang Bayaran (₱<?= number_format($fee, 2) ?>)
-                                <?php endif; ?>
-                            </span>
-                        </div>
-                        <p class="mt-1 font-mono text-xs text-slate-400">
-                            Reference: <strong class="text-slate-600"><?= e((string) $r['reference_no']) ?></strong>
-                            <?php if (!empty($r['payment_ref'])): ?>
-                            &bull; Payment Ref: <strong class="text-blue-600"><?= e((string) $r['payment_ref']) ?></strong>
-                            <?php endif; ?>
+                <!-- ── STEP 1: CHOOSE DOCUMENT ──────────────────────────── -->
+                <div id="wizardStep1" class="wizard-step">
+                    <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">HAKBANG 1 SA 4</span>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white">Piliin ang Dokumento (Choose Document)</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Pumili ng opisyal na sertipiko o clearance na nais hilingin sa Barangay Bayogo.
                         </p>
                     </div>
 
-                    <!-- Status Pill -->
-                    <div>
-                        <span class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold <?= $statusClass[$st] ?? 'bg-slate-100 text-slate-700' ?>">
-                            <?php if ($st === 'ready'): ?>
-                            <span class="relative flex h-2 w-2">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
-                            <?php endif; ?>
-                            <?= e($statusLabel) ?>
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Purpose & Details -->
-                <div class="mt-3 text-sm text-slate-700">
-                    <span class="font-semibold text-slate-500 text-xs uppercase tracking-wider"><?= e(t('documents.field_purpose')) ?>:</span>
-                    <span class="font-medium text-slate-800"><?= e((string) $r['purpose']) ?></span>
-                </div>
-
-                <?php if (!empty($r['notes'])): ?>
-                <div class="mt-1 text-xs text-slate-500">
-                    <span class="font-semibold text-slate-400">Iyong paalala:</span> <?= e((string) $r['notes']) ?>
-                </div>
-                <?php endif; ?>
-
-                <!-- Staff Note Box -->
-                <?php if (!empty($r['staff_note'])): ?>
-                <div class="mt-3.5 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs leading-relaxed text-amber-900">
-                    <div class="flex items-start gap-2">
-                        <i class="bi bi-chat-quote-fill mt-0.5 text-amber-600"></i>
+                    <div class="space-y-4">
                         <div>
-                            <span class="font-bold text-amber-900">Paalala mula sa Barangay Hall:</span>
-                            <p class="mt-0.5 text-amber-800"><?= e((string) $r['staff_note']) ?></p>
+                            <label for="wizard_document_type" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                                Uri ng Dokumento <span class="text-rose-500">*</span>
+                            </label>
+                            <select id="wizard_document_type" name="document_type" onchange="onDocumentTypeChange()"
+                                    class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                <?php foreach ($types as $key => $label): 
+                                    $f = $docFees[$key] ?? ['amount' => 50.0, 'is_free' => false];
+                                    $isFree = $f['is_free'] || (float)$f['amount'] <= 0;
+                                    $feeTxt = $isFree ? ' (LIBRE)' : sprintf(' (₱%.2f)', (float)$f['amount']);
+                                ?>
+                                <option value="<?= e($key) ?>"
+                                        data-amount="<?= (float)$f['amount'] ?>"
+                                        data-free="<?= $isFree ? '1' : '0' ?>"
+                                        data-label="<?= e($label) ?>">
+                                    <?= e($label) . $feeTxt ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <!-- Document Details Preview (Requirement 3) -->
+                        <div class="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
+                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Bayad sa Dokumento</span>
+                                    <span class="text-lg font-black text-blue-600 dark:text-blue-400" id="step1FeeDisplay">₱50.00</span>
+                                </div>
+                                <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
+                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Mga Kinakailangan</span>
+                                    <span class="font-bold text-slate-800 dark:text-slate-200" id="step1ReqsDisplay">Valid Government ID</span>
+                                </div>
+                                <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
+                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Processing Time</span>
+                                    <span class="font-bold text-emerald-600 dark:text-emerald-400" id="step1TimeDisplay">1–2 business days</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex justify-end">
+                            <button type="button" onclick="goToStep(2)"
+                                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition">
+                                <span>Magpatuloy (Continue)</span>
+                                <i class="bi bi-arrow-right"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
-                <?php endif; ?>
 
-                <!-- ================= PAYMENT SECTION FOR RESIDENT ================= -->
-                <?php if (!$isFree): ?>
+                <!-- ── STEP 2: RESIDENT INFORMATION ─────────────────────── -->
+                <div id="wizardStep2" class="wizard-step hidden">
+                    <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">HAKBANG 2 SA 4</span>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white">Impormasyon ng Residente (Resident Information)</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Awtomatikong kinuha mula sa inyong opisyal na rehistradong profile sa database.
+                        </p>
+                    </div>
 
-                    <!-- Case 1: Unpaid, Awaiting Payment, or Rejected (Continue to Checkout) -->
-                    <?php if ($isUnpaid || $isRejected || $st === 'awaiting_payment'): ?>
-                    <div class="mt-4 rounded-xl border-2 <?= $isRejected ? 'border-rose-200 bg-rose-50/40' : 'border-indigo-100 bg-gradient-to-br from-indigo-50/60 via-blue-50/40 to-white' ?> p-4">
-                        <div class="flex flex-wrap items-center justify-between gap-3">
-                            <div class="flex items-start gap-3">
-                                <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl <?= $isRejected ? 'bg-rose-600' : 'bg-gradient-to-br from-blue-600 to-indigo-700' ?> text-white font-bold text-base shadow-sm">
-                                    <i class="bi <?= $isRejected ? 'bi-exclamation-triangle-fill' : 'bi-qr-code-scan' ?>"></i>
-                                </span>
-                                <div>
-                                    <h4 class="text-sm font-bold text-slate-900">
-                                        <?= $isRejected ? 'Tinanggihan ang Resibo — Kailangan ng Bagong Patunay' : 'Kailangan ng Pagbabayad Online (Payment Required)' ?>
-                                    </h4>
-                                    <p class="text-xs text-slate-600 mt-0.5">
-                                        Halagang babayaran: <strong class="text-indigo-700 font-bold">₱<?= number_format($fee, 2) ?></strong>
-                                        <?php if (!empty($r['payment_ref'])): ?>
-                                        &bull; Ref: <code class="font-mono text-slate-700 font-semibold"><?= e((string) $r['payment_ref']) ?></code>
-                                        <?php endif; ?>
-                                    </p>
-                                    <?php if ($isRejected): ?>
-                                    <div class="mt-2 rounded-lg bg-rose-100/80 p-2.5 text-xs text-rose-900">
-                                        <strong class="font-bold">Dahilan:</strong> <?= e((string) ($r['rejection_reason'] ?: 'Kailangang suriin muli ang resibo.')) ?>
-                                        <?php if (!empty($r['rejection_note'])): ?>
-                                        <div class="mt-0.5 text-[11px] text-rose-800">Tala ng Staff: <?= e((string) $r['rejection_note']) ?></div>
-                                        <?php endif; ?>
-                                    </div>
-                                    <?php else: ?>
-                                    <p class="text-[11px] text-slate-500 mt-1">
-                                        I-click ang button upang buksan ang online checkout (awtomatikong buksan ang GCash app, i-scan ang official QR code, o magbayad via PayPal/Card).
-                                    </p>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
+                    <!-- Read-only verified profile summary (Requirement 4) -->
+                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5 dark:border-emerald-900 dark:bg-emerald-950/20">
+                        <div class="flex items-center justify-between border-b border-emerald-200/60 pb-3 mb-3.5 dark:border-emerald-800">
                             <div class="flex items-center gap-2">
-                                <a href="<?= e(route('documents/' . $reqId . '/payment')) ?>"
-                                   class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:from-blue-800 hover:to-indigo-800 transition active:scale-[0.98]">
-                                    <i class="bi bi-wallet2"></i>
-                                    <span><?= $isRejected ? 'Mag-upload Muli sa Checkout' : 'Magpatuloy sa Pagbabayad (Checkout)' ?></span>
-                                    <i class="bi bi-arrow-right"></i>
-                                </a>
+                                <i class="bi bi-person-check-fill text-xl text-emerald-600 dark:text-emerald-400"></i>
+                                <span class="text-sm font-black text-slate-900 dark:text-white">
+                                    <?= e(User::formatFullName($user)) ?>
+                                </span>
                             </div>
+                            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                                <i class="bi bi-check-circle-fill"></i> Verified ✓
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div>
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Buong Pangalan:</span>
+                                <strong class="text-slate-800 dark:text-slate-200"><?= e(User::formatFullName($user)) ?></strong>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Kaarawan & Edad:</span>
+                                <strong class="text-slate-800 dark:text-slate-200">
+                                    <?= !empty($user['date_of_birth']) ? date('F d, Y', strtotime($user['date_of_birth'])) : 'N/A' ?>
+                                    (<?= User::getAge($user['date_of_birth'] ?? null) !== null ? User::getAge($user['date_of_birth']) . ' anyos' : 'N/A' ?>)
+                                </strong>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Katayuang Sibil / Kasarian:</span>
+                                <strong class="text-slate-800 dark:text-slate-200">
+                                    <?= e(ucfirst($user['civil_status'] ?? 'Single')) ?> &bull; <?= e(ucfirst($user['sex'] ?? 'N/A')) ?>
+                                </strong>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Contact Number:</span>
+                                <strong class="text-slate-800 dark:text-slate-200"><?= e($user['phone'] ?? 'N/A') ?></strong>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Tirahan (Address):</span>
+                                <strong class="text-slate-800 dark:text-slate-200"><?= e(User::formatAddress($user)) ?></strong>
+                            </div>
+                            <?php if (!empty($user['household_no'])): ?>
+                            <div class="sm:col-span-2">
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Household Number:</span>
+                                <strong class="font-mono text-indigo-700 dark:text-indigo-400"><?= e($user['household_no']) ?></strong>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="mt-4 border-t border-emerald-200/60 pt-2 text-[11px] text-emerald-800 dark:text-emerald-300">
+                            * Ang mga impormasyong ito ay awtomatikong ilalagay sa opisyal na sertipiko. Hindi mo na kailangang mag-type muli.
                         </div>
                     </div>
 
-                    <!-- Case 2: Payment Proof Submitted (Under Review) -->
-                    <?php elseif ($isProofSub): ?>
-                    <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
-                        <div class="flex flex-wrap items-center justify-between gap-3">
-                            <div class="flex items-start gap-3">
-                                <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">
-                                    <i class="bi bi-hourglass-split text-lg"></i>
-                                </span>
-                                <div>
-                                    <h4 class="text-sm font-bold text-amber-950">Naisumite na ang Patunay ng Bayad</h4>
-                                    <p class="text-xs text-amber-800 mt-0.5">
-                                        GCash Reference: <strong class="font-mono text-amber-950"><?= e((string) $r['gcash_reference_no']) ?></strong> &bull; Halaga: <strong>₱<?= number_format($fee, 2) ?></strong>
-                                    </p>
-                                    <p class="text-[11px] text-amber-700 mt-1">
-                                        Kasalukuyan nang sinusuri ng kawani ng barangay ang inyong resibo. Awtomatikong magiging handa ang inyong dokumento pagkatapos beripikahin.
-                                    </p>
-                                </div>
+                    <div class="pt-5 flex items-center justify-between">
+                        <button type="button" onclick="goToStep(1)"
+                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <i class="bi bi-arrow-left"></i>
+                            <span>Bumalik</span>
+                        </button>
+                        <button type="button" onclick="goToStep(3)"
+                                class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition">
+                            <span>Magpatuloy (Continue)</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── STEP 3: PURPOSE & RECEIVING METHOD ───────────────── -->
+                <div id="wizardStep3" class="wizard-step hidden">
+                    <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">HAKBANG 3 SA 4</span>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white">Layunin at Paraan ng Pagtanggap</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Piliin kung para saan ang dokumento at kung paano mo ito nais matanggap.
+                        </p>
+                    </div>
+
+                    <div class="space-y-5">
+                        <!-- Purpose (Requirement 5) -->
+                        <div>
+                            <label for="wizard_purpose" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                                Layunin (Purpose) <span class="text-rose-500">*</span>
+                            </label>
+                            <select id="wizard_purpose" name="purpose" required onchange="onPurposeChange(this.value)"
+                                    class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                <option value="Employment">Employment (Paghahanapbuhay / Trabaho)</option>
+                                <option value="School">School (Eskwela / Scholarship / Enrollment)</option>
+                                <option value="Business">Business (Negosyo / Permit)</option>
+                                <option value="Government Requirement">Government Requirement (SSS, PhilHealth, Pag-IBIG, ID)</option>
+                                <option value="Bank Requirement">Bank Requirement (Pagbubukas ng Account / Loan)</option>
+                                <option value="Travel">Travel (Lokal o Pang-ibayong Dagat)</option>
+                                <option value="Other">Other (Iba pang layunin...)</option>
+                            </select>
+
+                            <!-- Other Purpose Text Field -->
+                            <div id="otherPurposeWrapper" class="mt-2.5 hidden">
+                                <label for="wizard_purpose_other" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                                    Tukuyin ang ibang layunin: <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="text" id="wizard_purpose_other" name="purpose_other" maxlength="150"
+                                       placeholder="Halimbawa: Police clearance requirement, scholarship application, atbp."
+                                       class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                             </div>
-                            <?php if (!empty($r['receipt_file_name'])): ?>
-                            <a href="<?= e(route('admin/payments/' . (int) $r['payment_id'] . '/receipt')) ?>" target="_blank"
-                               class="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 shadow-sm hover:bg-amber-50">
-                                <i class="bi bi-receipt"></i>
-                                <span>Tingnan ang Na-upload na Resibo</span>
+                        </div>
+
+                        <!-- Receiving Method (Requirement 5 & 6: Digital Copy vs Pickup at Barangay Hall ONLY) -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+                                Paano mo nais matanggap ang dokumento? <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <!-- Digital Option -->
+                                <label class="receiving-card relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-blue-600 bg-blue-50/30 p-4 transition dark:border-blue-500 dark:bg-blue-950/20">
+                                    <input type="radio" name="delivery_method" value="digital" checked onchange="updateReceivingMethod('digital')"
+                                           class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-sm font-bold text-slate-900 dark:text-white">DIGITAL COPY</span>
+                                            <span class="rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">PDF Soft Copy</span>
+                                        </div>
+                                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            Awtomatikong mai-download ang opisyal na PDF na may QR Code verification kapag naaprubahan.
+                                        </p>
+                                    </div>
+                                </label>
+
+                                <!-- Pickup Option -->
+                                <label class="receiving-card relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-slate-200 bg-white p-4 transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-800/40">
+                                    <input type="radio" name="delivery_method" value="pickup" onchange="updateReceivingMethod('pickup')"
+                                           class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-sm font-bold text-slate-900 dark:text-white">PICKUP AT BARANGAY HALL</span>
+                                            <span class="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-300">Counter</span>
+                                        </div>
+                                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            Kukunin ang pisikal na orihinal na dokumento sa Barangay Hall kapag handa na.
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Notes (Optional) -->
+                        <div>
+                            <label for="wizard_notes" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                                Karagdagang Paalala (Opsyonal):
+                            </label>
+                            <textarea id="wizard_notes" name="notes" rows="2" maxlength="300"
+                                      placeholder="Maaaring maglagay ng karagdagang impormasyon para sa kawani ng barangay..."
+                                      class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="pt-5 flex items-center justify-between">
+                        <button type="button" onclick="goToStep(2)"
+                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <i class="bi bi-arrow-left"></i>
+                            <span>Bumalik</span>
+                        </button>
+                        <button type="button" onclick="goToStep(4)"
+                                class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition">
+                            <span>Suriin ang Bayad (Review Fee)</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── STEP 4: ORDER SUMMARY & PAY WITH GCASH ───────────── -->
+                <div id="wizardStep4" class="wizard-step hidden">
+                    <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">HAKBANG 4 SA 4</span>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white">Kumpirmasyon at Pagbabayad</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Suriin ang kabuuang detalye at magbayad gamit ang GCash via PayMongo.
+                        </p>
+                    </div>
+
+                    <!-- Clean Request Summary (Requirement 24) -->
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/40 mb-5">
+                        <div class="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">REQUEST SUMMARY</div>
+
+                        <div class="space-y-3 text-xs">
+                            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
+                                <span class="text-slate-500 dark:text-slate-400">Dokumento (Document):</span>
+                                <strong class="text-slate-900 dark:text-white" id="summaryDocName">Barangay Clearance</strong>
+                            </div>
+                            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
+                                <span class="text-slate-500 dark:text-slate-400">Paraan ng Pagtanggap:</span>
+                                <strong class="text-slate-900 dark:text-white" id="summaryReceiving">Digital Copy</strong>
+                            </div>
+                            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
+                                <span class="text-slate-500 dark:text-slate-400">Layunin (Purpose):</span>
+                                <strong class="text-slate-900 dark:text-white" id="summaryPurpose">Employment</strong>
+                            </div>
+                            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
+                                <span class="text-slate-500 dark:text-slate-400">Bayad sa Dokumento:</span>
+                                <span class="font-bold text-slate-900 dark:text-white" id="summaryDocFee">₱50.00</span>
+                            </div>
+                            <div class="flex items-center justify-between pt-1">
+                                <span class="text-sm font-black text-slate-900 dark:text-white">KABUUAN (TOTAL):</span>
+                                <span class="text-xl font-black text-blue-600 dark:text-blue-400" id="summaryTotal">₱50.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method Box (Requirement 7: GCash via PayMongo Only) -->
+                        <div id="summaryPaymentMethodBox" class="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-700 flex items-center justify-between">
+                            <span class="text-xs text-slate-500 dark:text-slate-400">Paraan ng Pagbabayad:</span>
+                            <span class="inline-flex items-center gap-1.5 font-bold text-xs text-blue-700 dark:text-blue-300">
+                                <i class="bi bi-check-circle-fill text-blue-600"></i> GCash via PayMongo
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Alert message container -->
+                    <div id="wizardAlertBox" class="hidden mb-4 rounded-xl p-3 text-xs font-semibold"></div>
+
+                    <!-- Action Buttons -->
+                    <div class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <button type="button" onclick="goToStep(3)"
+                                class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <i class="bi bi-arrow-left"></i>
+                            <span>Bumalik</span>
+                        </button>
+
+                        <!-- Pay Button with double click protection (Requirement 38) -->
+                        <button type="submit" id="wizardSubmitBtn"
+                                class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] transition">
+                            <i class="bi bi-lock-fill"></i>
+                            <span id="wizardSubmitBtnText">BAYARAN ANG ₱50.00 GAMIT ANG GCASH</span>
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+        <?php endif; ?>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 2: MY REQUESTS (COMPACT LIST & DETAIL MODAL)                      -->
+    <!-- ========================================================================= -->
+    <div id="sectionMyRequests" class="<?= $activeTab === 'requests' ? '' : 'hidden' ?>">
+
+        <?php if (empty($requests)): ?>
+        <div class="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div class="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+                <i class="bi bi-folder2 text-3xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">Wala pang nakatalang kahilingan</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-5 max-w-sm mx-auto">
+                Wala ka pang isinusumiteng kahilingan ng dokumento sa Barangay Bayogo.
+            </p>
+            <button type="button" onclick="switchMainTab('new')"
+                    class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition">
+                <i class="bi bi-plus-lg"></i> Gumawa ng Bagong Kahilingan
+            </button>
+        </div>
+        <?php else: ?>
+
+        <!-- Compact Requests Container (Requirement 25) -->
+        <div class="space-y-3">
+            <?php foreach ($requests as $r):
+                $reqId      = (int) $r['id'];
+                $docLabel   = DocumentRequest::label((string) $r['document_type']);
+                $refNo      = (string) $r['reference_no'];
+                $statusKey  = (string) $r['status'];
+                $deliv      = (string) ($r['delivery_method'] ?? 'pickup');
+                $isDigital  = ($deliv === 'digital');
+                $fee        = (float) ($r['fee_amount'] ?? 0);
+                $payStatus  = (string) ($r['payment_status'] ?? 'UNPAID');
+                $isPaid     = DocumentRequest::isPaymentVerified($r);
+                $hasFile    = !empty($r['document_file_name']);
+
+                // Status Labels
+                $statusDisplay = DocumentRequest::statusLabel($statusKey);
+                if ($isDigital && $statusKey === 'ready') {
+                    $statusDisplay = 'Available for Download';
+                } elseif (!$isDigital && $statusKey === 'ready') {
+                    $statusDisplay = 'Ready for Pickup';
+                }
+
+                // Payment Status Label
+                $payDisplay = 'Awaiting Payment';
+                $payBadgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
+                if ($fee <= 0.0 || $payStatus === DocumentPayment::STATUS_FREE || $payStatus === DocumentPayment::STATUS_NOT_REQUIRED) {
+                    $payDisplay = 'Not Required';
+                    $payBadgeClass = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+                } elseif ($isPaid) {
+                    $payDisplay = 'Paid ✓';
+                    $payBadgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
+                } elseif (in_array($payStatus, ['FAILED', 'PAYMENT_REJECTED'], true)) {
+                    $payDisplay = 'Failed';
+                    $payBadgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300';
+                } elseif ($payStatus === 'CANCELLED') {
+                    $payDisplay = 'Cancelled';
+                    $payBadgeClass = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+                }
+            ?>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs transition hover:border-slate-300 sm:p-5 dark:border-slate-800 dark:bg-slate-900">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    
+                    <!-- Document Info -->
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <h3 class="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                <?= e($docLabel) ?>
+                            </h3>
+                            <span class="rounded bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                <?= e($refNo) ?>
+                            </span>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                            <span><i class="bi bi-calendar3 me-1"></i><?= date('M d, Y', strtotime($r['requested_at'])) ?></span>
+                            <span>&bull;</span>
+                            <span>
+                                <i class="bi bi-box-seam me-1"></i><?= $isDigital ? 'Digital Copy' : 'Pickup at Hall' ?>
+                            </span>
+                            <?php if ($fee > 0): ?>
+                            <span>&bull;</span>
+                            <span class="font-bold text-slate-700 dark:text-slate-300">₱<?= number_format($fee, 2) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Statuses & Action -->
+                    <div class="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
+                        <div class="flex items-center gap-1.5">
+                            <!-- Payment Badge -->
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold <?= $payBadgeClass ?>">
+                                <?= e($payDisplay) ?>
+                            </span>
+
+                            <!-- Request Status Badge -->
+                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 border border-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-900">
+                                <?= e($statusDisplay) ?>
+                            </span>
+                        </div>
+
+                        <!-- Action: View Details or Pay -->
+                        <div class="flex items-center gap-1.5">
+                            <?php if (!$isPaid && $fee > 0): ?>
+                            <a href="<?= e(route('documents/' . $reqId . '/payment')) ?>"
+                               class="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition">
+                                <i class="bi bi-credit-card-2-front"></i> Pay GCash
                             </a>
                             <?php endif; ?>
+
+                            <button type="button" onclick="openDetailsModal(<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>)"
+                                    class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                <i class="bi bi-eye"></i> View Details
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Case 3: Paid & Verified -->
-                    <?php elseif ($isVerified): ?>
-                    <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div class="flex items-center gap-2.5">
-                                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-sm">
-                                    <i class="bi bi-patch-check-fill"></i>
-                                </span>
-                                <div>
-                                    <span class="text-xs font-bold text-emerald-950">
-                                        <?= $payStatus === 'PAID_AT_PICKUP' ? 'Nabayaran sa Counter' : 'Naberipika na ang Bayad' ?> (₱<?= number_format($fee, 2) ?>)
-                                    </span>
-                                    <div class="text-[11px] text-emerald-700">
-                                        Ref: <?= e((string) ($r['payment_ref'] ?? 'PAID')) ?>
-                                        <?php if (!empty($r['verified_at'])): ?>
-                                        &bull; <?= e(format_datetime((string) $r['verified_at'])) ?>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <a href="<?= e(route('documents/' . $reqId . '/acknowledgement')) ?>" target="_blank"
-                                   class="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-sm hover:bg-emerald-50">
-                                    <i class="bi bi-printer"></i> Katibayan ng Bayad
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Case 4: Pay at Pickup -->
-                    <?php elseif ($isAtPickup): ?>
-                    <div class="mt-4 rounded-xl border border-purple-200 bg-purple-50/60 p-3.5">
-                        <div class="flex items-start gap-2.5">
-                            <i class="bi bi-cash-coin text-purple-600 text-lg mt-0.5"></i>
-                            <div>
-                                <span class="text-xs font-bold text-purple-950">Magbabayad sa Counter pagkuha (₱<?= number_format($fee, 2) ?>)</span>
-                                <p class="text-[11px] text-purple-800 mt-0.5">
-                                    Pakidala ang eksaktong halaga sa Barangay Hall pagkuha ng inyong opisyal na dokumento.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-
-                <?php endif; ?>
-
-                <!-- SOFT COPY ATTACHMENT CARD (If uploaded by Admin) -->
-                <?php if ($hasFile): ?>
-                    <?php if ($isDigital && !$isVerified): ?>
-                    <!-- Digital Soft copy uploaded but payment locked -->
-                    <div class="mt-4 rounded-xl border-2 border-amber-200 bg-amber-50/60 p-4">
-                        <div class="flex items-start gap-3">
-                            <i class="bi bi-lock-fill text-amber-600 text-xl mt-0.5"></i>
-                            <div>
-                                <h4 class="text-sm font-bold text-amber-950">Handa na ang Digital Soft Copy ngunit naka-kandado</h4>
-                                <p class="text-xs text-amber-800 mt-0.5">
-                                    Nai-upload na ng kawani ang opisyal na kopya, ngunit kailangan munang maberipika ang inyong bayad (₱<?= number_format($fee, 2) ?>) bago ma-download.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <?php else: ?>
-                    <!-- Fully unlocked and downloadable -->
-                    <div class="mt-4 rounded-xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-blue-50/40 p-4">
-                        <div class="flex flex-wrap items-center justify-between gap-3">
-                            <div class="flex items-center gap-3">
-                                <span class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
-                                    <?php
-                                    $ft = strtolower((string) $r['document_file_type']);
-                                    if (str_contains($ft, 'pdf')) {
-                                        echo '<i class="bi bi-file-earmark-pdf" style="font-size:1.35rem;"></i>';
-                                    } elseif (str_contains($ft, 'image')) {
-                                        echo '<i class="bi bi-file-earmark-image" style="font-size:1.35rem;"></i>';
-                                    } else {
-                                        echo '<i class="bi bi-file-earmark-word" style="font-size:1.35rem;"></i>';
-                                    }
-                                    ?>
-                                </span>
-                                <div class="min-w-0">
-                                    <div class="flex items-center gap-2">
-                                        <h4 class="truncate text-sm font-bold text-slate-900" title="<?= e((string) $r['document_file_name']) ?>">
-                                            <?= e((string) $r['document_file_name']) ?>
-                                        </h4>
-                                        <span class="rounded bg-indigo-200/80 px-1.5 py-0.2 text-[10px] font-bold uppercase tracking-wider text-indigo-800">Opisyal</span>
-                                    </div>
-                                    <p class="mt-0.5 text-xs text-slate-500">
-                                        <?= \App\Models\DocumentRequest::formatFileSize((int) $r['document_file_size']) ?>
-                                        <?php if (!empty($r['document_uploaded_at'])): ?>
-                                        &bull; <?= e(format_datetime((string) $r['document_uploaded_at'])) ?>
-                                        <?php endif; ?>
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Action Buttons: Preview, Download, Print -->
-                            <div class="flex flex-wrap items-center gap-2">
-                                <!-- Preview button -->
-                                <a href="<?= e(route('documents/' . $reqId . '/preview')) ?>"
-                                   target="_blank"
-                                   class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
-                                   title="<?= e(t('documents.preview_btn')) ?>">
-                                    <i class="bi bi-eye"></i>
-                                    <span><?= e(t('documents.preview_btn')) ?></span>
-                                </a>
-
-                                <!-- Download button -->
-                                <a href="<?= e(route('documents/' . $reqId . '/download')) ?>"
-                                   class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700 active:scale-95">
-                                    <i class="bi bi-download"></i>
-                                    <span><?= e(t('documents.download_btn')) ?></span>
-                                </a>
-
-                                <!-- Print button -->
-                                <button type="button"
-                                        onclick="printDocument('<?= e(route('documents/' . $reqId . '/preview')) ?>')"
-                                        class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50">
-                                    <i class="bi bi-printer"></i>
-                                    <span><?= e(t('documents.print_btn')) ?></span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-                <?php elseif ($isDigital && $st !== 'rejected'): ?>
-                <!-- Digital but file not yet uploaded -->
-                <div class="mt-3.5 flex items-center gap-2 rounded-xl bg-slate-50 border border-dashed border-slate-200 p-3 text-xs text-slate-500">
-                    <i class="bi bi-info-circle text-slate-400"></i>
-                    <span>Inihahanda ng kawani ng barangay ang opisyal na digital file. Makakatanggap kayo ng abiso at lalabas dito ang download button kapag handa na.</span>
                 </div>
-                <?php elseif (!$isDigital && $st === 'ready'): ?>
-                <!-- Pickup Ready Instructions -->
-                <div class="mt-3.5 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs leading-relaxed text-emerald-900">
-                    <div class="flex items-start gap-2.5">
-                        <i class="bi bi-check-circle-fill text-emerald-600 text-base mt-0.5"></i>
-                        <div>
-                            <strong class="font-bold text-emerald-900">Handa na para sa personal na pagkuha!</strong>
-                            <p class="mt-0.5 text-emerald-800">
-                                Maaari na ninyong kunin ang inyong dokumento sa Barangay Hall Counter. Magdala ng 1 valid ID at ibigay ang Reference No. <code class="font-bold font-mono text-emerald-950 bg-emerald-100/80 px-1 py-0.5 rounded"><?= e((string) $r['reference_no']) ?></code>.
-                                <?php if ($isAtPickup): ?>
-                                Ihanda rin ang <strong>₱<?= number_format($fee, 2) ?></strong> para sa bayarin.
-                                <?php endif; ?>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <!-- Footer Timestamps -->
-                <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[11px] text-slate-400">
-                    <div>
-                        <?= e(t('documents.filed_on')) ?>: <strong><?= e(format_datetime((string) $r['requested_at'])) ?></strong>
-                    </div>
-                    <?php if (!empty($r['ready_at'])): ?>
-                    <div>
-                        <?= e(t('documents.ready_on')) ?>: <strong class="text-emerald-700"><?= e(format_datetime((string) $r['ready_at'])) ?></strong>
-                    </div>
-                    <?php endif; ?>
-                    <?php if (!empty($r['released_at'])): ?>
-                    <div>
-                        Natapos: <strong class="text-blue-700"><?= e(format_datetime((string) $r['released_at'])) ?></strong>
-                    </div>
-                    <?php endif; ?>
-                </div>
-            </article>
+            </div>
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
+
     </div>
+
 </div>
 
-<!-- Modal to View Larger QR -->
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 hidden" id="qrModal">
-    <div class="relative w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-2xl">
-        <h3 class="text-base font-bold text-slate-900 mb-1" id="qrModalTitle">GCash QR Code</h3>
-        <p class="text-xs text-slate-500 mb-3">I-scan gamit ang GCash App para sa eksaktong bayad.</p>
-        <img id="qrModalImg" src="" alt="Enlarged QR" class="mx-auto max-h-72 rounded-xl border border-slate-200 shadow-sm">
-        <button type="button" onclick="closeQrModal()" class="mt-4 w-full rounded-xl bg-slate-100 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200">
-            Isara
-        </button>
+<!-- ========================================================================= -->
+<!-- REQUEST DETAILS MODAL (Requirement 26)                                     -->
+<!-- ========================================================================= -->
+<div id="detailsModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/60 p-4 sm:p-6 flex items-center justify-center backdrop-blur-xs transition-opacity">
+    <div class="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-800 transition-all">
+        
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 dark:border-slate-800">
+            <div>
+                <h3 class="text-base font-black text-slate-900 dark:text-white" id="modalDocTitle">REQUEST DETAILS</h3>
+                <span class="font-mono text-xs font-bold text-blue-600 dark:text-blue-400" id="modalRefNo"></span>
+            </div>
+            <button type="button" onclick="closeDetailsModal()" class="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800">
+                <i class="bi bi-x-lg text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="space-y-4 text-xs">
+
+            <!-- Request Details Box -->
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-800/40">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">DETALYE NG KAHILINGAN</div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Dokumento:</span>
+                    <strong class="text-slate-900 dark:text-white" id="modalDocName"></strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Layunin (Purpose):</span>
+                    <strong class="text-slate-900 dark:text-white" id="modalPurpose"></strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Petsa ng Paghiling:</span>
+                    <strong class="text-slate-900 dark:text-white" id="modalDate"></strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Paraan ng Pagtanggap:</span>
+                    <strong class="text-slate-900 dark:text-white" id="modalReceiving"></strong>
+                </div>
+            </div>
+
+            <!-- Payment Details Box -->
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-800/40">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">PAGBABAYAD (PAYMENT)</div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Halaga:</span>
+                    <strong class="text-slate-900 dark:text-white" id="modalAmount"></strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Paraan ng Bayad:</span>
+                    <strong class="text-slate-900 dark:text-white" id="modalPaymentMethod">GCash via PayMongo</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Estado ng Bayad:</span>
+                    <span id="modalPaymentStatus" class="font-bold"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Payment Reference:</span>
+                    <span class="font-mono font-bold text-slate-900 dark:text-white" id="modalPayRef"></span>
+                </div>
+            </div>
+
+            <!-- Process Timeline Tracker (Requirement 26) -->
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-800/40">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">PROSESO (TIMELINE)</div>
+                <div class="space-y-2 text-xs" id="modalTimeline">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- Pickup or Download Message Alert -->
+            <div id="modalNoticeBox" class="hidden rounded-xl p-3 text-xs font-semibold"></div>
+
+            <!-- Action Buttons inside Modal -->
+            <div class="pt-2 flex flex-col sm:flex-row gap-2 justify-end" id="modalActionButtons">
+                <!-- Populated dynamically via JS -->
+            </div>
+
+        </div>
+
     </div>
 </div>
-
-<!-- Hidden iframe for instant printing -->
-<iframe id="printFrame" style="display:none;width:0;height:0;border:0;"></iframe>
 
 <script>
-function printDocument(url) {
-    const frame = document.getElementById('printFrame');
-    if (!frame) return;
-    frame.src = url;
-    frame.onload = function() {
-        try {
-            frame.contentWindow.focus();
-            frame.contentWindow.print();
-        } catch (e) {
-            const win = window.open(url, '_blank');
-            if (win) {
-                win.focus();
-                win.print();
-            }
-        }
-    };
-}
+var docFeesData = <?= json_encode($docFees) ?>;
+var currentStep = 1;
+var selectedFee = 50.0;
+var isSelectedFree = false;
 
-function viewLargerQr(src, name) {
-    document.getElementById('qrModalImg').src = src;
-    document.getElementById('qrModalTitle').innerText = name + ' - GCash QR';
-    document.getElementById('qrModal').classList.remove('hidden');
-}
+function switchMainTab(tab) {
+    var btnNew = document.getElementById('tabBtnNew');
+    var btnReq = document.getElementById('tabBtnRequests');
+    var secNew = document.getElementById('sectionNewRequest');
+    var secReq = document.getElementById('sectionMyRequests');
 
-function closeQrModal() {
-    document.getElementById('qrModal').classList.add('hidden');
-}
-
-// Document metadata descriptions
-const docMetadata = {
-    barangay_clearance: {
-        title: 'Barangay Clearance',
-        desc: 'Opisyal na patunay na ang residente ay may magandang reputasyon, walang nakabinbing kaso o reklamo sa barangay, at lehitimong naninirahan.',
-        reqs: '1 Valid Government ID, Katibayan ng Paninirahan (Billing/Cedula)',
-        time: '1-2 Araw ng Trabaho (Instant sa Digital Soft Copy kapag naaprubahan)'
-    },
-    residency: {
-        title: 'Certificate of Residency',
-        desc: 'Katibayan na ang indibidwal ay lehitimong naninirahan sa nasasakupang purok/sitio ng Barangay Poblacion sa loob ng takdang panahon.',
-        reqs: '1 Valid Government ID o Katibayan mula sa Purok Leader',
-        time: '1 Araw ng Trabaho'
-    },
-    indigency: {
-        title: 'Certificate of Indigency',
-        desc: 'Opisyal na sertipiko para sa mga residenteng kabilang sa low-income o indigent families, ginagamit para sa medical assistance, scholarship, o financial aid.',
-        reqs: '1 Valid ID, Rekomendasyon mula sa Purok Leader o Barangay Health Worker',
-        time: '1 Araw ng Trabaho (LIBRE)'
-    },
-    business_clearance: {
-        title: 'Barangay Business Clearance',
-        desc: 'Pahintulot at clearance para sa pagtatayo o pagpapatakbo ng lehitimong negosyo o komersyo sa loob ng barangay.',
-        reqs: 'DTI / SEC Registration, Contract of Lease o Land Title',
-        time: '2-3 Araw ng Trabaho'
+    if (tab === 'new') {
+        btnNew.className = "flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400";
+        btnReq.className = "flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white";
+        secNew.classList.remove('hidden');
+        secReq.classList.add('hidden');
+    } else {
+        btnReq.className = "flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400";
+        btnNew.className = "flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white";
+        secReq.classList.remove('hidden');
+        secNew.classList.add('hidden');
     }
-};
+}
 
-const deliveryFeeAmount = <?= json_encode((float) ($deliveryFee ?? 40.00)) ?>;
-const isResidentVerified = <?= json_encode((bool) $isVerifiedResident) ?>;
+function onDocumentTypeChange() {
+    var sel = document.getElementById('wizard_document_type');
+    var opt = sel.options[sel.selectedIndex];
+    var amt = parseFloat(opt.getAttribute('data-amount') || '50');
+    var isFree = (opt.getAttribute('data-free') === '1' || amt <= 0);
 
-// Dynamic Fee and Payment Option Handler
-function handleDocTypeChange() {
-    const select = document.getElementById('document_type');
-    const selectedOpt = select.options[select.selectedIndex];
-    const docKey = select.value;
-    const amount = parseFloat(selectedOpt.getAttribute('data-amount') || '0');
-    const isFree = selectedOpt.getAttribute('data-free') === '1' || amount <= 0;
+    selectedFee = amt;
+    isSelectedFree = isFree;
 
-    const badge = document.getElementById('feeBadge');
-    const paySec = document.getElementById('paymentMethodSection');
-    const freeBanner = document.getElementById('freeDocumentBanner');
+    var feeText = isFree ? 'LIBRE (₱0.00)' : '₱' + amt.toFixed(2);
+    document.getElementById('step1FeeDisplay').innerText = feeText;
+    document.getElementById('summaryDocFee').innerText = feeText;
+    document.getElementById('summaryTotal').innerText = isFree ? '₱0.00' : '₱' + amt.toFixed(2);
+    document.getElementById('summaryDocName').innerText = opt.getAttribute('data-label') || opt.text;
 
-    // Update Details Box
-    const meta = docMetadata[docKey] || {
-        title: selectedOpt.text.replace(/\(₱.*?\)/, '').replace(/\(LIBRE\)/, '').trim(),
-        desc: 'Opisyal na dokumento ng Pamahalaang Barangay.',
-        reqs: '1 Valid ID',
-        time: '1-2 Araw ng Trabaho'
-    };
-    const titleEl = document.getElementById('docDetailTitle');
-    const descEl  = document.getElementById('docDetailDesc');
-    const reqsEl  = document.getElementById('docDetailReqs');
-    const timeEl  = document.getElementById('docDetailTime');
-    if (titleEl) titleEl.innerText = meta.title;
-    if (descEl) descEl.innerText = meta.desc;
-    if (reqsEl) reqsEl.innerText = meta.reqs;
-    if (timeEl) timeEl.innerText = meta.time;
-
+    var submitBtnText = document.getElementById('wizardSubmitBtnText');
+    var paymentBox = document.getElementById('summaryPaymentMethodBox');
     if (isFree) {
-        badge.innerText = 'LIBRE';
-        badge.className = 'rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-100';
-        paySec.classList.add('hidden');
-        freeBanner.classList.remove('hidden');
+        submitBtnText.innerText = 'ISUMITE ANG KAHILINGAN (LIBRE)';
+        paymentBox.classList.add('hidden');
     } else {
-        badge.innerText = '₱' + amount.toFixed(2);
-        badge.className = 'rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-100';
-        paySec.classList.remove('hidden');
-        freeBanner.classList.add('hidden');
+        submitBtnText.innerText = 'BAYARAN ANG ₱' + amt.toFixed(2) + ' GAMIT ANG GCASH';
+        paymentBox.classList.remove('hidden');
     }
-
-    handleDeliveryChange();
 }
 
-function handleDeliveryChange() {
-    const delRadio = document.querySelector('input[name="delivery_method"]:checked');
-    const delMethod = delRadio ? delRadio.value : 'pickup';
-
-    const select = document.getElementById('document_type');
-    const selectedOpt = select.options[select.selectedIndex];
-    const amount = parseFloat(selectedOpt.getAttribute('data-amount') || '0');
-    const isFree = selectedOpt.getAttribute('data-free') === '1' || amount <= 0;
-
-    const optPickup = document.getElementById('optPickupWrapper');
-    const optGcash = document.getElementById('optGcashWrapper');
-    const digitalNotice = document.getElementById('digitalPaymentNotice');
-    const delAddressSec = document.getElementById('deliveryAddressSection');
-    const pickupRadio = document.querySelector('input[name="payment_method"][value="pickup"]');
-    const gcashRadio = document.querySelector('input[name="payment_method"][value="gcash"]');
-
-    if (delAddressSec) {
-        if (delMethod === 'delivery') {
-            delAddressSec.classList.remove('hidden');
-        } else {
-            delAddressSec.classList.add('hidden');
-        }
-    }
-
-    if ((delMethod === 'digital' || delMethod === 'delivery') && !isFree) {
-        // Digital soft copy or Delivery requires Online Payment (GCash or PayPal)
-        if (optPickup) {
-            optPickup.classList.add('hidden');
-        }
-        if (pickupRadio && pickupRadio.checked) {
-            if (gcashRadio) gcashRadio.checked = true;
-        }
-        if (digitalNotice) {
-            digitalNotice.classList.remove('hidden');
-            digitalNotice.innerHTML = delMethod === 'delivery' 
-                ? '<i class="bi bi-truck me-1"></i>Para sa <strong>Home Delivery</strong>, mangyaring magbayad online (GCash o PayPal).'
-                : '<i class="bi bi-shield-lock me-1"></i>Para sa <strong>Digital Soft Copy</strong>, kailangang online payment (GCash o PayPal) upang mai-release ang digital na kopya online.';
-        }
+function onPurposeChange(val) {
+    var otherWrap = document.getElementById('otherPurposeWrapper');
+    var otherInput = document.getElementById('wizard_purpose_other');
+    if (val === 'Other') {
+        otherWrap.classList.remove('hidden');
+        otherInput.required = true;
+        otherInput.focus();
     } else {
-        if (optPickup) {
-            optPickup.classList.remove('hidden');
-        }
-        if (digitalNotice) {
-            digitalNotice.classList.add('hidden');
+        otherWrap.classList.add('hidden');
+        otherInput.required = false;
+    }
+}
+
+function updateReceivingMethod(method) {
+    document.getElementById('summaryReceiving').innerText = (method === 'digital') ? 'Digital Copy (Online)' : 'Pickup at Barangay Hall';
+}
+
+function goToStep(step) {
+    // Validate step transition
+    if (step === 4) {
+        var pur = document.getElementById('wizard_purpose').value;
+        if (pur === 'Other') {
+            var oth = document.getElementById('wizard_purpose_other').value.trim();
+            if (oth.length < 3) {
+                alert('Mangyaring ilagay ang layunin sa text field.');
+                document.getElementById('wizard_purpose_other').focus();
+                return;
+            }
+            document.getElementById('summaryPurpose').innerText = oth;
+        } else {
+            document.getElementById('summaryPurpose').innerText = pur;
         }
     }
 
-    updateDeliveryCardStyles();
-    updatePaymentCardStyles();
+    currentStep = step;
+    for (var i = 1; i <= 4; i++) {
+        var el = document.getElementById('wizardStep' + i);
+        var ind = document.getElementById('stepIndicator' + i);
+        var circle = ind.querySelector('.step-circle');
+
+        if (i === step) {
+            el.classList.remove('hidden');
+            ind.className = "flex flex-col items-center text-blue-600 dark:text-blue-400";
+            circle.className = "step-circle flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white font-black text-xs shadow-sm mb-1";
+        } else if (i < step) {
+            el.classList.add('hidden');
+            ind.className = "flex flex-col items-center text-emerald-600 dark:text-emerald-400";
+            circle.className = "step-circle flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white font-black text-xs mb-1";
+            circle.innerHTML = '<i class="bi bi-check-lg"></i>';
+        } else {
+            el.classList.add('hidden');
+            ind.className = "flex flex-col items-center text-slate-400";
+            circle.className = "step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400";
+            circle.innerText = i;
+        }
+    }
+
+    window.scrollTo({ top: 100, behavior: 'smooth' });
 }
 
-function updateDeliveryCardStyles() {
-    document.querySelectorAll('.delivery-option-card').forEach(card => {
-        const r = card.querySelector('input[type="radio"]');
-        if (r && r.checked) {
-            card.classList.add('border-blue-600', 'bg-blue-50/40', 'shadow-sm');
-            card.classList.remove('border-slate-200', 'bg-slate-50/50');
-        } else {
-            card.classList.remove('border-blue-600', 'bg-blue-50/40', 'shadow-sm');
-            card.classList.add('border-slate-200', 'bg-slate-50/50');
+function submitWizardForm() {
+    var btn = document.getElementById('wizardSubmitBtn');
+    var btnText = document.getElementById('wizardSubmitBtnText');
+    var alertBox = document.getElementById('wizardAlertBox');
+
+    // Requirement 38: Prevent double click
+    btn.disabled = true;
+    btnText.innerText = 'CREATING SECURE PAYMENT...';
+
+    var form = document.getElementById('wizardDocForm');
+    var formData = new FormData(form);
+
+    fetch('<?= e(route('documents')) ?>', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
         }
+    })
+    .then(function(res) {
+        return res.json();
+    })
+    .then(function(data) {
+        if (!data || !data.success) {
+            btn.disabled = false;
+            btnText.innerText = isSelectedFree ? 'ISUMITE ANG KAHILINGAN (LIBRE)' : 'BAYARAN ANG ₱' + selectedFee.toFixed(2) + ' GAMIT ANG GCASH';
+            alertBox.className = "mb-4 rounded-xl p-3.5 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-900";
+            alertBox.innerText = data.error || 'Nabigong likhain ang kahilingan.';
+            alertBox.classList.remove('hidden');
+            return;
+        }
+
+        // If free document, redirect to requests list
+        if (data.is_free) {
+            window.location.href = data.redirect_url || '<?= e(route('documents?tab=requests')) ?>';
+            return;
+        }
+
+        // If paid document with PayMongo checkout URL, redirect immediately
+        if (data.checkout_url) {
+            btnText.innerText = 'REDIRECTING TO GCASH VIA PAYMONGO...';
+            window.location.href = data.checkout_url;
+            return;
+        }
+
+        // Fallback
+        if (data.fallback_url) {
+            window.location.href = data.fallback_url;
+        }
+    })
+    .catch(function(err) {
+        console.error('Submission error:', err);
+        btn.disabled = false;
+        btnText.innerText = isSelectedFree ? 'ISUMITE ANG KAHILINGAN (LIBRE)' : 'BAYARAN ANG ₱' + selectedFee.toFixed(2) + ' GAMIT ANG GCASH';
+        alertBox.className = "mb-4 rounded-xl p-3.5 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200";
+        alertBox.innerText = 'May naganap na aberya sa koneksyon. Pakisubukan muli.';
+        alertBox.classList.remove('hidden');
     });
 }
 
-function updatePaymentCardStyles() {
-    document.querySelectorAll('.payment-method-card').forEach(card => {
-        const r = card.querySelector('input[type="radio"]');
-        if (r && r.checked) {
-            card.classList.add('border-blue-600', 'bg-blue-50/40', 'shadow-sm');
-            card.classList.remove('border-slate-200', 'bg-white');
-        } else {
-            card.classList.remove('border-blue-600', 'bg-blue-50/40', 'shadow-sm');
-            card.classList.add('border-slate-200', 'bg-white');
-        }
-    });
-}
+function openDetailsModal(r) {
+    document.getElementById('modalRefNo').innerText = r.reference_no || '';
+    document.getElementById('modalDocName').innerText = r.document_type || '';
+    document.getElementById('modalPurpose').innerText = r.purpose || '';
+    document.getElementById('modalDate').innerText = r.requested_at ? new Date(r.requested_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
+    document.getElementById('modalReceiving').innerText = (r.delivery_method === 'digital') ? 'Digital Copy' : 'Pickup at Barangay Hall';
 
-function updateSummaryAndButton() {
-    const select = document.getElementById('document_type');
-    const selectedOpt = select ? select.options[select.selectedIndex] : null;
-    const docName = selectedOpt ? selectedOpt.text.replace(/\(₱.*?\)/, '').replace(/\(LIBRE\)/, '').trim() : 'Dokumento';
-    let docFee = selectedOpt ? parseFloat(selectedOpt.getAttribute('data-amount') || '0') : 0;
-    const isDocFree = selectedOpt ? (selectedOpt.getAttribute('data-free') === '1' || docFee <= 0) : true;
+    var fee = parseFloat(r.fee_amount || 0);
+    document.getElementById('modalAmount').innerText = fee > 0 ? '₱' + fee.toFixed(2) : 'LIBRE';
+    document.getElementById('modalPayRef').innerText = r.payment_ref || (r.reference_no ? 'PAY-' + r.reference_no : 'N/A');
 
-    const delRadio = document.querySelector('input[name="delivery_method"]:checked');
-    const delMethod = delRadio ? delRadio.value : 'pickup';
-    let deliveryLabel = 'Personal Pickup (Counter)';
-    let extraFee = 0;
-
-    if (delMethod === 'digital') {
-        deliveryLabel = 'Digital Soft Copy (Online)';
-    } else if (delMethod === 'delivery') {
-        deliveryLabel = 'Home Delivery (+₱' + deliveryFeeAmount.toFixed(2) + ')';
-        extraFee = deliveryFeeAmount;
-    }
-
-    const payRadio = document.querySelector('input[name="payment_method"]:checked');
-    const payMethod = payRadio ? payRadio.value : 'gcash';
-
-    const totalFee = (isDocFree ? 0 : docFee) + extraFee;
-    const isOverallFree = totalFee <= 0;
-
-    // Summary fields
-    const summaryDocName = document.getElementById('summaryDocName');
-    const summaryDelivery = document.getElementById('summaryDelivery');
-    const summaryPayment = document.getElementById('summaryPayment');
-    const summaryFee = document.getElementById('summaryFee');
-    const summaryTotal = document.getElementById('summaryTotal');
-    const summaryBadge = document.getElementById('summaryBadge');
-
-    const submitBtn = document.getElementById('submitRequestBtn');
-    const submitBtnText = document.getElementById('submitBtnText');
-    const submitBtnIcon = document.getElementById('submitBtnIcon');
-
-    if (summaryDocName) summaryDocName.innerText = docName;
-    if (summaryDelivery) summaryDelivery.innerText = deliveryLabel;
-
-    if (!isResidentVerified) {
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            submitBtn.classList.remove('hover:from-blue-800', 'hover:to-indigo-800');
-        }
-        if (submitBtnText) submitBtnText.innerText = 'Kailangan munang Maberipika ang Profile';
-        if (submitBtnIcon) submitBtnIcon.className = 'bi bi-lock-fill text-base';
-        return;
-    }
-
-    if (isOverallFree) {
-        if (summaryPayment) summaryPayment.innerText = 'Libre (Walang Bayad)';
-        if (summaryFee) summaryFee.innerText = '₱0.00';
-        if (summaryTotal) summaryTotal.innerText = '₱0.00 (LIBRE)';
-        if (summaryBadge) {
-            summaryBadge.innerText = 'LIBRE';
-            summaryBadge.className = 'rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800';
-        }
-        if (submitBtnText) submitBtnText.innerText = 'Isumite ang Kahilingan (Submit Request)';
-        if (submitBtnIcon) submitBtnIcon.className = 'bi bi-send-fill text-base';
-    } else if (payMethod === 'gcash') {
-        if (summaryPayment) summaryPayment.innerText = 'Online GCash Payment';
-        if (summaryFee) summaryFee.innerText = '₱' + (isDocFree ? '0.00' : docFee.toFixed(2)) + (extraFee > 0 ? ' + ₱' + extraFee.toFixed(2) + ' Del.' : '');
-        if (summaryTotal) summaryTotal.innerText = '₱' + totalFee.toFixed(2);
-        if (summaryBadge) {
-            summaryBadge.innerText = 'GCASH';
-            summaryBadge.className = 'rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800';
-        }
-        if (submitBtnText) submitBtnText.innerText = 'Isumite at Magbayad sa GCash (Submit & Pay via GCash)';
-        if (submitBtnIcon) submitBtnIcon.className = 'bi bi-arrow-right-circle-fill text-base';
-    } else if (payMethod === 'paypal') {
-        if (summaryPayment) summaryPayment.innerText = 'Online PayPal / Card';
-        if (summaryFee) summaryFee.innerText = '₱' + (isDocFree ? '0.00' : docFee.toFixed(2)) + (extraFee > 0 ? ' + ₱' + extraFee.toFixed(2) + ' Del.' : '');
-        if (summaryTotal) summaryTotal.innerText = '₱' + totalFee.toFixed(2);
-        if (summaryBadge) {
-            summaryBadge.innerText = 'PAYPAL';
-            summaryBadge.className = 'rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800';
-        }
-        if (submitBtnText) submitBtnText.innerText = 'Isumite at Magpatuloy sa PayPal (Submit & Continue to PayPal)';
-        if (submitBtnIcon) submitBtnIcon.className = 'bi bi-arrow-right-circle-fill text-base';
+    var pst = (r.payment_status || 'UNPAID').toUpperCase();
+    var isPaid = (pst === 'PAID' || pst === 'PAID_VERIFIED' || pst === 'PAID_AT_PICKUP' || pst === 'FREE' || pst === 'NOT_REQUIRED' || fee <= 0);
+    var pstEl = document.getElementById('modalPaymentStatus');
+    if (isPaid) {
+        pstEl.className = "font-bold text-emerald-600 dark:text-emerald-400";
+        pstEl.innerText = "PAID ✓";
     } else {
-        if (summaryPayment) summaryPayment.innerText = 'Magbayad sa Counter (Pay Upon Pickup)';
-        if (summaryFee) summaryFee.innerText = '₱' + docFee.toFixed(2);
-        if (summaryTotal) summaryTotal.innerText = '₱' + docFee.toFixed(2);
-        if (summaryBadge) {
-            summaryBadge.innerText = 'CASH COUNTER';
-            summaryBadge.className = 'rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-800';
-        }
-        if (submitBtnText) submitBtnText.innerText = 'Isumite ang Kahilingan (Submit Request)';
-        if (submitBtnIcon) submitBtnIcon.className = 'bi bi-send-fill text-base';
+        pstEl.className = "font-bold text-amber-600 dark:text-amber-400";
+        pstEl.innerText = pst;
     }
+
+    // Process Timeline (Requirement 26)
+    var st = (r.status || 'pending').toLowerCase();
+    var timelineHtml = '';
+
+    // Step 1: Request Submitted
+    timelineHtml += '<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"><i class="bi bi-check-circle-fill"></i> <span>✓ Request Submitted</span></div>';
+
+    // Step 2: Payment Confirmed
+    if (isPaid) {
+        timelineHtml += '<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"><i class="bi bi-check-circle-fill"></i> <span>✓ Payment Confirmed</span></div>';
+    } else {
+        timelineHtml += '<div class="flex items-center gap-2 text-amber-600 dark:text-amber-400"><i class="bi bi-circle"></i> <span>○ Awaiting GCash Payment</span></div>';
+    }
+
+    // Step 3: Barangay Review
+    if (['approved', 'ready', 'released', 'completed'].indexOf(st) !== -1) {
+        timelineHtml += '<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"><i class="bi bi-check-circle-fill"></i> <span>✓ Barangay Review Completed</span></div>';
+    } else if (st === 'rejected') {
+        timelineHtml += '<div class="flex items-center gap-2 text-rose-600 dark:text-rose-400"><i class="bi bi-x-circle-fill"></i> <span>✗ Disapproved by Barangay</span></div>';
+    } else {
+        timelineHtml += '<div class="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold"><i class="bi bi-record-circle-fill"></i> <span>● Barangay Review Ongoing</span></div>';
+    }
+
+    // Step 4: Approved & Released
+    if (['ready', 'released', 'completed'].indexOf(st) !== -1) {
+        timelineHtml += '<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"><i class="bi bi-check-circle-fill"></i> <span>✓ Approved & Document Ready</span></div>';
+    } else {
+        timelineHtml += '<div class="flex items-center gap-2 text-slate-400"><i class="bi bi-circle"></i> <span>○ Document Released / Ready for Pickup</span></div>';
+    }
+
+    document.getElementById('modalTimeline').innerHTML = timelineHtml;
+
+    // Notice & Action buttons
+    var noticeBox = document.getElementById('modalNoticeBox');
+    var actionBox = document.getElementById('modalActionButtons');
+    noticeBox.classList.add('hidden');
+    actionBox.innerHTML = '';
+
+    if (r.delivery_method === 'digital' && ['ready', 'released', 'completed'].indexOf(st) !== -1 && isPaid) {
+        noticeBox.className = "rounded-xl p-3 text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300";
+        noticeBox.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Handa na para i-download ang inyong opisyal na sertipiko.';
+        noticeBox.classList.remove('hidden');
+
+        actionBox.innerHTML = `
+            <a href="<?= e(route('documents/')) ?>${r.id}/preview" target="_blank"
+               class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition">
+                <i class="bi bi-eye"></i> Preview Document
+            </a>
+            <a href="<?= e(route('documents/')) ?>${r.id}/download"
+               class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition">
+                <i class="bi bi-download"></i> Download PDF
+            </a>
+        `;
+    } else if (r.delivery_method === 'pickup' && ['ready', 'released'].indexOf(st) !== -1) {
+        noticeBox.className = "rounded-xl p-3 text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300";
+        noticeBox.innerHTML = '<i class="bi bi-building-check me-1"></i> Ang inyong dokumento ay handa na para kunin sa Barangay Hall.';
+        noticeBox.classList.remove('hidden');
+    }
+
+    if (!isPaid && fee > 0) {
+        actionBox.innerHTML += `
+            <a href="<?= e(route('documents/')) ?>${r.id}/payment"
+               class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:from-blue-700 hover:to-indigo-700">
+                <i class="bi bi-wallet2"></i> Magbayad gamit ang GCash (₱${fee.toFixed(2)})
+            </a>
+        `;
+    }
+
+    document.getElementById('detailsModal').classList.remove('hidden');
 }
 
-document.querySelectorAll('input[name="delivery_method"]').forEach(r => {
-    r.addEventListener('change', () => {
-        handleDeliveryChange();
-        updateSummaryAndButton();
-    });
-});
-document.querySelectorAll('input[name="payment_method"]').forEach(r => {
-    r.addEventListener('change', () => {
-        updatePaymentCardStyles();
-        updateSummaryAndButton();
-    });
-});
+function closeDetailsModal() {
+    document.getElementById('detailsModal').classList.add('hidden');
+}
 
-// Run on load
-document.addEventListener('DOMContentLoaded', () => {
-    handleDocTypeChange();
-    updateSummaryAndButton();
-});
+// Initial trigger
+onDocumentTypeChange();
 </script>
 
 <?php
 $content = ob_get_clean();
-require __DIR__ . '/../layouts/main.php';
+view('layouts/app', compact('content', 'pageTitle'));

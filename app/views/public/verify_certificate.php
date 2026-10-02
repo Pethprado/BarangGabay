@@ -37,8 +37,8 @@ $docType = $doc ? \App\Models\DocumentRequest::label((string)$doc['document_type
                 <i class="bi bi-shield-check text-3xl"></i>
             </div>
             <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Republika ng Pilipinas</div>
-            <div class="text-xs font-semibold text-slate-600">Lalawigan ng Agusan del Sur &bull; Bayan ng San Francisco</div>
-            <div class="mt-0.5 text-lg font-black tracking-tight text-blue-950 font-cinzel">BARANGAY POBLACION</div>
+            <div class="text-xs font-semibold text-slate-600"><?= e(\App\Models\Setting::get('doc_province', 'Lalawigan ng Surigao del Sur')) ?> &bull; <?= e(\App\Models\Setting::get('doc_municipality', 'Bayan ng Madrid')) ?></div>
+            <div class="mt-0.5 text-lg font-black tracking-tight text-blue-950 font-cinzel"><?= e(strtoupper(\App\Models\Setting::get('doc_barangay_name', 'BARANGAY BAYOGO'))) ?></div>
             <div class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-0.5 text-[11px] font-bold text-slate-700">
                 <i class="bi bi-qr-code-scan text-blue-600"></i>
                 Sistema ng Beripikasyon ng Dokumento
@@ -53,7 +53,7 @@ $docType = $doc ? \App\Models\DocumentRequest::label((string)$doc['document_type
             </div>
             <h2 class="text-base font-black text-emerald-950">OPISYAL AT TOTOO NA DOKUMENTO</h2>
             <p class="text-xs text-emerald-800 mt-0.5">
-                Ang sertipikong ito ay lehitimong inisyu ng Barangay Poblacion at nakatala sa opisyal na database.
+                Ang sertipikong ito ay lehitimong inisyu ng <?= e(\App\Models\Setting::get('doc_barangay_name', 'Barangay Bayogo')) ?> at nakatala sa opisyal na database.
             </p>
         </div>
 

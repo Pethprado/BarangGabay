@@ -45,28 +45,56 @@ class DocumentRequestController
         $userId = (int) ($_SESSION['user_id'] ?? 0);
         $user   = \App\Models\User::find($userId);
 
-        // Requirement 11: Resident Verification Gate
-        if (!$user || ($user['status'] ?? '') !== 'verified') {
+        $isAjax = (!empty($_POST['is_ajax']) || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json')));
+        $isVerifiedResident = ($user && ($user['status'] ?? '') === 'verified');
+
+        if (!$isVerifiedResident) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Kailangan munang maging beripikado ang inyong account bago makahiling ng dokumento.']);
+                return;
+            }
             flash('warning', 'Ang inyong resident account ay hindi pa ganap na beripikado. Ang mga beripikadong residente lamang ang maaaring humiling ng opisyal na dokumento ng barangay.');
             redirect('/documents');
         }
 
         $type           = trim($_POST['document_type'] ?? '');
-        $purpose        = trim($_POST['purpose'] ?? '');
+        $purposeChoice  = trim($_POST['purpose'] ?? '');
+        $purposeOther   = trim($_POST['purpose_other'] ?? '');
+        $purpose        = ($purposeChoice === 'Other' && $purposeOther !== '') ? $purposeOther : $purposeChoice;
         $notes          = trim($_POST['notes'] ?? '');
         $deliveryMethod = trim($_POST['delivery_method'] ?? 'pickup');
 
         if (!\array_key_exists($type, DocumentRequest::TYPES)) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => t('documents.err_type')]);
+                return;
+            }
             flash('error', t('documents.err_type'));
             redirect('/documents');
         }
 
         if (!\array_key_exists($deliveryMethod, DocumentRequest::DELIVERY_METHODS)) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => t('documents.err_delivery')]);
+                return;
+            }
             flash('error', t('documents.err_delivery'));
             redirect('/documents');
         }
 
         if (mb_strlen($purpose) < 3) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Mangyaring ilagay ang layunin (purpose) ng kahilingan.']);
+                return;
+            }
             flash('error', t('documents.err_purpose'));
             redirect('/documents');
         }
@@ -75,10 +103,17 @@ class DocumentRequestController
         foreach (DocumentRequest::forUser($userId) as $existing) {
             if ($existing['document_type'] === $type
                 && \in_array($existing['status'], ['pending', 'processing', 'ready'], true)) {
-                flash('warning', t('documents.err_duplicate', [
+                $dupMsg = t('documents.err_duplicate', [
                     'type'      => DocumentRequest::label($type),
                     'reference' => (string) $existing['reference_no'],
-                ]));
+                ]);
+                if ($isAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => $dupMsg]);
+                    return;
+                }
+                flash('warning', $dupMsg);
                 redirect('/documents');
             }
         }
@@ -110,11 +145,11 @@ class DocumentRequestController
         if ($isFree) {
             $paymentMethod = 'free';
         } else {
-            // For digital soft copy or delivery, online payment (GCash or PayPal) is standard
+            // For digital soft copy or delivery, online payment (PayMongo, GCash or PayPal) is standard
             if ($deliveryMethod === 'digital' || $deliveryMethod === 'delivery') {
-                $paymentMethod = in_array($chosenMethod, ['gcash', 'paypal'], true) ? $chosenMethod : 'gcash';
+                $paymentMethod = in_array($chosenMethod, ['paymongo', 'gcash', 'paypal'], true) ? $chosenMethod : 'paymongo';
             } else {
-                $paymentMethod = in_array($chosenMethod, ['gcash', 'paypal', 'pickup'], true) ? $chosenMethod : 'pickup';
+                $paymentMethod = in_array($chosenMethod, ['paymongo', 'gcash', 'paypal', 'pickup'], true) ? $chosenMethod : 'paymongo';
             }
         }
 
@@ -156,14 +191,72 @@ class DocumentRequestController
             $userId
         );
 
-        // If Online payment (PayPal / GCash) is required: redirect immediately to the checkout page!
-        if (in_array($paymentMethod, ['paypal', 'gcash'], true) && !$isFree) {
-            flash('info', 'Nalikha na ang inyong kahilingan (' . $reference . '). Kumpletuhin ang pagbabayad gamit ang PayPal Checkout sa ibaba.');
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            if ($isFree) {
+                echo json_encode([
+                    'success'      => true,
+                    'is_free'      => true,
+                    'request_id'   => $newId,
+                    'reference'    => $reference,
+                    'redirect_url' => route('documents?tab=requests&ref=' . urlencode($reference)),
+                ]);
+                return;
+            }
+
+            // PayMongo Checkout creation for paid document
+            $payment = \App\Models\DocumentPayment::findByRequest($newId);
+            if (!$payment) {
+                $payId = \App\Models\DocumentPayment::createForRequest($newId, $userId, $type, $feeAmount, 'gcash');
+                $payment = \App\Models\DocumentPayment::find($payId);
+            }
+
+            $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+            $base   = $scheme . '://' . $host;
+            $successUrl = $base . '/documents/payment/success?request_id=' . $newId;
+            $cancelUrl  = $base . '/documents/payment/cancel?request_id=' . $newId;
+
+            $pmRes = \App\Services\PayMongoService::createCheckoutSession(
+                $newId,
+                (string) $payment['payment_ref'],
+                $feeAmount,
+                DocumentRequest::label($type),
+                $reference,
+                $successUrl,
+                $cancelUrl
+            );
+
+            if ($pmRes['success'] && !empty($pmRes['checkout_url'])) {
+                \App\Models\DocumentPayment::setPaymongoCheckout((int) $payment['id'], (string) $pmRes['checkout_id'], json_encode($pmRes['raw'] ?? $pmRes));
+                echo json_encode([
+                    'success'      => true,
+                    'is_free'      => false,
+                    'request_id'   => $newId,
+                    'reference'    => $reference,
+                    'checkout_url' => $pmRes['checkout_url'],
+                ]);
+                return;
+            }
+
+            echo json_encode([
+                'success'      => false,
+                'error'        => $pmRes['error'] ?? 'Hindi mabuo ang PayMongo GCash checkout session.',
+                'request_id'   => $newId,
+                'reference'    => $reference,
+                'fallback_url' => route('documents/' . $newId . '/payment'),
+            ]);
+            return;
+        }
+
+        // Standard non-AJAX submission
+        if (in_array($paymentMethod, ['paymongo', 'paypal', 'gcash'], true) && !$isFree) {
+            flash('info', 'Nalikha na ang inyong kahilingan (' . $reference . '). Kumpletuhin ang pagbabayad gamit ang online checkout.');
             redirect('/documents/' . $newId . '/payment');
         }
 
         flash('success', t('documents.filed', ['reference' => $reference]));
-        redirect('/documents');
+        redirect('/documents?tab=requests&ref=' . urlencode($reference));
     }
 
     /** GET /documents/{id}/download — Resident downloading attached soft copy */

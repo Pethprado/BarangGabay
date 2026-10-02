@@ -1,33 +1,34 @@
 <?php
 /**
- * The document-request queue — Personal Pickup & Digital Soft Copy.
+ * Admin Document Requests Queue & Review Area — BarangGabay
  *
- * Variables: $requests (list), $status (string filter), $delivery (string filter), $search (string), $pageTitle, $pendingCount
+ * Requirements 29, 30, 31, 32, 33, 34:
+ * - Compact Table: REFERENCE, RESIDENT, DOCUMENT, AMOUNT, PAYMENT, REQUEST STATUS, DATE, ACTION
+ * - Review Modal:
+ *     RESIDENT INFORMATION
+ *     DOCUMENT REQUEST
+ *     PAYMENT INFORMATION (GCash via PayMongo, Paid, Amount, Reference, Paid On)
+ *     REQUIREMENTS (Valid ID)
+ *     ADMIN ACTIONS (Approve -> Auto Certificate Generation, Request Info, Reject, Mark Claimed)
  */
+use App\Models\DocumentRequest;
+use App\Models\DocumentPayment;
+
 $requests = $requests ?? [];
 $status   = (string) ($status ?? '');
 $delivery = (string) ($delivery ?? '');
+$paymentStatus = (string) ($paymentStatus ?? '');
 $search   = (string) ($search ?? '');
-
-$statusClass = [
-    'awaiting_payment' => 'background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;',
-    'pending'    => 'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;',
-    'processing' => 'background:#fef3c7;color:#92400e;border:1px solid #fde68a;',
-    'ready'      => 'background:#dcfce7;color:#166534;border:1px solid #bbf7d0;',
-    'released'   => 'background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;',
-    'rejected'   => 'background:#fee2e2;color:#991b1b;border:1px solid #fecaca;',
-];
 
 $totalCount    = count($requests);
 $pickupCount   = count(array_filter($requests, fn($r) => ($r['delivery_method'] ?? 'pickup') === 'pickup'));
 $digitalCount  = count(array_filter($requests, fn($r) => ($r['delivery_method'] ?? 'pickup') === 'digital'));
-$deliveryCount = count(array_filter($requests, fn($r) => ($r['delivery_method'] ?? 'pickup') === 'delivery'));
-$openCount     = count(array_filter($requests, fn($r) => in_array($r['status'] ?? '', ['pending', 'processing', 'under_review'], true)));
+$openCount     = count(array_filter($requests, fn($r) => in_array($r['status'] ?? '', ['pending', 'pending_review', 'under_review', 'processing'], true)));
 
 ob_start();
 ?>
 
-<!-- Header Card with Summary & Navigation -->
+<!-- Header & Filter Toolbar -->
 <div class="admin-card mb-4">
     <div class="admin-card-body">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
@@ -36,7 +37,7 @@ ob_start();
                     <i class="bi bi-file-earmark-ruled me-1 text-primary"></i> <?= e(t('admin_documents.title')) ?>
                 </h1>
                 <p class="text-muted mb-0" style="font-size:.84rem;">
-                    <?= e(t('admin_documents.subtitle')) ?>
+                    Pamamahala at pagsusuri ng mga kahilingan ng clearance at sertipiko ng mga residente.
                 </p>
             </div>
 
@@ -51,14 +52,9 @@ ob_start();
                 <span class="status-badge" style="background:#f8fafc;color:#334155;font-size:.8rem;border:1px solid #e2e8f0;">
                     <i class="bi bi-building me-1"></i> <strong><?= $pickupCount ?></strong> Pickup
                 </span>
-                <?php if ($deliveryCount > 0): ?>
-                <span class="status-badge" style="background:#e0f2fe;color:#0369a1;font-size:.8rem;border:1px solid #bae6fd;">
-                    <i class="bi bi-truck me-1"></i> <strong><?= $deliveryCount ?></strong> Delivery
-                </span>
-                <?php endif; ?>
                 <?php if ($openCount > 0): ?>
                 <span class="status-badge" style="background:#fef3c7;color:#b45309;font-size:.8rem;border:1px solid #fde68a;">
-                    <i class="bi bi-hourglass-split me-1"></i> <strong><?= $openCount ?></strong> Waiting Staff
+                    <i class="bi bi-hourglass-split me-1"></i> <strong><?= $openCount ?></strong> Pending Review
                 </span>
                 <?php endif; ?>
             </div>
@@ -66,16 +62,18 @@ ob_start();
 
         <!-- Filter & Search Toolbar -->
         <div class="row g-2 align-items-center pt-2 border-top">
-            <!-- Status Pills -->
             <div class="col-12 col-xl-7 d-flex flex-wrap gap-1.5 align-items-center">
                 <span class="text-muted me-1" style="font-size:.78rem;font-weight:600;">Status:</span>
                 <?php
-                $statusFilters = ['' => t('admin_documents.filter_all')];
-                foreach (array_keys(\App\Models\DocumentRequest::TRANSITIONS) as $s) {
-                    $statusFilters[$s] = \App\Models\DocumentRequest::statusLabel($s);
-                }
+                $statusFilters = [
+                    '' => 'Lahat',
+                    'pending_review' => 'Pending Review',
+                    'ready'          => 'Approved / Ready',
+                    'completed'      => 'Completed',
+                    'rejected'       => 'Rejected'
+                ];
                 foreach ($statusFilters as $k => $lbl):
-                    $active = $status === $k;
+                    $active = ($status === $k || ($k === 'pending_review' && in_array($status, ['pending', 'pending_review', 'under_review'], true)));
                     $url = route('admin/documents' . '?' . http_build_query(array_filter([
                         'status'   => $k !== '' ? $k : null,
                         'delivery' => $delivery !== '' ? $delivery : null,
@@ -90,43 +88,25 @@ ob_start();
                 <?php endforeach; ?>
             </div>
 
-            <!-- Delivery Method Filter & Search Form -->
             <div class="col-12 col-xl-5">
                 <form method="get" action="<?= e(route('admin/documents')) ?>" class="d-flex gap-2">
                     <?php if ($status !== ''): ?>
                     <input type="hidden" name="status" value="<?= e($status) ?>">
                     <?php endif; ?>
 
-                    <select name="delivery" class="form-select form-select-sm" style="font-size:.8rem;min-width:120px;max-width:140px;" onchange="this.form.submit()">
-                        <option value=""><?= e(t('admin_documents.filter_all')) ?> Delivery</option>
-                        <option value="pickup" <?= $delivery === 'pickup' ? 'selected' : '' ?>><?= e(t('admin_documents.filter_pickup')) ?></option>
-                        <option value="digital" <?= $delivery === 'digital' ? 'selected' : '' ?>><?= e(t('admin_documents.filter_digital')) ?></option>
-                        <option value="delivery" <?= $delivery === 'delivery' ? 'selected' : '' ?>>Delivery</option>
-                    </select>
-
-                    <select name="payment_status" class="form-select form-select-sm" style="font-size:.8rem;min-width:130px;max-width:150px;" onchange="this.form.submit()">
-                        <option value="">Lahat ng Bayad</option>
-                        <option value="PAYMENT_PROOF_SUBMITTED" <?= ($paymentStatus ?? '') === 'PAYMENT_PROOF_SUBMITTED' ? 'selected' : '' ?>>Proof Submitted</option>
-                        <option value="PAID_VERIFIED" <?= ($paymentStatus ?? '') === 'PAID_VERIFIED' ? 'selected' : '' ?>>Paid Verified</option>
-                        <option value="PAY_AT_PICKUP" <?= ($paymentStatus ?? '') === 'PAY_AT_PICKUP' ? 'selected' : '' ?>>Pay at Pickup</option>
-                        <option value="PAID_AT_PICKUP" <?= ($paymentStatus ?? '') === 'PAID_AT_PICKUP' ? 'selected' : '' ?>>Paid at Pickup</option>
-                        <option value="UNPAID" <?= ($paymentStatus ?? '') === 'UNPAID' ? 'selected' : '' ?>>Unpaid</option>
-                        <option value="PAYMENT_REJECTED" <?= ($paymentStatus ?? '') === 'PAYMENT_REJECTED' ? 'selected' : '' ?>>Rejected</option>
-                        <option value="FREE" <?= ($paymentStatus ?? '') === 'FREE' ? 'selected' : '' ?>>Libre (Free)</option>
+                    <select name="delivery" class="form-select form-select-sm" style="font-size:.8rem;min-width:120px;" onchange="this.form.submit()">
+                        <option value="">Lahat ng Receiving</option>
+                        <option value="digital" <?= $delivery === 'digital' ? 'selected' : '' ?>>Digital Copy</option>
+                        <option value="pickup" <?= $delivery === 'pickup' ? 'selected' : '' ?>>Barangay Hall Pickup</option>
                     </select>
 
                     <div class="input-group input-group-sm">
                         <input type="text" name="search" value="<?= e($search) ?>"
-                               placeholder="<?= e(t('admin_documents.search_ph')) ?>"
+                               placeholder="Hanapin (Ref, Pangalan)..."
                                class="form-control" style="font-size:.8rem;">
-                        <button type="submit" class="btn btn-outline-secondary" title="Search">
+                        <button type="submit" class="btn btn-primary btn-sm">
                             <i class="bi bi-search"></i>
                         </button>
-                        <?php if ($search !== '' || $delivery !== '' || $status !== '' || ($paymentStatus ?? '') !== ''): ?>
-                        <a href="<?= e(route('admin/documents')) ?>" class="btn btn-outline-danger" title="Clear Filters">
-                            <i class="bi bi-x-lg"></i>
-                        </a>
-                        <?php endif; ?>
                     </div>
                 </form>
             </div>
@@ -136,10 +116,10 @@ ob_start();
 
 <?php if ($requests === []): ?>
 <div class="admin-card">
-    <div class="admin-card-body text-center" style="padding:3.5rem 1rem;">
+    <div class="admin-card-body text-center py-5">
         <i class="bi bi-folder2-open" style="font-size:2.8rem;color:var(--border);"></i>
         <h3 class="mt-3 mb-1" style="font-size:1rem;font-weight:700;color:var(--text-primary);"><?= e(t('admin_documents.empty')) ?></h3>
-        <p class="text-muted mb-3" style="font-size:.84rem;">Subukang baguhin ang mga filter o maghanap ng ibang reference number.</p>
+        <p class="text-muted mb-3" style="font-size:.84rem;">Walang nakitang kahilingan para sa filter na ito.</p>
         <a href="<?= e(route('admin/documents')) ?>" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-arrow-counterclockwise me-1"></i> I-reset ang Filters
         </a>
@@ -147,20 +127,20 @@ ob_start();
 </div>
 <?php else: ?>
 
-<!-- Main Requests Queue Table -->
+<!-- Requirement 29: Compact Admin Table -->
 <div class="admin-card">
     <div class="table-responsive">
         <table class="table admin-table mb-0 align-middle">
             <thead>
                 <tr>
-                    <th style="padding-left:16px;"><?= e(t('admin_documents.col_reference')) ?></th>
-                    <th><?= e(t('admin_documents.col_resident')) ?></th>
-                    <th><?= e(t('admin_documents.col_delivery')) ?></th>
-                    <th><?= e(t('admin_documents.col_document')) ?> & <?= e(t('admin_documents.col_purpose')) ?></th>
-                    <th>Pagbabayad (Payment)</th>
-                    <th><?= e(t('residents.col_status')) ?></th>
-                    <th><?= e(t('admin_documents.col_attachment')) ?></th>
-                    <th style="width:280px;text-align:right;padding-right:16px;"><?= e(t('admin_documents.col_actions')) ?></th>
+                    <th style="padding-left:16px;">REFERENCE</th>
+                    <th>RESIDENT</th>
+                    <th>DOCUMENT</th>
+                    <th>AMOUNT</th>
+                    <th>PAYMENT</th>
+                    <th>REQUEST STATUS</th>
+                    <th>DATE</th>
+                    <th style="width:130px;text-align:right;padding-right:16px;">ACTION</th>
                 </tr>
             </thead>
             <tbody>
@@ -170,322 +150,125 @@ ob_start();
                 $deliv    = (string) ($r['delivery_method'] ?? 'pickup');
                 $isDigital= $deliv === 'digital';
                 $hasFile  = !empty($r['document_file_name']);
-                $next     = \App\Models\DocumentRequest::TRANSITIONS[$st] ?? [];
 
-                // Payment fields
+                // Payment calculations
                 $fee       = (float) ($r['fee_amount'] ?? 0);
-                $pst       = (string) ($r['payment_status'] ?? 'FREE');
-                $isFree    = $fee <= 0.0 || $pst === 'FREE';
-                $isVerified= in_array($pst, ['PAID_VERIFIED', 'PAID_AT_PICKUP', 'FREE', 'WAIVED'], true);
-                $isProofSub= $pst === 'PAYMENT_PROOF_SUBMITTED';
-                $isAtPickup= $pst === 'PAY_AT_PICKUP';
-                $isRejected= $pst === 'PAYMENT_REJECTED';
-                $pId       = (int) ($r['payment_id'] ?? 0);
+                $pst       = (string) ($r['payment_status'] ?? 'UNPAID');
+                $isPaid    = DocumentRequest::isPaymentVerified($r);
+                $isFree    = ($fee <= 0.0 || $pst === 'FREE' || $pst === 'NOT_REQUIRED');
 
-                // Tailored status display text
-                $displayStatus = ($isDigital && $st === 'ready')
-                    ? t('documents.status_ready_digital')
-                    : ($isDigital && $st === 'released' ? t('documents.status_released_digital') : t('documents.status_' . $st));
+                // Tailored Status Label
+                $statusLabel = 'Pending Review';
+                $statusBadgeStyle = 'background:#fef3c7;color:#92400e;border:1px solid #fde68a;';
+
+                if ($st === 'ready') {
+                    $statusLabel = $isDigital ? 'Available for Download' : 'Ready for Pickup';
+                    $statusBadgeStyle = 'background:#dcfce7;color:#166534;border:1px solid #bbf7d0;';
+                } elseif (in_array($st, ['released', 'completed'], true)) {
+                    $statusLabel = 'Completed';
+                    $statusBadgeStyle = 'background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;';
+                } elseif ($st === 'rejected') {
+                    $statusLabel = 'Rejected';
+                    $statusBadgeStyle = 'background:#fee2e2;color:#991b1b;border:1px solid #fecaca;';
+                } elseif ($st === 'needs_information') {
+                    $statusLabel = 'Needs Info';
+                    $statusBadgeStyle = 'background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;';
+                } elseif ($st === 'awaiting_payment') {
+                    $statusLabel = 'Awaiting Payment';
+                    $statusBadgeStyle = 'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;';
+                }
+
+                // Payment Label
+                $payLabel = 'Pending';
+                $payBadgeStyle = 'background:#fef3c7;color:#92400e;border:1px solid #fde68a;';
+                if ($isFree) {
+                    $payLabel = 'Not Required';
+                    $payBadgeStyle = 'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;';
+                } elseif ($isPaid) {
+                    $payLabel = 'Paid ✓';
+                    $payBadgeStyle = 'background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;';
+                } elseif (in_array($pst, ['FAILED', 'PAYMENT_REJECTED'], true)) {
+                    $payLabel = 'Failed';
+                    $payBadgeStyle = 'background:#fee2e2;color:#991b1b;border:1px solid #fecaca;';
+                }
             ?>
             <tr>
-                <!-- Reference No & Date -->
+                <!-- 1. REFERENCE -->
                 <td style="padding-left:16px;white-space:nowrap;">
-                    <div class="d-flex align-items-center gap-1.5">
-                        <span style="font-family:ui-monospace,monospace;font-size:.82rem;font-weight:700;color:var(--brand-primary);">
-                            <?= e((string) $r['reference_no']) ?>
-                        </span>
+                    <div style="font-family:ui-monospace,monospace;font-size:.82rem;font-weight:700;color:var(--brand-primary);">
+                        <?= e((string) $r['reference_no']) ?>
                     </div>
                     <?php if (!empty($r['certificate_no'])): ?>
-                    <div class="mt-0.5" style="font-size:.73rem;font-weight:700;color:#4338ca;">
-                        <i class="bi bi-patch-check-fill me-0.5 text-primary"></i> <?= e((string) $r['certificate_no']) ?>
+                    <div style="font-size:.72rem;font-weight:700;color:#4338ca;">
+                        <i class="bi bi-patch-check-fill text-primary me-0.5"></i><?= e((string) $r['certificate_no']) ?>
                     </div>
                     <?php endif; ?>
-                    <div class="text-muted" style="font-size:.72rem;">
-                        <i class="bi bi-calendar3 me-1"></i><?= e(format_datetime((string) $r['requested_at'])) ?>
-                    </div>
                 </td>
 
-                <!-- Resident Details -->
+                <!-- 2. RESIDENT -->
                 <td>
-                    <div style="font-weight:700;font-size:.86rem;color:var(--text-primary);">
+                    <div style="font-weight:700;font-size:.85rem;color:var(--text-primary);">
                         <?= e((string) $r['full_name']) ?>
                     </div>
                     <div class="text-muted" style="font-size:.74rem;">
-                        <i class="bi bi-geo-alt"></i> <?= e((string) ($r['zone'] ?: t('admin_documents.no_purok'))) ?>
-                        <?php if (!empty($r['phone'])): ?>
-                        &bull; <a href="tel:<?= e((string) $r['phone']) ?>" class="text-muted text-decoration-none"><i class="bi bi-telephone"></i> <?= e((string) $r['phone']) ?></a>
-                        <?php endif; ?>
+                        <i class="bi bi-geo-alt"></i> <?= e((string) ($r['zone'] ?: 'Purok N/A')) ?>
                     </div>
                 </td>
 
-                <!-- Delivery Method Badge -->
+                <!-- 3. DOCUMENT -->
                 <td>
-                    <?php if ($deliv === 'delivery'): ?>
-                    <span class="status-badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-weight:700;font-size:.74rem;">
-                        <i class="bi bi-truck me-1"></i> Delivery
-                    </span>
-                    <?php if (!empty($r['delivery_address'])): ?>
-                    <div class="text-muted text-truncate mt-0.5" style="max-width:130px;font-size:.68rem;" title="<?= e((string)$r['delivery_address']) ?>">
-                        <i class="bi bi-geo-alt"></i> <?= e((string)$r['delivery_address']) ?>
+                    <div style="font-size:.84rem;font-weight:600;color:var(--text-primary);">
+                        <?= e(DocumentRequest::label((string) $r['document_type'])) ?>
                     </div>
-                    <?php endif; ?>
                     <div class="mt-0.5">
-                        <span class="badge" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;font-size:.66rem;font-weight:700;">
-                            <?= e(strtoupper((string)($r['delivery_status'] ?? 'pending'))) ?>
+                        <span class="badge" style="font-size:.68rem;<?= $isDigital ? 'background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;' : 'background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;' ?>">
+                            <i class="bi bi-<?= $isDigital ? 'file-earmark-arrow-down' : 'building' ?> me-0.5"></i>
+                            <?= $isDigital ? 'Digital' : 'Pickup' ?>
                         </span>
                     </div>
-                    <?php elseif ($isDigital): ?>
-                    <span class="status-badge" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;font-weight:700;font-size:.74rem;" title="Resident requested digital copy online">
-                        <i class="bi bi-file-earmark-arrow-down me-1"></i> <?= e(t('documents.badge_digital')) ?>
-                    </span>
-                    <?php else: ?>
-                    <span class="status-badge" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:.74rem;" title="Resident will pick up at Barangay Hall">
-                        <i class="bi bi-building me-1"></i> <?= e(t('documents.badge_pickup')) ?>
-                    </span>
-                    <?php endif; ?>
                 </td>
 
-                <!-- Document Type & Purpose -->
-                <td style="max-width:240px;">
-                    <div style="font-size:.85rem;font-weight:600;color:var(--text-primary);">
-                        <?= e(\App\Models\DocumentRequest::label((string) $r['document_type'])) ?>
-                    </div>
-                    <div class="text-muted text-truncate" style="font-size:.78rem;" title="<?= e((string) $r['purpose']) ?>">
-                        <?= e((string) $r['purpose']) ?>
-                    </div>
-                    <?php if (!empty($r['staff_note'])): ?>
-                    <div class="mt-1" style="font-size:.72rem;color:#b45309;background:#fef3c7;padding:2px 6px;border-radius:4px;display:inline-block;">
-                        <i class="bi bi-chat-left-text me-1"></i> <?= e(mb_substr((string) $r['staff_note'], 0, 45)) ?>...
-                    </div>
-                    <?php endif; ?>
+                <!-- 4. AMOUNT -->
+                <td style="white-space:nowrap;">
+                    <strong style="font-size:.84rem;color:var(--text-primary);">
+                        <?= $isFree ? 'LIBRE' : '₱' . number_format($fee, 2) ?>
+                    </strong>
                 </td>
 
-                <!-- Payment Status Column -->
-                <td>
-                    <div class="d-flex flex-column gap-1">
-                        <?php if ($isFree): ?>
-                        <span class="status-badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:.72rem;">
-                            LIBRE (Free)
-                        </span>
-                        <?php elseif ($isVerified): ?>
-                        <span class="status-badge" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-weight:700;font-size:.72rem;">
-                            <i class="bi bi-patch-check-fill me-1"></i><?= $pst === 'PAID_AT_PICKUP' ? 'Paid at Pickup' : 'PAID (Verified)' ?> (₱<?= number_format($fee, 2) ?>)
-                        </span>
-                        <?php if ($pId > 0): ?>
-                        <a href="<?= e(route('documents/' . $id . '/acknowledgement')) ?>" target="_blank" class="text-decoration-none" style="font-size:.68rem;color:#047857;">
-                            <i class="bi bi-printer me-0.5"></i> Katibayan ng Bayad
+                <!-- 5. PAYMENT -->
+                <td style="white-space:nowrap;">
+                    <span class="status-badge" style="<?= $payBadgeStyle ?>;font-weight:700;font-size:.74rem;">
+                        <?= e($payLabel) ?>
+                    </span>
+                </td>
+
+                <!-- 6. REQUEST STATUS -->
+                <td style="white-space:nowrap;">
+                    <span class="status-badge" style="<?= $statusBadgeStyle ?>;font-weight:700;font-size:.74rem;">
+                        <?= e($statusLabel) ?>
+                    </span>
+                </td>
+
+                <!-- 7. DATE -->
+                <td style="white-space:nowrap;font-size:.78rem;color:var(--text-secondary);">
+                    <?= date('M d, Y', strtotime($r['requested_at'])) ?>
+                </td>
+
+                <!-- 8. ACTION (Requirement 29 & 30) -->
+                <td style="text-align:right;padding-right:16px;white-space:nowrap;">
+                    <div class="d-flex align-items-center justify-content-end gap-1">
+                        <button type="button" class="btn btn-sm btn-primary py-1 px-2.5 font-weight-bold"
+                                style="font-size:.78rem;border-radius:8px;"
+                                onclick="openReviewModal(<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>)">
+                            <i class="bi bi-search me-1"></i> Review
+                        </button>
+
+                        <?php if ($hasFile): ?>
+                        <a href="<?= e(route('admin/documents/' . $id . '/preview')) ?>" target="_blank"
+                           class="btn btn-sm btn-outline-secondary py-1 px-1.5" style="font-size:.78rem;border-radius:8px;" title="Tingnan ang PDF">
+                            <i class="bi bi-eye"></i>
                         </a>
                         <?php endif; ?>
-                        <?php elseif ($isProofSub): ?>
-                        <span class="status-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-weight:700;font-size:.72rem;">
-                            <i class="bi bi-hourglass-split me-1"></i>Proof Submitted
-                        </span>
-                        <div class="d-flex gap-1 mt-0.5">
-                            <a href="<?= e(route('admin/payments?search=' . urlencode((string)$r['reference_no']))) ?>" class="btn btn-xs btn-warning py-0 px-1 fw-bold" style="font-size:.68rem;">
-                                <i class="bi bi-eye me-0.5"></i> Review Payment
-                            </a>
-                        </div>
-                        <?php elseif ($isAtPickup): ?>
-                        <span class="status-badge" style="background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;font-weight:600;font-size:.72rem;">
-                            <i class="bi bi-cash me-1"></i>Pay at Pickup (₱<?= number_format($fee, 2) ?>)
-                        </span>
-                        <?php if ($pId > 0): ?>
-                        <form method="post" action="<?= e(route('admin/payments/' . $pId . '/mark-pickup')) ?>" class="d-inline mt-0.5" onsubmit="return confirm('Kumpirmahin na natanggap ang ₱<?= number_format($fee, 2) ?> mula kay <?= e(addslashes((string)$r['full_name'])) ?>?');">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="return_to" value="<?= e($_SERVER['REQUEST_URI'] ?? '/admin/documents') ?>">
-                            <button type="submit" class="btn btn-xs btn-outline-primary py-0 px-1" style="font-size:.68rem;font-weight:600;">
-                                <i class="bi bi-check2-circle me-0.5"></i> Mark Paid at Pickup
-                            </button>
-                        </form>
-                        <?php endif; ?>
-                        <?php elseif ($isRejected): ?>
-                        <span class="status-badge" style="background:#fff1f2;color:#be123c;border:1px solid #fecdd3;font-size:.72rem;">
-                            Tinanggihan (Rejected)
-                        </span>
-                        <?php else: ?>
-                        <span class="status-badge" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-size:.72rem;">
-                            UNPAID (₱<?= number_format($fee, 2) ?>)
-                        </span>
-                        <?php endif; ?>
-                    </div>
-                </td>
-
-                <!-- Status Badge -->
-                <td>
-                    <span class="status-badge" style="<?= $statusClass[$st] ?? '' ?>;font-weight:700;font-size:.76rem;">
-                        <?php if ($st === 'ready'): ?>
-                        <i class="bi bi-check-circle-fill me-1"></i>
-                        <?php elseif ($st === 'processing'): ?>
-                        <i class="bi bi-gear-fill me-1"></i>
-                        <?php elseif ($st === 'pending'): ?>
-                        <i class="bi bi-hourglass-split me-1"></i>
-                        <?php endif; ?>
-                        <?= e($displayStatus) ?>
-                    </span>
-                </td>
-
-                <!-- Soft Copy Attachment Column -->
-                <td style="min-width:180px;">
-                    <?php if ($isDigital && !$isVerified): ?>
-                    <!-- Digital Soft Copy requires verified payment first! -->
-                    <div class="p-1.5 rounded" style="background:#fff1f2;border:1px dashed #fecdd3;font-size:.74rem;">
-                        <span class="text-danger fw-bold d-block mb-1" style="font-size:.72rem;">
-                            <i class="bi bi-lock-fill me-1"></i>PAYMENT REQUIRED
-                        </span>
-                        <button type="button" class="btn btn-sm btn-secondary py-1 px-2 w-100" style="font-size:.72rem;opacity:.7;" disabled title="Payment verification is required before this digital document can be released.">
-                            <i class="bi bi-lock me-1"></i>Attach Soft Copy
-                        </button>
-                        <span class="text-muted d-block mt-1" style="font-size:.66rem;line-height:1.2;">
-                            Kailangan munang beripikahin ang bayad bago mai-release.
-                        </span>
-                    </div>
-                    <?php elseif ($hasFile): ?>
-                    <div class="p-1.5 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;font-size:.75rem;">
-                        <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
-                            <span class="text-truncate" style="max-width:120px;font-weight:600;" title="<?= e((string) $r['document_file_name']) ?>">
-                                <i class="bi bi-file-earmark-check text-primary"></i> <?= e((string) $r['document_file_name']) ?>
-                            </span>
-                            <span class="text-muted" style="font-size:.7rem;">
-                                <?= \App\Models\DocumentRequest::formatFileSize((int) $r['document_file_size']) ?>
-                            </span>
-                        </div>
-                        <div class="d-flex gap-1">
-                            <!-- Preview button -->
-                            <a href="<?= e(route('admin/documents/' . $id . '/preview')) ?>"
-                               target="_blank"
-                               class="btn btn-xs btn-outline-secondary py-0 px-1"
-                               style="font-size:.7rem;"
-                               title="Preview">
-                                <i class="bi bi-eye"></i> Tingnan
-                            </a>
-                            <!-- Download button -->
-                            <a href="<?= e(route('admin/documents/' . $id . '/download')) ?>"
-                               class="btn btn-xs btn-outline-primary py-0 px-1"
-                               style="font-size:.7rem;"
-                               title="Download">
-                                <i class="bi bi-download"></i>
-                            </a>
-                            <!-- Replace file modal trigger -->
-                            <button type="button"
-                                    class="btn btn-xs btn-outline-warning py-0 px-1"
-                                    style="font-size:.7rem;"
-                                    title="<?= e(t('admin_documents.btn_replace_file')) ?>"
-                                    onclick="openUploadModal(<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>, true)">
-                                <i class="bi bi-arrow-repeat"></i>
-                            </button>
-                            <!-- Remove file button -->
-                            <form method="post"
-                                  action="<?= e(route('admin/documents/' . $id . '/remove-file')) ?>"
-                                  style="display:inline;"
-                                  onsubmit="return confirm('<?= e(t('admin_documents.confirm_remove_file')) ?>');">
-                                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                                <button type="submit"
-                                        class="btn btn-xs btn-outline-danger py-0 px-1"
-                                        style="font-size:.7rem;"
-                                        title="<?= e(t('admin_documents.btn_remove_file')) ?>">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                    <?php else: ?>
-                    <!-- No file attached yet -->
-                    <button type="button"
-                            class="btn btn-sm <?= $isDigital ? 'btn-primary' : 'btn-outline-secondary' ?> py-1 px-2"
-                            style="font-size:.76rem;font-weight:600;"
-                            onclick="openUploadModal(<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>, false)">
-                        <i class="bi bi-cloud-arrow-up-fill me-1"></i>
-                        <?= $isDigital ? 'Attach Soft Copy' : 'Attach File' ?>
-                    </button>
-                    <?php endif; ?>
-                </td>
-
-                <!-- Status Update & Details Actions -->
-                <td style="text-align:right;padding-right:16px;">
-                    <div class="d-flex gap-1 justify-content-end align-items-center flex-wrap">
-                        <!-- Quick Action 1: Approve & Generate PDF Certificate -->
-                        <?php if (in_array($st, ['pending', 'under_review', 'processing', 'needs_information'], true)): ?>
-                        <form method="post" action="<?= e(route('admin/documents/' . $id . '/approve')) ?>" style="display:inline;"
-                              onsubmit="return confirm('Aprubahan ang kahilingan at awtomatikong gumawa ng opisyal na PDF na may QR Code para kay <?= e(addslashes((string)$r['full_name'])) ?>?');">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="return_status" value="<?= e($status) ?>">
-                            <input type="hidden" name="return_delivery" value="<?= e($delivery) ?>">
-                            <input type="hidden" name="return_search" value="<?= e($search) ?>">
-                            <button type="submit" class="btn btn-xs btn-success py-1 px-2 fw-bold text-white shadow-sm" style="font-size:.72rem;" title="Aprubahan at Gumawa ng PDF">
-                                <i class="bi bi-shield-fill-check me-0.5"></i> Aprubahan & I-generate
-                            </button>
-                        </form>
-                        <?php endif; ?>
-
-                        <!-- Quick Action 2: Mark as Claimed (Barangay Hall Pickup) -->
-                        <?php if ($deliv === 'pickup' && in_array($st, ['ready', 'ready_for_pickup'], true)): ?>
-                        <form method="post" action="<?= e(route('admin/documents/' . $id . '/claim')) ?>" style="display:inline;"
-                              onsubmit="return confirm('Kumpirmahin na nakuha na (Claimed) ng residente ang pisikal na dokumento sa Barangay Hall?');">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="return_status" value="<?= e($status) ?>">
-                            <input type="hidden" name="return_delivery" value="<?= e($delivery) ?>">
-                            <input type="hidden" name="return_search" value="<?= e($search) ?>">
-                            <button type="submit" class="btn btn-xs btn-primary py-1 px-2 fw-bold text-white shadow-sm" style="font-size:.72rem;" title="Mark as Claimed at Hall">
-                                <i class="bi bi-check2-all me-0.5"></i> Mark Claimed
-                            </button>
-                        </form>
-                        <?php endif; ?>
-
-                        <!-- Quick Action 3: Delivery Status Modal Trigger -->
-                        <?php if ($deliv === 'delivery'): ?>
-                        <button type="button" class="btn btn-xs btn-outline-info py-1 px-1.5 fw-bold" style="font-size:.72rem;"
-                                onclick="openDeliveryModal(<?= $id ?>, '<?= e(addslashes((string)$r['reference_no'])) ?>', '<?= e(addslashes((string)($r['delivery_status'] ?? 'pending'))) ?>', '<?= e(addslashes((string)($r['delivered_by'] ?? ''))) ?>')">
-                            <i class="bi bi-truck me-0.5"></i> Delivery
-                        </button>
-                        <?php endif; ?>
-
-                        <?php if ($st === 'awaiting_payment'): ?>
-                        <span class="text-muted me-2" style="font-size:.74rem;font-weight:600;" title="Payment must be confirmed before staff can process this request">
-                            <i class="bi bi-clock-history me-1 text-primary"></i> Awaiting Payment
-                        </span>
-                        <?php elseif ($next !== []): ?>
-                        <form method="post"
-                              action="<?= e(route('admin/documents/' . $id . '/status')) ?>"
-                              class="d-flex gap-1 align-items-center"
-                              onsubmit="return confirm('<?= e(t('admin_documents.confirm_change_status')) ?>');">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="return_status" value="<?= e($status) ?>">
-                            <input type="hidden" name="return_delivery" value="<?= e($delivery) ?>">
-                            <input type="hidden" name="return_search" value="<?= e($search) ?>">
-
-                            <input type="text" name="staff_note" maxlength="2000"
-                                   placeholder="<?= e(t('admin_documents.note_ph')) ?>"
-                                   class="form-control form-control-sm"
-                                   style="max-width:115px;font-size:.74rem;">
-
-                            <select name="status" class="form-select form-select-sm"
-                                    style="max-width:115px;font-size:.74rem;font-weight:600;">
-                                <?php foreach ($next as $to):
-                                    $toLabel = ($isDigital && $to === 'ready')
-                                        ? t('documents.status_ready_digital')
-                                        : ($isDigital && $to === 'released' ? t('documents.status_released_digital') : t('documents.status_' . $to));
-                                ?>
-                                <option value="<?= e($to) ?>"><?= e($toLabel) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-
-                            <button type="submit" class="btn-action" title="<?= e(t('admin_documents.apply')) ?>">
-                                <i class="bi bi-check2"></i>
-                            </button>
-                        </form>
-                        <?php else: ?>
-                        <span class="text-muted me-2" style="font-size:.74rem;font-weight:600;">
-                            <i class="bi bi-lock-fill"></i> <?= e(t('admin_documents.final')) ?>
-                        </span>
-                        <?php endif; ?>
-
-                        <!-- Details & Audit Trail modal trigger -->
-                        <button type="button"
-                                class="btn-action"
-                                title="<?= e(t('admin_documents.btn_view_logs')) ?>"
-                                onclick="openDetailsModal(<?= $id ?>, '<?= e((string) $r['reference_no']) ?>')">
-                            <i class="bi bi-clock-history"></i>
-                        </button>
                     </div>
                 </td>
             </tr>
@@ -497,390 +280,274 @@ ob_start();
 <?php endif; ?>
 
 <!-- ========================================================================= -->
-<!-- 1. UPLOAD / REPLACE DOCUMENT MODAL                                         -->
+<!-- ADMIN REVIEW MODAL (Requirements 30 & 31)                                 -->
 <!-- ========================================================================= -->
-<div class="modal fade" id="uploadDocumentModal" tabindex="-1" aria-labelledby="uploadModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 40px rgba(0,0,0,0.15);">
-            <form method="post" id="uploadDocForm" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                <input type="hidden" name="return_status" value="<?= e($status) ?>">
-                <input type="hidden" name="return_delivery" value="<?= e($delivery) ?>">
-                <input type="hidden" name="return_search" value="<?= e($search) ?>">
-
-                <div class="modal-header" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:16px 16px 0 0;padding:16px 20px;">
-                    <div>
-                        <h5 class="modal-title mb-0" id="uploadModalTitle" style="font-size:1.05rem;font-weight:800;color:var(--text-primary);">
-                            <i class="bi bi-cloud-arrow-up text-primary me-1"></i> <?= e(t('admin_documents.upload_modal_title')) ?>
-                        </h5>
-                        <div class="text-muted" id="modalReqSubtitle" style="font-size:.78rem;"></div>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body" style="padding:20px;">
-                    <p class="text-muted mb-3" style="font-size:.82rem;">
-                        <?= e(t('admin_documents.upload_modal_desc')) ?>
-                    </p>
-
-                    <!-- File Picker Area -->
-                    <div class="mb-3">
-                        <label for="document_file" class="form-label mb-1" style="font-size:.8rem;font-weight:700;">
-                            <?= e(t('admin_documents.upload_file_label')) ?> <span class="text-danger">*</span>
-                        </label>
-                        <input type="file"
-                               id="document_file"
-                               name="document_file"
-                               required
-                               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
-                               class="form-control"
-                               style="font-size:.82rem;"
-                               onchange="validateSelectedFile(this)">
-                        <div class="form-text" style="font-size:.74rem;">
-                            Tinatanggap: PDF, DOC, DOCX, JPG, PNG (Max 10MB).
-                        </div>
-                    </div>
-
-                    <!-- Note / Instructions to Resident -->
-                    <div class="mb-3">
-                        <label for="modal_staff_note" class="form-label mb-1" style="font-size:.8rem;font-weight:700;">
-                            <?= e(t('admin_documents.upload_note_label')) ?>
-                        </label>
-                        <textarea id="modal_staff_note"
-                                  name="staff_note"
-                                  rows="3"
-                                  maxlength="2000"
-                                  placeholder="<?= e(t('admin_documents.upload_note_ph')) ?>"
-                                  class="form-control"
-                                  style="font-size:.82rem;"></textarea>
-                    </div>
-
-                    <!-- Checkbox: Mark as Ready -->
-                    <div class="form-check p-3 rounded" style="background:#f0fdf4;border:1px solid #bbf7d0;">
-                        <input class="form-check-input" type="checkbox" name="mark_ready" id="mark_ready" value="1" checked>
-                        <label class="form-check-label" for="mark_ready" style="font-size:.8rem;font-weight:600;color:#166534;">
-                            <i class="bi bi-bell-fill me-1"></i> I-mark agad bilang "Ready for download" at i-text ang residente
-                        </label>
-                    </div>
-                </div>
-
-                <div class="modal-footer" style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:12px 20px;">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Kanselahin</button>
-                    <button type="submit" id="submitUploadBtn" class="btn btn-sm btn-primary font-weight-bold">
-                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> <?= e(t('admin_documents.upload_btn_submit')) ?>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- ========================================================================= -->
-<!-- 2. DETAILS & AUDIT TRAIL MODAL                                            -->
-<!-- ========================================================================= -->
-<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalTitle" aria-hidden="true">
+<div class="modal fade" id="adminReviewModal" tabindex="-1" aria-labelledby="adminReviewTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 40px rgba(0,0,0,0.15);">
-            <div class="modal-header" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:16px 16px 0 0;padding:16px 20px;">
+        <div class="modal-content" style="border-radius:20px;border:none;box-shadow:0 20px 40px rgba(0,0,0,0.18);">
+            
+            <div class="modal-header" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;border-radius:20px 20px 0 0;padding:18px 24px;">
                 <div>
-                    <h5 class="modal-title mb-0" id="detailsModalTitle" style="font-size:1.05rem;font-weight:800;color:var(--text-primary);">
-                        <i class="bi bi-clock-history text-primary me-1"></i> <?= e(t('admin_documents.details_modal_title')) ?>
+                    <h5 class="modal-title mb-0" id="adminReviewTitle" style="font-size:1.1rem;font-weight:800;color:var(--text-primary);">
+                        <i class="bi bi-file-earmark-check text-primary me-1"></i> Review Document Request
                     </h5>
-                    <div class="text-muted" id="detailsModalSubtitle" style="font-size:.78rem;"></div>
+                    <div class="text-muted font-mono mt-0.5" id="revRefSubtitle" style="font-size:.8rem;font-weight:700;color:#2563eb;"></div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body" style="padding:20px;max-height:75vh;overflow-y:auto;">
-                <!-- Loading Spinner -->
-                <div id="detailsLoading" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="text-muted mt-2" style="font-size:.82rem;">Kinukuha ang buong kasaysayan ng request...</p>
-                </div>
+            <div class="modal-body" style="padding:22px;max-height:75vh;overflow-y:auto;">
+                <div class="row g-3">
 
-                <!-- Content Container -->
-                <div id="detailsContent" style="display:none;">
-                    <!-- Request Summary Cards -->
-                    <div class="row g-2 mb-4">
-                        <div class="col-md-6">
-                            <div class="p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;">
-                                <div class="text-muted mb-1" style="font-size:.72rem;text-transform:uppercase;font-weight:700;">Residente</div>
-                                <div id="dtResidentName" style="font-weight:700;font-size:.9rem;color:var(--text-primary);"></div>
-                                <div id="dtResidentContact" class="text-muted" style="font-size:.78rem;"></div>
-                                <div id="dtResidentAddress" class="text-muted" style="font-size:.78rem;"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;">
-                                <div class="text-muted mb-1" style="font-size:.72rem;text-transform:uppercase;font-weight:700;">Detalye ng Dokumento</div>
-                                <div id="dtDocType" style="font-weight:700;font-size:.9rem;color:var(--brand-primary);"></div>
-                                <div id="dtDeliveryMethod" class="mt-0.5" style="font-size:.78rem;"></div>
-                                <div id="dtPurpose" class="text-muted mt-1" style="font-size:.78rem;"></div>
+                    <!-- SECTION 1: RESIDENT INFORMATION -->
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;height:100%;">
+                            <h6 style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.75rem;">
+                                <i class="bi bi-person-badge text-primary me-1"></i> RESIDENT INFORMATION
+                            </h6>
+                            <div class="space-y-1" style="font-size:.82rem;">
+                                <div class="mb-1"><span class="text-muted">Pangalan:</span> <strong id="revResName" class="text-dark"></strong></div>
+                                <div class="mb-1"><span class="text-muted">Tirahan:</span> <strong id="revResAddress" class="text-dark"></strong></div>
+                                <div class="mb-1"><span class="text-muted">Telepono:</span> <strong id="revResPhone" class="text-dark"></strong></div>
+                                <div class="mb-1"><span class="text-muted">Beripikasyon:</span> <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">Verified Resident ✓</span></div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Attached File Info (if any) -->
-                    <div id="dtFileSection" class="mb-4 p-3 rounded" style="display:none;background:#eef2ff;border:1px solid #c7d2fe;">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-file-earmark-check-fill text-primary" style="font-size:1.4rem;"></i>
-                                <div>
-                                    <div id="dtFileName" style="font-weight:700;font-size:.85rem;color:#1e1b4b;"></div>
-                                    <div id="dtFileMeta" class="text-muted" style="font-size:.74rem;"></div>
+                    <!-- SECTION 2: DOCUMENT REQUEST -->
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;height:100%;">
+                            <h6 style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.75rem;">
+                                <i class="bi bi-file-earmark-text text-primary me-1"></i> DOCUMENT REQUEST
+                            </h6>
+                            <div class="space-y-1" style="font-size:.82rem;">
+                                <div class="mb-1"><span class="text-muted">Dokumento:</span> <strong id="revDocType" class="text-primary"></strong></div>
+                                <div class="mb-1"><span class="text-muted">Layunin (Purpose):</span> <strong id="revPurpose" class="text-dark"></strong></div>
+                                <div class="mb-1"><span class="text-muted">Paraan ng Pagtanggap:</span> <strong id="revReceiving" class="text-dark"></strong></div>
+                                <div class="mb-1"><span class="text-muted">Petsa ng Kahilingan:</span> <span id="revDate" class="text-muted"></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 3: PAYMENT INFORMATION (Requirement 30) -->
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 rounded-3" style="background:#f0fdf4;border:1px solid #bbf7d0;height:100%;">
+                            <h6 style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#166534;margin-bottom:.75rem;">
+                                <i class="bi bi-wallet2 text-success me-1"></i> PAYMENT INFORMATION
+                            </h6>
+                            <div class="space-y-1" style="font-size:.82rem;">
+                                <div class="mb-1"><span class="text-muted">Payment Method:</span> <strong id="revPayMethod" class="text-dark">GCash via PayMongo</strong></div>
+                                <div class="mb-1"><span class="text-muted">Halaga (Amount):</span> <strong id="revAmount" class="text-success" style="font-size:.95rem;"></strong></div>
+                                <div class="mb-1"><span class="text-muted">Status:</span> <span id="revPayStatus" class="fw-bold"></span></div>
+                                <div class="mb-1"><span class="text-muted">Reference:</span> <span class="font-monospace fw-bold" id="revPayRef"></span></div>
+                                <div class="mb-1"><span class="text-muted">Paid On:</span> <span id="revPayDate" class="text-muted"></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 4: REQUIREMENTS -->
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;height:100%;">
+                            <h6 style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.75rem;">
+                                <i class="bi bi-shield-check text-primary me-1"></i> REQUIREMENTS
+                            </h6>
+                            <div class="space-y-1" style="font-size:.82rem;">
+                                <div class="d-flex align-items-center gap-1.5 text-success fw-bold mb-1">
+                                    <i class="bi bi-check-circle-fill"></i> Valid Government ID on File (Verified)
+                                </div>
+                                <div class="text-muted" style="font-size:.76rem;line-height:1.3;">
+                                    Lahat ng kinakailangang impormasyon at katibayan ng paninirahan ay ganap na na-verify sa rehistro ng barangay.
+                                </div>
+                                <div id="revCertBox" class="mt-2 pt-2 border-top d-none">
+                                    <span class="text-muted d-block" style="font-size:.72rem;">Nailikhang Sertipiko:</span>
+                                    <strong id="revCertNo" class="text-primary font-monospace"></strong>
                                 </div>
                             </div>
-                            <div class="d-flex gap-1">
-                                <a id="dtFilePreviewBtn" href="#" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:.75rem;">
-                                    <i class="bi bi-eye"></i> Preview
-                                </a>
-                                <a id="dtFileDownloadBtn" href="#" class="btn btn-sm btn-primary" style="font-size:.75rem;">
-                                    <i class="bi bi-download"></i> Download
-                                </a>
-                            </div>
                         </div>
                     </div>
 
-                    <!-- Audit Trail Timeline -->
-                    <h6 style="font-size:.86rem;font-weight:800;color:var(--text-primary);margin-bottom:12px;">
-                        <i class="bi bi-journal-text me-1"></i> Audit Trail & Timeline
-                    </h6>
+                    <!-- SECTION 5: ADMIN ACTION (Requirement 31) -->
+                    <div class="col-12">
+                        <div class="p-3 rounded-3" style="background:#f1f5f9;border:1px solid #cbd5e1;">
+                            <h6 style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#334155;margin-bottom:.75rem;">
+                                <i class="bi bi-lightning-charge text-warning me-1"></i> ADMIN ACTION
+                            </h6>
 
-                    <div id="logsTimeline" class="position-relative ps-4" style="border-left:2px solid #e2e8f0;">
-                        <!-- Timeline entries inserted via JS -->
+                            <!-- Form 1: Approve & Auto-Generate -->
+                            <div id="actionApproveSection" class="mb-3 p-3 bg-white rounded-3 border">
+                                <form method="post" id="formApprove" onsubmit="return confirm('Aprubahan at awtomatikong gumawa ng opisyal na sertipiko na may QR Code?');">
+                                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <div>
+                                            <strong class="d-block text-dark" style="font-size:.85rem;">Aprubahan ang Kahilingan (Approve & Auto-Generate)</strong>
+                                            <span class="text-muted" style="font-size:.75rem;">Awtomatikong bubuuin ang opisyal na PDF certificate na may pirma at QR code.</span>
+                                        </div>
+                                        <button type="submit" class="btn btn-success btn-sm px-4 fw-bold">
+                                            <i class="bi bi-patch-check me-1"></i> APPROVE & GENERATE
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Form 2: Mark As Claimed (for Pickup only) -->
+                            <div id="actionClaimSection" class="mb-3 p-3 bg-white rounded-3 border d-none">
+                                <form method="post" id="formClaim" onsubmit="return confirm('Markahan bilang nakuha na (Claimed) sa Barangay Hall?');">
+                                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <div>
+                                            <strong class="d-block text-primary" style="font-size:.85rem;">I-release sa Barangay Hall (Mark as Claimed)</strong>
+                                            <span class="text-muted" style="font-size:.75rem;">Nakuha na ng residente ang pisikal na kopya ng sertipiko sa counter.</span>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold">
+                                            <i class="bi bi-hand-thumbs-up me-1"></i> MARK AS CLAIMED
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Tabs for Request Info & Reject -->
+                            <div class="row g-2">
+                                <div class="col-12 col-md-6">
+                                    <div class="p-2.5 bg-white rounded-3 border">
+                                        <form method="post" id="formNeedInfo">
+                                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                            <input type="hidden" name="status" value="needs_information">
+                                            <label class="form-label mb-1 fw-bold text-dark" style="font-size:.78rem;">
+                                                Humiling ng Karagdagang Impormasyon:
+                                            </label>
+                                            <textarea name="staff_note" rows="2" class="form-control form-control-sm mb-2" style="font-size:.76rem;" placeholder="Ilagay ang kailangan ipadala o itanong sa residente..." required></textarea>
+                                            <button type="submit" class="btn btn-outline-warning btn-sm w-100 fw-bold" style="font-size:.76rem;">
+                                                <i class="bi bi-question-circle me-1"></i> REQUEST MORE INFO
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <div class="p-2.5 bg-white rounded-3 border">
+                                        <form method="post" id="formReject" onsubmit="return confirm('Sigurado ka bang nais tanggihan ang kahilingang ito?');">
+                                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                            <input type="hidden" name="status" value="rejected">
+                                            <label class="form-label mb-1 fw-bold text-danger" style="font-size:.78rem;">
+                                                Tanggihan ang Kahilingan (Reject Reason): <span class="text-danger">*</span>
+                                            </label>
+                                            <textarea name="staff_note" rows="2" class="form-control form-control-sm mb-2" style="font-size:.76rem;" placeholder="Kailangan ilagay ang opisyal na dahilan ng pagtanggi..." required></textarea>
+                                            <button type="submit" class="btn btn-outline-danger btn-sm w-100 fw-bold" style="font-size:.76rem;">
+                                                <i class="bi bi-x-circle me-1"></i> REJECT REQUEST
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
+
                 </div>
             </div>
 
-            <div class="modal-footer" style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:12px 20px;">
+            <div class="modal-footer" style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 20px 20px;padding:12px 24px;">
                 <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Isara</button>
+                <a href="#" id="revPreviewBtn" target="_blank" class="btn btn-sm btn-outline-primary d-none">
+                    <i class="bi bi-eye me-1"></i> Preview PDF
+                </a>
+                <a href="#" id="revDownloadBtn" class="btn btn-sm btn-primary d-none">
+                    <i class="bi bi-download me-1"></i> Download PDF
+                </a>
             </div>
-        </div>
-    </div>
-</div>
 
-<!-- ========================================================================= -->
-<!-- 3. DELIVERY STATUS UPDATE MODAL                                           -->
-<!-- ========================================================================= -->
-<div class="modal fade" id="deliveryStatusModal" tabindex="-1" aria-labelledby="deliveryModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 40px rgba(0,0,0,0.15);">
-            <form method="post" id="deliveryStatusForm">
-                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                <input type="hidden" name="return_status" value="<?= e($status) ?>">
-                <input type="hidden" name="return_delivery" value="<?= e($delivery) ?>">
-                <input type="hidden" name="return_search" value="<?= e($search) ?>">
-
-                <div class="modal-header" style="background:#f0f9ff;border-bottom:1px solid #bae6fd;border-radius:16px 16px 0 0;padding:16px 20px;">
-                    <div>
-                        <h5 class="modal-title mb-0" id="deliveryModalTitle" style="font-weight:700;font-size:1.05rem;color:#0369a1;">
-                            <i class="bi bi-truck me-1"></i> I-update ang Estado ng Delivery
-                        </h5>
-                        <p class="text-muted mb-0 mt-0.5" id="deliveryModalSubtitle" style="font-size:.78rem;"></p>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body" style="padding:20px;">
-                    <div class="mb-3">
-                        <label class="form-label" style="font-size:.82rem;font-weight:700;color:var(--text-primary);">
-                            Estado ng Paghahatid (Delivery Status) <span class="text-danger">*</span>
-                        </label>
-                        <select name="delivery_status" id="modal_delivery_status" class="form-select" required>
-                            <option value="pending">Pending (Nakabinbin)</option>
-                            <option value="preparing">Preparing (Inihahanda ng Kawani)</option>
-                            <option value="out_for_delivery">Out for Delivery (Dala na ng Courier/Kagawad)</option>
-                            <option value="delivered">Delivered (Matagumpay na Nakarating)</option>
-                            <option value="failed">Failed Delivery (Hindi Nakarating / Walang Tao)</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label" style="font-size:.82rem;font-weight:700;color:var(--text-primary);">
-                            Pangalan ng Naghatid (Delivered / Dispatched By)
-                        </label>
-                        <input type="text" name="delivered_by" id="modal_delivered_by" class="form-control" placeholder="Pangalan ng Kagawad / Tanod / Staff">
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label" style="font-size:.82rem;font-weight:700;color:var(--text-primary);">
-                            Tala o Komento ng Kawani (Staff Note / Tracking Info)
-                        </label>
-                        <textarea name="staff_note" id="modal_delivery_note" rows="2" class="form-control" placeholder="Hal: Naihatid sa mismong residente, pumirma sa delivery logbook."></textarea>
-                    </div>
-                </div>
-
-                <div class="modal-footer" style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:12px 20px;">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Kanselahin</button>
-                    <button type="submit" class="btn btn-sm btn-primary fw-bold">
-                        <i class="bi bi-check2-circle me-1"></i> I-save ang Estado
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
 
 <script>
-function openDeliveryModal(id, ref, currentStatus, currentDeliveredBy) {
-    const modalEl = document.getElementById('deliveryStatusModal');
-    const form = document.getElementById('deliveryStatusForm');
-    const subtitle = document.getElementById('deliveryModalSubtitle');
-    const statusSelect = document.getElementById('modal_delivery_status');
-    const deliveredByInput = document.getElementById('modal_delivered_by');
-
-    form.action = '<?= e(route('admin/documents/')) ?>' + id + '/delivery-status';
-    subtitle.innerHTML = 'Reference: <strong>' + ref + '</strong>';
-    if (statusSelect) statusSelect.value = currentStatus || 'pending';
-    if (deliveredByInput) deliveredByInput.value = currentDeliveredBy || '';
-
+function openReviewModal(r) {
+    const modalEl = document.getElementById('adminReviewModal');
     const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-}
-// Open Upload/Replace Modal
-function openUploadModal(request, isReplace) {
-    const modalEl = document.getElementById('uploadDocumentModal');
-    const form = document.getElementById('uploadDocForm');
-    const title = document.getElementById('uploadModalTitle');
-    const subtitle = document.getElementById('modalReqSubtitle');
-    const note = document.getElementById('modal_staff_note');
-    const fileInput = document.getElementById('document_file');
 
-    fileInput.value = '';
-    const routeAction = isReplace
-        ? '<?= e(route('admin/documents/')) ?>' + request.id + '/replace'
-        : '<?= e(route('admin/documents/')) ?>' + request.id + '/upload';
+    // Header
+    document.getElementById('revRefSubtitle').innerText = r.reference_no + (r.certificate_no ? ' • ' + r.certificate_no : '');
 
-    form.action = routeAction;
-    title.innerHTML = isReplace
-        ? '<i class="bi bi-arrow-repeat text-warning me-1"></i> Palitan ang Soft Copy'
-        : '<i class="bi bi-cloud-arrow-up text-primary me-1"></i> Mag-upload ng Soft Copy';
+    // Resident
+    document.getElementById('revResName').innerText = r.full_name || '';
+    document.getElementById('revResAddress').innerText = (r.zone ? r.zone + ', ' : '') + (r.address || 'Barangay Bayogo');
+    document.getElementById('revResPhone').innerText = r.phone || 'N/A';
 
-    subtitle.innerHTML = 'Reference: <strong>' + request.reference_no + '</strong> &bull; ' + request.full_name;
+    // Document
+    document.getElementById('revDocType').innerText = r.document_type || '';
+    document.getElementById('revPurpose').innerText = r.purpose || '';
+    document.getElementById('revReceiving').innerText = (r.delivery_method === 'digital') ? 'Digital Copy (Online Soft Copy)' : 'Pickup at Barangay Hall (Counter)';
+    document.getElementById('revDate').innerText = r.requested_at ? new Date(r.requested_at).toLocaleString() : '';
 
-    if (request.staff_note) {
-        note.value = request.staff_note;
+    // Payment Section (Requirement 30)
+    var fee = parseFloat(r.fee_amount || 0);
+    var pst = (r.payment_status || 'UNPAID').toUpperCase();
+    var isPaid = (pst === 'PAID' || pst === 'PAID_VERIFIED' || pst === 'PAID_AT_PICKUP' || pst === 'FREE' || pst === 'NOT_REQUIRED' || fee <= 0);
+
+    document.getElementById('revAmount').innerText = fee > 0 ? '₱' + fee.toFixed(2) : 'LIBRE';
+    document.getElementById('revPayRef').innerText = r.payment_ref || (r.reference_no ? 'PAY-' + r.reference_no : 'N/A');
+    document.getElementById('revPayDate').innerText = r.payment_created_at || (r.requested_at ? new Date(r.requested_at).toLocaleDateString() : 'N/A');
+
+    var pstEl = document.getElementById('revPayStatus');
+    if (isPaid) {
+        pstEl.className = "text-success fw-bold";
+        pstEl.innerHTML = '<i class="bi bi-check-circle-fill"></i> PAID ✓';
     } else {
-        note.value = 'Opisyal na pinirmahan ng Punong Barangay. Handa nang i-print.';
+        pstEl.className = "text-warning fw-bold";
+        pstEl.innerText = pst;
     }
 
-    form.onsubmit = function() {
-        if (!fileInput.files || fileInput.files.length === 0) {
-            alert('Pumili muna ng dokumento bago mag-upload.');
-            return false;
-        }
-        return confirm('<?= e(t('admin_documents.confirm_upload')) ?>');
-    };
+    // Certificate Box
+    var certBox = document.getElementById('revCertBox');
+    if (r.certificate_no) {
+        certBox.classList.remove('d-none');
+        document.getElementById('revCertNo').innerText = r.certificate_no;
+    } else {
+        certBox.classList.add('d-none');
+    }
 
-    const modal = new bootstrap.Modal(modalEl);
+    // Forms Setup
+    var formApprove = document.getElementById('formApprove');
+    var formClaim = document.getElementById('formClaim');
+    var formNeedInfo = document.getElementById('formNeedInfo');
+    var formReject = document.getElementById('formReject');
+
+    formApprove.action = '<?= e(route('admin/documents/')) ?>' + r.id + '/approve';
+    formClaim.action = '<?= e(route('admin/documents/')) ?>' + r.id + '/claim';
+    formNeedInfo.action = '<?= e(route('admin/documents/')) ?>' + r.id + '/status';
+    formReject.action = '<?= e(route('admin/documents/')) ?>' + r.id + '/status';
+
+    // Show/hide approve or claim actions
+    var st = (r.status || '').toLowerCase();
+    var approveSec = document.getElementById('actionApproveSection');
+    var claimSec = document.getElementById('actionClaimSection');
+
+    if (['pending', 'pending_review', 'under_review', 'processing', 'needs_information'].indexOf(st) !== -1) {
+        approveSec.classList.remove('d-none');
+    } else {
+        approveSec.classList.add('d-none');
+    }
+
+    if (r.delivery_method === 'pickup' && st === 'ready') {
+        claimSec.classList.remove('d-none');
+    } else {
+        claimSec.classList.add('d-none');
+    }
+
+    // Preview / Download links
+    var prevBtn = document.getElementById('revPreviewBtn');
+    var downBtn = document.getElementById('revDownloadBtn');
+    if (r.document_file_name) {
+        prevBtn.classList.remove('d-none');
+        downBtn.classList.remove('d-none');
+        prevBtn.href = '<?= e(route('admin/documents/')) ?>' + r.id + '/preview';
+        downBtn.href = '<?= e(route('admin/documents/')) ?>' + r.id + '/download';
+    } else {
+        prevBtn.classList.add('d-none');
+        downBtn.classList.add('d-none');
+    }
+
     modal.show();
-}
-
-// Client-side file validation (10MB limit and format)
-function validateSelectedFile(input) {
-    if (!input.files || input.files.length === 0) return;
-    const file = input.files[0];
-    const maxBytes = 10 * 1024 * 1024; // 10MB
-    const allowed = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
-    const ext = file.name.split('.').pop().toLowerCase();
-
-    if (!allowed.includes(ext)) {
-        alert('Di-wastong format (' + ext + '). Ang tinatanggap lamang ay PDF, DOC, DOCX, JPG, o PNG.');
-        input.value = '';
-        return;
-    }
-
-    if (file.size > maxBytes) {
-        alert('Masyadong malaki ang file (' + (file.size / 1024 / 1024).toFixed(1) + ' MB). Ang limitasyon ay 10MB.');
-        input.value = '';
-        return;
-    }
-}
-
-// Open Details & Audit Trail Modal via AJAX
-function openDetailsModal(requestId, refNo) {
-    const modalEl = document.getElementById('detailsModal');
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-
-    const subtitle = document.getElementById('detailsModalSubtitle');
-    subtitle.innerHTML = 'Reference: <strong>' + refNo + '</strong>';
-
-    const loading = document.getElementById('detailsLoading');
-    const content = document.getElementById('detailsContent');
-    loading.style.display = 'block';
-    content.style.display = 'none';
-
-    fetch('<?= e(route('admin/documents/')) ?>' + requestId + '/details')
-        .then(r => {
-            if (!r.ok) throw new Error('Failed to load');
-            return r.json();
-        })
-        .then(data => {
-            loading.style.display = 'none';
-            content.style.display = 'block';
-
-            const req = data.request;
-            const logs = data.logs;
-
-            // Resident Details
-            document.getElementById('dtResidentName').textContent = req.full_name;
-            document.getElementById('dtResidentContact').textContent = (req.phone ? req.phone + ' • ' : '') + (req.email || '');
-            document.getElementById('dtResidentAddress').textContent = 'Purok/Zone: ' + (req.zone || 'None') + (req.address ? ' • ' + req.address : '');
-
-            // Document Details
-            document.getElementById('dtDocType').textContent = req.document_type;
-            const isDig = req.delivery_method === 'digital';
-            document.getElementById('dtDeliveryMethod').innerHTML = isDig
-                ? '<span class="badge bg-primary">📄 Digital Soft Copy (Online)</span>'
-                : '<span class="badge bg-secondary">🏢 Personal Pickup (Counter)</span>';
-            document.getElementById('dtPurpose').textContent = 'Layunin: ' + req.purpose;
-
-            // File section
-            const fileSec = document.getElementById('dtFileSection');
-            if (req.document_file_name) {
-                fileSec.style.display = 'block';
-                document.getElementById('dtFileName').textContent = req.document_file_name;
-                document.getElementById('dtFileMeta').textContent = (req.document_file_type || '') + (req.document_uploaded_at ? ' • Na-upload: ' + req.document_uploaded_at : '');
-                document.getElementById('dtFilePreviewBtn').href = '<?= e(route('admin/documents/')) ?>' + req.id + '/preview';
-                document.getElementById('dtFileDownloadBtn').href = '<?= e(route('admin/documents/')) ?>' + req.id + '/download';
-            } else {
-                fileSec.style.display = 'none';
-            }
-
-            // Timeline logs
-            const timeline = document.getElementById('logsTimeline');
-            timeline.innerHTML = '';
-
-            if (!logs || logs.length === 0) {
-                timeline.innerHTML = '<p class="text-muted" style="font-size:.8rem;">Walang naitalang audit logs para sa request na ito.</p>';
-            } else {
-                logs.forEach(log => {
-                    const item = document.createElement('div');
-                    item.className = 'mb-3 position-relative';
-                    const iconColor = log.action.includes('file') ? '#4f46e5' : (log.action.includes('status') ? '#059669' : '#0284c7');
-                    item.innerHTML = `
-                        <div style="position:absolute;left:-23px;top:2px;width:12px;height:12px;border-radius:50%;background:${iconColor};border:2px solid #fff;box-shadow:0 0 0 2px #e2e8f0;"></div>
-                        <div class="d-flex align-items-center justify-content-between">
-                            <strong style="font-size:.8rem;color:var(--text-primary);text-transform:capitalize;">${log.action.replace('_', ' ')}</strong>
-                            <span class="text-muted" style="font-size:.72rem;">${log.created_at}</span>
-                        </div>
-                        <div class="text-muted" style="font-size:.76rem;">
-                            Actor: <strong>${log.actor_name || 'System / Resident'}</strong> ${log.actor_role ? '(' + log.actor_role + ')' : ''}
-                        </div>
-                        <div style="font-size:.78rem;color:var(--text-secondary);margin-top:2px;">
-                            ${log.details || ''}
-                        </div>
-                    `;
-                    timeline.appendChild(item);
-                });
-            }
-        })
-        .catch(err => {
-            loading.innerHTML = '<div class="text-danger py-4"><i class="bi bi-exclamation-triangle"></i> Hindi maikarga ang detalye: ' + err.message + '</div>';
-        });
 }
 </script>
 

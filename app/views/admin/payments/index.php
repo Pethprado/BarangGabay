@@ -34,6 +34,8 @@ ob_start();
 <?php
 $paypalMode = \App\Services\PayPalService::getMode();
 $paypalConfigured = \App\Services\PayPalService::isConfigured();
+$paymongoMode = \App\Services\PayMongoService::getMode();
+$paymongoConfigured = \App\Services\PayMongoService::isConfigured();
 ?>
 
 <!-- Header & Subnav -->
@@ -59,7 +61,40 @@ $paypalConfigured = \App\Services\PayPalService::isConfigured();
     </div>
 </div>
 
-<!-- Admin-Only PayPal Connection Status Card -->
+<!-- Primary Payment Gateway: PayMongo Status Card -->
+<div class="card border-0 shadow-sm rounded-3 p-3 mb-3" style="background:var(--card-bg, #fff);border-left:4px solid #10b981 !important;">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background:#ecfdf5;color:#059669;width:42px;height:42px;">
+                <i class="bi bi-credit-card-2-front fs-4"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-dark" style="font-size:.9rem;">Primary Gateway: PayMongo</span>
+                    <span class="badge rounded-pill bg-<?= $paymongoMode === 'live' ? 'success' : 'warning text-dark' ?>" style="font-size:.7rem;">
+                        Mode: <?= strtoupper($paymongoMode) ?>
+                    </span>
+                    <span class="badge rounded-pill bg-<?= $paymongoConfigured ? 'success-subtle text-success border border-success-subtle' : 'danger-subtle text-danger border border-danger-subtle' ?>" style="font-size:.7rem;">
+                        API: <?= $paymongoConfigured ? 'Configured' : 'Missing Keys' ?>
+                    </span>
+                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size:.7rem;">
+                        GCash &bull; Maya &bull; Cards &bull; QR PH
+                    </span>
+                </div>
+                <div class="text-muted mt-1" style="font-size:.75rem;">
+                    Hosted Checkout: <strong>Active</strong> &bull; Checkout Sessions API: <strong>v2</strong> &bull; Currency: <strong>PHP</strong> &bull; Webhook Verification: <strong>HMAC-SHA256</strong>
+                </div>
+            </div>
+        </div>
+        <div>
+            <span class="badge bg-light text-secondary border font-monospace" style="font-size:.75rem;">
+                Endpoint: /api/payments/paymongo/webhook
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Payment Provider: PayPal Status Card -->
 <div class="card border-0 shadow-sm rounded-3 p-3 mb-4" style="background:var(--card-bg, #fff);border-left:4px solid #0284c7 !important;">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
@@ -68,7 +103,7 @@ $paypalConfigured = \App\Services\PayPalService::isConfigured();
             </div>
             <div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold text-dark" style="font-size:.9rem;">Payment Provider: PayPal</span>
+                    <span class="fw-bold text-dark" style="font-size:.9rem;">Secondary Provider: PayPal</span>
                     <span class="badge rounded-pill bg-<?= $paypalMode === 'live' ? 'success' : 'warning text-dark' ?>" style="font-size:.7rem;">
                         Mode: <?= strtoupper($paypalMode) ?>
                     </span>
@@ -160,6 +195,7 @@ $paypalConfigured = \App\Services\PayPalService::isConfigured();
         <div class="col-md-2">
             <select name="method" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">Lahat ng Paraan</option>
+                <option value="paymongo" <?= $method === 'paymongo' ? 'selected' : '' ?>>PayMongo (GCash/Cards/QR)</option>
                 <option value="paypal" <?= $method === 'paypal' ? 'selected' : '' ?>>PayPal Online</option>
                 <option value="gcash" <?= $method === 'gcash' ? 'selected' : '' ?>>Online GCash</option>
                 <option value="pickup" <?= $method === 'pickup' ? 'selected' : '' ?>>Counter / Pickup</option>
@@ -298,9 +334,31 @@ $paypalConfigured = \App\Services\PayPalService::isConfigured();
                         <?php endif; ?>
                     </td>
 
-                    <!-- Proof & Reference / PayPal IDs -->
+                    <!-- Proof & Reference / PayMongo / PayPal IDs -->
                     <td>
-                        <?php if (!empty($t['paypal_order_id']) || ($t['provider'] ?? '') === 'paypal'): ?>
+                        <?php if (!empty($t['paymongo_checkout_id']) || ($t['provider'] ?? '') === 'paymongo'): ?>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:.68rem;">
+                                <i class="bi bi-credit-card-2-front me-1"></i>PayMongo (<?= e(strtoupper((string)($t['paymongo_source_type'] ?: 'Online'))) ?>)
+                            </span>
+                            <?php if ($pst === 'PAID_VERIFIED'): ?>
+                            <span class="badge bg-success text-white" style="font-size:.65rem;">Verified</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="font-monospace text-muted mt-1" style="font-size:.7rem;" title="PayMongo Checkout ID">
+                            CS: <strong class="text-dark"><?= e((string) $t['paymongo_checkout_id']) ?></strong>
+                        </div>
+                        <?php if (!empty($t['paymongo_payment_id'])): ?>
+                        <div class="font-monospace text-muted" style="font-size:.68rem;" title="Payment ID">
+                            PayID: <span class="text-secondary"><?= e((string) $t['paymongo_payment_id']) ?></span>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (!empty($t['verified_at'])): ?>
+                        <div class="text-muted" style="font-size:.68rem;">
+                            Paid At: <?= e(format_datetime((string) $t['verified_at'])) ?>
+                        </div>
+                        <?php endif; ?>
+                        <?php elseif (!empty($t['paypal_order_id']) || ($t['provider'] ?? '') === 'paypal'): ?>
                         <div class="d-flex align-items-center gap-1">
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.68rem;">
                                 <i class="bi bi-paypal me-1"></i>PayPal
