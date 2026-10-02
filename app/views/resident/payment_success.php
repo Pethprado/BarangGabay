@@ -242,4 +242,4 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-view('layouts/app', compact('content', 'pageTitle'));
+require __DIR__ . '/../layouts/main.php';

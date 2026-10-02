@@ -227,12 +227,17 @@ ob_start();
                     </div>
 
                     <!-- Read-only verified profile summary (Requirement 4) -->
+                    <?php 
+                        $userArr = is_array($user) ? $user : [];
+                        $userFullName = !empty($userArr) ? User::formatFullName($userArr) : ($user['name'] ?? 'Residente');
+                        $userAddress  = !empty($userArr) ? User::formatAddress($userArr) : 'Barangay Bayogo';
+                    ?>
                     <div class="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5 dark:border-emerald-900 dark:bg-emerald-950/20">
                         <div class="flex items-center justify-between border-b border-emerald-200/60 pb-3 mb-3.5 dark:border-emerald-800">
                             <div class="flex items-center gap-2">
                                 <i class="bi bi-person-check-fill text-xl text-emerald-600 dark:text-emerald-400"></i>
                                 <span class="text-sm font-black text-slate-900 dark:text-white">
-                                    <?= e(User::formatFullName($user)) ?>
+                                    <?= e($userFullName) ?>
                                 </span>
                             </div>
                             <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
@@ -243,7 +248,7 @@ ob_start();
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                             <div>
                                 <span class="text-slate-400 block text-[10px] font-bold uppercase">Buong Pangalan:</span>
-                                <strong class="text-slate-800 dark:text-slate-200"><?= e(User::formatFullName($user)) ?></strong>
+                                <strong class="text-slate-800 dark:text-slate-200"><?= e($userFullName) ?></strong>
                             </div>
                             <div>
                                 <span class="text-slate-400 block text-[10px] font-bold uppercase">Kaarawan & Edad:</span>
@@ -264,7 +269,7 @@ ob_start();
                             </div>
                             <div class="sm:col-span-2">
                                 <span class="text-slate-400 block text-[10px] font-bold uppercase">Tirahan (Address):</span>
-                                <strong class="text-slate-800 dark:text-slate-200"><?= e(User::formatAddress($user)) ?></strong>
+                                <strong class="text-slate-800 dark:text-slate-200"><?= e($userAddress) ?></strong>
                             </div>
                             <?php if (!empty($user['household_no'])): ?>
                             <div class="sm:col-span-2">
@@ -951,4 +956,4 @@ onDocumentTypeChange();
 
 <?php
 $content = ob_get_clean();
-view('layouts/app', compact('content', 'pageTitle'));
+require __DIR__ . '/../layouts/main.php';
