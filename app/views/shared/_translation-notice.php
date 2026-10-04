@@ -47,6 +47,7 @@ $__tnMachine  = false;
  * the same source language.
  */
 $__tnShown = null;
+$__tnGated = false;
 
 foreach ($__tnPicks as $__tnOne) {
     if (!is_array($__tnOne)) {
@@ -58,6 +59,7 @@ foreach ($__tnPicks as $__tnOne) {
         continue;
     }
     $__tnMissing = $__tnMissing || !($__tnOne['translated'] ?? true);
+    $__tnGated   = $__tnGated || !empty($__tnOne['gated']);
     $__tnMachine = $__tnMachine || (bool) ($__tnOne['machine'] ?? false);
 
     if ($__tnShown === null
@@ -79,7 +81,82 @@ if (!$__tnMissing && !$__tnMachine) {
 <?php /* Rendered as a quiet inline footnote rather than a boxed alert: this
          is a remark about the text, not a warning about the barangay, and a
          full-width amber panel above the article said otherwise. */ ?>
-<?php if ($__tnMissing): ?>
+<?php
+/*
+ * A missing translation is generated on the spot instead of serving the
+ * source text under the reader's language. The page shows "Translating…",
+ * asks /api/content/translate to create and store it (the same runner staff
+ * use, saved for everyone after), then reloads once to show it. Only an
+ * urgent post's machine translation held for staff review is not
+ * generated here — that gate exists so a mistranslated storm warning never
+ * reaches residents unchecked.
+ */
+$__tnType = $__tnType ?? null;
+$__tnId   = (int) ($__tnId ?? 0);
+$__tnAuto = $__tnMissing && !$__tnGated && $__tnType !== null && $__tnId > 0;
+?>
+<?php if ($__tnAuto): ?>
+<div data-translation-notice="translating" class="post-note" role="status" aria-live="polite"
+     id="tnAuto"
+     data-type="<?= e((string) $__tnType) ?>" data-id="<?= $__tnId ?>"
+     data-locale="<?= e((string) $__tnPick['locale']) ?>">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true" id="tnSpin" style="width:1rem;height:1rem;"></span>
+    <span id="tnText"><?= e(t('content_lang.translating', ['language' => $__tnLanguage])) ?></span>
+    <button type="button" id="tnRetry" class="post-note-shown" style="display:none;text-decoration:underline;background:none;border:0;padding:0;cursor:pointer;">
+        <?= e(t('content_lang.translate_retry')) ?>
+    </button>
+</div>
+<script>
+(function () {
+    var box = document.getElementById('tnAuto');
+    if (!box) { return; }
+    var key = 'tn:' + box.dataset.type + ':' + box.dataset.id + ':' + box.dataset.locale;
+    var failedMsg = <?= json_encode(t('content_lang.translate_failed', ['language' => $__tnLanguage])) ?>;
+    var reviewMsg = <?= json_encode(t('content_lang.pending_review', ['language' => $__tnLanguage])) ?>;
+
+    function fail(msg) {
+        document.getElementById('tnSpin').style.display = 'none';
+        document.getElementById('tnText').textContent = msg;
+        document.getElementById('tnRetry').style.display = msg === failedMsg ? 'inline' : 'none';
+    }
+
+    function run(manual) {
+        // One automatic attempt per post and language per session: never a reload loop.
+        var tried = false;
+        try { tried = sessionStorage.getItem(key) === '1'; sessionStorage.setItem(key, '1'); } catch (e) {}
+        if (tried && !manual) { fail(failedMsg); return; }
+
+        document.getElementById('tnSpin').style.display = '';
+        document.getElementById('tnRetry').style.display = 'none';
+        var fd = new FormData();
+        fd.set('content_type', box.dataset.type);
+        fd.set('content_id', box.dataset.id);
+        fd.set('locale', box.dataset.locale);
+        fd.set('csrf_token', (window.BarangGabay && window.BarangGabay.csrfToken) || '');
+        var base = ((window.BarangGabay && window.BarangGabay.baseUrl) || '').replace(/\/$/, '');
+        fetch(base + '/api/content/translate', { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.status === 'ready') { window.location.reload(); return; }
+                if (d.status === 'pending_review') { fail(reviewMsg); return; }
+                fail(failedMsg);
+            })
+            .catch(function () { fail(failedMsg); });
+    }
+
+    document.getElementById('tnRetry').addEventListener('click', function () { run(true); });
+    run(false);
+})();
+</script>
+<?php elseif ($__tnMissing && $__tnGated): ?>
+<p data-translation-notice="pending-review" class="post-note">
+    <i class="bi bi-shield-check"></i>
+    <span><?= e(t('content_lang.pending_review', ['language' => $__tnLanguage])) ?></span>
+    <?php if ($__tnShownName !== null): ?>
+    <span class="post-note-shown"><?= e(t('content_lang.showing_instead', ['language' => $__tnShownName])) ?></span>
+    <?php endif; ?>
+</p>
+<?php elseif ($__tnMissing): ?>
 <p data-translation-notice="missing"
    class="post-note"
    data-shown-locale="<?= e((string) ($__tnShown ?? '')) ?>">

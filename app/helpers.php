@@ -1382,8 +1382,10 @@ function localised_content(array $row, string $baseField, ?string $locale = null
     // because a post only ever has one such language. Manobo is never gated —
     // it is glossed locally from the barangay's own dictionary.
     $gatedLocale = $sourceLang === 'fil' ? 'en' : 'fil';
+    $gated       = false;
     if ($locale === $gatedLocale && ($row['en_review_state'] ?? 'none') === 'pending') {
         $translated = '';
+        $gated      = true;
     }
 
 
@@ -1431,6 +1433,9 @@ function localised_content(array $row, string $baseField, ?string $locale = null
             // announcement that means Quill HTML, not plain text.
             'is_original'  => true,
             'shown_locale' => $sourceLang,
+            // True when a machine translation exists but is held for staff
+            // review (urgent posts); the page must not try to generate one.
+            'gated'        => $gated,
         ];
 }
 

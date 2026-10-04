@@ -1220,6 +1220,10 @@ return [
         /* Tingnan ang en.php: pinapangalanan na kung anong wika ang
            talagang binabasa, hindi na lang "ang orihinal". */
         'no_translation'  => 'Wala pang :language na bersyon ang post na ito.',
+        'translating'     => 'Isinasalin ang post na ito sa :language…',
+        'translate_failed' => 'Pansamantalang hindi available ang salin sa :language.',
+        'translate_retry' => 'Subukan muli',
+        'pending_review'  => 'Sinusuri pa ng barangay staff ang salin sa :language ng urgent na abisong ito bago ipakita.',
         'showing_instead' => 'Ang binabasa ninyo ay ang orihinal na :language.',
         'machine_translation' => 'Awtomatikong ginawa ang saling ito. Maaaring hindi ito eksakto — ang orihinal ang opisyal na bersyon.',
     ],

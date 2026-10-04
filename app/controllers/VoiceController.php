@@ -240,6 +240,91 @@ class VoiceController
         ]);
     }
 
+    /**
+     * POST /api/content/translate — make sure a post has text in a language.
+     *
+     * Called by the detail page when the reader's language has no stored
+     * translation: runs the same TranslationRetryRunner staff use (MyMemory
+     * for English/Filipino, the Manobo-first hybrid translator for Manobo),
+     * stores the result for everyone, and reports whether it is now
+     * showable. Never generates around the urgent-post review gate.
+     *
+     * Responds {status: ready | pending_review | failed}.
+     */
+    public function ensureTranslation(): void
+    {
+        header('Content-Type: application/json');
+        check_csrf();
+
+        $type   = (string) ($_POST['content_type'] ?? '');
+        $id     = (int) ($_POST['content_id'] ?? 0);
+        $locale = (string) ($_POST['locale'] ?? '');
+        $fields = ['announcement' => 'body', 'event' => 'description', 'ordinance' => 'description'];
+
+        if (!isset($fields[$type]) || $id <= 0 || !\in_array($locale, TranslationAttempt::LANGS, true)) {
+            http_response_code(400);
+            echo json_encode(['status' => 'failed', 'error' => 'Bad request']);
+            return;
+        }
+
+        $state = function () use ($type, $id, $locale, $fields): ?string {
+            $row = $this->row($type, $id);
+            if ($row === null) {
+                return null;
+            }
+            $picks = [localised_content($row, 'title', $locale), localised_content($row, $fields[$type], $locale)];
+            $missing = false;
+            foreach ($picks as $pick) {
+                if (trim((string) $pick['text']) === '') {
+                    continue;
+                }
+                if (!empty($pick['gated'])) {
+                    return 'pending_review';
+                }
+                $missing = $missing || !$pick['translated'];
+            }
+            return $missing ? 'missing' : 'ready';
+        };
+
+        $before = $state();
+        if ($before === null) {
+            http_response_code(404);
+            echo json_encode(['status' => 'failed', 'error' => 'Not found']);
+            return;
+        }
+        if ($before !== 'missing') {
+            echo json_encode(['status' => $before]);   // already there (or held for review): nothing to spend
+            return;
+        }
+
+        // A resident can trigger at most 30 new translations an hour; each
+        // runs once per post and language and is then stored for everyone.
+        $now  = time();
+        $runs = array_values(array_filter($_SESSION['content_translate_runs'] ?? [], static fn ($t) => $t > $now - 3600));
+        if (\count($runs) >= 30) {
+            echo json_encode(['status' => 'failed', 'error' => 'rate_limited']);
+            return;
+        }
+        $runs[] = $now;
+        $_SESSION['content_translate_runs'] = $runs;
+
+        try {
+            @set_time_limit(110);
+            TranslationAttempt::makeDue($type, $id, $locale);
+            $result = (new TranslationRetryRunner())->runOne($type, $id, $locale);
+        } catch (\Throwable $e) {
+            error_log("[VoiceController::ensureTranslation] {$type}#{$id} {$locale}: " . $e->getMessage());
+            echo json_encode(['status' => 'failed']);
+            return;
+        }
+
+        $after = $state();
+        echo json_encode([
+            'status' => $after === 'missing' || $after === null ? 'failed' : $after,
+            'reason' => $result['reason'] ?? null,
+        ]);
+    }
+
     // ── Internals ────────────────────────────────────────────────────────────
 
     /**

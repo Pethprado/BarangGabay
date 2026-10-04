@@ -1248,6 +1248,10 @@ return [
            out whether what they got is Filipino or English — on a page
            whose own button says MN. The second sentence names it. */
         'no_translation'  => 'This post has no :language version yet.',
+        'translating'     => 'Translating this post to :language…',
+        'translate_failed' => ':language translation is temporarily unavailable.',
+        'translate_retry' => 'Try again',
+        'pending_review'  => 'The :language translation of this urgent notice is being checked by barangay staff before it is shown.',
         'showing_instead' => 'You are reading the :language original.',
         'machine_translation' => 'This translation was made automatically. It may not be exact — the original is the official version.',
     ],

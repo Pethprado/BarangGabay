@@ -178,6 +178,43 @@ class TranslationRetryRunner
             return ['ok' => false, 'detail' => "{$label}: no source text"];
         }
 
+        // ── Partly hand-written: fill the missing half, keep the person's ──
+        // A title typed by staff with no body (or the reverse) used to count
+        // as "written by a person", so the body was never translated and
+        // readers got the source language under their language's label.
+        // Translate the post, then put the hand-written part back.
+        $suffix     = TranslationAttempt::columnSuffix($lang);
+        $humanTitle = trim((string) ($row['title_' . $suffix] ?? ''));
+        $humanBody  = trim((string) ($row[$bodyField . '_' . $suffix] ?? ''));
+        $partial    = $lang !== (string) ($row['source_lang'] ?? 'fil')
+            && self::wasWrittenByAPerson($row, $lang, $bodyField)
+            && (($humanTitle === '' && trim($title) !== '') || ($humanBody === '' && trim(strip_tags($body)) !== ''));
+        if ($partial) {
+            $sourceLang = \in_array($row['source_lang'] ?? 'fil', ['fil', 'en'], true) ? (string) $row['source_lang'] : 'fil';
+            $ok = match ($lang) {
+                'en'  => TranslationService::autoTranslatePostToEnglish($type, $id, $title, $body),
+                'fil' => TranslationService::autoTranslatePostToFilipino($type, $id, $title, $body),
+                'msm' => TranslationService::autoTranslatePostToManobo($type, $id, $title, $body, $sourceLang),
+                default => false,
+            };
+            if ($ok) {
+                $fresh = $this->loadPost($type, $id) ?? [];
+                $t = $humanTitle !== '' ? $humanTitle : (string) ($fresh['title_' . $suffix] ?? '');
+                $b = $humanBody !== '' ? $humanBody : (string) ($fresh[$bodyField . '_' . $suffix] ?? '');
+                $model = match ($type) {
+                    'announcement' => Announcement::class,
+                    'event'        => Event::class,
+                    'ordinance'    => Ordinance::class,
+                };
+                match ($lang) {
+                    'en'  => $model::updateEnglish($id, $t, $b),
+                    'fil' => $model::updateFilipino($id, $t, $b),
+                    'msm' => $model::updateManobo($id, $t, $b),
+                };
+            }
+            return ['ok' => $ok, 'detail' => "{$label}: filled the untranslated part, kept the hand-written part"];
+        }
+
         // ── The rule that outranks everything else ───────────────────────
         if (self::wasWrittenByAPerson($row, $lang, $bodyField)) {
             TranslationAttempt::recordOk($type, $id, $lang, 'text', 'human', $title . "\n" . $body);

@@ -39,6 +39,12 @@ return [
     // the admin Interactive Voice Tester uses. Database reads only.
     ['POST', '/api/voice/resolve', 'VoiceTrainingController@resolve', ['auth']],
 
+    // A detail page whose language has no stored translation asks for one:
+    // generated once (MyMemory / Manobo hybrid), stored for every reader.
+    // Throttled per session in the controller; never bypasses the urgent-post
+    // review gate.
+    ['POST', '/api/content/translate', 'VoiceController@ensureTranslation', ['auth', 'verified']],
+
     // Building the cached narration, on the other hand, spends the barangay's
     // metered text-to-speech allowance — so it is staff-only and never reached
     // from a resident's page. Publishing calls the same service directly.

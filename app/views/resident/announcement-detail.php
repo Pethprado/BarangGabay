@@ -178,7 +178,7 @@ ob_start();
         <?php /* Title and body together: the headline can fall back to another
                  language while the body is translated, and a reader is owed the
                  truth about the page they are looking at, not just its body. */ ?>
-        <?php $__tnPicks = [$bodyPick, $titlePick]; require __DIR__ . '/../shared/_translation-notice.php'; ?>
+        <?php $__tnPicks = [$bodyPick, $titlePick]; $__tnType = 'announcement'; $__tnId = (int) $announcement['id']; require __DIR__ . '/../shared/_translation-notice.php'; ?>
 
         <?php /* data-voice-body marks the element the voice reader highlights
                  sentence by sentence as it reads. */ ?>

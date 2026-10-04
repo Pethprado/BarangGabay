@@ -88,7 +88,7 @@ $evTitlePick  = localised_content($event, 'title');
 
         <hr class="post-rule">
 
-        <?php $__tnPicks = [$descPick, $evTitlePick]; require __DIR__ . '/../shared/_translation-notice.php'; ?>
+        <?php $__tnPicks = [$descPick, $evTitlePick]; $__tnType = 'event'; $__tnId = (int) $event['id']; require __DIR__ . '/../shared/_translation-notice.php'; ?>
 
         <?php /* data-voice-body marks what the voice reader highlights as it reads. */ ?>
         <div class="post-body" data-voice-body>

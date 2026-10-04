@@ -272,7 +272,10 @@ class FreeTranslationService
     {
         try {
             $res = $this->client->get('https://api.mymemory.translated.net/get', [
-                'query' => ['q' => $chunk, 'langpair' => $langPair, 'mt' => '1'],
+                // MYMEMORY_EMAIL (optional) raises MyMemory's free quota from
+                // ~5,000 to ~50,000 characters a day for this deployment.
+                'query' => ['q' => $chunk, 'langpair' => $langPair, 'mt' => '1']
+                    + ((string) env('MYMEMORY_EMAIL', '') !== '' ? ['de' => (string) env('MYMEMORY_EMAIL')] : []),
             ]);
         } catch (\Throwable $e) {
             error_log('[FreeTranslationService] request failed: ' . $e->getMessage());

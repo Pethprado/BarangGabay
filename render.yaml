@@ -42,6 +42,8 @@
         value: "3600"
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: MYMEMORY_EMAIL
+        sync: false
       - key: TTS_PROVIDER
         sync: false
       - key: TTS_API_KEY

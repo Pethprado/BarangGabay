@@ -71,7 +71,7 @@ $__vrRow  = $ordinance;
 require __DIR__ . '/../shared/_voice-reader.php';
 ?>
 
-<?php $__tnPicks = [$ordTitlePick, $ordDescPick]; require __DIR__ . '/../shared/_translation-notice.php'; ?>
+<?php $__tnPicks = [$ordTitlePick, $ordDescPick]; $__tnType = 'ordinance'; $__tnId = (int) $ordinance['id']; require __DIR__ . '/../shared/_translation-notice.php'; ?>
 
 <?php if ($__vrDesc !== ''): ?>
 <?php /* data-voice-body marks what the voice reader highlights as it reads.

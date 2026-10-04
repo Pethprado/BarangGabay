@@ -863,7 +863,8 @@ class ManoboHybridTranslator
             ]);
 
             $res = $client->get('https://api.mymemory.translated.net/get', [
-                'query' => ['q' => $text, 'langpair' => $langPair, 'mt' => '1'],
+                'query' => ['q' => $text, 'langpair' => $langPair, 'mt' => '1']
+                    + ((string) env('MYMEMORY_EMAIL', '') !== '' ? ['de' => (string) env('MYMEMORY_EMAIL')] : []),
             ]);
 
             if ($res->getStatusCode() !== 200) {
