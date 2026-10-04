@@ -40,6 +40,8 @@ final class VoiceText
         }
         // Curly apostrophes and the various dashes fold to their ASCII forms.
         $text = strtr($text, ["\u{2019}" => "'", "\u{2018}" => "'", "\u{02BC}" => "'", "\u{2010}" => '-', "\u{2011}" => '-']);
+        // Words glued together when HTML was stripped ("ngayonLahat") are two words.
+        $text = SpokenText::repairJoins($text);
         $text = mb_strtolower($text, 'UTF-8');
 
         // Everything that is not a letter, digit, apostrophe or hyphen is a

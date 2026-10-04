@@ -116,6 +116,14 @@ final class VoicePipelineTest extends TestCase
         $this->assertTrue(\App\Services\VoiceUsageIndex::isTrackable('evacuation'));
     }
 
+    public function testRepairJoinsRestoresLostSpacesButKeepsNumbers(): void
+    {
+        $fixed = \App\Services\SpokenText::repairJoins('Surigao del Sur.Intawa ang lumikas ngayonLahat sa 1.5 metro, 8:00 PM, Purok 2.Mga');
+        $this->assertSame('Surigao del Sur. Intawa ang lumikas ngayon Lahat sa 1.5 metro, 8:00 PM, Purok 2. Mga', $fixed);
+        // Glued words become two tokens for voice matching.
+        $this->assertSame(['ngayon', 'lahat'], VoiceText::tokens('ngayonLahat'));
+    }
+
     public function testNumbersAreNotCountedAsMissingVocabulary(): void
     {
         $plan = VoiceResolver::plan(VoiceText::tokens('tibo 25'), [], 1);

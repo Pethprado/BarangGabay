@@ -1003,6 +1003,10 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 <?php endforeach; ?>
             </div>
             <p class="vt-text-muted text-xs mb-2" id="missingHelp"></p>
+            <p class="text-xs mb-2 d-none" id="gapHelp">
+                These are <strong>Manobo translation gaps</strong>: the translator used Bisaya because the Manobo dictionary has no entry.
+                <a href="<?= e(route('admin/dictionary')) ?>" class="font-bold" style="color:#b45309;">Add the Manobo word in the dictionary</a> and new translations will use it instead of Bisaya.
+            </p>
             <div class="d-flex gap-2 mb-2 flex-wrap">
                 <label for="missingSearch" class="visually-hidden">Search missing words</label>
                 <input type="search" id="missingSearch" class="vt-input flex-fill" style="min-width:140px;" placeholder="Search…" oninput="renderMissing()">
@@ -1843,6 +1847,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 ? 'Bisaya words used inside Manobo posts (translator fallback) with no recording, most-used first.'
                 : LANG_NAMES[lang] + ' words in visible posts with no approved recording, most-used first.');
         $('btnBatch').disabled = !items.length;
+        $('gapHelp').classList.toggle('d-none', lang !== 'ceb');
 
         var body = $('missingRows');
         body.innerHTML = '';

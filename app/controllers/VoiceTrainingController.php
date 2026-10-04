@@ -29,7 +29,7 @@ class VoiceTrainingController
     private const MIN_DURATION = 0.2;
 
     /** Bump when VoiceUsageIndex changes what it indexes; triggers one rebuild. */
-    private const USAGE_INDEX_VERSION = '2';
+    private const USAGE_INDEX_VERSION = '3';
 
     private const LANGUAGE_NAMES = ['msm' => 'Manobo', 'en' => 'English', 'fil' => 'Filipino', 'ceb' => 'Bisaya'];
 

@@ -194,6 +194,7 @@
                 clip.onerror = fallback;
                 clip.src = seg.audio_url;
                 clip.playbackRate = opts.rate || 1;
+                clip.volume = typeof opts.volume === 'number' ? Math.max(0, Math.min(1, opts.volume)) : 1;
                 var p = clip.play();
                 if (p && p.catch) { p.catch(fallback); }
                 return;
@@ -214,7 +215,7 @@
             u.lang   = opts.lang || 'fil-PH';
             u.rate   = opts.rate || 1;
             u.pitch  = 1;
-            u.volume = 1;
+            u.volume = typeof opts.volume === 'number' ? opts.volume : 1;
             if (opts.voice) { u.voice = opts.voice; }
             u.onend   = function () { if (token === self.token) { next(); } };
             u.onerror = function (event) {

@@ -243,6 +243,20 @@ final class SpokenText
     }
 
     /**
+     * Put back spaces lost when text was saved with its HTML stripped bare
+     * ("Surigao del Sur.Intawa", "ngayonLahat", "2.Mga"): a sentence mark
+     * glued to the next capitalised word, and a lowercase word glued to a
+     * capitalised one. Decimals ("1.5") and times ("8:00") are untouched
+     * because a digit, not a capital, follows the mark.
+     */
+    public static function repairJoins(string $text): string
+    {
+        $text = preg_replace('/([.!?;:])(?=\p{Lu}\p{Ll})/u', '$1 ', $text) ?? $text;
+        $text = preg_replace('/(\p{Ll})(?=\p{Lu}\p{Ll})/u', '$1 ', $text) ?? $text;
+        return $text;
+    }
+
+    /**
      * Collapse whitespace the way a browser does when it lays text out.
      *
      * This matters beyond tidiness: the player matches 'find' against the text

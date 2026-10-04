@@ -34,8 +34,12 @@ $__mIsAuto   = (bool) ($__mIsAuto ?? false);
 $__mSafeText = e(mb_substr(strip_tags((string) ($__mText ?? '')), 0, 4000));
 $__apiKeySet = !empty(env('ANTHROPIC_API_KEY', ''));
 
-// 1. The Manobo stored on the row itself.
-$__manualText = trim((string) ($__mManual ?? ''));
+// 1. The Manobo stored on the row itself. Body columns may hold Quill HTML
+// or text whose tags were stripped bare; turn block ends into line breaks
+// and put back spaces lost between sentences ("Sur.Intawa", "ngayonLahat").
+$__manualText = \App\Services\SpokenText::repairJoins(
+    \App\Services\SpokenText::plain((string) ($__mManual ?? ''))
+);
 
 // 2. Otherwise, a previously cached AI translation.
 $__cachedText = '';
@@ -49,7 +53,13 @@ if ($__manualText === '') {
     }
 }
 
-$__shownText  = $__manualText !== '' ? $__manualText : $__cachedText;
+$__shownText  = $__manualText !== '' ? $__manualText : \App\Services\SpokenText::repairJoins($__cachedText);
+
+// What the Listen button plays: approved dataset recordings (Manobo, plus
+// Bisaya recordings for Bisaya fallback words), per the admin's Voice
+// Fallback setting. Never the device's Filipino voice unless that fallback
+// is switched on.
+$__mFallback = \App\Services\VoiceResolver::fallbackMode();
 $__safeCached = e($__shownText);
 
 // A hand-written translation is not a machine's guess and must not wear the
@@ -81,7 +91,8 @@ $__manualHuman = $__manualText !== '' && !$__mIsAuto;
      data-mtext="<?= $__mSafeText ?>"
      data-has-key="<?= $__apiKeySet ? '1' : '0' ?>"
      data-manual="<?= $__manualHuman ? '1' : '0' ?>"
-     data-cached="<?= $__safeCached ?>">
+     data-cached="<?= $__safeCached ?>"
+     data-fallback="<?= e($__mFallback) ?>">
 
     <div class="post-card post-lang-card">
 
@@ -328,9 +339,11 @@ $__manualHuman = $__manualText !== '' && !$__mIsAuto;
                      voice reader makes, and it is labelled the same way here.
                      Saying it once at the top of the post is not enough when
                      there is a second button further down that does it too. */ ?>
-            <p class="mx-5 mb-2 flex items-start gap-2 text-xs post-lang-footnote-text">
-                <i class="bi bi-robot"></i>
-                <span><?= e(t('voice_reader.source_approx')) ?></span>
+            <p class="mx-5 mb-2 flex items-start gap-2 text-xs post-lang-footnote-text" aria-live="polite">
+                <i class="bi" :class="fallback === 'recorded_only' ? 'bi-mic-fill' : 'bi-robot'"></i>
+                <span x-text="voiceNotice || (fallback === 'recorded_only'
+                    ? <?= e(json_encode(t('voice_reader.source_recorded_only'))) ?>
+                    : <?= e(json_encode(t('voice_reader.source_dataset_mix'))) ?>)"></span>
             </p>
 
             <!-- Voice controls -->
@@ -339,9 +352,9 @@ $__manualHuman = $__manualText !== '' && !$__mIsAuto;
                 <select x-model.number="speechRate"
                         class="cursor-pointer rounded-lg border border-slate-200 bg-white
                                px-2 py-1 text-xs text-slate-700">
-                    <option value="0.6">🐢 Mabagal</option>
-                    <option value="0.85">🚶 Normal</option>
-                    <option value="1.1">🏃 Mabilis</option>
+                    <option value="0.75">🐢 Mabagal</option>
+                    <option value="1">🚶 Normal</option>
+                    <option value="1.25">🏃 Mabilis</option>
                 </select>
                 <span class="text-xs text-slate-500">🔈</span>
                 <input type="range" min="0.3" max="1" step="0.1"
@@ -368,6 +381,7 @@ $__manualHuman = $__manualText !== '' && !$__mIsAuto;
     </div>
 </div>
 
+<script src="<?= e(asset_v('assets/js/voice-reader.js')) ?>"></script>
 <script>
 (function () {
     if (window.__manoboTranslatorDefined) return;
@@ -399,14 +413,18 @@ $__manualHuman = $__manualText !== '' && !$__mIsAuto;
             segments:     [],
             errorMsg:     null,
             speaking:     false,
-            speechRate:   0.85,
+            speechRate:   1,
             speechVolume: 1.0,
+            fallback:     'recorded_only',
+            voiceNotice:  '',
+            _seg:         null,
 
             init() {
                 this._contentType = this.$el.dataset.mtype  || '';
                 this._contentId   = parseInt(this.$el.dataset.mid  || '0', 10);
                 this._text        = this.$el.dataset.mtext || '';
                 this.hasKey       = this.$el.dataset.hasKey === '1';
+                this.fallback     = this.$el.dataset.fallback || 'recorded_only';
 
                 /* Manobo already stored for this post — either typed by a person
                    in the admin form or cached from an earlier AI call. Shown
@@ -468,51 +486,69 @@ $__manualHuman = $__manualText !== '' && !$__mIsAuto;
                 }
             },
 
-            readAloud() {
-                if (!window.speechSynthesis) return;
-
+            /* Plays approved recordings from the Voice Training dataset: the
+               same server resolver and segment player as the Voice Reader at
+               the top of the post (longest phrase first; Bisaya fallback words
+               use Bisaya recordings). Unrecorded words are skipped unless the
+               admin enabled the device-voice fallback. */
+            async readAloud() {
                 if (this.speaking) {
-                    window.speechSynthesis.cancel();
+                    this._player().stop();
                     this.speaking = false;
                     return;
                 }
+                if (!window.VoiceSegmentPlayer || !this.translation) return;
 
-                window.speechSynthesis.cancel(); // clear any queued utterances
+                const player = this._player();
+                player.unlock();            // inside the tap, for iOS
+                this.speaking    = true;
+                this.voiceNotice = '';
 
-                const speak = () => {
-                    const utterance  = new SpeechSynthesisUtterance(this.translation || '');
-                    utterance.lang   = 'fil-PH';
-                    utterance.rate   = parseFloat(this.speechRate)   || 0.85;
-                    utterance.volume = parseFloat(this.speechVolume) || 1.0;
-                    utterance.pitch  = 1.0;
+                try {
+                    const base = (window.BarangGabay?.baseUrl || '').replace(/\/$/, '');
+                    const fd   = new FormData();
+                    fd.append('language',   'msm');
+                    fd.append('text',       this.translation);
+                    fd.append('csrf_token', window.BarangGabay?.csrfToken || '');
+                    const res  = await fetch(base + '/api/voice/resolve', {
+                        method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+                    const plan = await res.json();
+                    if (!plan.success) throw new Error(plan.error || 'resolve failed');
 
-                    const voices = window.speechSynthesis.getVoices();
-                    const voice  = voices.find(v => v.lang === 'fil-PH' || v.lang === 'tl-PH')
-                                || voices.find(v => v.lang.startsWith('fil') || v.lang.startsWith('tl'))
-                                || voices.find(v => v.name.toLowerCase().includes('filipino'))
-                                || voices.find(v => v.lang.startsWith('en'))
-                                || null;
-                    if (voice) utterance.voice = voice;
+                    this.fallback = plan.fallback || this.fallback;
+                    const recordedOnly = this.fallback === 'recorded_only';
+                    if (recordedOnly && !plan.recorded) {
+                        this.voiceNotice = <?= json_encode(t('voice_reader.no_recordings')) ?>;
+                        this.speaking = false;
+                        return;
+                    }
+                    if (recordedOnly && plan.missing) {
+                        this.voiceNotice = <?= json_encode(t('voice_reader.some_missing')) ?>;
+                    }
 
-                    this.speaking     = true;
-                    utterance.onend   = () => { this.speaking = false; };
-                    utterance.onerror = () => { this.speaking = false; };
-                    window.speechSynthesis.speak(utterance);
-                };
-
-                const voices = window.speechSynthesis.getVoices();
-                if (voices.length > 0) {
-                    speak();
-                } else {
-                    window.speechSynthesis.onvoiceschanged = () => {
-                        window.speechSynthesis.onvoiceschanged = null;
-                        speak();
-                    };
+                    player.play(plan.segments, {
+                        fallback: this.fallback,
+                        lang:     plan.speech_lang || 'fil-PH',
+                        voice:    window.voicePickVoice ? window.voicePickVoice(plan.voices || []) : null,
+                        rate:     parseFloat(this.speechRate) || 1,
+                        volume:   parseFloat(this.speechVolume),
+                        onDone:   () => { this.speaking = false; },
+                        onSpeechError: () => { this.speaking = false; },
+                    });
+                } catch (_) {
+                    this.voiceNotice = <?= json_encode(t('manobo_widget.err_network')) ?>;
+                    this.speaking = false;
                 }
             },
 
+            _player() {
+                if (!this._seg) { this._seg = new window.VoiceSegmentPlayer(); }
+                return this._seg;
+            },
+
             hideTranslation() {
-                if (this.speaking) { window.speechSynthesis.cancel(); this.speaking = false; }
+                if (this.speaking) { this._player().stop(); this.speaking = false; }
                 this.translation = null;
                 this.cached      = false;
                 this.offline     = false;
