@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS voice_samples (
     text VARCHAR(500) NOT NULL,
     normalized_text VARCHAR(500) NOT NULL,
     dictionary_entry_id INT NULL,
+    content_type VARCHAR(50) NULL,
+    content_id INT NULL,
     audio_url VARCHAR(500) NOT NULL,
     audio_storage_key VARCHAR(255) NULL,
     speaker_label VARCHAR(100) NULL,

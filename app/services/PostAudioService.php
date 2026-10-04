@@ -189,13 +189,27 @@ class PostAudioService
             }
 
             $ai = $stored[$locale . ':' . PostAudio::SOURCE_AI] ?? null;
-            $datasetMatch = \App\Models\VoiceSample::findMatchingSample($script['title'] ?? '', $locale);
+            $human = $stored[$locale . ':' . PostAudio::SOURCE_HUMAN] ?? null;
+
+            // A full-post narration counts only when it is explicitly linked
+            // to this post, or recorded word-for-word for the whole text.
+            // (Matching on a fragment would let one recorded word replace the
+            // entire narration.)
+            $datasetMatch = \App\Models\VoiceSample::findSampleForContent($type, $id, $locale)
+                         ?? \App\Models\VoiceSample::findMatchingSample($locale, (string) ($script['text'] ?? ''));
 
             if ($datasetMatch && !empty($datasetMatch['audio_url'])) {
-                $track['source']    = 'dataset';
-                $track['audioUrl']  = asset($datasetMatch['audio_url']);
-                $track['voiceName'] = $datasetMatch['speaker_label'] ?: 'Community Recording';
-                $track['stale']     = false;
+                $track['source']      = 'dataset';
+                $track['audioUrl']    = (string) $datasetMatch['audio_url'];
+                $track['voiceName']   = $datasetMatch['speaker_label'] ?: 'Voice Dataset Audio';
+                $track['stale']       = false;
+                $track['approximate'] = false;
+            } elseif ($human !== null && !empty($human['audio_path'])) {
+                $track['source']      = PostAudio::SOURCE_HUMAN;
+                $track['audioUrl']    = asset((string) $human['audio_path']);
+                $track['voiceName']   = $human['voice_name'] ?? 'Community Recording';
+                $track['stale']       = $human['text_hash'] !== $script['hash'];
+                $track['approximate'] = false;
             } elseif ($ai !== null && $ai['text_hash'] === $script['hash']) {
                 $track['source']    = PostAudio::SOURCE_AI;
                 $track['audioUrl']  = asset((string) $ai['audio_path']);
@@ -206,6 +220,58 @@ class PostAudioService
                 // the one thing that must never be wrong.
                 $track['source'] = 'speech';
                 $track['stale']  = $ai !== null;
+            }
+
+            // Word/phrase recordings inside each spoken chunk. A chunk that
+            // contains at least one approved recording carries a segment plan
+            // (longest phrase first); the player plays recorded segments and
+            // reads the rest with the device voice. Same resolver as the
+            // admin Interactive Voice Tester.
+            $hasSegments = false;
+            $missedWords = [];
+            foreach ($track['chunks'] as &$chunk) {
+                if (empty($chunk['say'])) {
+                    continue;
+                }
+                $plan = VoiceResolver::resolve($locale, (string) $chunk['say']);
+                if ($locale === VoiceUsageIndex::LANGUAGE) {
+                    array_push($missedWords, ...VoiceResolver::missingWords($plan));
+                }
+                if (VoiceResolver::hasRecording($plan)) {
+                    $chunk['segments'] = $plan;
+                    $hasSegments       = true;
+                }
+            }
+            unset($chunk);
+
+            // For Manobo a native recording always beats machine audio: when
+            // the dataset covers part of this post, drop the AI narration so
+            // the segment player (native clips + labelled fallback) is used.
+            if ($locale === 'msm' && $hasSegments && $track['source'] === PostAudio::SOURCE_AI) {
+                $track['source']    = 'speech';
+                $track['audioUrl']  = null;
+                $track['voiceName'] = null;
+            }
+
+            // Count unrecorded Manobo words the reader will need — once per
+            // post per session, so a refresh does not inflate the priority.
+            if ($missedWords && $id > 0 && session_status() === PHP_SESSION_ACTIVE) {
+                $seenKey = "{$type}:{$id}";
+                if (empty($_SESSION['voice_miss_counted'][$seenKey])) {
+                    $_SESSION['voice_miss_counted'][$seenKey] = 1;
+                    VoiceUsageIndex::recordReaderMisses($missedWords);
+                }
+            }
+
+            // Attach active voice profile settings configured in Voice Training Hub
+            $activeProfile = \App\Models\VoiceProfile::getActiveProfile($locale);
+            $track['activeProfile'] = $activeProfile;
+            $track['speakingRate']  = (float) ($activeProfile['speaking_rate'] ?? 0.95);
+            if (!empty($activeProfile['provider_voice_id'])) {
+                array_unshift($track['voices'], $activeProfile['provider_voice_id']);
+            }
+            if (!empty($activeProfile['fallback_voice'])) {
+                $track['voices'][] = $activeProfile['fallback_voice'];
             }
 
             $out[$locale] = $track;

@@ -2419,6 +2419,7 @@ return [
         'source_ai'          => 'Boses ng AI (:voice)',
         'source_approx'      => 'Boses ng AI — Filipino na boses na bumabasa ng Manobo',
         'source_device'      => 'Binabasa ng sariling boses ng inyong device',
+        'source_dataset_mix' => 'Mga tunay na recording sa Manobo, at boses ng device para sa mga salitang wala pang recording',
         'source_switch_human'=> 'Boses ng residente',
         'source_switch_ai'   => 'Boses ng AI',
         'approx_explain'     => 'Walang text-to-speech kahit saan na marunong mag-Manobo. Filipino na boses ito na bumabasa ng Manobong teksto: maiintindihan ang karamihan, ngunit Filipino ang diin at ilang patinig, hindi Manobo. Mas mainam pa rin ang recording ng tunay na tagapagsalita ng Manobo — pakisabi po sa Barangay Hall kung kaya ninyong tumulong.',

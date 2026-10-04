@@ -34,6 +34,11 @@ return [
     // at render time and never call this.
     ['POST', '/api/voice/script', 'VoiceController@script', ['auth']],
 
+    // Text → playback plan of approved dataset recordings (longest phrase
+    // first) plus the words that still need the device voice. Same resolver
+    // the admin Interactive Voice Tester uses. Database reads only.
+    ['POST', '/api/voice/resolve', 'VoiceTrainingController@resolve', ['auth']],
+
     // Building the cached narration, on the other hand, spends the barangay's
     // metered text-to-speech allowance — so it is staff-only and never reached
     // from a resident's page. Publishing calls the same service directly.

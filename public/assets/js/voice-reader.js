@@ -112,6 +112,145 @@
         setTimeout(fire, 1200);      // some builds fill the list without firing
     }
 
+    /** 0.1 s of silence — played inside the user's tap so iOS lets the clip element play later. */
+    var SILENCE = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
+
+    /**
+     * Plays a voice-dataset segment plan: recorded clips of native speakers in
+     * order, with the device voice reading the words nobody has recorded yet.
+     *
+     * One instance per player. The Resident Voice Reader and the admin
+     * Interactive Voice Tester both use this, on plans from the same server
+     * resolver, so the admin preview is exactly what residents hear.
+     *
+     * Only one segment ever sounds at a time: every play() or stop() bumps a
+     * token, and callbacks from an older run see the stale token and do nothing.
+     */
+    function VoiceSegmentPlayer() {
+        this.clip     = null;
+        this.token    = 0;
+        this.active   = false;
+        this.paused   = false;
+        this._preload = null;
+    }
+
+    VoiceSegmentPlayer.prototype = {
+        /** Call from inside the click handler that starts playback (iOS). */
+        unlock: function () {
+            if (!this.clip) { this.clip = new Audio(); this.clip.preload = 'auto'; }
+            if (!this.clip.src) {
+                try { this.clip.src = SILENCE; var p = this.clip.play(); if (p && p.catch) { p.catch(function () {}); } } catch (e) {}
+            }
+        },
+
+        /**
+         * @param {Array}  segments  [{type:'recorded', text, audio_url} | {type:'missing', text}]
+         * @param {Object} opts      lang, voice, rate, onSegment(i, seg), onDone(), onSpeechError(event)
+         */
+        play: function (segments, opts) {
+            this.stop();
+            this.unlock();
+            this.active = true;
+            this.paused = false;
+            this._run(segments || [], opts || {}, 0, ++this.token);
+        },
+
+        _run: function (segments, opts, i, token) {
+            var self = this;
+            if (token !== this.token) { return; }
+            if (i >= segments.length) {
+                this.active = false;
+                if (opts.onDone) { opts.onDone(); }
+                return;
+            }
+
+            var seg  = segments[i];
+            var next = function () { self._run(segments, opts, i + 1, token); };
+            if (opts.onSegment) { opts.onSegment(i, seg); }
+
+            // Warm the cache for the next clip so recorded words follow each other without a gap.
+            for (var k = i + 1; k < segments.length; k++) {
+                if (segments[k].type === 'recorded' && segments[k].audio_url) {
+                    this._preload = new Audio();
+                    this._preload.preload = 'auto';
+                    this._preload.src = segments[k].audio_url;
+                    break;
+                }
+            }
+
+            if (seg.type === 'recorded' && seg.audio_url) {
+                var clip = this.clip;
+                var fallback = function () {
+                    if (token !== self.token) { return; }
+                    clip.onended = clip.onerror = null;
+                    self._say(seg.text, opts, next, token);   // the clip failed — read the words instead of skipping them
+                };
+                clip.onended = function () { if (token === self.token) { clip.onended = clip.onerror = null; next(); } };
+                clip.onerror = fallback;
+                clip.src = seg.audio_url;
+                clip.playbackRate = opts.rate || 1;
+                var p = clip.play();
+                if (p && p.catch) { p.catch(fallback); }
+                return;
+            }
+
+            this._say(seg.text, opts, next, token);
+        },
+
+        _say: function (text, opts, next, token) {
+            var self = this;
+            if (!SPEECH || !text) { next(); return; }
+
+            var u = new SpeechSynthesisUtterance(text);
+            u.lang   = opts.lang || 'fil-PH';
+            u.rate   = opts.rate || 1;
+            u.pitch  = 1;
+            u.volume = 1;
+            if (opts.voice) { u.voice = opts.voice; }
+            u.onend   = function () { if (token === self.token) { next(); } };
+            u.onerror = function (event) {
+                if (token !== self.token || event.error === 'interrupted' || event.error === 'canceled') { return; }
+                if (opts.onSpeechError) { opts.onSpeechError(event); } else { next(); }
+            };
+            window.speechSynthesis.speak(u);
+        },
+
+        /** True while a recorded clip (not the device voice) is sounding. */
+        clipPlaying: function () {
+            return !!(this.clip && !this.clip.paused && !this.clip.ended && this.clip.src !== SILENCE);
+        },
+
+        pause: function () {
+            if (!this.active) { return; }
+            this.paused = true;
+            if (this.clip && !this.clip.paused) { this.clip.pause(); this._clipPaused = true; return; }
+            this._clipPaused = false;
+            if (SPEECH) { window.speechSynthesis.pause(); }
+        },
+
+        resume: function () {
+            if (!this.active || !this.paused) { return; }
+            this.paused = false;
+            if (this._clipPaused && this.clip) { this.clip.play(); return; }
+            if (SPEECH) { window.speechSynthesis.resume(); }
+        },
+
+        stop: function () {
+            this.token++;
+            this.active = false;
+            this.paused = false;
+            if (this.clip) {
+                this.clip.onended = this.clip.onerror = null;
+                try { this.clip.pause(); } catch (e) {}
+            }
+            if (SPEECH) { window.speechSynthesis.cancel(); }
+        },
+    };
+
+    window.VoiceSegmentPlayer = VoiceSegmentPlayer;
+    window.voicePickVoice     = pickVoice;
+    window.voiceWhenReady     = whenVoicesReady;
+
     window.voiceReader = function () {
         return {
             /* ── State ───────────────────────────────────────────────────── */
@@ -223,7 +362,7 @@
             get showApproxLabel() {
                 var t = this.track;
                 if (!t || !t.approximate) { return false; }
-                return !(this.activeUrl && this.preferHuman && t.source === 'human');
+                return !(this.activeUrl && this.preferHuman && (t.source === 'human' || t.source === 'dataset'));
             },
 
             /** One line under the heading saying who, or what, is reading. */
@@ -232,8 +371,14 @@
                 var t = this.track;
                 if (!t) { return ''; }
 
+                if (this.activeUrl && (!this.hasAlternateSource || this.preferHuman) && t.source === 'dataset') {
+                    return t.voiceName ? (t.voiceName + ' (Voice Dataset)') : (s.source_human || '');
+                }
                 if (this.activeUrl && (!this.hasAlternateSource || this.preferHuman) && t.source === 'human') {
                     return s.source_human || '';
+                }
+                if (!this.activeUrl && this.chunks.some(function (c) { return c.segments && c.segments.length; })) {
+                    return s.source_dataset_mix || s.source_device || '';
                 }
                 if (this.activeUrl) {
                     var voice = (this.hasAlternateSource ? t.altVoiceName : t.voiceName) || '';
@@ -393,6 +538,9 @@
                 this.chunks      = t.chunks || [];
                 this.mode        = this.activeUrl ? 'audio' : 'speech';
                 this.preferHuman = true;
+                if (typeof t.speakingRate === 'number' && t.speakingRate > 0) {
+                    this.rate = t.speakingRate;
+                }
                 this.notice      = t.stale && t.source === 'human'
                     ? (this.cfg.strings.stale_recording || '')
                     : '';
@@ -459,6 +607,11 @@
                     return;
                 }
 
+                // Inside the tap: let the dataset clip element play later on iOS.
+                if (this.chunks.some(function (c) { return c.segments && c.segments.length; })) {
+                    this._segments().unlock();
+                }
+
                 this._setStatus('playing');
                 this._speakFrom(0);
             },
@@ -473,6 +626,13 @@
                 }
 
                 this._stopTimers();
+
+                // A recorded clip pauses and resumes exactly where it was, on every platform.
+                if (this._seg && this._seg.active && this._seg.clipPlaying()) {
+                    this._seg.pause();
+                    this._setStatus('paused');
+                    return;
+                }
 
                 if (ANDROID) {
                     // Android Chrome accepts pause() and then never resumes, so
@@ -498,6 +658,12 @@
                 this._stopping = false;
                 this._setStatus('playing');
 
+                if (this._seg && this._seg.active && this._seg.paused && this._seg._clipPaused) {
+                    this._seg.resume();
+                    this._startTimers();
+                    return;
+                }
+
                 if (ANDROID) {
                     this._speakFrom(Math.max(this.current, 0));
                 } else {
@@ -516,6 +682,7 @@
 
                 var el = this._audioEl();
                 if (el) { el.pause(); try { el.currentTime = 0; } catch (e) {} }
+                if (this._seg) { this._seg.stop(); }
                 if (SPEECH) { window.speechSynthesis.cancel(); }
 
                 this.current  = -1;
@@ -621,6 +788,7 @@
             _speakFrom(index) {
                 if (!SPEECH) { return; }
 
+                if (this._seg) { this._seg.stop(); }
                 window.speechSynthesis.cancel();
                 this._stopping = false;
                 this._startTimers();
@@ -633,8 +801,49 @@
 
                 var chunk = this.chunks[index];
                 var track = this.track;
-                var u     = new SpeechSynthesisUtterance(chunk.say);
                 var self  = this;
+
+                // A sentence that contains approved native recordings plays
+                // through the segment player: recorded clips (longest phrase
+                // first) with the device voice reading only the unrecorded
+                // words. Its own <audio> element, so the cached-MP3 handlers
+                // bound to [data-voice-audio] never see these clips.
+                if (chunk && chunk.segments && chunk.segments.length) {
+                    this.current   = index;
+                    this._spokenAt = Date.now();
+                    this._highlight(chunk.find);
+                    this._progressAt(index, 0);
+
+                    this._segments().play(chunk.segments, {
+                        lang:  (track && track.speechLang) || 'fil-PH',
+                        voice: this._voice,
+                        rate:  this.rate,
+                        onSegment: function () { self._spokenAt = Date.now(); },
+                        onDone: function () {
+                            if (self._stopping) { return; }
+                            self._progressAt(index, (chunk.say || '').length);
+                            self._speak(index + 1);
+                        },
+                        onSpeechError: function () {
+                            self.notice = self.cfg.strings.speech_failed || '';
+                            self.stop();
+                        },
+                    });
+                    return;
+                }
+
+                this._speakUtterance(index, chunk, track);
+            },
+
+            /** The dataset segment player for this reader (created on first use). */
+            _segments() {
+                if (!this._seg) { this._seg = new VoiceSegmentPlayer(); }
+                return this._seg;
+            },
+
+            _speakUtterance(index, chunk, track) {
+                var self = this;
+                var u    = new SpeechSynthesisUtterance(chunk.say);
 
                 u.lang   = (track && track.speechLang) || 'fil-PH';
                 u.rate   = this.rate;
@@ -698,6 +907,9 @@
                 this._watchdog = setInterval(function () {
                     if (self.status !== 'playing' || self.mode !== 'speech' || !SPEECH) { return; }
                     if (window.speechSynthesis.speaking || window.speechSynthesis.pending) { return; }
+                    // A recorded dataset clip is sounding: silence from the speech engine is expected.
+                    // (Includes the moment a clip is still loading over a slow connection.)
+                    if (self._seg && self._seg.active && !self._seg.paused) { self._spokenAt = Date.now(); return; }
                     if (Date.now() - self._spokenAt < 2000) { return; }
 
                     self._speak(self.current + 1);   // went quiet without firing onend
@@ -858,6 +1070,24 @@
                     });
                     var data = await res.json();
                     if (!data.success || !data.chunks.length) { return; }
+
+                    // Pick up native dataset recordings for the new wording too.
+                    try {
+                        var form = new URLSearchParams({
+                            language:   target,
+                            csrf_token: (window.BarangGabay && window.BarangGabay.csrfToken) || '',
+                        });
+                        data.chunks.forEach(function (c) { form.append('texts[]', c.say || ''); });
+                        var planRes = await fetch(base + '/api/voice/resolve', {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                            body:    form,
+                        });
+                        var plans = await planRes.json();
+                        if (plans.success && plans.plans) {
+                            data.chunks.forEach(function (c, i) { if (plans.plans[i]) { c.segments = plans.plans[i]; } });
+                        }
+                    } catch (e) { /* no recordings — the device voice reads it all */ }
 
                     track.chunks    = data.chunks;
                     track.available = true;

@@ -164,6 +164,8 @@ class Ordinance
     {
         $stmt = db()->prepare('UPDATE ordinances SET title_manobo = ?, description_manobo = ? WHERE id = ?');
         $stmt->execute([$titleManobo, $descManobo, $id]);
+        // Keep the Voice Training "missing Manobo voice" list current.
+        \App\Services\VoiceUsageIndex::indexContent('ordinance', $id, $titleManobo . "\n" . $descManobo);
     }
 
     /**

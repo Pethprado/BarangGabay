@@ -115,6 +115,7 @@ $__vrConfig = [
         'source_ai'      => t('voice_reader.source_ai'),
         'source_approx'  => t('voice_reader.source_approx'),
         'source_device'  => t('voice_reader.source_device'),
+        'source_dataset_mix' => t('voice_reader.source_dataset_mix'),
         'stale_recording'=> t('voice_reader.stale_recording'),
         'languages'      => $__vrLangNames,
         'translating'    => t('voice_reader.translating'),

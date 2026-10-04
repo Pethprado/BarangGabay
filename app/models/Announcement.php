@@ -451,6 +451,8 @@ class Announcement
     {
         $stmt = db()->prepare('UPDATE announcements SET title_manobo = ?, body_manobo = ? WHERE id = ?');
         $stmt->execute([$titleManobo, $bodyManobo, $id]);
+        // Keep the Voice Training "missing Manobo voice" list current.
+        \App\Services\VoiceUsageIndex::indexContent('announcement', $id, $titleManobo . "\n" . $bodyManobo);
     }
 
     /**

@@ -320,6 +320,34 @@ function syncPostgresSchema(PDO $pdo): void
             created_at TIMESTAMP NOT NULL DEFAULT NOW(),
             updated_at TIMESTAMP NOT NULL DEFAULT NOW()
         )",
+        // Columns VoiceSample::create() writes. Missing content_type/content_id
+        // made every dataset save fail on production.
+        "ALTER TABLE voice_samples ADD COLUMN IF NOT EXISTS content_type VARCHAR(50) NULL",
+        "ALTER TABLE voice_samples ADD COLUMN IF NOT EXISTS content_id INT NULL",
+        "ALTER TABLE voice_samples ADD COLUMN IF NOT EXISTS translation VARCHAR(500) NULL",
+        "ALTER TABLE voice_samples ADD COLUMN IF NOT EXISTS profile_id INT NULL",
+        "ALTER TABLE voice_samples ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP NULL",
+        "CREATE INDEX IF NOT EXISTS idx_vs_lang_status_norm ON voice_samples (language, status, normalized_text)",
+        "CREATE INDEX IF NOT EXISTS idx_vs_dict ON voice_samples (dictionary_entry_id)",
+        // Audio bytes live in the database: Render's disk is wiped on restart.
+        "CREATE TABLE IF NOT EXISTS voice_sample_audio (
+            sample_id INT NOT NULL PRIMARY KEY,
+            mime_type VARCHAR(60) NOT NULL,
+            byte_size INT NOT NULL,
+            audio_data BYTEA NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )",
+        "CREATE TABLE IF NOT EXISTS voice_word_usage (
+            id SERIAL PRIMARY KEY,
+            language VARCHAR(10) NOT NULL,
+            normalized_text VARCHAR(191) NOT NULL,
+            content_type VARCHAR(20) NOT NULL,
+            content_id INT NOT NULL DEFAULT 0,
+            occurrences INT NOT NULL DEFAULT 1,
+            last_seen_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            UNIQUE (language, normalized_text, content_type, content_id)
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_vwu_content ON voice_word_usage (content_type, content_id)",
 
         // 13. MySQL Compatibility Functions for PostgreSQL
         "CREATE OR REPLACE FUNCTION date_sub(ts timestamp with time zone, iv interval)

@@ -86,6 +86,12 @@ return [
 ['POST', '/admin/voice-training/profile',   'VoiceTrainingController@updateProfile', ['auth', 'role:admin,superadmin']],
 ['POST', '/admin/voice-training/test',      'VoiceTrainingController@testVoice',     ['auth', 'role:admin,superadmin']],
 ['GET',  '/admin/voice-training/export',    'VoiceTrainingController@exportDataset', ['auth', 'role:admin,superadmin']],
+['POST', '/admin/voice-training/rescan',    'VoiceTrainingController@rescan',        ['auth', 'role:admin,superadmin']],
+['POST', '/admin/voice-training/diagnostics', 'VoiceTrainingController@diagnostics', ['auth', 'role:superadmin']],
+// Stored dataset recordings (bytes live in the database — Render's disk is
+// ephemeral). Approved clips are what the resident reader plays; the
+// controller restricts unreviewed clips to staff.
+['GET',  '/voice/audio/{id}',               'VoiceTrainingController@audio',         ['auth']],
 
 ['GET',  '/admin/staff',        'ResidentController@staffIndex',  ['auth', 'role:admin,superadmin']],
 ['GET',  '/admin/staff/create', 'ResidentController@createStaff', ['auth', 'role:admin,superadmin']],

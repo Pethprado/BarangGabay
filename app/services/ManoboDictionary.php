@@ -264,6 +264,16 @@ final class ManoboDictionary
     }
 
     /**
+     * Alias for all() for backwards compatibility with voice training and dataset hub.
+     *
+     * @return list<array<string,string>>
+     */
+    public function getAllWords(): array
+    {
+        return $this->all();
+    }
+
+    /**
      * Entries filtered by category (e.g. "health", "numbers").
      *
      * @return list<array<string,string>>
