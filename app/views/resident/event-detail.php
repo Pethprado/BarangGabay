@@ -92,7 +92,8 @@ $evTitlePick  = localised_content($event, 'title');
 
         <?php /* data-voice-body marks what the voice reader highlights as it reads. */ ?>
         <div class="post-body" data-voice-body>
-            <?= nl2br(e($descPick['text'])) ?>
+            <?php // Some descriptions were saved with editor HTML; show paragraphs, not literal tags. ?>
+            <?= nl2br(e(\App\Services\SpokenText::plain((string) $descPick['text']))) ?>
         </div>
 
         <?php
@@ -102,22 +103,6 @@ $evTitlePick  = localised_content($event, 'title');
         require __DIR__ . '/../shared/_source-embed.php';
         ?>
 
-<!-- ── Manobo Translator ─────────────────────────────────── -->
-        <?php
-        $__mText = $event['title'] . '. '
-            . (!empty($event['venue']) ? 'Lugar: ' . $event['venue'] . '. ' : '')
-            . ($event['description'] ?? '');
-        $__mAudio = $event['audio_manobo_path'] ?? null;
-        $__mType = 'event';
-        $__mId   = (int) $event['id'];
-        // The Manobo already stored on the row — see the announcement view.
-        $__mManual = trim(
-            trim((string) ($event['title_manobo'] ?? ''))
-            . "\n\n" . trim((string) ($event['description_manobo'] ?? ''))
-        );
-        $__mIsAuto = (int) ($event['manobo_is_auto'] ?? 0) === 1;
-        require __DIR__ . '/../shared/_manobo-translator.php';
-        ?>
 
         <!-- Back link -->
         <div class="mt-8 border-t border-slate-100 pt-6">

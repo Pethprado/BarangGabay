@@ -591,7 +591,9 @@
 
                 this._voice = pickVoice(t.voices || []);
 
-                if (!this.activeUrl && !this._voice && SPEECH
+                // Recorded-only mode never uses a device voice, so a missing
+                // one is not worth telling the resident about.
+                if (!this.activeUrl && !this._voice && SPEECH && t.fallback !== 'recorded_only'
                     && (window.speechSynthesis.getVoices() || []).length) {
                     var names = (this.cfg.strings.languages || {});
                     this.notice = (this.cfg.strings.no_voice || '')

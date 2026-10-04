@@ -321,21 +321,6 @@ require __DIR__ . '/../shared/_voice-reader.php';
         require __DIR__ . '/../shared/_source-embed.php';
         ?>
 
-<!-- ── Manobo Translator ──────────────────────────────────── -->
-        <?php
-        $__mText = $ordinance['ordinance_no'] . ': ' . $ordinance['title'] . '. '
-            . ($ordinance['description'] ?? '');
-        $__mAudio = $ordinance['audio_manobo_path'] ?? null;
-        $__mType = 'ordinance';
-        $__mId   = (int) $ordinance['id'];
-        // The Manobo already stored on the row — see the announcement view.
-        $__mManual = trim(
-            trim((string) ($ordinance['title_manobo'] ?? ''))
-            . "\n\n" . trim((string) ($ordinance['description_manobo'] ?? ''))
-        );
-        $__mIsAuto = (int) ($ordinance['manobo_is_auto'] ?? 0) === 1;
-        require __DIR__ . '/../shared/_manobo-translator.php';
-        ?>
 
         <!-- Back link -->
         <a href="<?= e(route('ordinances')) ?>"

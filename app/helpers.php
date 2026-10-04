@@ -1402,6 +1402,17 @@ function localised_content(array $row, string $baseField, ?string $locale = null
      * what it had fallen back to.
      */
 
+    // Translations are rendered as escaped plain text. Some were saved with
+    // Quill HTML still in them, others with their tags stripped bare so
+    // sentences ran together ("Sur.Intawa", "ngayonLahat"); normalise both
+    // so residents read clean paragraphs in every language.
+    if ($translated !== '') {
+        if ($translated !== strip_tags($translated)) {
+            $translated = \App\Services\SpokenText::plain($translated);
+        }
+        $translated = \App\Services\SpokenText::repairJoins($translated);
+    }
+
     return $translated !== ''
         ? [
             'text'         => $translated,

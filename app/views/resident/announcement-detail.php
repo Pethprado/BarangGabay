@@ -223,22 +223,6 @@ ob_start();
             </button>
         </div>
 
-<!-- ── Manobo Translator ─────────────────────────────────── -->
-        <?php
-        $__mText = $announcement['title'] . '. ' . ($announcement['body'] ?? '');
-        $__mAudio = $announcement['audio_manobo_path'] ?? null;
-        $__mType = 'announcement';
-        $__mId   = (int) $announcement['id'];
-        // The Manobo already stored on the row — what staff or a Manobo
-        // speaker typed. Shown straight away instead of asking an API that
-        // needs credits for something the barangay has already written.
-        $__mManual = trim(
-            trim((string) ($announcement['title_manobo'] ?? ''))
-            . "\n\n" . trim((string) ($announcement['body_manobo'] ?? ''))
-        );
-        $__mIsAuto = (int) ($announcement['manobo_is_auto'] ?? 0) === 1;
-        require __DIR__ . '/../shared/_manobo-translator.php';
-        ?>
 
     </div><!-- /main column -->
 
