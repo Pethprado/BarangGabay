@@ -142,7 +142,7 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
                  Manobo below is the one exception and stays admin-only. ── -->
             <?php if (in_array($userRole, ['admin', 'staff', 'superadmin'], true)): ?>
 
-            <p class="nav-section-label"><?= e(t('admin_nav.management')) ?></p>
+            <p class="nav-section-label"><?= e(t('admin_nav.community')) ?></p>
 
             <a href="<?= e(route('admin/residents')) ?>"
                class="sidebar-link <?= $isActive('/admin/residents', false) ?>">
@@ -162,6 +162,8 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
                 <span><?= e(t('staff_list.title')) ?></span>
             </a>
             <?php endif; ?>
+
+            <p class="nav-section-label"><?= e(t('admin_nav.language')) ?></p>
 
             <!-- Urgent announcements whose machine translation is held back.
                  Badged, because holding a storm warning's translation is only
@@ -192,6 +194,21 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
                 <span><?= e(t('translation_health.page_title')) ?></span>
             </a>
 
+            <?php if (in_array($userRole, ['admin', 'superadmin'], true)): ?>
+            <a href="<?= e(route('admin/manobo')) ?>"
+               class="sidebar-link <?= $isActive('/admin/manobo', false) ?>">
+                <i class="bi bi-translate nav-icon"></i>
+                <span><?= e(t('admin_nav.manobo')) ?></span>
+            </a>
+            <a href="<?= e(route('admin/voice-training')) ?>"
+               class="sidebar-link <?= $isActive('/admin/voice-training', false) ?>">
+                <i class="bi bi-mic nav-icon"></i>
+                <span>Voice Training</span>
+            </a>
+            <?php endif; ?>
+
+            <p class="nav-section-label"><?= e(t('admin_nav.services')) ?></p>
+
             <?php /* Document requests carry a badge for the same reason the
                      verification queue does: it is work waiting on a person,
                      and an unbadged link is one nobody opens until reminded. */ ?>
@@ -218,18 +235,6 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
                 <?php endif; } catch (\Throwable) {} ?>
             </a>
 
-            <a href="<?= e(route('admin/safety')) ?>"
-               class="sidebar-link <?= $isActive('/admin/safety', false) ?>">
-                <i class="bi bi-shield-check nav-icon"></i>
-                <span><?= e(t('admin_nav.safety')) ?></span>
-            </a>
-
-            <a href="<?= e(route('admin/evacuation')) ?>"
-               class="sidebar-link <?= $isActive('/admin/evacuation', false) ?>">
-                <i class="bi bi-house-exclamation nav-icon"></i>
-                <span><?= e(t('admin_nav.evacuation')) ?></span>
-            </a>
-
             <a href="<?= e(route('admin/feedback')) ?>"
                class="sidebar-link <?= $isActive('/admin/feedback', false) ?>">
                 <i class="bi bi-chat-dots nav-icon"></i>
@@ -242,6 +247,20 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
                 <?php endif; } catch (\Throwable) {} ?>
             </a>
 
+            <a href="<?= e(route('admin/evacuation')) ?>"
+               class="sidebar-link <?= $isActive('/admin/evacuation', false) ?>">
+                <i class="bi bi-house-exclamation nav-icon"></i>
+                <span><?= e(t('admin_nav.evacuation')) ?></span>
+            </a>
+
+            <a href="<?= e(route('admin/safety')) ?>"
+               class="sidebar-link <?= $isActive('/admin/safety', false) ?>">
+                <i class="bi bi-shield-check nav-icon"></i>
+                <span><?= e(t('admin_nav.safety')) ?></span>
+            </a>
+
+            <p class="nav-section-label"><?= e(t('admin_nav.insights')) ?></p>
+
             <a href="<?= e(route('admin/reports')) ?>"
                class="sidebar-link <?= $isActive('/admin/reports', false) ?>">
                 <i class="bi bi-bar-chart-line nav-icon"></i>
@@ -253,19 +272,6 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
                 <i class="bi bi-phone nav-icon"></i>
                 <span><?= e(t('admin_nav.sms')) ?></span>
             </a>
-
-            <?php if (in_array($userRole, ['admin', 'superadmin'], true)): ?>
-            <a href="<?= e(route('admin/manobo')) ?>"
-               class="sidebar-link <?= $isActive('/admin/manobo', false) ?>">
-                <i class="bi bi-translate nav-icon"></i>
-                <span><?= e(t('admin_nav.manobo')) ?></span>
-            </a>
-            <a href="<?= e(route('admin/voice-training')) ?>"
-               class="sidebar-link <?= $isActive('/admin/voice-training', false) ?>">
-                <i class="bi bi-mic nav-icon"></i>
-                <span>Voice Training</span>
-            </a>
-            <?php endif; ?>
 
             <?php endif; ?>
 

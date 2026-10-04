@@ -54,10 +54,21 @@ ob_start();
            style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">
             <?= e(t('dashboard.eyebrow')) ?>
         </p>
+        <?php
+        $__hour  = (int) date('G');
+        $__greet = $__hour < 12 ? 'Good morning' : ($__hour < 18 ? 'Good afternoon' : 'Good evening');
+        $__first = explode(' ', trim((string) ($_SESSION['full_name'] ?? '')))[0] ?? '';
+        $__role  = (string) ($_SESSION['role'] ?? '');
+        ?>
         <h1 class="mb-0 mt-1"
-            style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;">
-            <?= e(t('dashboard.title')) ?>
+            style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;font-family:var(--font-heading);">
+            <?= e($__greet . ($__first !== '' ? ', ' . $__first : '')) ?>!
         </h1>
+        <p class="mb-0 mt-1" style="font-size:.9rem;color:var(--text-secondary);">
+            <?= $__role === 'staff'
+                ? 'Here are your tasks and recent activity.'
+                : 'Manage your barangay information, voice dataset, and system settings.' ?>
+        </p>
     </div>
     <span class="text-muted" style="font-size:.8rem;padding-top:4px;">
         <?= e(date('l, F j, Y')) ?>
@@ -304,6 +315,76 @@ $advisoryOn    = $advisoryText !== '';
     <?php endforeach; ?>
 
 </div><!-- /stat cards -->
+
+<?php
+/*
+ * Priority modules + language dataset coverage (mockup). Coverage figures
+ * are real: the share of the distinct words residents meet in visible posts
+ * that have an approved voice recording, per language, plus how many Manobo
+ * dictionary entries have one. Nothing here is a target or an estimate.
+ */
+$__isAdmin  = in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true);
+$__langName = ['msm' => 'Manobo', 'en' => 'English', 'fil' => 'Filipino', 'ceb' => 'Bisaya'];
+$__langIcon = ['msm' => 'bi-mic-fill', 'en' => 'bi-globe', 'fil' => 'bi-translate', 'ceb' => 'bi-chat-quote-fill'];
+?>
+<style>
+.dash-module { display:flex; gap:1rem; align-items:flex-start; padding:1.25rem; height:100%; }
+.dash-module__icon { width:52px; height:52px; border-radius:14px; display:grid; place-items:center; font-size:1.5rem; flex-shrink:0; background:var(--brand-primary-light); color:var(--brand-primary); }
+.dash-module h2 { font-size:1.05rem; font-weight:800; margin:0 0 .25rem; color:var(--text-primary); }
+.dash-module p { font-size:.86rem; color:var(--text-secondary); margin:0 0 .85rem; }
+.dash-cov-row { padding:.55rem 0; border-bottom:1px solid var(--tb-border); }
+.dash-cov-row:last-child { border-bottom:none; }
+.dash-cov-top { display:flex; justify-content:space-between; gap:.5rem; font-size:.85rem; color:var(--text-primary); }
+.dash-cov-top small { color:var(--text-muted); }
+.dash-cov-bar { height:8px; border-radius:999px; background:var(--surface-muted); overflow:hidden; margin-top:.35rem; }
+.dash-cov-bar > span { display:block; height:100%; border-radius:999px; background:var(--action-solid); }
+.dash-cov-bar > span.is-low { background:var(--motif-gold); }
+</style>
+<div class="row g-3 mb-4">
+    <?php if ($__isAdmin): ?>
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="admin-card dash-module">
+            <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-soundwave"></i></div>
+            <div>
+                <h2>Voice Training &amp; AI Dataset Hub</h2>
+                <p>Record and approve native pronunciations for Manobo, Filipino, English and Bisaya. Residents hear only approved recordings.</p>
+                <a href="<?= e(route('admin/voice-training')) ?>" class="btn-barangay">Manage Voice Dataset <i class="bi bi-arrow-right ms-1"></i></a>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="admin-card dash-module">
+            <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-translate"></i></div>
+            <div>
+                <h2>Translation Management</h2>
+                <p>Review translation health for every post, retry failures and rebuild Manobo translations with the current dictionaries.</p>
+                <a href="<?= e(route('admin/translation-health')) ?>" class="btn-barangay">Manage Translations <i class="bi bi-arrow-right ms-1"></i></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <div class="admin-card h-100" style="padding:1.25rem;">
+            <h2 class="admin-card-title mb-1" style="font-size:1rem;">Language Dataset Coverage</h2>
+            <p class="mb-2" style="font-size:.78rem;color:var(--text-muted);">Words used in visible posts that have an approved recording.</p>
+            <?php foreach (($datasetCoverage ?? []) as $__lc => $__r):
+                $__pct = (float) ($__r['usage_coverage'] ?? 0); ?>
+                <div class="dash-cov-row">
+                    <div class="dash-cov-top">
+                        <span><i class="bi <?= $__langIcon[$__lc] ?? 'bi-dot' ?> me-1" aria-hidden="true"></i><?= e($__langName[$__lc] ?? $__lc) ?></span>
+                        <span><strong><?= number_format($__pct, 0) ?>%</strong> <small><?= (int) $__r['used_recorded'] ?> / <?= (int) $__r['used_words'] ?></small></span>
+                    </div>
+                    <div class="dash-cov-bar" role="progressbar" aria-label="<?= e($__langName[$__lc] ?? $__lc) ?> coverage" aria-valuenow="<?= $__pct ?>" aria-valuemin="0" aria-valuemax="100"><span class="<?= $__pct < 50 ? 'is-low' : '' ?>" style="width:<?= $__pct ?>%"></span></div>
+                </div>
+            <?php endforeach; ?>
+            <?php if (!empty($manoboDictionary['total_dictionary_words'])): ?>
+                <p class="mb-0 mt-2" style="font-size:.78rem;color:var(--text-muted);">
+                    Manobo dictionary: <?= (int) $manoboDictionary['words_with_audio'] ?> of <?= (int) $manoboDictionary['total_dictionary_words'] ?> entries recorded.
+                </p>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 
 <!-- ── Pending verifications section ─────────────────────────────── -->
 <?php if ($pendingCount > 0): ?>
@@ -649,7 +730,7 @@ $advisoryOn    = $advisoryText !== '';
     // to the exact earth-palette hex values theme.css uses.
     const GREEN   = '#2f5d3a';
     const PALETTE = [
-        '#2f5d3a', '#c8992e', '#7b1e22', '#8a5a12',
+        '#2f5d3a', '#c8992e', '#17603a', '#8a5a12',
         '#6fae7e', '#a3311c', '#7a5c11', '#5b5240',
         '#e2b955', '#6b5d52',
     ];
@@ -727,7 +808,7 @@ $advisoryOn    = $advisoryText !== '';
                         plugins: {
                             legend: { display: false },
                             tooltip: {
-                                backgroundColor: '#241b18',
+                                backgroundColor: '#10241a',
                                 titleFont: { size: 12 },
                                 bodyFont: { size: 12 },
                                 callbacks: {
@@ -753,7 +834,7 @@ $advisoryOn    = $advisoryText !== '';
                                     font: { size: 11 },
                                     color: '#6b5d52',
                                 },
-                                grid: { color: 'rgba(36,27,24,.05)' },
+                                grid: { color: 'rgba(16,36,26,.05)' },
                                 border: { color: '#e4d7c2', dash: [4, 4] },
                             },
                         },
@@ -812,7 +893,7 @@ $advisoryOn    = $advisoryText !== '';
                                 },
                             },
                             tooltip: {
-                                backgroundColor: '#241b18',
+                                backgroundColor: '#10241a',
                                 callbacks: {
                                     label: ctx => '  ' + ctx.label + ': ' + ctx.parsed + I18N.tooltip_announcements,
                                 },

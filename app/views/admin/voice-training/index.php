@@ -628,7 +628,7 @@ ob_start();
     font-weight: 600;
 }
 :root[data-theme="dark"] .vt-select option {
-    background-color: var(--surface-card, #241b18);
+    background-color: var(--surface-card, #10241a);
     color: var(--text-primary, #fdf8ee);
 }
 
@@ -724,13 +724,13 @@ ob_start();
 
 /* Dark mode overrides for modal and cards */
 :root[data-theme="dark"] .vt-modal-content {
-    background-color: var(--surface-card, #241b18) !important;
+    background-color: var(--surface-card, #10241a) !important;
     color: var(--text-primary, #fdf8ee) !important;
-    border-color: var(--border, #3a2a22) !important;
+    border-color: var(--border, #1a3a29) !important;
 }
 :root[data-theme="dark"] .vt-modal-header,
 :root[data-theme="dark"] .vt-modal-footer {
-    border-color: var(--border, #3a2a22) !important;
+    border-color: var(--border, #1a3a29) !important;
 }
 </style>
 

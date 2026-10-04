@@ -87,9 +87,9 @@
     --motif-gold:      #c8992e;   /* decoration only — 2.38:1, never text */
     --motif-gold-ink:  #7a5c11;   /* the gold that MAY carry text */
     --motif-gold-night:#e2b955;   /* gold on a dark ground */
-    --motif-maroon-dk: #5e161a;
-    --motif-night:     #241b18;
-    --motif-night-2:   #3a2a22;
+    --motif-maroon-dk: #0f4a2a;
+    --motif-night:     #10241a;
+    --motif-night-2:   #1a3a29;
 
     /* ── Surfaces — cream content, dark brown panels (rule: dashboards
          stay light for all-day readability; dark stays for sidebar,
@@ -115,9 +115,9 @@
     /* ── Brand — text/link colour. A gold LOOKS right here, but raw gold
          (--motif-gold) is 2.38:1 and unusable for text, so the ink-shade
          of gold carries words instead; raw gold stays for borders/fills. */
-    --brand-primary:        var(--motif-gold-ink);   /* 6.14:1 on card */
-    --brand-primary-dark:   #5a430d;                 /* 9.21:1 — hover  */
-    --brand-primary-light:  #f6ecd2;                 /* pale gold wash  */
+    --brand-primary:        #17603a;                 /* barangay green, 7.4:1 on card */
+    --brand-primary-dark:   #0f4a2a;                 /* hover */
+    --brand-primary-light:  #e3efe6;                 /* pale green wash */
     --brand-secondary:      #2f5d3a;                 /* earthy green, 7.52:1 */
     --brand-secondary-dark: #1f3f27;
     --brand-secondary-light:#e3ede4;
@@ -125,14 +125,14 @@
     /* ── Actions — solid fill, carries white text. Fixed across themes
          on purpose (see tokens.css's own rule + DesignTokensTest, which
          this file follows even though it only scans tokens.css itself). */
-    --action-solid:       #7b1e22;   /* deep maroon — white on it 10.24:1 */
+    --action-solid:       #17603a;   /* deep barangay green — white on it 7.6:1 */
     --action-solid-hover: var(--motif-maroon-dk);   /* white on it 13.08:1 */
     --text-on-action:     #ffffff;
 
     /* ── Role accents ──────────────────────────────────────────────── */
     --role-resident:    var(--motif-gold-ink);
     --role-staff:       #2f5d3a;
-    --role-admin:       #7b1e22;
+    --role-admin:       #17603a;
     --role-system:      #4a3f38;
 
     /* ── Status — success/warning/danger/info pulled into the same
@@ -150,16 +150,16 @@
     /* ── Lines and focus ───────────────────────────────────────────── */
     --border:           #e4d7c2;
     --border-strong:    #cdbb9c;
-    --focus-ring:       rgba(123,30,34,.40);   /* maroon, visible on cream and dark alike */
+    --focus-ring:       rgba(23,96,58,.40);   /* maroon, visible on cream and dark alike */
     --focus-ring-width: 3px;
 
     /* ── Shape (kept from tokens.css) + one addition ─────────────────── */
     --radius-pill: 999px;
 
     /* ── Depth — same shadow scale, warmed from slate-grey to a brown tint */
-    --shadow-card:  0 1px 2px rgba(36,27,24,.08), 0 2px 8px rgba(36,27,24,.06);
-    --shadow-lift:  0 6px 18px rgba(36,27,24,.12);
-    --shadow-modal: 0 28px 70px rgba(20,15,13,.50), 0 4px 18px rgba(20,15,13,.28);
+    --shadow-card:  0 1px 2px rgba(16,36,26,.08), 0 2px 8px rgba(16,36,26,.06);
+    --shadow-lift:  0 6px 18px rgba(16,36,26,.12);
+    --shadow-modal: 0 28px 70px rgba(8,18,13,.50), 0 4px 18px rgba(8,18,13,.28);
 
     /* ── admin.css's OWN hardcoded sidebar vars (not sourced from
          tokens.css, so they need a direct override here) ─────────────
@@ -168,17 +168,17 @@
     --sb-bg:          var(--motif-night);
     --sb-bg-mid:      var(--motif-night-2);
     --sb-hover:       rgba(253,248,238,.08);
-    --sb-active:      var(--motif-gold);          /* "gold active item" */
-    --sb-active-glow: rgba(200,153,46,.35);
+    --sb-active:      #2e8b57;                    /* green active item (mockup) */
+    --sb-active-glow: rgba(46,139,87,.35);
     --sb-text:        var(--text-on-panel-faint);
     --sb-text-bright: var(--text-on-panel);
 
     /* admin.css's premium-layer gradients (hardcode a blue literal
        blended with a token, so a var-only override upstream can't reach
        them — redeclared whole here). */
-    --brand-gradient:      linear-gradient(135deg, #7b1e22 0%, #a3311c 100%);
+    --brand-gradient:      linear-gradient(135deg, #17603a 0%, #1f7a45 100%);
     --brand-gradient-gold: linear-gradient(135deg, #c8992e 0%, #7a5c11 100%);
-    --glow-green:          0 0 0 4px rgba(123,30,34,.14);
+    --glow-green:          0 0 0 4px rgba(23,96,58,.14);
     --glow-gold:           0 0 0 4px rgba(200,153,46,.18);
 
     /* main.css's hand-rolled Tailwind-style colour utilities
@@ -194,19 +194,19 @@
    hand, the same discipline DesignTokensTest enforces on tokens.css itself.
    ═══════════════════════════════════════════════════════════════════════ */
 :root[data-theme="dark"] {
-    --surface-page:     #1c1512;
+    --surface-page:     #0d1511;
     --surface-card:     var(--motif-night);
-    --surface-raised:   #2d2320;
-    --surface-muted:    #2d2320;
-    --surface-input:    #2d2320;
+    --surface-raised:   #1a2620;
+    --surface-muted:    #1a2620;
+    --surface-input:    #1a2620;
 
     --text-primary:     #fdf8ee;   /* 15.93:1 on dark card */
     --text-secondary:   #e6d9c8;   /* 12.15:1 */
     --text-muted:       #c3b2a0;   /*  8.19:1 */
 
-    --brand-primary:        var(--motif-gold-night);  /* 9.08:1 on dark card */
-    --brand-primary-dark:   #f0cd7a;
-    --brand-primary-light:  #3a2f1a;
+    --brand-primary:        #6fcf97;                  /* light green on dark card */
+    --brand-primary-dark:   #a7e3bd;
+    --brand-primary-light:  #1c3326;
     --brand-secondary:      #6fae7e;                  /* 6.45:1 on dark card */
     --brand-secondary-light:#1f3324;
 
@@ -218,9 +218,9 @@
                                        (--action-solid) does not change */
     --role-system:      #c3b2a0;
 
-    --border:           #3d2f28;
-    --border-strong:    #4e3c33;
-    --focus-ring:       rgba(226,185,85,.45);
+    --border:           #2a3b32;
+    --border-strong:    #37493f;
+    --focus-ring:       rgba(111,207,151,.45);
 
     --status-success:    #9bc78a;
     --status-warning:    #e0b25c;
@@ -241,19 +241,19 @@
 
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-        --surface-page:     #1c1512;
+        --surface-page:     #0d1511;
         --surface-card:     var(--motif-night);
-        --surface-raised:   #2d2320;
-        --surface-muted:    #2d2320;
-        --surface-input:    #2d2320;
+        --surface-raised:   #1a2620;
+        --surface-muted:    #1a2620;
+        --surface-input:    #1a2620;
 
         --text-primary:     #fdf8ee;
         --text-secondary:   #e6d9c8;
         --text-muted:       #c3b2a0;
 
-        --brand-primary:        var(--motif-gold-night);
-        --brand-primary-dark:   #f0cd7a;
-        --brand-primary-light:  #3a2f1a;
+        --brand-primary:        #6fcf97;
+        --brand-primary-dark:   #a7e3bd;
+        --brand-primary-light:  #1c3326;
         --brand-secondary:      #6fae7e;
         --brand-secondary-light:#1f3324;
 
@@ -262,9 +262,9 @@
         --role-admin:       #e2907c;
         --role-system:      #c3b2a0;
 
-        --border:           #3d2f28;
-        --border-strong:    #4e3c33;
-        --focus-ring:       rgba(226,185,85,.45);
+        --border:           #2a3b32;
+        --border-strong:    #37493f;
+        --focus-ring:       rgba(111,207,151,.45);
 
         --status-success:    #9bc78a;
         --status-warning:    #e0b25c;
@@ -328,11 +328,11 @@
     background: linear-gradient(135deg, var(--action-solid), var(--action-solid-hover)) !important;
 }
 .btn-primary-premium:hover {
-    box-shadow: 0 12px 30px rgba(123,30,34,.4) !important;
+    box-shadow: 0 12px 30px rgba(23,96,58,.4) !important;
 }
 
 .card-premium:hover {
-    border-color: rgba(123,30,34,.18) !important;
+    border-color: rgba(23,96,58,.18) !important;
 }
 
 .footer-premium {
@@ -342,22 +342,22 @@
     color: var(--motif-gold-night) !important;
 }
 
-::-webkit-scrollbar-thumb         { background: rgba(123,30,34,.20) !important; }
-::-webkit-scrollbar-thumb:hover   { background: rgba(123,30,34,.38) !important; }
+::-webkit-scrollbar-thumb         { background: rgba(23,96,58,.20) !important; }
+::-webkit-scrollbar-thumb:hover   { background: rgba(23,96,58,.38) !important; }
 :root {
-    scrollbar-color: rgba(123,30,34,.30) transparent;
-    --shadow-accent: 0 4px 20px rgba(123,30,34,.25);
-    --shadow-brand:  0 4px 20px rgba(123,30,34,.25);
+    scrollbar-color: rgba(23,96,58,.30) transparent;
+    --shadow-accent: 0 4px 20px rgba(23,96,58,.25);
+    --shadow-brand:  0 4px 20px rgba(23,96,58,.25);
 }
-.navbar-premium { border-bottom: 1px solid rgba(123,30,34,.08) !important; }
-.btn-login:hover { box-shadow: 0 8px 25px rgba(123,30,34,.35) !important; }
+.navbar-premium { border-bottom: 1px solid rgba(23,96,58,.08) !important; }
+.btn-login:hover { box-shadow: 0 8px 25px rgba(23,96,58,.35) !important; }
 
 /* main.css's navbar keeps a cold slate-navy tint in dark mode
    (rgba(19,27,44,...)) left over from the old palette — warmed to match
    the rest of dark mode's brown surfaces. */
-:root[data-theme="dark"] .navbar-premium { background: rgba(36,27,24,.92) !important; }
+:root[data-theme="dark"] .navbar-premium { background: rgba(16,36,26,.92) !important; }
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .navbar-premium { background: rgba(36,27,24,.92) !important; }
+    :root:not([data-theme="light"]) .navbar-premium { background: rgba(16,36,26,.92) !important; }
 }
 
 /* admin.css sidebar brand strip: a blue glow drop-shadow and gradient
@@ -368,19 +368,19 @@
 .sidebar-brand-icon-fallback     { color: var(--motif-gold-night) !important; }
 
 /* admin.css's glass topbar-on-scroll effect, dark mode variant. */
-:root[data-theme="dark"] .admin-topbar.scrolled { background: rgba(36,27,24,.86) !important; }
+:root[data-theme="dark"] .admin-topbar.scrolled { background: rgba(16,36,26,.86) !important; }
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .admin-topbar.scrolled { background: rgba(36,27,24,.86) !important; }
+    :root:not([data-theme="light"]) .admin-topbar.scrolled { background: rgba(16,36,26,.86) !important; }
 }
 
 /* admin.css literals */
-.btn-barangay:hover { box-shadow: 0 4px 12px rgba(123,30,34,.30) !important; }
+.btn-barangay:hover { box-shadow: 0 4px 12px rgba(23,96,58,.30) !important; }
 .form-control:focus,
 .form-select:focus,
 textarea.form-control:focus {
-    box-shadow: 0 0 0 3px rgba(123,30,34,.16) !important;
+    box-shadow: 0 0 0 3px rgba(23,96,58,.16) !important;
 }
-.quick-action-btn:hover .qa-icon { box-shadow: 0 6px 16px rgba(123,30,34,.35) !important; }
+.quick-action-btn:hover .qa-icon { box-shadow: 0 6px 16px rgba(23,96,58,.35) !important; }
 .status-upcoming { background: var(--status-info-bg) !important; color: var(--status-info) !important; }
 
 
@@ -538,7 +538,7 @@ h1, h2, h3,
 .form-theme__input:focus {
     outline: none;
     border-color: var(--brand-primary);
-    box-shadow: 0 0 0 3px rgba(123,30,34,.16);
+    box-shadow: 0 0 0 3px rgba(23,96,58,.16);
 }
 .form-theme__error {
     margin-top: .3rem;
@@ -686,7 +686,7 @@ table.table tbody tr:hover td {
 .pagination .page-link { color: var(--brand-primary); }
 .pagination .page-item.active .page-link { background-color: var(--action-solid); border-color: var(--action-solid); }
 .pagination .page-link:hover { color: var(--brand-primary-dark); background-color: var(--brand-primary-light); }
-.pagination .page-link:focus { box-shadow: 0 0 0 3px rgba(123,30,34,.16); }
+.pagination .page-link:focus { box-shadow: 0 0 0 3px rgba(23,96,58,.16); }
 
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -799,12 +799,12 @@ table.table tbody tr:hover td {
    18. BOOTSTRAP VARIABLE OVERRIDES — "override, don't fight it"
    ═══════════════════════════════════════════════════════════════════════ */
 :root {
-    --bs-primary:                  #7b1e22;
+    --bs-primary:                  #17603a;
     --bs-primary-rgb:              123, 30, 34;
     --bs-link-color:               var(--brand-primary);
     --bs-link-color-rgb:           122, 92, 17;
     --bs-link-hover-color:         var(--brand-primary-dark);
-    --bs-focus-ring-color:         rgba(123, 30, 34, .25);
+    --bs-focus-ring-color:         rgba(23,96,58, .25);
 }
 .btn-primary {
     --bs-btn-bg:               var(--action-solid);
@@ -834,7 +834,7 @@ table.table tbody tr:hover td {
     border-color: var(--action-solid) !important;
 }
 .form-check-input:focus {
-    box-shadow: 0 0 0 3px rgba(123,30,34,.16) !important;
+    box-shadow: 0 0 0 3px rgba(23,96,58,.16) !important;
 }
 
 
@@ -971,13 +971,13 @@ table.table tbody tr:hover td {
    ═══════════════════════════════════════════════════════════════════════ */
 :root[data-theme="dark"] select option,
 :root[data-theme="dark"] .form-select option {
-    background-color: #241b18 !important;
+    background-color: #10241a !important;
     color: #fdf8ee !important;
 }
 
 :root[data-theme="dark"] .dropdown-menu {
-    background-color: #2d2320 !important;
-    border-color: #3d2f28 !important;
+    background-color: #1a2620 !important;
+    border-color: #2a3b32 !important;
     color: #fdf8ee !important;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
 }
@@ -988,19 +988,19 @@ table.table tbody tr:hover td {
 
 :root[data-theme="dark"] .dropdown-item:hover,
 :root[data-theme="dark"] .dropdown-item:focus {
-    background-color: #3a2a22 !important;
+    background-color: #1a3a29 !important;
     color: #fdf8ee !important;
 }
 
 :root[data-theme="dark"] .modal-content {
-    background-color: #241b18 !important;
+    background-color: #10241a !important;
     color: #fdf8ee !important;
-    border: 1px solid #3d2f28 !important;
+    border: 1px solid #2a3b32 !important;
 }
 
 :root[data-theme="dark"] .modal-header,
 :root[data-theme="dark"] .modal-footer {
-    border-color: #3d2f28 !important;
+    border-color: #2a3b32 !important;
 }
 
 :root[data-theme="dark"] .btn-close {
@@ -1010,9 +1010,9 @@ table.table tbody tr:hover td {
 :root[data-theme="dark"] .form-control,
 :root[data-theme="dark"] .form-select,
 :root[data-theme="dark"] textarea.form-control {
-    background-color: #2d2320 !important;
+    background-color: #1a2620 !important;
     color: #fdf8ee !important;
-    border-color: #3d2f28 !important;
+    border-color: #2a3b32 !important;
 }
 
 :root[data-theme="dark"] .form-control::placeholder {
@@ -1021,15 +1021,15 @@ table.table tbody tr:hover td {
 }
 
 :root[data-theme="dark"] .input-group-text {
-    background-color: #2d2320 !important;
+    background-color: #1a2620 !important;
     color: #e6d9c8 !important;
-    border-color: #3d2f28 !important;
+    border-color: #2a3b32 !important;
 }
 
 :root[data-theme="dark"] .admin-card,
 :root[data-theme="dark"] .stat-card {
-    background-color: #241b18 !important;
-    border-color: #3d2f28 !important;
+    background-color: #10241a !important;
+    border-color: #2a3b32 !important;
     color: #fdf8ee !important;
 }
 

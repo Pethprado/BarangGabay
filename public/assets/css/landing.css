@@ -49,8 +49,8 @@
     /* ── Surfaces ───────────────────────────────────────────────────── */
     --l-cream:      #faf4e8;   /* page */
     --l-card:       #fffdf8;   /* card, slightly lighter than the page */
-    --l-night:      #241b18;   /* hero ground and footer, warm near-black */
-    --l-night-2:    #3a2a22;   /* the lighter end of the hero gradient */
+    --l-night:      #10241a;   /* hero ground and footer, warm near-black */
+    --l-night-2:    #1a3a29;   /* the lighter end of the hero gradient */
 
     /* ── Ink ────────────────────────────────────────────────────────── */
     --l-ink:        #1a1512;   /* 16.53:1 on cream */
@@ -60,8 +60,8 @@
     --l-on-night-3: #c3b2a0;   /*  8.19:1 on night */
 
     /* ── Accents ────────────────────────────────────────────────────── */
-    --l-maroon:     #7b1e22;   /*  9.35:1 on cream · white on it 10.24:1 */
-    --l-maroon-dk:  #5e161a;   /* hover; white on it 13.08:1 */
+    --l-maroon:     #17603a;   /*  9.35:1 on cream · white on it 10.24:1 */
+    --l-maroon-dk:  #0f4a2a;   /* hover; white on it 13.08:1 */
     --l-green:      #2f5d3a;   /*  6.98:1 on cream */
 
     /* DECORATION ONLY. 2.38:1 on cream — never put text in this colour. */
@@ -144,7 +144,7 @@
     background: rgba(250, 244, 232, .92);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--l-line);
-    box-shadow: 0 1px 0 rgba(123, 30, 34, .06);
+    box-shadow: 0 1px 0 rgba(23,96,58, .06);
 }
 .landing .nav-link-premium {
     color: var(--l-ink-soft);
@@ -196,11 +196,11 @@
  */
 .landing .btn-login {
     background: linear-gradient(135deg, var(--l-maroon), var(--l-maroon-dk));
-    box-shadow: 0 4px 14px rgba(123, 30, 34, .3);
+    box-shadow: 0 4px 14px rgba(23,96,58, .3);
 }
 .landing .btn-login:hover {
-    background: linear-gradient(135deg, var(--l-maroon-dk), #45100f);
-    box-shadow: 0 8px 20px rgba(123, 30, 34, .4);
+    background: linear-gradient(135deg, var(--l-maroon-dk), #0b3320);
+    box-shadow: 0 8px 20px rgba(23,96,58, .4);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -231,7 +231,7 @@
         repeating-linear-gradient(135deg,
             rgba(226,185,85,.07) 0 10px, transparent 10px 30px),
         repeating-linear-gradient(45deg,
-            rgba(123,30,34,.10) 0 10px, transparent 10px 30px);
+            rgba(23,96,58,.10) 0 10px, transparent 10px 30px);
     background-size: 96px 96px;
 }
 
@@ -461,12 +461,12 @@
     border-radius: var(--l-radius-lg);
     background: var(--l-card);
     overflow: hidden;
-    box-shadow: 0 1px 2px rgba(36, 27, 24, .05), 0 6px 18px rgba(36, 27, 24, .05);
+    box-shadow: 0 1px 2px rgba(16,36,26, .05), 0 6px 18px rgba(16,36,26, .05);
     transition: transform .2s, box-shadow .2s;
 }
 .landing .card-premium:hover {
     transform: translateY(-3px);
-    box-shadow: 0 10px 28px rgba(36, 27, 24, .12);
+    box-shadow: 0 10px 28px rgba(16,36,26, .12);
 }
 .landing .card-premium .card-top-bar {
     height: 6px;
@@ -483,7 +483,7 @@
     width: 52px;
     height: 52px;
     border-radius: var(--l-radius);
-    background: rgba(123, 30, 34, .08);
+    background: rgba(23,96,58, .08);
     color: var(--l-maroon);
     font-size: 1.4rem;
 }

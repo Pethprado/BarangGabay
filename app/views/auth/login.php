@@ -162,7 +162,7 @@ $authBgUrl  = is_file($authBgFile) ? asset('images/auth-bg.jpg') : null;
                     transparent 14px 38px),
                 /* soft depth so the lattice is not flat */
                 radial-gradient(ellipse at 22% 18%, rgba(200,153,46,.14) 0%, transparent 55%),
-                radial-gradient(ellipse at 78% 82%, rgba(94,22,26,.50) 0%, transparent 60%),
+                radial-gradient(ellipse at 78% 82%, rgba(15,74,42,.50) 0%, transparent 60%),
                 linear-gradient(150deg, var(--indigo-deep) 0%, var(--indigo-mid) 62%, #140f0d 100%);
             background-size: 120px 120px, 120px 120px, auto, auto, auto;
             animation: bgDrift var(--motion-drift) linear infinite;
@@ -172,7 +172,7 @@ $authBgUrl  = is_file($authBgFile) ? asset('images/auth-bg.jpg') : null;
         /* A community-supplied photograph is present, so it takes over. */
         .auth-bg {
             background-image:
-                linear-gradient(150deg, rgba(36,27,24,.80), rgba(94,22,26,.55)),
+                linear-gradient(150deg, rgba(16,36,26,.80), rgba(15,74,42,.55)),
                 url('<?= e($authBgUrl) ?>');
             background-size: cover, cover;
             background-position: center, center;
@@ -193,7 +193,7 @@ $authBgUrl  = is_file($authBgFile) ? asset('images/auth-bg.jpg') : null;
             inset: 0;
             z-index: 0;
             pointer-events: none;
-            background: radial-gradient(ellipse at 50% 50%, rgba(20,15,13,.30) 0%, rgba(20,15,13,.62) 100%);
+            background: radial-gradient(ellipse at 50% 50%, rgba(8,18,13,.30) 0%, rgba(8,18,13,.62) 100%);
         }
 
         /* ════════════════════════════════════════════════════════════════

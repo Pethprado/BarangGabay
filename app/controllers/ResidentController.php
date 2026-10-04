@@ -195,11 +195,20 @@ class ResidentController
             error_log('[ResidentController] safety check-in unavailable: ' . $e->getMessage());
         }
 
+        // Latest published posts for the dashboard's "Latest Posts" cards.
+        $latestPosts = [];
+        try {
+            $latestPosts = Announcement::getPublished(3);
+        } catch (\Throwable $e) {
+            error_log('[ResidentController] latest posts unavailable: ' . $e->getMessage());
+        }
+
         // Record the visit last, so nothing above is affected by it.
         User::touchLastSeen($userId);
 
         view('resident/home', compact(
             'user',
+            'latestPosts',
             'advisoryText',
             'advisoryLevel',
             'zone',

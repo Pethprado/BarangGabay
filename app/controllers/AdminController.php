@@ -146,7 +146,26 @@ class AdminController
         $advisoryText  = (string) setting('hazard_advisory_text', '');
         $advisoryLevel = (string) setting('hazard_advisory_level', 'warning');
 
+        // Language dataset coverage for the dashboard card: real figures —
+        // share of the words residents meet in visible posts that have an
+        // approved recording, per language, plus Manobo dictionary coverage.
+        $datasetCoverage = [];
+        $manoboDictionary = ['total_dictionary_words' => 0, 'words_with_audio' => 0, 'coverage_percentage' => 0.0];
+        $activeStaffCount = 0;
+        try {
+            foreach (\App\Services\VoiceUsageIndex::reports() as $lang => $report) {
+                $datasetCoverage[$lang] = $report;
+            }
+            $manoboDictionary = \App\Models\VoiceSample::getManoboCoverageStats();
+            $activeStaffCount = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role IN ('staff','admin') AND status = 'verified'")->fetchColumn();
+        } catch (\Throwable $e) {
+            error_log('[AdminController::dashboard] dataset coverage: ' . $e->getMessage());
+        }
+
         view('admin/dashboard', compact(
+            'datasetCoverage',
+            'manoboDictionary',
+            'activeStaffCount',
             'verifiedCount',
             'pendingCount',
             'publishedCount',

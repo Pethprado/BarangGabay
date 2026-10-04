@@ -90,6 +90,35 @@ $eventMeta = static function (array $ev): array {
 
 ob_start();
 ?>
+<style>
+.rd-welcome { position: relative; overflow: hidden; padding: 1.4rem 1.5rem 1.2rem; border-radius: 1.1rem; border: 1px solid var(--border); background: linear-gradient(120deg, var(--brand-primary-light) 0%, var(--surface-card) 70%); color: var(--brand-primary); box-shadow: var(--shadow-card); }
+.rd-welcome__scape { position: absolute; right: 0; bottom: 0; width: 60%; height: 100%; pointer-events: none; }
+.rd-welcome__row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.rd-welcome__greet { margin: 0; font-size: .9rem; color: var(--text-secondary); }
+.rd-welcome__name { margin: 0; font-family: var(--font-heading); font-weight: 800; font-size: clamp(1.4rem, 3vw, 1.9rem); line-height: 1.15; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-welcome__tag { position: relative; margin: .8rem 0 0; font-size: .92rem; font-weight: 600; color: var(--brand-primary); }
+.rd-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 1rem; box-shadow: var(--shadow-card); }
+.rd-lang { display: grid; gap: 1rem; padding: 1rem; align-items: center; }
+@media (min-width: 768px) { .rd-lang { grid-template-columns: auto 1fr; } }
+.rd-lang__opts { display: flex; gap: .5rem; }
+.rd-lang__opt { min-width: 84px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: .5rem .9rem; border-radius: .8rem; border: 1px solid var(--border); background: var(--surface-muted); color: var(--text-secondary); text-decoration: none; }
+.rd-lang__opt strong { font-size: 1rem; color: var(--text-primary); }
+.rd-lang__opt span { font-size: .75rem; }
+.rd-lang__opt.is-active { background: var(--action-solid); border-color: var(--action-solid); color: var(--text-on-action); }
+.rd-lang__opt.is-active strong { color: var(--text-on-action); }
+.rd-btn { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: .55rem 1.1rem; border-radius: .75rem; background: var(--action-solid); color: var(--text-on-action); font-weight: 700; font-size: .9rem; text-decoration: none; }
+.rd-btn:hover { background: var(--action-solid-hover); color: var(--text-on-action); }
+.rd-post { overflow: hidden; display: flex; flex-direction: column; transition: transform .15s ease, box-shadow .15s ease; }
+.rd-post:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+.rd-post__img { aspect-ratio: 16 / 9; display: grid; place-items: center; background: linear-gradient(135deg, var(--brand-primary-light), var(--surface-muted)); color: var(--brand-primary); font-size: 1.8rem; }
+.rd-post__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rd-post__body { padding: .9rem 1rem 1rem; display: flex; flex-direction: column; gap: .4rem; flex: 1; }
+.rd-badge { display: inline-flex; align-items: center; gap: .25rem; padding: .1rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 800; }
+.rd-badge--urgent { background: var(--status-danger-bg); color: var(--status-danger); }
+.rd-badge--important { background: var(--status-warning-bg); color: var(--status-warning); }
+@media (prefers-reduced-motion: reduce) { .rd-post { transition: none; } .rd-post:hover { transform: none; } }
+</style>
+
 
 <!-- ══ HAZARD ADVISORY ════════════════════════════════════════════════════
      A STANDING state set by barangay staff (/admin), distinct from an urgent
@@ -423,8 +452,12 @@ if (empty($safetyAdvisory)):
 <section class="fade-up mb-6">
     <?php // surface-card-gradient, not Tailwind's from-white/to-slate-50: a baked-in
           // white gradient stays white in dark mode while the text turns near-white. ?>
-    <div class="surface-card-gradient flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 p-5 shadow-sm">
-
+    <div class="rd-welcome">
+        <svg class="rd-welcome__scape" viewBox="0 0 600 120" preserveAspectRatio="xMaxYMax slice" aria-hidden="true" focusable="false">
+            <path d="M0 90 L80 50 L150 80 L230 35 L320 85 L400 45 L480 80 L600 40 L600 120 L0 120 Z" fill="currentColor" opacity=".10"/>
+            <path d="M0 105 L100 75 L190 100 L280 70 L380 105 L470 78 L600 100 L600 120 L0 120 Z" fill="currentColor" opacity=".16"/>
+        </svg>
+        <div class="rd-welcome__row">
         <?php if (!empty($user['avatar_url'])): ?>
         <img src="<?= e(asset((string) $user['avatar_url'])) ?>" alt=""
              class="h-14 w-14 flex-shrink-0 rounded-full object-cover ring-4 ring-blue-100">
@@ -436,8 +469,8 @@ if (empty($safetyAdvisory)):
         <?php endif; ?>
 
         <div class="min-w-0 flex-1">
-            <p class="text-sm text-slate-500"><?= e($greeting) ?>,</p>
-            <h1 class="truncate text-xl font-black leading-tight text-slate-900 sm:text-2xl">
+            <p class="rd-welcome__greet"><?= e($greeting) ?>,</p>
+            <h1 class="rd-welcome__name">
                 <?= e($firstName !== '' ? $firstName : (string) ($user['full_name'] ?? '')) ?>
             </h1>
             <div class="mt-1.5 flex flex-wrap items-center gap-2">
@@ -457,6 +490,8 @@ if (empty($safetyAdvisory)):
                 <?php endif; ?>
             </div>
         </div>
+        </div>
+        <p class="rd-welcome__tag"><?= e(t('resident_home.welcome_tagline')) ?></p>
     </div>
 
     <!-- Email verification prompt — an unverified resident never receives
@@ -849,13 +884,13 @@ $docState = (string) ($docOpen['status'] ?? '');
         // in a far purok.
         // CHANGED: every gradient pair below was a stock Tailwind blue/green/
         // red/amber/purple hex pair — retinted to the earthy theme palette.
-        ['href' => route('documents'),  'icon' => 'bi-file-earmark-text-fill', 'label' => t('resident_home.action_documents'), 'grad' => '#7b1e22,#a3311c'],
-        ['href' => route('feedback'),   'icon' => 'bi-chat-heart-fill', 'label' => t('resident_home.action_feedback'),   'grad' => '#2f5d3a,#6fae7e'],
-        ['href' => route('evacuation'), 'icon' => 'bi-house-exclamation-fill', 'label' => t('resident_home.action_evacuation'), 'grad' => '#a3311c,#c94a30'],
-        ['href' => route('ordinances'), 'icon' => 'bi-journal-text',    'label' => t('resident_home.action_ordinances'), 'grad' => '#c8992e,#7a5c11'],
-        ['href' => route('manobo'),     'icon' => 'bi-book-half',       'label' => t('nav.dictionary'),                  'grad' => '#6b4a5c,#8a6577'],
-        ['ai'   => true,                'icon' => 'bi-robot',           'label' => t('resident_home.action_ai'),         'grad' => '#6b4a5c,#9c7a8c'],
-        ['href' => route('profile'),    'icon' => 'bi-person-fill',     'label' => t('resident_home.action_profile'),    'grad' => '#7b1e22,#a3311c'],
+        ['href' => route('documents'),  'icon' => 'bi-file-earmark-text-fill', 'label' => t('resident_home.action_documents'), 'grad' => '#17603a'],
+        ['href' => route('feedback'),   'icon' => 'bi-chat-heart-fill', 'label' => t('resident_home.action_feedback'),   'grad' => '#2f5d3a'],
+        ['href' => route('evacuation'), 'icon' => 'bi-house-exclamation-fill', 'label' => t('resident_home.action_evacuation'), 'grad' => '#b42318'],
+        ['href' => route('ordinances'), 'icon' => 'bi-journal-text',    'label' => t('resident_home.action_ordinances'), 'grad' => '#7a5c11'],
+        ['href' => route('manobo'),     'icon' => 'bi-book-half',       'label' => t('nav.dictionary'),                  'grad' => '#1f6f8b'],
+        ['ai'   => true,                'icon' => 'bi-robot',           'label' => t('resident_home.action_ai'),         'grad' => '#4b5563'],
+        ['href' => route('profile'),    'icon' => 'bi-person-fill',     'label' => t('resident_home.action_profile'),    'grad' => '#17603a'],
     ];
     ?>
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -863,7 +898,7 @@ $docState = (string) ($docOpen['status'] ?? '');
             <?php if (!empty($qa['ai'])): ?>
             <button type="button" data-open-ai-chat class="<?= $tileClass ?>">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl text-white"
-                      style="background:linear-gradient(135deg,<?= $qa['grad'] ?>);">
+                      style="background:<?= $qa['grad'] ?>;">
                     <i class="bi <?= $qa['icon'] ?>" style="font-size:1.2rem;"></i>
                 </span>
                 <span class="text-xs font-bold leading-snug text-slate-700"><?= e($qa['label']) ?></span>
@@ -871,7 +906,7 @@ $docState = (string) ($docOpen['status'] ?? '');
             <?php else: ?>
             <a href="<?= e($qa['href']) ?>" class="<?= $tileClass ?>">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl text-white"
-                      style="background:linear-gradient(135deg,<?= $qa['grad'] ?>);">
+                      style="background:<?= $qa['grad'] ?>;">
                     <i class="bi <?= $qa['icon'] ?>" style="font-size:1.2rem;"></i>
                 </span>
                 <span class="text-xs font-bold leading-snug text-slate-700"><?= e($qa['label']) ?></span>
@@ -894,6 +929,68 @@ $docState = (string) ($docOpen['status'] ?? '');
         if (fab.getAttribute('aria-expanded') !== 'true') { fab.click(); }
     });
 </script>
+
+<!-- ══ LANGUAGE & VOICE ════════════════════════════════════════════════════
+     The header's EN / FIL / MN switch, repeated here as the mockup's card.
+     Every post's Voice Reader reads the selected language using the
+     barangay's approved recordings. -->
+<?php $curLocale = current_locale(); ?>
+<section class="fade-up mb-8" aria-labelledby="rd-lang-title">
+    <h2 id="rd-lang-title" class="mb-3 text-sm font-bold uppercase tracking-widest text-slate-500"><?= e(t('resident_home.lang_voice_title')) ?></h2>
+    <div class="rd-card rd-lang">
+        <div class="rd-lang__opts" role="group" aria-label="<?= e(t('resident_home.lang_voice_title')) ?>">
+            <?php foreach (['en' => ['EN', 'English'], 'fil' => ['FIL', 'Filipino'], 'msm' => ['MN', 'Manobo']] as $lc => [$lcShort, $lcName]): ?>
+                <a href="<?= e(route('set-locale/' . $lc)) ?>" class="rd-lang__opt<?= $curLocale === $lc ? ' is-active' : '' ?>" aria-current="<?= $curLocale === $lc ? 'true' : 'false' ?>">
+                    <strong><?= $lcShort ?></strong><span><?= $lcName ?></span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+        <div class="rd-lang__voice">
+            <p class="text-sm text-slate-600 mb-2"><?= e(t('resident_home.lang_voice_hint')) ?></p>
+            <?php if (!empty($latestPosts[0])): ?>
+                <a href="<?= e(route('announcements/' . $latestPosts[0]['slug'])) ?>" class="rd-btn">
+                    <i class="bi bi-volume-up-fill" aria-hidden="true"></i> <?= e(t('resident_home.listen_latest')) ?>
+                </a>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+
+<!-- ══ LATEST POSTS ════════════════════════════════════════════════════════ -->
+<?php if (!empty($latestPosts)): ?>
+<section class="fade-up mb-8" aria-labelledby="rd-latest-title">
+    <div class="mb-3 flex items-baseline justify-between gap-3">
+        <h2 id="rd-latest-title" class="text-sm font-bold uppercase tracking-widest text-slate-500"><?= e(t('resident_home.latest_posts')) ?></h2>
+        <a href="<?= e(route('announcements')) ?>" class="text-sm font-bold text-blue-700"><?= e(t('resident_home.view_all')) ?> <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="grid gap-4 md:grid-cols-3">
+        <?php foreach ($latestPosts as $lp):
+            $lpTitle = localised_text($lp, 'title');
+            $lpBody  = \App\Services\SpokenText::repairJoins(\App\Services\SpokenText::plain(localised_text($lp, 'body')));
+            $lpUrg   = (string) ($lp['urgency'] ?? 'normal');
+            $lpImg   = trim((string) ($lp['cover_image_url'] ?? ''));
+            $lpUrl   = route('announcements/' . $lp['slug']);
+        ?>
+        <article class="rd-card rd-post">
+            <div class="rd-post__img">
+                <?php if ($lpImg !== ''): ?><img src="<?= e(asset($lpImg)) ?>" alt="" loading="lazy" onerror="this.remove()"><?php endif; ?>
+                <i class="bi bi-megaphone" aria-hidden="true"></i>
+            </div>
+            <div class="rd-post__body">
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                    <?php if ($lpUrg === 'urgent'): ?><span class="rd-badge rd-badge--urgent"><i class="bi bi-exclamation-triangle-fill"></i> Urgent</span><?php endif; ?>
+                    <?php if ($lpUrg === 'important'): ?><span class="rd-badge rd-badge--important"><?= e(t('landing.important')) ?></span><?php endif; ?>
+                    <time datetime="<?= e((string) $lp['published_at']) ?>"><?= e($shortWhen($lp['published_at'] ?? null)) ?></time>
+                </div>
+                <h3 class="text-base font-bold leading-snug text-slate-900"><a href="<?= e($lpUrl) ?>" class="hover:underline"><?= e($lpTitle) ?></a></h3>
+                <p class="text-sm text-slate-600"><?= e(mb_strimwidth($lpBody, 0, 120, '…')) ?></p>
+                <a href="<?= e($lpUrl) ?>" class="mt-auto text-sm font-bold text-blue-700" aria-label="<?= e(t('resident_home.read_more') . ': ' . $lpTitle) ?>"><?= e(t('resident_home.read_more')) ?> <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </article>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- ══ D + E. NOTIFICATIONS & MY CONVERSATIONS ════════════════════════════ -->
 <section class="mb-10 grid gap-4 lg:grid-cols-2">

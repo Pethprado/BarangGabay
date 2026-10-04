@@ -20,9 +20,9 @@ $flashOk  = flash('success');
     <style>
         :root {
             /* System-wide maroon/gold earth palette with proper contrast tokens */
-            --green:  #7b1e22;   /* maroon brand primary */
-            --green-hover: #5e161a;
-            --darker: #241b18;
+            --green:  #17603a;   /* maroon brand primary */
+            --green-hover: #0f4a2a;
+            --darker: #10241a;
             --gold:   #7a5c11;   /* gold-ink: safe for white text/icons on it */
             --radius: .75rem;
             --text-primary: #1a1512;
@@ -42,7 +42,7 @@ $flashOk  = flash('success');
             font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
             background:
                 radial-gradient(ellipse at 20% 30%, rgba(200,153,46,.16) 0%, transparent 55%),
-                linear-gradient(145deg, #241b18 0%, #7b1e22 60%, #3a2a22 100%);
+                linear-gradient(145deg, #10241a 0%, #17603a 60%, #1a3a29 100%);
         }
 
         /* ── Outer wrapper ──────────────────────────────────── */
@@ -70,7 +70,7 @@ $flashOk  = flash('success');
         .reg-left {
             width: 360px;
             flex-shrink: 0;
-            background: linear-gradient(180deg, #241b18 0%, #5e161a 100%);
+            background: linear-gradient(180deg, #10241a 0%, #0f4a2a 100%);
             padding: 2.5rem 2rem;
             display: flex;
             flex-direction: column;
@@ -203,7 +203,7 @@ $flashOk  = flash('success');
         .form-control:focus, .form-select:focus {
             border-color: var(--green);
             background: #fff;
-            box-shadow: 0 0 0 3px rgba(123,30,34,.14);
+            box-shadow: 0 0 0 3px rgba(23,96,58,.14);
         }
         .form-control.is-invalid {
             border-color: #dc3545;
@@ -290,9 +290,9 @@ $flashOk  = flash('success');
             width: 100%;
         }
         .btn-register:hover {
-            background: #5e161a;
+            background: #0f4a2a;
             color: #fff;
-            box-shadow: 0 6px 18px rgba(123,30,34,.4);
+            box-shadow: 0 6px 18px rgba(23,96,58,.4);
             transform: translateY(-1px);
         }
         .btn-register:active { transform: none; }
