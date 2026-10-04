@@ -129,7 +129,9 @@ class Ordinance
             $data['uploaded_by'],
             $data['status'],
         ]);
-        return (int) db()->lastInsertId();
+        $id = (int) db()->lastInsertId();
+        \App\Services\VoiceUsageIndex::indexPost('ordinance', $id);
+        return $id;
     }
 
     /** Update core ordinance fields (does not clear ai_summary). */
@@ -151,6 +153,7 @@ class Ordinance
             $data['status'],
             $id,
         ]);
+        \App\Services\VoiceUsageIndex::indexPost('ordinance', $id);
     }
 
     /** Delete an ordinance record. */
@@ -164,8 +167,8 @@ class Ordinance
     {
         $stmt = db()->prepare('UPDATE ordinances SET title_manobo = ?, description_manobo = ? WHERE id = ?');
         $stmt->execute([$titleManobo, $descManobo, $id]);
-        // Keep the Voice Training "missing Manobo voice" list current.
-        \App\Services\VoiceUsageIndex::indexContent('ordinance', $id, $titleManobo . "\n" . $descManobo);
+        // Keep the Voice Training missing-pronunciation lists current.
+        \App\Services\VoiceUsageIndex::indexPost('ordinance', $id);
     }
 
     /**
@@ -180,6 +183,7 @@ class Ordinance
     {
         $stmt = db()->prepare('UPDATE ordinances SET title_en = ?, description_en = ? WHERE id = ?');
         $stmt->execute([$titleEn, $bodyEn, $id]);
+        \App\Services\VoiceUsageIndex::indexPost('ordinance', $id);
     }
 
     /**
@@ -193,6 +197,7 @@ class Ordinance
     {
         $stmt = db()->prepare('UPDATE ordinances SET title_fil = ?, description_fil = ? WHERE id = ?');
         $stmt->execute([$titleFil, $bodyFil, $id]);
+        \App\Services\VoiceUsageIndex::indexPost('ordinance', $id);
     }
 
     /** Record which language a staff member actually wrote this post in. */

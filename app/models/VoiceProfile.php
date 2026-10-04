@@ -66,12 +66,14 @@ class VoiceProfile
             'msm'   => 'Manobo Community Voice',
             'fil'   => 'Filipino Default Voice',
             'en'    => 'English Default Voice',
+            'ceb'   => 'Bisaya Default Voice',
             default => ucfirst($language) . ' Default Voice',
         };
 
         $fallback = match ($language) {
             'msm'   => 'ceb-PH',
             'fil'   => 'fil-PH',
+            'ceb'   => 'ceb-PH',
             default => 'en-US',
         };
 
@@ -272,6 +274,17 @@ class VoiceProfile
                     'is_active'         => 1,
                     'fallback_voice'    => 'en-US',
                     'speaking_rate'     => 1.0,
+                ],
+                [
+                    'language'          => 'ceb',
+                    'name'              => 'Bisaya Default Voice',
+                    'profile_name'      => 'Bisaya Default Voice',
+                    'provider'          => 'dataset_hybrid',
+                    'provider_voice_id' => 'ceb-PH',
+                    'description'       => 'Recorded Bisaya/Cebuano pronunciations, used for Bisaya words inside Manobo text',
+                    'is_active'         => 1,
+                    'fallback_voice'    => 'ceb-PH',
+                    'speaking_rate'     => 0.95,
                 ],
             ];
 

@@ -84,6 +84,38 @@ final class VoicePipelineTest extends TestCase
         $this->assertSame([['type' => 'missing', 'text' => 'a b']], $plan);
     }
 
+    public function testBisayaRecordingsFillOnlyBisayaWordsInsideManoboText(): void
+    {
+        // Manobo text: "madjow" (Manobo, unrecorded) + "maayong buntag" (Bisaya, recorded as Bisaya).
+        \App\Services\VoiceUsageIndex::setDictionariesForTesting(['madjow', 'para'], ['maayong', 'buntag', 'para']);
+        $msmPlan = VoiceResolver::plan(VoiceText::tokens('madjow maayong buntag para'), [], 1);
+        $ceb     = $this->map('maayong buntag', 'para');
+
+        $plan = VoiceResolver::fillFrom($msmPlan, $ceb, 2, 'ceb',
+            static fn (string $t): bool => \App\Services\VoiceUsageIndex::classifyManoboToken($t) === 'ceb');
+
+        $this->assertSame(['missing', 'recorded', 'missing'], array_column($plan, 'type'));
+        $this->assertSame('maayong buntag', $plan[1]['text']);
+        $this->assertSame('ceb', $plan[1]['language']);
+        // "para" is a Manobo headword too, so the Bisaya recording of "para" is NOT used.
+        $this->assertSame('para', $plan[2]['text']);
+    }
+
+    public function testLanguagesAreClassifiedNotMixed(): void
+    {
+        \App\Services\VoiceUsageIndex::setDictionariesForTesting(['madjow', 'para'], ['kaluwasan', 'para']);
+        $this->assertSame('ceb', \App\Services\VoiceUsageIndex::classifyManoboToken('kaluwasan'));
+        $this->assertSame('msm', \App\Services\VoiceUsageIndex::classifyManoboToken('para'));
+        $this->assertSame('msm', \App\Services\VoiceUsageIndex::classifyManoboToken('unknownword'));
+    }
+
+    public function testUrlFragmentsAreNotTrackable(): void
+    {
+        $this->assertFalse(\App\Services\VoiceUsageIndex::isTrackable('https'));
+        $this->assertFalse(\App\Services\VoiceUsageIndex::isTrackable('2026'));
+        $this->assertTrue(\App\Services\VoiceUsageIndex::isTrackable('evacuation'));
+    }
+
     public function testNumbersAreNotCountedAsMissingVocabulary(): void
     {
         $plan = VoiceResolver::plan(VoiceText::tokens('tibo 25'), [], 1);

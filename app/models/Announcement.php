@@ -402,7 +402,9 @@ class Announcement
             $data['status'],
             $data['published_at']    ?? null,
         ]);
-        return (int) db()->lastInsertId();
+        $id = (int) db()->lastInsertId();
+        \App\Services\VoiceUsageIndex::indexPost('announcement', $id);
+        return $id;
     }
 
     /** Update an existing row. */
@@ -424,6 +426,7 @@ class Announcement
             $data['cover_image_url'] ?? null,
             $id,
         ]);
+        \App\Services\VoiceUsageIndex::indexPost('announcement', $id);
     }
 
     /**
@@ -451,8 +454,8 @@ class Announcement
     {
         $stmt = db()->prepare('UPDATE announcements SET title_manobo = ?, body_manobo = ? WHERE id = ?');
         $stmt->execute([$titleManobo, $bodyManobo, $id]);
-        // Keep the Voice Training "missing Manobo voice" list current.
-        \App\Services\VoiceUsageIndex::indexContent('announcement', $id, $titleManobo . "\n" . $bodyManobo);
+        // Keep the Voice Training missing-pronunciation lists current.
+        \App\Services\VoiceUsageIndex::indexPost('announcement', $id);
     }
 
     /**
@@ -533,6 +536,7 @@ class Announcement
     {
         $stmt = db()->prepare('UPDATE announcements SET title_en = ?, body_en = ? WHERE id = ?');
         $stmt->execute([$titleEn, $bodyEn, $id]);
+        \App\Services\VoiceUsageIndex::indexPost('announcement', $id);
     }
 
     /**
@@ -546,6 +550,7 @@ class Announcement
     {
         $stmt = db()->prepare('UPDATE announcements SET title_fil = ?, body_fil = ? WHERE id = ?');
         $stmt->execute([$titleFil, $bodyFil, $id]);
+        \App\Services\VoiceUsageIndex::indexPost('announcement', $id);
     }
 
     /**

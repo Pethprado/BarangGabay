@@ -31,7 +31,86 @@ final class VoiceResolver
     public static function resolve(string $language, string $text): array
     {
         $index = self::index($language);
-        return self::plan(VoiceText::tokens($text), $index['map'], $index['max']);
+        $plan  = self::plan(VoiceText::tokens($text), $index['map'], $index['max']);
+
+        // Manobo text carries Bisaya words where the translator fell back to
+        // Bisaya. Those words — and only those — may use Bisaya recordings.
+        if ($language === 'msm') {
+            $ceb = self::index('ceb');
+            if ($ceb['map']) {
+                $plan = self::fillFrom($plan, $ceb['map'], $ceb['max'], 'ceb',
+                    static fn (string $token): bool => VoiceUsageIndex::classifyManoboToken($token) === 'ceb');
+            }
+        }
+        return $plan;
+    }
+
+    /**
+     * Re-plan the missing segments of $plan against a second language's
+     * recordings, restricted to keys whose every word $accept()s.
+     *
+     * Kept separate (and pure) so Manobo and Bisaya recordings never mix by
+     * accident: identical spellings stay in their own language unless the
+     * word is a Bisaya-only headword inside Manobo text.
+     *
+     * @param list<array<string,mixed>>         $plan
+     * @param array<string,array<string,mixed>> $map
+     * @param callable(string): bool            $accept
+     * @return list<array<string,mixed>>
+     */
+    public static function fillFrom(array $plan, array $map, int $maxLen, string $language, callable $accept): array
+    {
+        $allowed = [];
+        foreach ($map as $key => $hit) {
+            $ok = true;
+            foreach (explode(' ', (string) $key) as $t) {
+                if (!$accept($t)) {
+                    $ok = false;
+                    break;
+                }
+            }
+            if ($ok) {
+                $allowed[$key] = $hit + ['language' => $language];
+            }
+        }
+        if (!$allowed) {
+            return $plan;
+        }
+
+        $out = [];
+        foreach ($plan as $segment) {
+            if ($segment['type'] !== 'missing') {
+                $out[] = $segment;
+                continue;
+            }
+            foreach (self::plan(explode(' ', (string) $segment['text']), $allowed, $maxLen) as $sub) {
+                $last = count($out) - 1;
+                if ($sub['type'] === 'missing' && $last >= 0 && $out[$last]['type'] === 'missing') {
+                    $out[$last]['text'] .= ' ' . $sub['text'];
+                } else {
+                    $out[] = $sub;
+                }
+            }
+        }
+        return $out;
+    }
+
+    /** Fallback modes for words with no approved recording. */
+    public const FALLBACK_NONE = 'recorded_only';
+    public const FALLBACK_TTS  = 'recorded_tts';
+
+    /**
+     * Admin setting: what the reader does with unrecorded words.
+     * Default 'recorded_only' — residents hear only approved recordings.
+     */
+    public static function fallbackMode(): string
+    {
+        try {
+            $mode = (string) \App\Models\Setting::get('voice_fallback', self::FALLBACK_NONE);
+        } catch (\Throwable $e) {
+            $mode = self::FALLBACK_NONE;
+        }
+        return $mode === self::FALLBACK_TTS ? self::FALLBACK_TTS : self::FALLBACK_NONE;
     }
 
     /**

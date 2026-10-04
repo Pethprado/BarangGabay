@@ -128,6 +128,8 @@ class PostAudioService
         // only to remember which wording it was recorded against.
         $humanManobo = trim((string) ($row['audio_manobo_path'] ?? ''));
 
+        $fallback = VoiceResolver::fallbackMode();
+
         $out = [];
         foreach (PostAudio::LOCALES as $locale) {
             $script = PostScript::build($type, $row, $locale);
@@ -179,7 +181,9 @@ class PostAudioService
                  * staff to delete a recording to hear it.
                  */
                 $alt = $stored['msm:' . PostAudio::SOURCE_AI] ?? null;
-                if ($alt !== null && $alt['text_hash'] === $script['hash']) {
+                $track['fallback']    = $fallback;
+                $track['hasRecorded'] = true;
+                if ($alt !== null && $alt['text_hash'] === $script['hash'] && $fallback !== VoiceResolver::FALLBACK_NONE) {
                     $track['altAudioUrl']  = asset((string) $alt['audio_path']);
                     $track['altVoiceName'] = $alt['voice_name'] ?? null;
                 }
@@ -222,44 +226,54 @@ class PostAudioService
                 $track['stale']  = $ai !== null;
             }
 
-            // Word/phrase recordings inside each spoken chunk. A chunk that
-            // contains at least one approved recording carries a segment plan
-            // (longest phrase first); the player plays recorded segments and
-            // reads the rest with the device voice. Same resolver as the
-            // admin Interactive Voice Tester.
-            $hasSegments = false;
-            $missedWords = [];
+            // Word/phrase recordings inside each spoken chunk (longest phrase
+            // first) — the same resolver as the admin Interactive Voice Tester.
+            //
+            // Recorded-only mode (the default): every chunk carries its plan;
+            // the player plays the recorded segments and skips the rest, and
+            // no machine narration is offered. With the TTS fallback enabled,
+            // only chunks containing a recording carry a plan and the device
+            // voice reads everything else.
+            $recordedOnly = $fallback === VoiceResolver::FALLBACK_NONE;
+            $hasSegments  = false;
+            $missedWords  = [];
             foreach ($track['chunks'] as &$chunk) {
                 if (empty($chunk['say'])) {
                     continue;
                 }
                 $plan = VoiceResolver::resolve($locale, (string) $chunk['say']);
-                if ($locale === VoiceUsageIndex::LANGUAGE) {
-                    array_push($missedWords, ...VoiceResolver::missingWords($plan));
-                }
+                array_push($missedWords, ...VoiceResolver::missingWords($plan));
                 if (VoiceResolver::hasRecording($plan)) {
+                    $hasSegments = true;
+                }
+                if ($recordedOnly || VoiceResolver::hasRecording($plan)) {
                     $chunk['segments'] = $plan;
-                    $hasSegments       = true;
                 }
             }
             unset($chunk);
 
-            // For Manobo a native recording always beats machine audio: when
-            // the dataset covers part of this post, drop the AI narration so
-            // the segment player (native clips + labelled fallback) is used.
-            if ($locale === 'msm' && $hasSegments && $track['source'] === PostAudio::SOURCE_AI) {
+            $track['fallback']    = $fallback;
+            $track['hasRecorded'] = $hasSegments || ($track['audioUrl'] !== null && $track['source'] !== PostAudio::SOURCE_AI);
+
+            // Machine narration is not the admin's voice: drop it in
+            // recorded-only mode, and for Manobo whenever native recordings
+            // cover part of the post.
+            if ($track['source'] === PostAudio::SOURCE_AI && ($recordedOnly || ($locale === 'msm' && $hasSegments))) {
                 $track['source']    = 'speech';
                 $track['audioUrl']  = null;
                 $track['voiceName'] = null;
             }
+            if ($recordedOnly) {
+                $track['approximate'] = false;   // nothing machine-made is played
+            }
 
-            // Count unrecorded Manobo words the reader will need — once per
-            // post per session, so a refresh does not inflate the priority.
+            // Count unrecorded words the reader will need — once per post and
+            // language per session, so a refresh does not inflate the priority.
             if ($missedWords && $id > 0 && session_status() === PHP_SESSION_ACTIVE) {
-                $seenKey = "{$type}:{$id}";
+                $seenKey = "{$type}:{$id}:{$locale}";
                 if (empty($_SESSION['voice_miss_counted'][$seenKey])) {
                     $_SESSION['voice_miss_counted'][$seenKey] = 1;
-                    VoiceUsageIndex::recordReaderMisses($missedWords);
+                    VoiceUsageIndex::recordReaderMisses($missedWords, $locale);
                 }
             }
 

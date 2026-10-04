@@ -7,36 +7,53 @@ namespace App\Services;
 use PDO;
 
 /**
- * Where Manobo words are actually used, so recording effort goes to the words
- * residents meet first.
+ * Which words residents actually hear, per language, so recording effort goes
+ * to the words they meet first.
  *
- * - Every time a post's Manobo text is saved (manually or by auto-translate),
- *   indexContent() replaces that post's word counts. No full scan per request.
- * - When the Resident Voice Reader meets a word with no recording,
- *   recordReaderMisses() counts it (content_type 'reader').
- * - rebuild() re-indexes every post: the admin's "Rescan Published Content".
+ * - Whenever a post (or one of its translations) is saved, indexPost()
+ *   replaces that post's word counts. It reads the exact text the Voice
+ *   Reader speaks for each language (PostScript), so the queue and the
+ *   reader never disagree.
+ * - Bisaya: posts have no Bisaya version; Bisaya words appear inside the
+ *   Manobo text where the translator fell back to Bisaya. A token in the
+ *   Manobo text that is a Bisaya dictionary headword and NOT a Manobo one is
+ *   indexed — and recorded — as Bisaya ('ceb').
+ * - When the reader meets a word with no recording, recordReaderMisses()
+ *   counts it (content_type 'reader').
+ * - rebuild() re-indexes every post: "Rescan Published Content".
  *
- * Words are indexed for drafts too; queries only count posts residents can
- * see, so a draft's words show up the moment it is published.
+ * Drafts are indexed too; queries only count posts residents can see, so a
+ * draft's words show up the moment it is published.
  */
 final class VoiceUsageIndex
 {
+    /** Kept for callers that mean "the dictionary language". */
     public const LANGUAGE = 'msm';
 
-    /** Content tables and their Manobo columns. Table/column names are fixed, never user input. */
-    private const SOURCES = [
-        'announcement' => ['table' => 'announcements', 'title' => 'title_manobo', 'body' => 'body_manobo'],
-        'event'        => ['table' => 'events',        'title' => 'title_manobo', 'body' => 'description_manobo'],
-        'ordinance'    => ['table' => 'ordinances',    'title' => 'title_manobo', 'body' => 'description_manobo'],
+    /** Every language the dataset records, in display order. */
+    public const LANGUAGES = ['msm', 'en', 'fil', 'ceb'];
+
+    /** Reader locales that have their own text on a post. */
+    private const POST_LOCALES = ['msm', 'en', 'fil'];
+
+    private const TABLES = [
+        'announcement' => 'announcements',
+        'event'        => 'events',
+        'ordinance'    => 'ordinances',
     ];
 
+    /** @var array<string,true>|null */
+    private static ?array $manoboWords = null;
+    /** @var array<string,true>|null */
+    private static ?array $bisayaWords = null;
+
     /**
-     * Replace the word counts for one post. Never throws: indexing must not
-     * break saving a post.
+     * Re-index one post in every language (or just $onlyLanguage).
+     * Never throws: indexing must not break saving a post.
      */
-    public static function indexContent(string $contentType, int $contentId, string $manoboText): void
+    public static function indexPost(string $contentType, int $contentId, ?string $onlyLanguage = null): void
     {
-        if (!isset(self::SOURCES[$contentType]) || $contentId <= 0) {
+        if (!isset(self::TABLES[$contentType]) || $contentId <= 0) {
             return;
         }
 
@@ -45,25 +62,34 @@ final class VoiceUsageIndex
         // rolling back a caller's transaction would undo their post save.
         $owns = !$pdo->inTransaction();
         try {
-            $counts = [];
-            foreach (VoiceText::tokens($manoboText) as $token) {
-                if (VoiceText::isWord($token) && strlen($token) <= 191) {
-                    $counts[$token] = ($counts[$token] ?? 0) + 1;
-                }
-            }
+            $stmt = $pdo->prepare('SELECT * FROM ' . self::TABLES[$contentType] . ' WHERE id = ?');
+            $stmt->execute([$contentId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $counts = $row ? self::countWords($contentType, $row) : [];
 
             if ($owns) {
                 $pdo->beginTransaction();
             }
-            $pdo->prepare('DELETE FROM voice_word_usage WHERE language = ? AND content_type = ? AND content_id = ?')
-                ->execute([self::LANGUAGE, $contentType, $contentId]);
+            if ($onlyLanguage !== null) {
+                $pdo->prepare('DELETE FROM voice_word_usage WHERE content_type = ? AND content_id = ? AND language = ?')
+                    ->execute([$contentType, $contentId, $onlyLanguage]);
+            } else {
+                $pdo->prepare('DELETE FROM voice_word_usage WHERE content_type = ? AND content_id = ?')
+                    ->execute([$contentType, $contentId]);
+            }
 
             $insert = $pdo->prepare(
                 'INSERT INTO voice_word_usage (language, normalized_text, content_type, content_id, occurrences, last_seen_at)
                  VALUES (?, ?, ?, ?, ?, NOW())'
             );
-            foreach ($counts as $word => $n) {
-                $insert->execute([self::LANGUAGE, $word, $contentType, $contentId, $n]);
+            foreach ($counts as $language => $words) {
+                if ($onlyLanguage !== null && $language !== $onlyLanguage) {
+                    continue;
+                }
+                foreach ($words as $word => $n) {
+                    $insert->execute([$language, (string) $word, $contentType, $contentId, $n]);
+                }
             }
             if ($owns) {
                 $pdo->commit();
@@ -72,19 +98,79 @@ final class VoiceUsageIndex
             if ($owns && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            error_log("[VoiceUsageIndex::indexContent] {$contentType}#{$contentId}: " . $e->getMessage());
+            error_log("[VoiceUsageIndex::indexPost] {$contentType}#{$contentId}: " . $e->getMessage());
         }
     }
 
     /**
-     * Count Manobo words the Voice Reader had to play without a recording.
+     * Back-compat entry point (older hooks passed the Manobo text directly).
+     */
+    public static function indexContent(string $contentType, int $contentId, string $manoboText = ''): void
+    {
+        self::indexPost($contentType, $contentId);
+    }
+
+    /**
+     * Word counts per language for one post row.
+     *
+     * @param  array<string,mixed> $row
+     * @return array<string, array<string,int>>
+     */
+    public static function countWords(string $contentType, array $row): array
+    {
+        $counts = [];
+        foreach (self::POST_LOCALES as $locale) {
+            try {
+                $script = PostScript::build($contentType, $row, $locale);
+            } catch (\Throwable $e) {
+                continue;
+            }
+            if (empty($script['available'])) {
+                continue;
+            }
+            foreach (VoiceText::tokens((string) $script['text']) as $token) {
+                if (!self::isTrackable($token)) {
+                    continue;
+                }
+                $language = $locale === 'msm' ? self::classifyManoboToken($token) : $locale;
+                $counts[$language][$token] = ($counts[$language][$token] ?? 0) + 1;
+            }
+        }
+        return $counts;
+    }
+
+    /**
+     * A token from Manobo text: 'ceb' when it is a Bisaya headword that is
+     * not also a Manobo one (the translator's Bisaya fallback), else 'msm'.
+     */
+    public static function classifyManoboToken(string $token): string
+    {
+        self::loadDictionaries();
+        return (isset(self::$bisayaWords[$token]) && !isset(self::$manoboWords[$token])) ? 'ceb' : 'msm';
+    }
+
+    /**
+     * Words worth a recording: has a letter, fits the column, not a URL/email
+     * fragment (those are split into pieces like "https" and "www").
+     */
+    public static function isTrackable(string $token): bool
+    {
+        return VoiceText::isWord($token)
+            && strlen($token) <= 191
+            && !in_array($token, ['http', 'https', 'www', 'com', 'ph', 'gov', 'org', 'html'], true)
+            && !str_contains($token, '@');
+    }
+
+    /**
+     * Count words a resident's Voice Reader had to skip or speak with the
+     * device voice. Manobo words are split into Manobo/Bisaya like posts are.
      *
      * @param list<string> $words  Normalised words.
      */
-    public static function recordReaderMisses(array $words): void
+    public static function recordReaderMisses(array $words, string $language = 'msm'): void
     {
-        $words = array_values(array_unique(array_filter($words, [VoiceText::class, 'isWord'])));
-        if (!$words) {
+        $words = array_values(array_unique(array_filter($words, [self::class, 'isTrackable'])));
+        if (!$words || !in_array($language, ['msm', 'en', 'fil', 'ceb'], true)) {
             return;
         }
 
@@ -98,11 +184,12 @@ final class VoiceUsageIndex
                 "INSERT INTO voice_word_usage (language, normalized_text, content_type, content_id, occurrences, last_seen_at)
                  VALUES (?, ?, 'reader', 0, 1, NOW())"
             );
-            foreach (array_slice($words, 0, 200) as $word) {
-                $update->execute([self::LANGUAGE, $word]);
+            foreach (array_slice($words, 0, 300) as $word) {
+                $lang = $language === 'msm' ? self::classifyManoboToken($word) : $language;
+                $update->execute([$lang, $word]);
                 if ($update->rowCount() === 0) {
                     try {
-                        $insert->execute([self::LANGUAGE, $word]);
+                        $insert->execute([$lang, $word]);
                     } catch (\PDOException $e) {
                         // Another request inserted it first — its count stands.
                     }
@@ -114,24 +201,25 @@ final class VoiceUsageIndex
     }
 
     /**
-     * Re-index every post's Manobo text. Returns the number of posts indexed.
+     * Re-index every post (optionally one language). Returns posts indexed.
      */
-    public static function rebuild(): int
+    public static function rebuild(?string $onlyLanguage = null): int
     {
+        if ($onlyLanguage !== null && !in_array($onlyLanguage, self::LANGUAGES, true)) {
+            $onlyLanguage = null;
+        }
+
         $indexed = 0;
-        foreach (self::SOURCES as $type => $src) {
-            $rows = db()->query("SELECT id, {$src['title']} AS t, {$src['body']} AS b FROM {$src['table']}")
-                        ->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            $live = [];
-            foreach ($rows as $row) {
-                $live[] = (int) $row['id'];
-                self::indexContent($type, (int) $row['id'], trim(($row['t'] ?? '') . "\n" . ($row['b'] ?? '')));
+        foreach (self::TABLES as $type => $table) {
+            $ids = array_map('intval', db()->query("SELECT id FROM {$table}")->fetchAll(PDO::FETCH_COLUMN) ?: []);
+            foreach ($ids as $id) {
+                self::indexPost($type, $id, $onlyLanguage);
                 $indexed++;
             }
             // Drop rows for posts that no longer exist.
             $stmt = db()->prepare('SELECT DISTINCT content_id FROM voice_word_usage WHERE content_type = ?');
             $stmt->execute([$type]);
-            $gone = array_diff(array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN)), $live);
+            $gone = array_diff(array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN)), $ids);
             if ($gone) {
                 $marks = implode(',', array_fill(0, count($gone), '?'));
                 db()->prepare("DELETE FROM voice_word_usage WHERE content_type = ? AND content_id IN ({$marks})")
@@ -143,15 +231,15 @@ final class VoiceUsageIndex
     }
 
     /**
-     * Words used in resident-visible posts or requested by the reader,
-     * with recording status, sorted by priority (most used first).
+     * Words used in resident-visible posts or requested by the reader, for
+     * one language, with recording status, most-used first.
      *
      * @return array{
      *   words: list<array<string,mixed>>,
      *   used_words: int, used_recorded: int, used_missing: int, usage_coverage: float
      * }
      */
-    public static function report(): array
+    public static function report(string $language = 'msm'): array
     {
         $empty = ['words' => [], 'used_words' => 0, 'used_recorded' => 0, 'used_missing' => 0, 'usage_coverage' => 0.0];
 
@@ -169,23 +257,28 @@ final class VoiceUsageIndex
                    LEFT JOIN ({$visible}) v ON v.ct = u.content_type AND v.id = u.content_id
                   WHERE u.language = ? AND (u.content_type = 'reader' OR v.id IS NOT NULL)"
             );
-            $stmt->execute([self::LANGUAGE]);
+            $stmt->execute([$language]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\Throwable $e) {
             error_log('[VoiceUsageIndex::report] ' . $e->getMessage());
             return $empty;
         }
 
-        $recorded = VoiceResolver::index(self::LANGUAGE)['map'];
-        $dict     = self::dictionaryByWord();
+        $recorded = VoiceResolver::index($language)['map'];
+        $dict     = match ($language) {
+            'msm'   => self::dictionaryByWord(),
+            'ceb'   => self::bisayaByWord(),
+            default => [],
+        };
 
         $words = [];
         foreach ($rows as $row) {
             $w = (string) $row['normalized_text'];
             $words[$w] ??= [
                 'word'            => $w,
+                'language'        => $language,
                 'translation'     => $dict[$w]['translation'] ?? '',
-                'dictionary_id'   => $dict[$w]['id'] ?? null,
+                'dictionary_id'   => $language === 'msm' ? ($dict[$w]['id'] ?? null) : null,
                 'occurrences'     => 0,
                 'reader_requests' => 0,
                 'sources'         => [],
@@ -212,6 +305,7 @@ final class VoiceUsageIndex
         }
         unset($entry);
 
+        $words = array_values($words);
         usort($words, static fn (array $a, array $b): int =>
             [$a['recorded'], -$a['priority'], $a['word']] <=> [$b['recorded'], -$b['priority'], $b['word']]);
 
@@ -229,7 +323,21 @@ final class VoiceUsageIndex
     }
 
     /**
-     * Live dictionary entries keyed by normalised Manobo headword.
+     * Reports for every language, keyed by code.
+     *
+     * @return array<string, array<string,mixed>>
+     */
+    public static function reports(): array
+    {
+        $out = [];
+        foreach (self::LANGUAGES as $language) {
+            $out[$language] = self::report($language);
+        }
+        return $out;
+    }
+
+    /**
+     * Live Manobo dictionary entries keyed by normalised headword.
      *
      * @return array<string, array{id: int, manobo: string, translation: string}>
      */
@@ -258,5 +366,67 @@ final class VoiceUsageIndex
             error_log('[VoiceUsageIndex::dictionaryByWord] ' . $e->getMessage());
         }
         return $byWord;
+    }
+
+    /**
+     * Live Bisaya dictionary entries keyed by normalised headword.
+     *
+     * @return array<string, array{id: int, translation: string}>
+     */
+    public static function bisayaByWord(): array
+    {
+        static $byWord = null;
+        if ($byWord !== null) {
+            return $byWord;
+        }
+
+        $byWord = [];
+        try {
+            $rows = db()->query('SELECT id, bisaya, tagalog, english FROM bisaya_dictionary WHERE deleted_at IS NULL ORDER BY id ASC')
+                        ->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            foreach ($rows as $row) {
+                $key = VoiceText::normalize((string) $row['bisaya']);
+                if ($key !== '' && !isset($byWord[$key])) {
+                    $byWord[$key] = ['id' => (int) $row['id'], 'translation' => trim((string) ($row['tagalog'] ?: $row['english']))];
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[VoiceUsageIndex::bisayaByWord] ' . $e->getMessage());
+        }
+        return $byWord;
+    }
+
+    /**
+     * Single-word headword sets used to tell Manobo from Bisaya-fallback tokens.
+     */
+    private static function loadDictionaries(): void
+    {
+        if (self::$manoboWords !== null) {
+            return;
+        }
+        self::$manoboWords = [];
+        self::$bisayaWords = [];
+        foreach (array_keys(self::dictionaryByWord()) as $key) {
+            foreach (explode(' ', $key) as $t) {
+                self::$manoboWords[$t] = true;
+            }
+        }
+        foreach (array_keys(self::bisayaByWord()) as $key) {
+            if (!str_contains($key, ' ')) {
+                self::$bisayaWords[$key] = true;
+            }
+        }
+    }
+
+    /**
+     * Test seam: set the headword sets directly.
+     *
+     * @param list<string> $manobo
+     * @param list<string> $bisaya
+     */
+    public static function setDictionariesForTesting(array $manobo, array $bisaya): void
+    {
+        self::$manoboWords = array_fill_keys($manobo, true);
+        self::$bisayaWords = array_fill_keys($bisaya, true);
     }
 }

@@ -20,7 +20,7 @@ class VoiceSample
 
     public const STATUSES = [self::STATUS_PENDING, self::STATUS_APPROVED, self::STATUS_REJECTED, self::STATUS_DRAFT];
 
-    public const LANGUAGES = ['msm', 'fil', 'en'];
+    public const LANGUAGES = ['msm', 'en', 'fil', 'ceb'];
 
     /**
      * Normalise text for matching. Delegates to the shared VoiceText rules.
@@ -385,7 +385,7 @@ class VoiceSample
     public static function getStatsByLanguage(): array
     {
         $blank = ['total' => 0, 'approved' => 0, 'pending' => 0, 'rejected' => 0];
-        $stats = ['msm' => $blank, 'fil' => $blank, 'en' => $blank];
+        $stats = ['msm' => $blank, 'en' => $blank, 'fil' => $blank, 'ceb' => $blank];
 
         try {
             $rows = db()->query("SELECT language, LOWER(status) AS status, COUNT(*) AS cnt FROM voice_samples GROUP BY language, LOWER(status)")
@@ -491,7 +491,7 @@ class VoiceSample
     public static function missingDictionaryEntries(int $limit = 15, ?array $usageWords = null): array
     {
         $usage = [];
-        foreach ($usageWords ?? VoiceUsageIndex::report()['words'] as $w) {
+        foreach ($usageWords ?? VoiceUsageIndex::report('msm')['words'] as $w) {
             $usage[$w['word']] = $w;
         }
 

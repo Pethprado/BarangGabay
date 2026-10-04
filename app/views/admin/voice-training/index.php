@@ -739,13 +739,21 @@ ob_start();
  *  @var array $usage @var array $health @var array $filters @var array $samples @var array $pagination
  *  @var array $missingPronunciations @var int $missingTotal @var array $dictionaryEntries
  *  @var array $recentPosts @var bool $isSuperadmin */
-$langLabels   = ['msm' => 'Manobo', 'fil' => 'Filipino', 'en' => 'English'];
-$langBadge    = ['msm' => 'vt-badge-gold', 'fil' => 'vt-badge-blue', 'en' => 'vt-badge-neutral'];
+$langLabels   = ['msm' => 'Manobo', 'en' => 'English', 'fil' => 'Filipino', 'ceb' => 'Bisaya'];
+$langBadge    = ['msm' => 'vt-badge-gold', 'en' => 'vt-badge-neutral', 'fil' => 'vt-badge-blue', 'ceb' => 'vt-badge-green'];
 $statusBadge  = ['approved' => 'vt-badge-green', 'pending' => 'vt-badge-gold', 'draft' => 'vt-badge-gold', 'rejected' => 'vt-badge-red'];
 $totalAll     = array_sum(array_column($stats, 'total'));
 $approvedAll  = array_sum(array_column($stats, 'approved'));
 $pendingAll   = array_sum(array_column($stats, 'pending'));
-$usageMissing = array_values(array_filter($usage['words'], static fn (array $w): bool => !$w['recorded']));
+// Missing words from published content, top 25 per language, most-used first.
+$usageMissing   = [];
+$usageTruncated = false;
+foreach ($reports as $rLang => $rep) {
+    $langMissing = array_values(array_filter($rep['words'], static fn (array $w): bool => !$w['recorded']));
+    $usageTruncated = $usageTruncated || count($langMissing) > 25;
+    array_push($usageMissing, ...array_slice($langMissing, 0, 25));
+}
+usort($usageMissing, static fn (array $a, array $b): int => $b['priority'] <=> $a['priority']);
 $returnTo     = 'admin/voice-training' . (($q = http_build_query(array_filter([
     'language' => $filters['language'], 'status' => $filters['status'], 'search' => $filters['search'],
     'sort' => $filters['sort'] !== 'newest' ? $filters['sort'] : '', 'page' => $pagination['page'] > 1 ? $pagination['page'] : '',
@@ -809,14 +817,14 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 <div class="vt-stat-icon" style="background-color: rgba(200, 153, 46, 0.15); color: #c8992e;"><i class="bi bi-soundwave"></i></div>
             </div>
             <div class="vt-stat-value-row">
-                <span class="vt-stat-value"><?= (int) $activeProfileCount ?> of 3</span>
-                <?php if ($activeProfileCount === 3): ?>
+                <span class="vt-stat-value"><?= (int) $activeProfileCount ?> of <?= count($langLabels) ?></span>
+                <?php if ($activeProfileCount === count($langLabels)): ?>
                     <span class="vt-badge vt-badge-green"><i class="bi bi-check-circle-fill me-1"></i>Ready</span>
                 <?php else: ?>
                     <span class="vt-badge vt-badge-red">Check profiles</span>
                 <?php endif; ?>
             </div>
-            <span class="vt-stat-sub">Manobo, Filipino, English</span>
+            <span class="vt-stat-sub">Manobo, English, Filipino, Bisaya</span>
         </div>
 
         <div class="vt-stat-card">
@@ -863,7 +871,8 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
     <div class="vt-profiles-grid">
         <?php foreach (['msm' => ['Manobo (MN)', 'PRIMARY LANGUAGE', 'vt-badge-gold', 'bi-mic-fill', 'manobo'],
                         'fil' => ['Filipino (FIL)', 'NATIONAL', 'vt-badge-blue', 'bi-translate', 'filipino'],
-                        'en'  => ['English (EN)', 'INTERNATIONAL', 'vt-badge-neutral', 'bi-globe', 'english']] as $lk => [$lTitle, $lTag, $lTagClass, $lIcon, $lAccent]):
+                        'en'  => ['English (EN)', 'INTERNATIONAL', 'vt-badge-neutral', 'bi-globe', 'english'],
+                        'ceb' => ['Bisaya (CEB)', 'REGIONAL', 'vt-badge-green', 'bi-chat-quote', 'filipino']] as $lk => [$lTitle, $lTag, $lTagClass, $lIcon, $lAccent]):
             $prof = $activeProfiles[$lk];
             $profActive = !empty($prof['id']) && (int) $prof['is_active'] === 1;
         ?>
@@ -891,7 +900,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                     <span class="vt-wrap"><?= e((string) ($prof['profile_name'] ?? $prof['name'] ?? '')) ?></span>
                 </div>
                 <span class="vt-active-provider">
-                    Plays: <?= $lk === 'msm' ? 'approved native recordings, device voice for unrecorded words (labelled)' : 'approved recordings, then device / server TTS voice' ?>
+                    Plays: approved recordings<?= $fallbackMode === 'recorded_tts' ? ', device voice for unrecorded words' : ' only' ?><?= $lk === 'ceb' ? ' (Bisaya words inside Manobo text)' : '' ?>
                     · rate <?= e((string) ($prof['speaking_rate'] ?? '0.95')) ?>x
                 </span>
             </div>
@@ -980,51 +989,66 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             </div>
         </div>
 
-        <div class="vt-card">
+        <div class="vt-card" id="missingCard">
             <div class="d-flex align-items-center justify-content-between mb-1 gap-2 flex-wrap">
                 <h3 class="h5 font-extrabold vt-text-primary mb-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-mic-mute-fill" style="color: #9f1239;"></i><span>Missing Manobo Pronunciations</span>
+                    <i class="bi bi-mic-mute-fill" style="color: #9f1239;"></i><span>Missing Pronunciations</span>
                 </h3>
-                <span class="vt-badge vt-badge-red"><?= (int) $missingTotal ?> missing</span>
+                <span class="vt-badge vt-badge-red" id="missingCountBadge"></span>
             </div>
-            <p class="vt-text-muted text-xs mb-3">
-                Dictionary entries with no approved recording, most-used first.
-                <?php if ($missingTotal > count($missingPronunciations)): ?>Showing <?= count($missingPronunciations) ?> of <?= (int) $missingTotal ?>.<?php endif; ?>
-            </p>
+            <div class="vt-lang-selector mb-2" role="tablist" aria-label="Missing pronunciations language">
+                <?php foreach ($langLabels as $lk => $ll): ?>
+                    <input type="radio" class="btn-check" name="missing_tab" id="mtab_<?= $lk ?>" value="<?= $lk ?>" <?= $lk === 'msm' ? 'checked' : '' ?> onchange="renderMissing()">
+                    <label class="vt-lang-btn" for="mtab_<?= $lk ?>" role="tab"><?= $ll ?> <span class="vt-text-muted">(<?= count($queues[$lk]) ?>)</span></label>
+                <?php endforeach; ?>
+            </div>
+            <p class="vt-text-muted text-xs mb-2" id="missingHelp"></p>
+            <div class="d-flex gap-2 mb-2 flex-wrap">
+                <label for="missingSearch" class="visually-hidden">Search missing words</label>
+                <input type="search" id="missingSearch" class="vt-input flex-fill" style="min-width:140px;" placeholder="Search…" oninput="renderMissing()">
+                <button type="button" class="btn-vt-primary" onclick="startBatch()" id="btnBatch"><i class="bi bi-collection-play me-1"></i> Batch Record</button>
+            </div>
+            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                <table class="vt-table">
+                    <thead><tr><th class="ps-2">Word / phrase</th><th>Meaning</th><th class="text-center" title="Uses in visible posts + times residents' reader needed it">Used</th><th class="text-end pe-2"><span class="visually-hidden">Action</span></th></tr></thead>
+                    <tbody id="missingRows"></tbody>
+                </table>
+            </div>
+            <p id="missingEmpty" class="text-center py-4 vt-text-muted text-xs d-none"></p>
+        </div>
+    </div>
 
-            <?php if (!$missingPronunciations): ?>
-                <div class="text-center py-5 vt-text-muted text-xs my-auto">
-                    <i class="bi bi-check-circle-fill text-success fs-1 d-block mb-2"></i>
-                    <span class="font-bold vt-text-primary d-block text-sm">Every dictionary entry has an approved recording.</span>
+    <!-- ── 4b. Published-content coverage + resident fallback setting ─────── -->
+    <div class="vt-split-grid mb-4">
+        <div class="vt-card">
+            <h3 class="h6 font-extrabold vt-text-primary mb-1"><i class="bi bi-bar-chart-fill me-1" style="color:#c8992e;"></i>Published Content Voice Coverage</h3>
+            <p class="text-xs vt-text-muted mb-3">Unique words residents meet in visible posts that have an approved recording.</p>
+            <?php foreach ($langLabels as $lk => $ll): $r = $reports[$lk]; ?>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between text-xs font-bold vt-text-primary">
+                        <span><?= $ll ?></span>
+                        <span><?= number_format((float) $r['usage_coverage'], 1) ?>% <span class="vt-text-muted font-normal">(<?= (int) $r['used_recorded'] ?> / <?= (int) $r['used_words'] ?>)</span></span>
+                    </div>
+                    <div class="vt-progress-track" role="progressbar" aria-label="<?= $ll ?> content coverage" aria-valuenow="<?= (float) $r['usage_coverage'] ?>" aria-valuemin="0" aria-valuemax="100"><div class="vt-progress-fill" style="width: <?= (float) $r['usage_coverage'] ?>%;"></div></div>
                 </div>
-            <?php else: ?>
-                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
-                    <table class="vt-table">
-                        <thead><tr><th class="ps-2">Manobo</th><th>Meaning</th><th class="text-center" title="Uses in visible posts + times residents' reader needed it">Used</th><th class="text-end pe-2"><span class="visually-hidden">Action</span></th></tr></thead>
-                        <tbody>
-                        <?php foreach ($missingPronunciations as $m): ?>
-                            <tr>
-                                <td class="ps-2 font-bold vt-text-primary"><?= e($m['manobo']) ?></td>
-                                <td class="vt-text-secondary"><?= e($m['translation']) ?></td>
-                                <td class="text-center"><?= $m['priority'] > 0 ? '<span class="vt-badge vt-badge-gold">' . (int) $m['priority'] . '</span>' : '<span class="vt-text-muted">—</span>' ?></td>
-                                <td class="text-end pe-2">
-                                    <button type="button" class="btn-vt-gold" onclick='openRecorder(<?= e(json_encode(['language' => 'msm', 'text' => $m['manobo'], 'translation' => $m['translation'], 'dictionary_entry_id' => $m['id']])) ?>)' aria-label="Record <?= e($m['manobo']) ?>">
-                                        <i class="bi bi-mic-fill me-1"></i> Record
-                                    </button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
+            <?php endforeach; ?>
+            <p class="text-xs vt-text-muted mb-0 mt-2">Bisaya = Bisaya dictionary words that appear inside Manobo text (the translator's fallback).</p>
+        </div>
+        <div class="vt-card">
+            <h3 class="h6 font-extrabold vt-text-primary mb-1"><i class="bi bi-sliders me-1" style="color:#c8992e;"></i>Voice Fallback for Residents</h3>
+            <p class="text-xs vt-text-muted mb-3">What the Resident Voice Reader does with words that have no approved recording.</p>
+            <form method="post" action="<?= e(route('admin/voice-training/settings')) ?>" onsubmit="return ajaxForm(event, this)">
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="voice_fallback" id="fb_none" value="recorded_only" <?= $fallbackMode === 'recorded_only' ? 'checked' : '' ?>>
+                    <label class="form-check-label text-sm vt-text-primary" for="fb_none"><strong>Recorded voice only</strong> <span class="vt-text-muted text-xs d-block">Residents hear only your approved recordings. Unrecorded words are skipped (and counted in the missing lists). A post with no recordings at all cannot be played yet.</span></label>
                 </div>
-                <?php if ($missingTotal > count($missingPronunciations)): ?>
-                <div class="mt-auto pt-3 border-top text-end">
-                    <button type="button" class="btn btn-link p-0 text-xs font-bold text-decoration-none" style="color:#b45309;" data-bs-toggle="modal" data-bs-target="#allMissingModal">
-                        View all <?= (int) $missingTotal ?> missing Manobo entries <i class="bi bi-arrow-right"></i>
-                    </button>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="radio" name="voice_fallback" id="fb_tts" value="recorded_tts" <?= $fallbackMode === 'recorded_tts' ? 'checked' : '' ?>>
+                    <label class="form-check-label text-sm vt-text-primary" for="fb_tts"><strong>Recorded voice + device voice fallback</strong> <span class="vt-text-muted text-xs d-block">Your recordings play first; the phone or computer's own voice reads the rest, labelled as an approximation.</span></label>
                 </div>
-                <?php endif; ?>
-            <?php endif; ?>
+                <button type="submit" class="btn-vt-primary">Save setting</button>
+            </form>
         </div>
     </div>
 
@@ -1036,12 +1060,17 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                     <h3 class="h5 font-extrabold vt-text-primary mb-1 d-flex align-items-center gap-2">
                         <i class="bi bi-broadcast" style="color:#c8992e;"></i><span>Missing Voice From Published Content</span>
                     </h3>
-                    <p class="text-xs vt-text-muted mb-0">Manobo words in announcements, events and ordinances residents can see, plus words the Voice Reader met without a recording. Updated automatically whenever a post's Manobo text is saved.</p>
+                    <p class="text-xs vt-text-muted mb-0">Words in announcements, events and ordinances residents can see — in the text the Voice Reader reads for each language — plus words the reader met without a recording. Updated automatically whenever a post or translation is saved.</p>
                 </div>
                 <div class="d-flex gap-2 align-items-start flex-wrap">
-                    <form method="post" action="<?= e(route('admin/voice-training/rescan')) ?>" onsubmit="return ajaxForm(event, this)">
+                    <form method="post" action="<?= e(route('admin/voice-training/rescan')) ?>" onsubmit="return ajaxForm(event, this)" class="d-flex gap-1">
                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                        <button type="submit" class="btn-vt-outline"><i class="bi bi-arrow-repeat me-1"></i> Rescan Published Content</button>
+                        <label for="rescanLang" class="visually-hidden">Language to rescan</label>
+                        <select name="language" id="rescanLang" class="form-select form-select-sm vt-select" style="width:auto;">
+                            <option value="">Rescan all</option>
+                            <?php foreach ($langLabels as $lk => $ll): ?><option value="<?= $lk ?>">Rescan <?= $ll ?></option><?php endforeach; ?>
+                        </select>
+                        <button type="submit" class="btn-vt-outline"><i class="bi bi-arrow-repeat me-1"></i> Rescan</button>
                     </form>
                     <?php if ($isSuperadmin): ?>
                         <button type="button" class="btn-vt-outline" onclick="runDiagnostics()"><i class="bi bi-clipboard2-pulse me-1"></i> Diagnostics</button>
@@ -1051,14 +1080,10 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
             <div class="row g-2 mt-2">
                 <?php foreach ([
-                    ['Words used in posts', $usage['used_words'], ''],
-                    ['…with a recording', $usage['used_recorded'] . ' (' . number_format((float) $usage['usage_coverage'], 1) . '%)', 'text-success'],
-                    ['Used but missing', $usage['used_missing'], $usage['used_missing'] ? 'text-danger' : ''],
                     ['Pending approval', $health['pending'], $health['pending'] ? 'text-warning' : ''],
                     ['Rejected', $health['rejected'], ''],
                     ['Broken audio', $health['broken'], $health['broken'] ? 'text-danger' : ''],
                     ['Duplicate approved', $health['duplicates'], ''],
-                    ['Orphaned (dictionary entry deleted)', $health['orphaned'], ''],
                 ] as [$hLabel, $hVal, $hClass]): ?>
                     <div class="col-6 col-md-3">
                         <div class="vt-stat-pill h-100">
@@ -1069,39 +1094,45 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 <?php endforeach; ?>
             </div>
             <div id="diagnosticsBox" class="mt-3 d-none" aria-live="polite"></div>
+
+            <div class="vt-lang-selector mt-3" role="tablist" aria-label="Filter by language">
+                <input type="radio" class="btn-check" name="usage_tab" id="utab_all" value="" checked onchange="filterUsage()">
+                <label class="vt-lang-btn" for="utab_all">All</label>
+                <?php foreach ($langLabels as $lk => $ll): ?>
+                    <input type="radio" class="btn-check" name="usage_tab" id="utab_<?= $lk ?>" value="<?= $lk ?>" onchange="filterUsage()">
+                    <label class="vt-lang-btn" for="utab_<?= $lk ?>"><?= $ll ?> <span class="vt-text-muted">(<?= (int) $reports[$lk]['used_missing'] ?>)</span></label>
+                <?php endforeach; ?>
+            </div>
         </div>
 
         <?php if (!$usageMissing): ?>
             <div class="text-center py-4 vt-text-muted text-xs">
-                <?php if ($usage['used_words'] === 0): ?>
-                    No Manobo text found in visible posts yet. Publish a post with Manobo text, or click <strong>Rescan Published Content</strong>.
-                <?php else: ?>
-                    <i class="bi bi-check-circle-fill text-success me-1"></i>Every Manobo word used in visible posts has an approved recording.
-                <?php endif; ?>
+                <i class="bi bi-check-circle-fill text-success me-1"></i>Every word used in visible posts has an approved recording (or no posts have text yet — click <strong>Rescan</strong>).
             </div>
         <?php else: ?>
-            <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
+            <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
                 <table class="vt-table">
                     <thead><tr>
-                        <th class="ps-4">Manobo word</th><th>Meaning</th><th class="text-center">In posts</th><th class="text-center" title="Times the Voice Reader needed this word">Reader</th><th>Used in</th><th>Last used</th><th class="pe-4 text-end"><span class="visually-hidden">Action</span></th>
+                        <th class="ps-4">Word</th><th>Language</th><th>Meaning</th><th class="text-center">In posts</th><th class="text-center" title="Times the Voice Reader needed this word">Reader</th><th>Used in</th><th>Last used</th><th class="pe-4 text-end"><span class="visually-hidden">Action</span></th>
                     </tr></thead>
-                    <tbody>
-                    <?php foreach (array_slice($usageMissing, 0, 100) as $w): ?>
-                        <tr>
+                    <tbody id="usageRows">
+                    <?php foreach ($usageMissing as $w): ?>
+                        <tr data-lang="<?= e($w['language']) ?>">
                             <td class="ps-4 font-bold vt-text-primary"><?= e($w['word']) ?></td>
-                            <td class="vt-text-secondary text-xs"><?= $w['translation'] !== '' ? e($w['translation']) : '<span class="vt-text-muted">not in dictionary</span>' ?></td>
+                            <td><span class="vt-badge <?= $langBadge[$w['language']] ?>"><?= e($langLabels[$w['language']]) ?></span></td>
+                            <td class="vt-text-secondary text-xs"><?= $w['translation'] !== '' ? e($w['translation']) : '<span class="vt-text-muted">—</span>' ?></td>
                             <td class="text-center"><?= (int) $w['occurrences'] ?></td>
                             <td class="text-center"><?= (int) $w['reader_requests'] ?></td>
-                            <td class="text-xs vt-wrap" style="max-width:260px;">
-                                <?php foreach (array_slice($w['sources'], 0, 3) as $src): ?>
-                                    <span class="vt-badge vt-badge-blue d-inline-block mb-1" title="<?= e($src['title']) ?>"><?= e(ucfirst($src['type'])) ?>: <?= e(mb_strimwidth($src['title'], 0, 28, '…')) ?></span>
+                            <td class="text-xs vt-wrap" style="max-width:240px;">
+                                <?php foreach (array_slice($w['sources'], 0, 2) as $src): ?>
+                                    <span class="vt-badge vt-badge-blue d-inline-block mb-1" title="<?= e($src['title']) ?>"><?= e(ucfirst($src['type'])) ?>: <?= e(mb_strimwidth($src['title'], 0, 26, '…')) ?></span>
                                 <?php endforeach; ?>
-                                <?php if (count($w['sources']) > 3): ?><span class="vt-text-muted">+<?= count($w['sources']) - 3 ?> more</span><?php endif; ?>
+                                <?php if (count($w['sources']) > 2): ?><span class="vt-text-muted">+<?= count($w['sources']) - 2 ?> more</span><?php endif; ?>
                                 <?php if (!$w['sources']): ?><span class="vt-text-muted">Voice Reader only</span><?php endif; ?>
                             </td>
                             <td class="text-xs vt-text-muted"><?= $w['last_seen_at'] ? e(date('M j, Y', strtotime((string) $w['last_seen_at']))) : '—' ?></td>
                             <td class="pe-4 text-end">
-                                <button type="button" class="btn-vt-gold" onclick='openRecorder(<?= e(json_encode(['language' => 'msm', 'text' => $w['word'], 'translation' => $w['translation'], 'dictionary_entry_id' => $w['dictionary_id']])) ?>)' aria-label="Record <?= e($w['word']) ?> now">
+                                <button type="button" class="btn-vt-gold" onclick='recordFromQueue(<?= e(json_encode($w['language'])) ?>, <?= e(json_encode($w['word'])) ?>)' aria-label="Record <?= e($w['word']) ?> now">
                                     <i class="bi bi-mic-fill me-1"></i> Record Now
                                 </button>
                             </td>
@@ -1110,7 +1141,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                     </tbody>
                 </table>
             </div>
-            <?php if (count($usageMissing) > 100): ?><p class="text-xs vt-text-muted p-3 mb-0">Showing the 100 highest-priority of <?= count($usageMissing) ?> words.</p><?php endif; ?>
+            <?php if ($usageTruncated): ?><p class="text-xs vt-text-muted p-3 mb-0">Showing the 25 most-used missing words per language. The full lists are in Missing Pronunciations above (search and Batch Record).</p><?php endif; ?>
         <?php endif; ?>
     </div>
 
@@ -1268,6 +1299,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 <input type="hidden" name="id" id="rec_sample_id" value="">
                 <div class="modal-body vt-modal-body">
                     <div id="recAlert" class="alert d-none" role="alert"></div>
+                    <div id="queueInfo" class="d-none mb-3 p-2 rounded-xl text-xs vt-text-primary" style="background-color: var(--surface-muted, #f1e6d2); border: 1px solid var(--border, #e4d7c2);" aria-live="polite"></div>
                     <div class="row g-3">
                         <div class="col-12 col-md-4">
                             <label for="sample_language" class="form-label text-xs font-bold vt-text-primary">Language <span class="text-danger">*</span></label>
@@ -1374,6 +1406,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                     <button type="button" class="btn-vt-outline" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" id="btnSavePending" class="btn-vt-secondary" onclick="submitSample('pending')">Save as Pending</button>
                     <button type="button" id="btnSaveApprove" class="btn-vt-primary" onclick="submitSample('approved')"><i class="bi bi-check-circle-fill me-1"></i> Save &amp; Approve</button>
+                    <button type="button" id="btnSaveNext" class="btn-vt-primary d-none" onclick="submitSample('approved', '', true)"><i class="bi bi-skip-forward-fill me-1"></i> Save &amp; Record Next</button>
                 </div>
             </form>
         </div>
@@ -1430,31 +1463,6 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                     <button type="submit" class="btn-vt-primary">Save changes</button>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
-
-<!-- ── All missing Manobo entries ──────────────────────────────────────── -->
-<div class="modal fade vt-modal" id="allMissingModal" tabindex="-1" aria-labelledby="allMissingModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-        <div class="modal-content vt-modal-content">
-            <div class="modal-header vt-modal-header">
-                <h4 class="modal-title h5 mb-0 font-extrabold vt-text-primary" id="allMissingModalLabel"><?= (int) $missingTotal ?> Manobo entries without a recording</h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body vt-modal-body p-0">
-                <table class="vt-table">
-                    <tbody>
-                    <?php foreach ($dictionaryEntries as $d): if ($d['recorded']) { continue; } ?>
-                        <tr>
-                            <td class="ps-3 font-bold"><?= e($d['manobo']) ?></td>
-                            <td class="text-xs vt-text-secondary"><?= e($d['translation']) ?></td>
-                            <td class="text-end pe-3"><button type="button" class="btn-vt-gold" style="padding:3px 8px;font-size:.72rem;" onclick='bootstrap.Modal.getInstance(document.getElementById("allMissingModal")).hide(); openRecorder(<?= e(json_encode(['language' => 'msm', 'text' => $d['manobo'], 'translation' => $d['translation'], 'dictionary_entry_id' => $d['id']])) ?>)'><i class="bi bi-mic-fill"></i> Record</button></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
         </div>
     </div>
 </div>
@@ -1530,6 +1538,8 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         diag:   <?= json_encode(route('admin/voice-training/diagnostics')) ?>
     };
     var CSRF = <?= json_encode(csrf_token()) ?>;
+    var QUEUES = <?= json_encode($queues, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+    var LANG_NAMES = <?= json_encode($langLabels) ?>;
     var MAX_SECONDS = 120;
 
     /* ── Helpers ─────────────────────────────────────────────────────── */
@@ -1808,9 +1818,120 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         if (!$('sample_translation').value) { $('sample_translation').value = opt.dataset.meaning || ''; }
     };
 
+    /* ── Missing pronunciations tabs, queue and batch recording ─────── */
+
+    var queue = null;        // {lang, items, pos, done, total} while recording through a list
+    var datasetDirty = false;
+
+    function currentTab() {
+        var c = document.querySelector('input[name="missing_tab"]:checked');
+        return c ? c.value : 'msm';
+    }
+
+    window.renderMissing = function () {
+        var lang  = currentTab();
+        var items = QUEUES[lang] || [];
+        var term  = ($('missingSearch').value || '').trim().toLowerCase();
+        var shown = term ? items.filter(function (it) {
+            return it.text.toLowerCase().indexOf(term) !== -1 || (it.translation || '').toLowerCase().indexOf(term) !== -1;
+        }) : items;
+
+        $('missingCountBadge').textContent = items.length + ' missing';
+        $('missingHelp').textContent = lang === 'msm'
+            ? 'Manobo dictionary entries with no approved recording, most-used first.'
+            : (lang === 'ceb'
+                ? 'Bisaya words used inside Manobo posts (translator fallback) with no recording, most-used first.'
+                : LANG_NAMES[lang] + ' words in visible posts with no approved recording, most-used first.');
+        $('btnBatch').disabled = !items.length;
+
+        var body = $('missingRows');
+        body.innerHTML = '';
+        shown.slice(0, 200).forEach(function (it) {
+            var tr = document.createElement('tr');
+            var td1 = document.createElement('td'); td1.className = 'ps-2 font-bold vt-text-primary'; td1.textContent = it.text;
+            var td2 = document.createElement('td'); td2.className = 'vt-text-secondary text-xs'; td2.textContent = it.translation || '—';
+            var td3 = document.createElement('td'); td3.className = 'text-center';
+            td3.innerHTML = it.used > 0 ? '<span class="vt-badge vt-badge-gold"></span>' : '<span class="vt-text-muted">—</span>';
+            if (it.used > 0) { td3.firstChild.textContent = it.used; }
+            var td4 = document.createElement('td'); td4.className = 'text-end pe-2';
+            var btn = document.createElement('button');
+            btn.type = 'button'; btn.className = 'btn-vt-gold';
+            btn.innerHTML = '<i class="bi bi-mic-fill me-1"></i> Record';
+            btn.setAttribute('aria-label', 'Record ' + it.text);
+            btn.onclick = function () { window.recordFromQueue(lang, it.text); };
+            td4.appendChild(btn);
+            tr.append(td1, td2, td3, td4);
+            body.appendChild(tr);
+        });
+        var empty = $('missingEmpty');
+        empty.textContent = items.length ? 'No match for "' + term + '".' : 'Nothing missing — every ' + LANG_NAMES[lang] + ' word residents meet has an approved recording.';
+        empty.classList.toggle('d-none', shown.length > 0);
+    };
+
+    /** Record one word, continuing through that language's list with "Save & Record Next". */
+    window.recordFromQueue = function (lang, text) {
+        var items = QUEUES[lang] || [];
+        var pos = items.findIndex(function (it) { return it.text === text; });
+        if (pos < 0) { window.openRecorder({ language: lang, text: text }); return; }
+        queue = { lang: lang, items: items, pos: pos, done: 0, total: items.length };
+        loadQueueItem();
+    };
+
+    window.startBatch = function () {
+        var lang = currentTab();
+        var items = QUEUES[lang] || [];
+        if (!items.length) { return; }
+        queue = { lang: lang, items: items, pos: 0, done: 0, total: items.length };
+        loadQueueItem();
+    };
+
+    function loadQueueItem() {
+        var it = queue.items[queue.pos];
+        window.openRecorder({ language: queue.lang, text: it.text, translation: it.translation, dictionary_entry_id: it.dictionary_entry_id }, true);
+        var info = $('queueInfo');
+        info.innerHTML = '';
+        var strong = document.createElement('strong');
+        strong.textContent = (queue.done + 1) + ' of ' + queue.total;
+        info.append(strong, document.createTextNode(' · Language: ' + LANG_NAMES[queue.lang] + ' · Text: ' + it.text + ' · Status: Missing recording'));
+        info.classList.remove('d-none');
+        $('btnSaveNext').classList.remove('d-none');
+    }
+
+    function advanceQueue() {
+        queue.items.splice(queue.pos, 1);   // recorded — no longer missing
+        queue.done++;
+        if (queue.pos >= queue.items.length) { queue.pos = 0; }
+        if (!queue.items.length) {
+            showAlert($('recAlert'), 'success', 'Done — every word in this ' + LANG_NAMES[queue.lang] + ' list now has a recording.');
+            $('queueInfo').classList.add('d-none');
+            $('btnSaveNext').classList.add('d-none');
+            return false;
+        }
+        loadQueueItem();
+        return true;
+    }
+
+    window.filterUsage = function () {
+        var c = document.querySelector('input[name="usage_tab"]:checked');
+        var lang = c ? c.value : '';
+        document.querySelectorAll('#usageRows tr').forEach(function (tr) {
+            tr.classList.toggle('d-none', !!lang && tr.dataset.lang !== lang);
+        });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () { window.renderMissing(); });
+
     /** Open the recorder, optionally pre-filled (Record buttons) or for re-recording a sample. */
-    window.openRecorder = function (preset) {
+    window.openRecorder = function (preset, fromQueue) {
         preset = preset || {};
+        if (!fromQueue) {
+            queue = null;
+            $('queueInfo').classList.add('d-none');
+            $('btnSaveNext').classList.add('d-none');
+        }
+        var keepConsent = fromQueue && $('consent_confirmed').checked;
+        var keepSpeaker = fromQueue ? $('sample_speaker').value : '';
+        var keepVoice   = fromQueue ? $('sample_voice_type').value : '';
         var form = $('addVoiceSampleForm');
         form.reset();
         rec.blob = null; rec.file = null; rec.duration = null;
@@ -1829,6 +1950,12 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         if (preset.dictionary_entry_id) { $('sample_dictionary_entry_id').value = String(preset.dictionary_entry_id); }
         if (preset.speaker_label) { $('sample_speaker').value = preset.speaker_label; }
         if (preset.voice_type) { $('sample_voice_type').value = preset.voice_type; }
+        // Batch recording keeps the speaker and consent between words.
+        if (fromQueue) {
+            $('consent_confirmed').checked = keepConsent;
+            if (keepSpeaker) { $('sample_speaker').value = keepSpeaker; }
+            if (keepVoice) { $('sample_voice_type').value = keepVoice; }
+        }
 
         var re = !!rec.rerecordId;
         $('rec_sample_id').value = re ? preset.id : '';
@@ -1837,7 +1964,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             .forEach(function (id) { $(id).disabled = re; });
 
         bootstrap.Modal.getOrCreateInstance($('addSampleModal')).show();
-        setTimeout(function () { (preset.text ? $('btnStartRec') : $('sample_text')).focus(); }, 400);
+        setTimeout(function () { (preset.text ? $('btnStartRec') : $('sample_text')).focus(); }, fromQueue ? 50 : 400);
     };
 
     $('addSampleModal').addEventListener('hide.bs.modal', function () {
@@ -1845,10 +1972,15 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         var player = $('recAudioPlayer');
         player.pause();
     });
+    $('addSampleModal').addEventListener('hidden.bs.modal', function () {
+        // After recording several words without reloading, refresh the counts once.
+        if (datasetDirty) { reloadWithMessage('Recordings saved. Counts and lists are updated.'); }
+    });
 
     var pendingSave = null;
+    var pendingNext = false;
 
-    window.submitSample = function (saveAs, duplicateMode) {
+    window.submitSample = function (saveAs, duplicateMode, next) {
         var alertEl = $('recAlert');
         var useFile = $('src_file').checked;
         var audio   = useFile ? rec.file : rec.blob;
@@ -1886,14 +2018,21 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             fd.set('id', rec.rerecordId);
         }
 
-        var buttons = [$('btnSavePending'), $('btnSaveApprove')];
+        var buttons = [$('btnSavePending'), $('btnSaveApprove'), $('btnSaveNext')];
         buttons.forEach(function (b) { b.disabled = true; });
         showAlert(alertEl, 'info', 'Uploading…');
 
         post(url, fd).then(function (r) {
             buttons.forEach(function (b) { b.disabled = false; });
             if (r.ok) {
+                if (next && queue) {
+                    datasetDirty = true;
+                    var msg = r.data.message;
+                    if (advanceQueue()) { showAlert(alertEl, 'success', msg + ' Next word loaded.'); }
+                    return;
+                }
                 alertEl.classList.add('d-none');
+                datasetDirty = false;
                 bootstrap.Modal.getInstance($('addSampleModal')).hide();
                 reloadWithMessage(r.data.message);
                 return;
@@ -1901,6 +2040,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             if (r.status === 409 && r.data.duplicate) {
                 alertEl.classList.add('d-none');
                 pendingSave = saveAs;
+                pendingNext = !!next;
                 $('duplicateText').textContent = r.data.error + ' Replace it with this new recording, or keep both as versions? (The newest approved version is the one residents hear.)';
                 bootstrap.Modal.getOrCreateInstance($('duplicateModal')).show();
                 return;
@@ -1911,7 +2051,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
     window.resolveDuplicate = function (mode) {
         bootstrap.Modal.getInstance($('duplicateModal')).hide();
-        window.submitSample(pendingSave || 'approved', mode);
+        window.submitSample(pendingSave || 'approved', mode, pendingNext);
     };
 
     /* ── Interactive Voice Tester (same resolver + player as residents) ─ */
@@ -1968,17 +2108,26 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             }
 
             var d = r.data;
+            var recOnly = d.fallback === 'recorded_only';
             badge.className = 'vt-badge ' + (d.missing === 0 ? 'vt-badge-green' : (d.recorded ? 'vt-badge-gold' : 'vt-badge-blue'));
-            badge.textContent = d.missing === 0 ? 'All native recordings' : (d.recorded ? 'Recordings + device voice' : 'Device voice only');
+            badge.textContent = d.missing === 0 ? 'All recorded' : (d.recorded ? (recOnly ? 'Partly recorded' : 'Recordings + device voice') : (recOnly ? 'Nothing recorded' : 'Device voice only'));
             $('testProfileLabel').textContent = d.profile_name ? 'Profile: ' + d.profile_name : '';
-            $('testMessage').textContent = d.recorded
-                ? d.recorded + ' recorded segment(s), ' + d.missing + ' read by the device voice' + (d.approximate && d.missing ? ' (an approximation for Manobo)' : '') + '.'
-                : 'No approved recording matches this text yet — it is read by the device voice' + (d.approximate ? ', which is only an approximation of Manobo' : '') + '.';
+            if (recOnly) {
+                $('testMessage').textContent = d.recorded
+                    ? d.recorded + ' recorded segment(s) play; ' + d.missing + ' unrecorded part(s) are skipped (Recorded voice only).'
+                    : 'No approved recording matches this text yet, so residents would hear nothing (Recorded voice only). Record the words below.';
+            } else {
+                $('testMessage').textContent = d.recorded
+                    ? d.recorded + ' recorded segment(s), ' + d.missing + ' read by the device voice' + (d.approximate && d.missing ? ' (an approximation)' : '') + '.'
+                    : 'No approved recording matches this text yet — it is read by the device voice' + (d.approximate ? ', which is only an approximation' : '') + '.';
+            }
 
             d.segments.forEach(function (seg) {
                 var chip = document.createElement('span');
                 chip.className = 'vt-badge ' + (seg.type === 'recorded' ? 'vt-badge-green' : 'vt-badge-neutral');
-                chip.title = seg.type === 'recorded' ? 'Native recording #' + seg.sample_id + (seg.speaker ? ' — ' + seg.speaker : '') : 'No recording — device voice';
+                chip.title = seg.type === 'recorded'
+                    ? 'Recording #' + seg.sample_id + (seg.language === 'ceb' ? ' (Bisaya)' : '') + (seg.speaker ? ' — ' + seg.speaker : '')
+                    : (recOnly ? 'No recording — skipped' : 'No recording — device voice');
                 chip.innerHTML = '<i class="bi ' + (seg.type === 'recorded' ? 'bi-mic-fill' : 'bi-robot') + ' me-1"></i>';
                 chip.appendChild(document.createTextNode(seg.text));
                 segBox.appendChild(chip);
@@ -1989,6 +2138,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             $('btnTestStop').classList.remove('d-none');
             var chips = segBox.querySelectorAll('.vt-badge');
             tester.play(d.segments, {
+                fallback: d.fallback,
                 lang: d.speech_lang || 'fil-PH',
                 voice: voice,
                 rate: d.speaking_rate || 1,

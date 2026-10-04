@@ -28,6 +28,11 @@ class VoiceTrainingController
     /** Shortest recording accepted, in seconds. Short words are fine; zero is not. */
     private const MIN_DURATION = 0.2;
 
+    /** Bump when VoiceUsageIndex changes what it indexes; triggers one rebuild. */
+    private const USAGE_INDEX_VERSION = '2';
+
+    private const LANGUAGE_NAMES = ['msm' => 'Manobo', 'en' => 'English', 'fil' => 'Filipino', 'ceb' => 'Bisaya'];
+
     /**
      * Display the Voice Training dashboard.
      */
@@ -39,27 +44,44 @@ class VoiceTrainingController
 
         $stats = VoiceSample::getStatsByLanguage();
 
-        $activeProfiles = [
-            'msm' => VoiceProfile::getActiveProfile('msm'),
-            'fil' => VoiceProfile::getActiveProfile('fil'),
-            'en'  => VoiceProfile::getActiveProfile('en'),
-        ];
+        $activeProfiles = [];
+        foreach (VoiceSample::LANGUAGES as $lang) {
+            $activeProfiles[$lang] = VoiceProfile::getActiveProfile($lang);
+        }
         $activeProfileCount = count(array_filter($activeProfiles, static fn (array $p): bool => !empty($p['id']) && (int) $p['is_active'] === 1));
 
-        // First visit after deploy: build the usage index once so the
-        // missing-voice list is populated without anyone clicking Rescan.
+        // First visit after a deploy that changed how words are indexed:
+        // rebuild once so every language's missing list is populated
+        // without anyone clicking Rescan.
         try {
-            if ((int) db()->query('SELECT COUNT(*) FROM voice_word_usage')->fetchColumn() === 0) {
+            if ((string) \App\Models\Setting::get('voice_usage_index_version', '') !== self::USAGE_INDEX_VERSION) {
                 VoiceUsageIndex::rebuild();
+                \App\Models\Setting::set('voice_usage_index_version', self::USAGE_INDEX_VERSION);
             }
         } catch (\Throwable $e) {
             error_log('[VoiceTrainingController::index] usage bootstrap: ' . $e->getMessage());
         }
 
-        $usage    = VoiceUsageIndex::report();
+        $reports  = VoiceUsageIndex::reports();
+        $usage    = $reports['msm'];
         $coverage = VoiceSample::getManoboCoverageStats();
         $missing  = VoiceSample::missingDictionaryEntries(15, $usage['words']);
         $health   = VoiceSample::health();
+
+        // Record queues per language, most-needed first. Manobo: dictionary
+        // entries without a recording. Others: words residents actually meet
+        // in visible posts (recording a whole English dictionary is not the goal).
+        $queues = ['msm' => array_map(static fn (array $m): array => [
+            'text' => $m['manobo'], 'translation' => $m['translation'], 'dictionary_entry_id' => $m['id'], 'used' => $m['priority'],
+        ], VoiceSample::missingDictionaryEntries(0, $usage['words'])['items'])];
+        foreach (['en', 'fil', 'ceb'] as $lang) {
+            $queues[$lang] = [];
+            foreach ($reports[$lang]['words'] as $w) {
+                if (!$w['recorded']) {
+                    $queues[$lang][] = ['text' => $w['word'], 'translation' => $w['translation'], 'dictionary_entry_id' => null, 'used' => $w['priority']];
+                }
+            }
+        }
 
         $page  = max(1, (int) ($_GET['page'] ?? 1));
         $limit = 15;
@@ -93,6 +115,9 @@ class VoiceTrainingController
             'activeProfileCount' => $activeProfileCount,
             'coverage'           => $coverage,
             'usage'              => $usage,
+            'reports'            => $reports,
+            'queues'             => $queues,
+            'fallbackMode'       => VoiceResolver::fallbackMode(),
             'health'             => $health,
             'filters'            => $filters,
             'samples'            => $samples,
@@ -439,17 +464,17 @@ class VoiceTrainingController
 
         // Batch form: texts[] → one plan per text (the reader's sentence chunks).
         if (isset($_POST['texts']) && is_array($_POST['texts'])) {
-            $plans  = [];
-            $missed = [];
+            $plans    = [];
+            $missed   = [];
+            $fallback = VoiceResolver::fallbackMode();
             foreach (array_slice($_POST['texts'], 0, 300) as $chunkText) {
-                $plan     = VoiceResolver::resolve($language, mb_substr((string) $chunkText, 0, 2000));
-                $missed   = array_merge($missed, VoiceResolver::missingWords($plan));
-                $plans[]  = VoiceResolver::hasRecording($plan) ? $plan : null;
+                $plan    = VoiceResolver::resolve($language, mb_substr((string) $chunkText, 0, 2000));
+                $missed  = array_merge($missed, VoiceResolver::missingWords($plan));
+                // Recorded-only: every chunk needs its plan (missing parts are skipped).
+                $plans[] = ($fallback === VoiceResolver::FALLBACK_NONE || VoiceResolver::hasRecording($plan)) ? $plan : null;
             }
-            if ($language === VoiceUsageIndex::LANGUAGE) {
-                VoiceUsageIndex::recordReaderMisses($missed);
-            }
-            $this->json(['success' => true, 'plans' => $plans]);
+            VoiceUsageIndex::recordReaderMisses($missed, $language);
+            $this->json(['success' => true, 'plans' => $plans, 'fallback' => $fallback]);
             return;
         }
 
@@ -536,12 +561,36 @@ class VoiceTrainingController
         check_csrf();
 
         try {
-            $count = VoiceUsageIndex::rebuild();
-            AuditLog::record((int) ($_SESSION['user_id'] ?? 0), 'voice_usage.rescan', "Rescanned {$count} posts for Manobo words");
-            $this->respond(true, "Rescanned {$count} posts. The missing-voice list is up to date.");
+            $language = in_array($_POST['language'] ?? '', VoiceSample::LANGUAGES, true) ? (string) $_POST['language'] : null;
+            $count    = VoiceUsageIndex::rebuild($language);
+            $label    = $language === null ? 'all languages' : self::LANGUAGE_NAMES[$language];
+            AuditLog::record((int) ($_SESSION['user_id'] ?? 0), 'voice_usage.rescan', "Rescanned {$count} posts ({$label})");
+            $this->respond(true, "Rescanned {$count} posts for {$label}. The missing-pronunciation lists are up to date.");
         } catch (\Throwable $e) {
             error_log('[VoiceTrainingController::rescan] ' . $e->getMessage());
             $this->respond(false, 'Rescan failed because of a server error.', [], 500);
+        }
+    }
+
+    /**
+     * POST /admin/voice-training/settings — what residents hear for unrecorded words.
+     */
+    public function settings(): void
+    {
+        $this->ensureAdmin();
+        check_csrf();
+
+        $mode   = ($_POST['voice_fallback'] ?? '') === VoiceResolver::FALLBACK_TTS ? VoiceResolver::FALLBACK_TTS : VoiceResolver::FALLBACK_NONE;
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        try {
+            \App\Models\Setting::set('voice_fallback', $mode, $userId);
+            AuditLog::record($userId, 'voice_settings.fallback', "Voice fallback set to {$mode}");
+            $this->respond(true, $mode === VoiceResolver::FALLBACK_NONE
+                ? 'Residents now hear only approved recordings. Unrecorded words are skipped and added to the missing lists.'
+                : 'Residents hear approved recordings, with the device voice reading unrecorded words.');
+        } catch (\Throwable $e) {
+            error_log('[VoiceTrainingController::settings] ' . $e->getMessage());
+            $this->respond(false, 'The setting could not be saved because of a server error.', [], 500);
         }
     }
 
@@ -604,7 +653,7 @@ class VoiceTrainingController
             return 'None';
         });
 
-        foreach (['msm' => 'Manobo', 'fil' => 'Filipino', 'en' => 'English'] as $lang => $label) {
+        foreach (self::LANGUAGE_NAMES as $lang => $label) {
             $run("{$label} dataset lookup", static function () use ($lang): string {
                 $index = VoiceResolver::index($lang);
                 return count($index['map']) . ' approved playable recording(s), longest phrase ' . $index['max'] . ' word(s)';
@@ -625,15 +674,18 @@ class VoiceTrainingController
         });
 
         $run('Missing-word scanner', static function (): string {
-            $report = VoiceUsageIndex::report();
-            return "{$report['used_words']} Manobo word(s) used in visible posts, {$report['used_missing']} without a recording";
+            $parts = [];
+            foreach (VoiceUsageIndex::reports() as $lang => $report) {
+                $parts[] = self::LANGUAGE_NAMES[$lang] . ": {$report['used_missing']} of {$report['used_words']} used words missing";
+            }
+            return implode('; ', $parts);
         });
 
         $tts = (string) env('TTS_PROVIDER', '');
         $results[] = [
             'name'   => 'Server text-to-speech (optional)',
             'status' => $tts === '' ? 'config_missing' : 'passed',
-            'detail' => $tts === '' ? 'TTS_PROVIDER not set — device voice is used for unrecorded words' : "Provider: {$tts}",
+            'detail' => ($tts === '' ? 'TTS_PROVIDER not set' : "Provider: {$tts}") . ' — resident fallback mode: ' . VoiceResolver::fallbackMode(),
         ];
 
         $this->json(['success' => true, 'results' => $results]);
@@ -707,8 +759,8 @@ class VoiceTrainingController
     private function plan(string $language, string $text, bool $countMisses): array
     {
         $segments = VoiceResolver::resolve($language, $text);
-        if ($countMisses && $language === VoiceUsageIndex::LANGUAGE) {
-            VoiceUsageIndex::recordReaderMisses(VoiceResolver::missingWords($segments));
+        if ($countMisses) {
+            VoiceUsageIndex::recordReaderMisses(VoiceResolver::missingWords($segments), $language);
         }
 
         $profile = VoiceProfile::getActiveProfile($language);
@@ -717,9 +769,10 @@ class VoiceTrainingController
             'segments'      => $segments,
             'recorded'      => count(array_filter($segments, static fn (array $s): bool => $s['type'] === 'recorded')),
             'missing'       => count(array_filter($segments, static fn (array $s): bool => $s['type'] === 'missing')),
-            'speech_lang'   => \App\Services\SpokenText::speechLang($language),
-            'voices'        => \App\Services\SpokenText::voiceCandidates($language),
-            'approximate'   => $language === 'msm',
+            'speech_lang'   => \App\Services\SpokenText::speechLang($language) ?? 'fil-PH',
+            'voices'        => $language === 'ceb' ? ['ceb-PH', 'ceb', 'fil-PH', 'fil'] : \App\Services\SpokenText::voiceCandidates($language),
+            'approximate'   => in_array($language, ['msm', 'ceb'], true),
+            'fallback'      => VoiceResolver::fallbackMode(),
             'speaking_rate' => (float) ($profile['speaking_rate'] ?? 0.95),
             'profile_name'  => (string) ($profile['profile_name'] ?? $profile['name'] ?? ''),
         ];

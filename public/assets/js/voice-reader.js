@@ -158,6 +158,10 @@
         _run: function (segments, opts, i, token) {
             var self = this;
             if (token !== this.token) { return; }
+            if (this.paused) {   // paused between two segments: hold the place until resume()
+                this._pendingRun = function () { self._run(segments, opts, i, token); };
+                return;
+            }
             if (i >= segments.length) {
                 this.active = false;
                 if (opts.onDone) { opts.onDone(); }
@@ -183,6 +187,7 @@
                 var fallback = function () {
                     if (token !== self.token) { return; }
                     clip.onended = clip.onerror = null;
+                    if (opts.fallback === 'recorded_only') { next(); return; }   // never substitute a machine voice
                     self._say(seg.text, opts, next, token);   // the clip failed — read the words instead of skipping them
                 };
                 clip.onended = function () { if (token === self.token) { clip.onended = clip.onerror = null; next(); } };
@@ -194,6 +199,10 @@
                 return;
             }
 
+            // No recording for these words. Recorded-only mode skips them (they
+            // are already counted for the admin's missing list); otherwise the
+            // device voice reads them.
+            if (opts.fallback === 'recorded_only') { setTimeout(next, 0); return; }
             this._say(seg.text, opts, next, token);
         },
 
@@ -231,6 +240,7 @@
         resume: function () {
             if (!this.active || !this.paused) { return; }
             this.paused = false;
+            if (this._pendingRun) { var run = this._pendingRun; this._pendingRun = null; run(); return; }
             if (this._clipPaused && this.clip) { this.clip.play(); return; }
             if (SPEECH) { window.speechSynthesis.resume(); }
         },
@@ -239,6 +249,7 @@
             this.token++;
             this.active = false;
             this.paused = false;
+            this._pendingRun = null;
             if (this.clip) {
                 this.clip.onended = this.clip.onerror = null;
                 try { this.clip.pause(); } catch (e) {}
@@ -348,7 +359,9 @@
             get canPlay() {
                 var t = this.track;
                 if (!t || !t.available) { return false; }
-                return !!this.activeUrl || (SPEECH && t.chunks && t.chunks.length > 0);
+                if (this.activeUrl) { return true; }
+                if (t.fallback === 'recorded_only') { return this._hasRecordedSegments(); }
+                return SPEECH && t.chunks && t.chunks.length > 0;
             },
 
             /**
@@ -361,7 +374,7 @@
              */
             get showApproxLabel() {
                 var t = this.track;
-                if (!t || !t.approximate) { return false; }
+                if (!t || !t.approximate || t.fallback === 'recorded_only') { return false; }
                 return !(this.activeUrl && this.preferHuman && (t.source === 'human' || t.source === 'dataset'));
             },
 
@@ -376,6 +389,11 @@
                 }
                 if (this.activeUrl && (!this.hasAlternateSource || this.preferHuman) && t.source === 'human') {
                     return s.source_human || '';
+                }
+                if (!this.activeUrl && t.fallback === 'recorded_only') {
+                    return this._hasRecordedSegments()
+                        ? (s.source_recorded_only || '')
+                        : (s.no_recordings || '');
                 }
                 if (!this.activeUrl && this.chunks.some(function (c) { return c.segments && c.segments.length; })) {
                     return s.source_dataset_mix || s.source_device || '';
@@ -628,7 +646,8 @@
                 this._stopTimers();
 
                 // A recorded clip pauses and resumes exactly where it was, on every platform.
-                if (this._seg && this._seg.active && this._seg.clipPlaying()) {
+                var recOnly = this.track && this.track.fallback === 'recorded_only';
+                if (this._seg && this._seg.active && (recOnly || this._seg.clipPlaying())) {
                     this._seg.pause();
                     this._setStatus('paused');
                     return;
@@ -658,7 +677,8 @@
                 this._stopping = false;
                 this._setStatus('playing');
 
-                if (this._seg && this._seg.active && this._seg.paused && this._seg._clipPaused) {
+                if (this._seg && this._seg.active && this._seg.paused
+                    && (this._seg._clipPaused || this._seg._pendingRun || (this.track && this.track.fallback === 'recorded_only'))) {
                     this._seg.resume();
                     this._startTimers();
                     return;
@@ -786,11 +806,17 @@
             /* ── Device speech ───────────────────────────────────────────── */
 
             _speakFrom(index) {
-                if (!SPEECH) { return; }
+                var recordedOnly = this.track && this.track.fallback === 'recorded_only';
+                if (!SPEECH && !recordedOnly) { return; }
 
                 if (this._seg) { this._seg.stop(); }
-                window.speechSynthesis.cancel();
+                if (SPEECH) { window.speechSynthesis.cancel(); }
                 this._stopping = false;
+                if (recordedOnly && this.chunks.some(function (c) {
+                    return c.segments && c.segments.some(function (sg) { return sg.type === 'missing'; });
+                })) {
+                    this.notice = (this.cfg.strings && this.cfg.strings.some_missing) || '';
+                }
                 this._startTimers();
                 this._speak(index);
             },
@@ -815,6 +841,7 @@
                     this._progressAt(index, 0);
 
                     this._segments().play(chunk.segments, {
+                        fallback: track && track.fallback,
                         lang:  (track && track.speechLang) || 'fil-PH',
                         voice: this._voice,
                         rate:  this.rate,
@@ -832,7 +859,21 @@
                     return;
                 }
 
+                // Recorded-only: a sentence with no plan has nothing to play.
+                if (track && track.fallback === 'recorded_only') {
+                    var self2 = this;
+                    setTimeout(function () { if (!self2._stopping) { self2._speak(index + 1); } }, 0);
+                    return;
+                }
+
                 this._speakUtterance(index, chunk, track);
+            },
+
+            /** Whether any sentence has at least one approved recording to play. */
+            _hasRecordedSegments() {
+                return this.chunks.some(function (c) {
+                    return c.segments && c.segments.some(function (sg) { return sg.type === 'recorded'; });
+                });
             },
 
             /** The dataset segment player for this reader (created on first use). */
@@ -906,6 +947,7 @@
 
                 this._watchdog = setInterval(function () {
                     if (self.status !== 'playing' || self.mode !== 'speech' || !SPEECH) { return; }
+                    if (self.track && self.track.fallback === 'recorded_only') { return; }   // clips only; no engine to restart
                     if (window.speechSynthesis.speaking || window.speechSynthesis.pending) { return; }
                     // A recorded dataset clip is sounding: silence from the speech engine is expected.
                     // (Includes the moment a clip is still loading over a slow connection.)
@@ -1086,6 +1128,7 @@
                         var plans = await planRes.json();
                         if (plans.success && plans.plans) {
                             data.chunks.forEach(function (c, i) { if (plans.plans[i]) { c.segments = plans.plans[i]; } });
+                            if (plans.fallback) { track.fallback = plans.fallback; }
                         }
                     } catch (e) { /* no recordings — the device voice reads it all */ }
 
