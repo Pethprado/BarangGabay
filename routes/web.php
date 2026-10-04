@@ -78,6 +78,7 @@ return [
 // reason, and the provider state at the top.
 ['GET',  '/admin/translation-health',  'TranslationHealthController@index',    ['auth', 'role:admin,staff']],
 ['POST', '/admin/retranslate-all',     'TranslationHealthController@retryAll', ['auth', 'role:admin,staff']],
+['POST', '/admin/translation-health/rebuild-manobo', 'TranslationHealthController@rebuildManobo', ['auth', 'role:admin,staff']],
 
 // Voice Training & Voice Dataset Management
 ['GET',  '/admin/voice-training',           'VoiceTrainingController@index',         ['auth', 'role:admin,superadmin']],

@@ -28,6 +28,32 @@ class ManoboHybridTranslator
     private static ?array $bisayaIndex = null;
     private static ?int $cachedVersion = null;
 
+    /**
+     * Normalised source words the last translateToBisaya() call had to leave
+     * as they were (no Manobo, no Bisaya). In MN output these are NOT Bisaya —
+     * they are the source language (usually Filipino) showing through, so they
+     * are labelled 'unresolved' and queued as translation gaps instead of
+     * being passed off as a Bisaya fallback.
+     *
+     * @var array<string,true>
+     */
+    private array $lastUnresolved = [];
+
+    /**
+     * Wall-clock time (microtime) after which no more machine-translation
+     * calls are made; the local dictionaries still apply. Long batch jobs set
+     * this so a request cannot outlive PHP's execution limit.
+     */
+    public static ?float $machineDeadline = null;
+
+    /** @var array<string,true>|null Normalised Bisaya headwords. */
+    private static ?array $bisayaWords = null;
+
+    /** Words that are legitimately identical in Filipino and Bisaya. */
+    private const SHARED_FUNCTION_WORDS = ['sa', 'ang', 'mga', 'ug', 'o', 'kung', 'para', 'na', 'ka', 'si', 'ni', 'kay',
+        // lowercase particles inside place names ("Surigao del Sur")
+        'del', 'de', 'la', 'los', 'las'];
+
     public function __construct(?PDO $db = null)
     {
         $this->db = $db ?? db();
@@ -99,6 +125,7 @@ class ManoboHybridTranslator
         if (empty($options['force_refresh'])) {
             $cached = $this->getCachedTranslation($sourceHash, $dictVersion);
             if ($cached !== null) {
+                $cached['unresolved'] = self::countUnresolved($cached['provenance'] ?? []);
                 return $cached;
             }
         }
@@ -138,9 +165,28 @@ class ManoboHybridTranslator
             'source_lang'     => $sourceLang,
             'manoboMatches'   => $result['manoboMatches'],
             'bisayaFallbacks' => $result['bisayaFallbacks'],
+            'unresolved'      => self::countUnresolved($provenance),
             'provenance'      => $provenance,
             'cached'          => false,
         ];
+    }
+
+    /**
+     * Segments of an MN translation that are neither Manobo nor Bisaya — the
+     * source language left in place because no dictionary had the word.
+     * Should trend to 0 as the dictionaries grow; never silently hidden.
+     *
+     * @param list<array<string,mixed>> $provenance
+     */
+    public static function countUnresolved(array $provenance): int
+    {
+        $n = 0;
+        foreach ($provenance as $p) {
+            if (($p['source'] ?? '') === 'unresolved') {
+                $n++;
+            }
+        }
+        return $n;
     }
 
     /**
@@ -464,9 +510,11 @@ class ManoboHybridTranslator
 
                 if ($unmatchedCore !== '') {
                     $bisayaTranslation = $this->translateToBisaya($unmatchedCore, $sourceLang);
+                    $unresolvedWords   = $this->lastUnresolved;
                     
                     // Prioritize Manobo: Scan Bisaya translation to ensure NO word connected to Manobo is left in Bisaya/Cebuano
-                    $refined = $this->refineBisayaWithManobo($bisayaTranslation, $manoboIndex);
+                    // Words the Bisaya step could not translate are tagged 'unresolved', not 'bisaya'.
+                    $refined = $this->refineBisayaWithManobo($bisayaTranslation, $manoboIndex, $unresolvedWords);
                     $finalSegment = $refined['text'];
                     $manoboMatches += $refined['manoboCount'];
                     $bisayaFallbacks += $refined['bisayaCount'];
@@ -483,7 +531,14 @@ class ManoboHybridTranslator
                         $provenance[] = $rp;
                     }
 
-                    $this->trackMissingConcept($unmatchedCore, $sourceLang, $bisayaTranslation);
+                    // Queue every gap: the whole run (with its Bisaya fallback when
+                    // there was one) and each word nothing could translate.
+                    $this->trackMissingConcept($unmatchedCore, $sourceLang, $unresolvedWords ? null : $bisayaTranslation);
+                    foreach (array_keys($unresolvedWords) as $gapWord) {
+                        if ($this->normalise($unmatchedCore) !== $gapWord) {
+                            $this->trackMissingConcept((string) $gapWord, $sourceLang, null);
+                        }
+                    }
                 } else {
                     $assembledText .= $unmatchedRaw;
                 }
@@ -581,6 +636,7 @@ class ManoboHybridTranslator
      */
     public function translateToBisaya(string $text, string $sourceLang): string
     {
+        $this->lastUnresolved = [];
         $trimmed = trim($text);
         if ($trimmed === '') {
             return $text;
@@ -593,10 +649,13 @@ class ManoboHybridTranslator
             return $this->applyCase($text, $bisayaLocal);
         }
 
-        // 2. Machine translation fallback via MyMemory
+        // 2. Machine translation fallback via MyMemory. Machine translation
+        //    echoes words it does not know, so any source word that comes back
+        //    unchanged (and is not also a Bisaya word) is still untranslated.
         $targetPairLang = $sourceLang === 'en' ? 'en' : 'tl';
         $ceb = $this->queryMyMemoryBisaya($trimmed, $targetPairLang);
         if ($ceb !== null && $ceb !== '') {
+            $this->lastUnresolved = $this->echoedSourceWords($trimmed, $ceb);
             return $this->applyCase($text, $ceb);
         }
 
@@ -617,6 +676,9 @@ class ManoboHybridTranslator
                     $anyWordFound = true;
                 } else {
                     $out .= $part;
+                    if ($this->isGapWord($part, $i === 0)) {
+                        $this->lastUnresolved[$wordNorm] = true;
+                    }
                 }
             }
             if ($anyWordFound) {
@@ -624,7 +686,61 @@ class ManoboHybridTranslator
             }
         }
 
+        // Nothing translated: every real word of the run is a gap.
+        $this->lastUnresolved = [];
+        foreach (preg_split('/[^\p{L}\p{N}\x27\-]+/u', $trimmed, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $k => $word) {
+            if ($this->isGapWord($word, $k === 0)) {
+                $this->lastUnresolved[$this->normalise($word)] = true;
+            }
+        }
         return $text;
+    }
+
+    /**
+     * Source words that survived machine translation unchanged.
+     *
+     * @return array<string,true>
+     */
+    private function echoedSourceWords(string $source, string $translated): array
+    {
+        $srcWords = [];
+        foreach (preg_split('/[^\p{L}\p{N}\x27\-]+/u', $source, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $k => $word) {
+            if ($this->isGapWord($word, $k === 0)) {
+                $srcWords[$this->normalise($word)] = true;
+            }
+        }
+        $echoed = [];
+        foreach (preg_split('/[^\p{L}\p{N}\x27\-]+/u', $translated, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
+            $n = $this->normalise($word);
+            if (isset($srcWords[$n])) {
+                $echoed[$n] = true;
+            }
+        }
+        return $echoed;
+    }
+
+    /**
+     * Whether a word left in place counts as an untranslated gap. Numbers,
+     * capitalised names inside a sentence, and words that are also Bisaya
+     * (or shared function words like "sa", "ang") do not.
+     */
+    private function isGapWord(string $word, bool $runInitial): bool
+    {
+        if (!preg_match('/\p{L}/u', $word) || mb_strlen($word) < 2) {
+            return false;
+        }
+        $norm = $this->normalise($word);
+        if (in_array($norm, self::SHARED_FUNCTION_WORDS, true)) {
+            return false;
+        }
+        if (!$runInitial && preg_match('/^\p{Lu}/u', $word)) {
+            return false;   // a name: "Bayogo", "Surigao"
+        }
+        if (preg_match('/^\p{Lu}{2,}$/u', $word)) {
+            return false;   // an acronym: "PAGASA"
+        }
+        $this->lookupLocalBisaya('', 'ceb');   // ensure the Bisaya sets are loaded
+        return !isset(self::$bisayaWords[$norm]);
     }
 
     /**
@@ -674,11 +790,17 @@ class ManoboHybridTranslator
 
         if (self::$bisayaIndex === null) {
             $map = [];
+            self::$bisayaWords = [];
             try {
                 $stmt = $this->db->query("SELECT bisaya, tagalog, english FROM bisaya_dictionary WHERE deleted_at IS NULL LIMIT 2500");
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $b = trim((string)$row['bisaya']);
                     if ($b === '') continue;
+                    foreach (preg_split('/\s+/u', $this->normalise($b)) ?: [] as $bw) {
+                        if ($bw !== '') {
+                            self::$bisayaWords[$bw] = true;
+                        }
+                    }
 
                     foreach (['tagalog', 'english'] as $f) {
                         $val = (string)($row[$f] ?? '');
@@ -725,6 +847,9 @@ class ManoboHybridTranslator
     {
         if (mb_strlen($text) < 2 || is_numeric($text)) {
             return null;
+        }
+        if (self::$machineDeadline !== null && microtime(true) > self::$machineDeadline) {
+            return null;   // time budget spent: local dictionaries only
         }
 
         $langPair = ($sourceCode === 'en' ? 'en' : 'tl') . '|ceb';
@@ -1191,7 +1316,7 @@ class ManoboHybridTranslator
      * Scan Bisaya fallback text and replace ANY word or phrase that connects to an approved
      * Manobo dictionary term with the Manobo term before displaying Bisaya.
      */
-    public function refineBisayaWithManobo(string $bisayaText, array $manoboIndex): array
+    public function refineBisayaWithManobo(string $bisayaText, array $manoboIndex, array $unresolved = []): array
     {
         $parts = preg_split('/([^\p{L}\p{N}\x27\-]+)/u', $bisayaText, -1, PREG_SPLIT_DELIM_CAPTURE);
         if ($parts === false || empty($parts)) {
@@ -1254,6 +1379,14 @@ class ManoboHybridTranslator
                     'translated' => $replacement,
                     'source'     => 'manobo',
                     'entry_id'   => $hit['id'] ?? null,
+                ];
+            } elseif (isset($unresolved[$norm])) {
+                // Neither Manobo nor Bisaya: the source word is showing through.
+                $out .= $part;
+                $provenance[] = [
+                    'text'       => $part,
+                    'translated' => $part,
+                    'source'     => 'unresolved',
                 ];
             } else {
                 $out .= $part;

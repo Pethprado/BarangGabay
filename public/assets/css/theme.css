@@ -1057,3 +1057,16 @@ table.table tbody tr:hover td {
     background-color: rgba(255,255,255,0.06) !important;
 }
 
+/* ── Logo: light/dark variants (baranggabay_logo('auto')) ──────────────
+   logo-light.svg has dark lettering for light surfaces; logo-dark.svg has
+   white lettering for dark ones. The helper renders both; only one shows.
+   (They used inline display styles that no theme could override, so dark
+   mode kept the dark-lettered logo on a dark navbar.) */
+.baranggabay-logo-wrapper .logo-light-variant { display: block; }
+.baranggabay-logo-wrapper .logo-dark-variant  { display: none; }
+:root[data-theme="dark"] .baranggabay-logo-wrapper .logo-light-variant { display: none; }
+:root[data-theme="dark"] .baranggabay-logo-wrapper .logo-dark-variant  { display: block; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .baranggabay-logo-wrapper .logo-light-variant { display: none; }
+    :root:not([data-theme="light"]) .baranggabay-logo-wrapper .logo-dark-variant  { display: block; }
+}

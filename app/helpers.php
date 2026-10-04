@@ -341,8 +341,8 @@ function baranggabay_logo(string $variant = 'auto', array $options = []): string
 
             $html = sprintf(
                 '<span class="baranggabay-logo-wrapper %s" style="display:inline-flex;align-items:center;vertical-align:middle;%s">
-                   <img src="%s" alt="%s" class="baranggabay-logo-img logo-light-variant" style="height:%s;width:auto;max-width:100%%;object-fit:contain;display:block;" />
-                   <img src="%s" alt="%s" class="baranggabay-logo-img logo-dark-variant" style="height:%s;width:auto;max-width:100%%;object-fit:contain;display:none;" />
+                   <img src="%s" alt="%s" class="baranggabay-logo-img logo-light-variant" style="height:%s;width:auto;max-width:100%%;object-fit:contain;" />
+                   <img src="%s" alt="%s" class="baranggabay-logo-img logo-dark-variant" style="height:%s;width:auto;max-width:100%%;object-fit:contain;" />
                  </span>',
                 e($class), e($style),
                 e($lightSrc), e($alt), e($height),

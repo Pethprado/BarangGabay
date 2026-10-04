@@ -60,6 +60,85 @@ class TranslationHealthController
      * would time out and look like a failure. The runner picks up whatever
      * this does not reach, which is what it is for.
      */
+    /**
+     * POST /admin/translation-health/rebuild-manobo — re-resolve machine-made
+     * Manobo with the current dictionaries (Manobo first, Bisaya fallback,
+     * gaps flagged — never Filipino passed off as Bisaya).
+     *
+     * Rebuilds rows whose Manobo is machine output, sample data, or missing.
+     * Hand-written Manobo (manobo_is_auto = 0 on a non-sample post) is never
+     * touched. Runs a few posts per call (machine translation is slow) and
+     * the page loops until done; `offset` walks a stable candidate list.
+     */
+    public function rebuildManobo(): void
+    {
+        check_csrf();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $offset = max(0, (int) ($_POST['offset'] ?? 0));
+        $batch  = 1;
+        // Keep well inside max_execution_time (120 s): after 70 s no more
+        // machine-translation calls; the dictionaries still translate.
+        \App\Services\ManoboHybridTranslator::$machineDeadline = microtime(true) + 70;
+
+        $tables = [
+            'announcement' => ['announcements', 'body'],
+            'event'        => ['events', 'description'],
+            'ordinance'    => ['ordinances', 'description'],
+        ];
+        $candidates = [];
+        foreach ($tables as $type => [$table, $bodyCol]) {
+            $rows = db()->query(
+                "SELECT id, title, {$bodyCol} AS body, source_lang FROM {$table}
+                  WHERE manobo_is_auto = 1 OR is_sample = 1 OR COALESCE(title_manobo, '') = ''
+                  ORDER BY id"
+            )->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            foreach ($rows as $row) {
+                $candidates[] = ['type' => $type] + $row;
+            }
+        }
+
+        if ($offset === 0) {
+            // New dictionary version: cached glosses from the old rules are not reused.
+            \App\Services\ManoboHybridTranslator::incrementDictionaryVersion();
+        }
+
+        $translator = new \App\Services\ManoboHybridTranslator();
+        $done = [];
+        foreach (array_slice($candidates, $offset, $batch) as $c) {
+            $source = in_array($c['source_lang'] ?? '', ['fil', 'en'], true) ? $c['source_lang'] : 'fil';
+            $ok = \App\Services\TranslationService::autoTranslatePostToManobo(
+                $c['type'], (int) $c['id'], (string) $c['title'], (string) ($c['body'] ?? ''), $source
+            );
+            // Same inputs, now cached: read back the provenance counts.
+            $unresolved = 0;
+            foreach ([(string) $c['title'], (string) ($c['body'] ?? '')] as $text) {
+                if (trim(strip_tags($text)) === '') {
+                    continue;
+                }
+                $r = $translator->translate($text, $source);
+                $unresolved += (int) ($r['unresolved'] ?? 0);
+            }
+            $done[] = [
+                'type' => $c['type'], 'id' => (int) $c['id'], 'title' => (string) $c['title'],
+                'ok' => $ok, 'unresolved' => $unresolved,
+            ];
+        }
+
+        $next = $offset + count($done);
+        if ($next >= count($candidates)) {
+            \App\Models\AuditLog::record((int) ($_SESSION['user_id'] ?? 0), 'translation.rebuild_manobo',
+                'Rebuilt machine Manobo for ' . count($candidates) . ' posts');
+        }
+        echo json_encode([
+            'success' => true,
+            'total'   => count($candidates),
+            'next'    => $next,
+            'done'    => $next >= count($candidates),
+            'posts'   => $done,
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
     public function retryAll(): void
     {
         check_csrf();

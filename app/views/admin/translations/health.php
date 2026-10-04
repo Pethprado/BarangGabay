@@ -124,6 +124,61 @@ ob_start();
     </div>
 </div>
 
+<?php /* ── MN rebuild: Manobo first, Bisaya fallback, gaps flagged ───── */ ?>
+<div class="admin-card mb-4" id="mnRebuild">
+    <div class="d-flex flex-wrap align-items-start gap-3">
+        <div style="flex:1 1 320px;">
+            <h2 class="h6 mb-1" style="font-weight:800;color:var(--text-primary);">Rebuild MN translations</h2>
+            <p class="mb-0" style="font-size:.85rem;color:var(--text-secondary);">
+                Re-translates machine-made and sample Manobo with the current dictionaries:
+                Manobo first, Bisaya only where Manobo is missing. Words neither dictionary has are
+                flagged as <strong>unresolved</strong> and added to the Manobo gaps list in the Dictionary
+                admin, never passed off as Bisaya. Hand-written Manobo is not changed.
+            </p>
+        </div>
+        <button type="button" class="btn-barangay" id="mnRebuildBtn" onclick="mnRebuild()">
+            <i class="bi bi-arrow-repeat me-1"></i> Rebuild MN translations
+        </button>
+    </div>
+    <div id="mnRebuildStatus" class="mt-3 d-none" style="font-size:.85rem;" aria-live="polite"></div>
+    <ul id="mnRebuildLog" class="mt-2 mb-0 ps-3" style="font-size:.8rem;color:var(--text-secondary);max-height:220px;overflow:auto;"></ul>
+</div>
+<script>
+async function mnRebuild() {
+    var btn = document.getElementById('mnRebuildBtn');
+    var status = document.getElementById('mnRebuildStatus');
+    var log = document.getElementById('mnRebuildLog');
+    if (!confirm('Re-translate machine-made Manobo for all posts? This can take several minutes.')) { return; }
+    btn.disabled = true; log.innerHTML = ''; status.classList.remove('d-none');
+    var offset = 0, unresolved = 0, failed = 0;
+    try {
+        while (true) {
+            status.textContent = 'Working... ' + offset + ' done. Keep this page open.';
+            var fd = new FormData();
+            fd.set('csrf_token', <?= json_encode(csrf_token()) ?>);
+            fd.set('offset', offset);
+            var res = await fetch(<?= json_encode(route('admin/translation-health/rebuild-manobo')) ?>, { method: 'POST', body: fd, credentials: 'same-origin' });
+            var data = await res.json();
+            if (!data.success) { throw new Error(data.error || 'failed'); }
+            data.posts.forEach(function (p) {
+                unresolved += p.unresolved; if (!p.ok) { failed++; }
+                var li = document.createElement('li');
+                li.textContent = (p.ok ? '✔ ' : '✖ ') + p.type + ' #' + p.id + ' — ' + p.title + ' · ' + p.unresolved + ' unresolved word(s)';
+                log.appendChild(li);
+            });
+            offset = data.next;
+            if (data.done) {
+                status.textContent = 'Done: ' + data.total + ' post(s) rebuilt, ' + failed + ' failed, ' + unresolved + ' unresolved word(s) left in MN text (fill them in Dictionary → missing concepts).';
+                break;
+            }
+        }
+    } catch (e) {
+        status.textContent = 'Stopped at ' + offset + ': ' + e.message + '. Click again to restart.';
+    }
+    btn.disabled = false;
+}
+</script>
+
 <?php /* ── 3. The posts ─────────────────────────────────────────────── */ ?>
 <?php if ($rows === []): ?>
 <div class="admin-card">
