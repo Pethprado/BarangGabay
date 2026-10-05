@@ -29,6 +29,18 @@ if (!in_array($activeTab, ['new', 'requests'], true)) {
 $pageTitle = 'Mga Dokumento at Kahilingan — BarangGabay';
 ob_start();
 ?>
+<style>
+.doc-timeline { display: flex; gap: .25rem; list-style: none; margin: 0; padding: 0; overflow-x: auto; }
+.doc-timeline__step { flex: 1 1 0; min-width: 72px; display: flex; flex-direction: column; align-items: center; gap: .25rem; position: relative; text-align: center; }
+.doc-timeline__step:not(:last-child)::after { content: ''; position: absolute; top: .65rem; left: calc(50% + .8rem); right: calc(-50% + .8rem); height: 2px; background: var(--border); }
+.doc-timeline__step.is-done:not(:last-child)::after { background: var(--action-solid); }
+.doc-timeline__dot { width: 1.3rem; height: 1.3rem; border-radius: 999px; display: grid; place-items: center; font-size: .7rem; font-weight: 800; background: var(--surface-muted); border: 2px solid var(--border); color: var(--text-on-action); }
+.doc-timeline__step.is-done .doc-timeline__dot { background: var(--action-solid); border-color: var(--action-solid); }
+.doc-timeline__step.is-current .doc-timeline__dot { border-color: var(--action-solid); background: var(--brand-primary-light); box-shadow: 0 0 0 3px var(--brand-primary-light); }
+.doc-timeline__label { font-size: .68rem; font-weight: 700; color: var(--text-muted); line-height: 1.2; }
+.doc-timeline__step.is-current .doc-timeline__label { color: var(--brand-primary); }
+</style>
+
 
 <div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
 
@@ -561,15 +573,9 @@ ob_start();
                     <!-- Statuses & Action -->
                     <div class="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
                         <div class="flex items-center gap-1.5">
-                            <!-- Payment Badge -->
-                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold <?= $payBadgeClass ?>">
-                                <?= e($payDisplay) ?>
-                            </span>
-
-                            <!-- Request Status Badge -->
-                            <span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 border border-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-900">
-                                <?= e($statusDisplay) ?>
-                            </span>
+                            <!-- Payment + request status: shared colours (status_tone) -->
+                            <?= status_badge($isPaid ? 'paid' : (in_array($payStatus, ['FAILED', 'PAYMENT_REJECTED'], true) ? 'failed' : ($fee <= 0 ? 'draft' : ($payStatus === 'CANCELLED' ? 'cancelled' : 'awaiting_payment'))), $payDisplay) ?>
+                            <?= status_badge($statusKey === 'ready' ? ($isDigital ? 'available_for_download' : 'ready_for_pickup') : $statusKey, $statusDisplay) ?>
                         </div>
 
                         <!-- Action: View Details or Pay -->
@@ -589,6 +595,31 @@ ob_start();
                     </div>
 
                 </div>
+                <?php
+                // Progress timeline: where this request is in the workflow.
+                $__stage = match (strtolower($statusKey)) {
+                    'awaiting_payment'                                   => 1,
+                    'under_review', 'processing', 'approved', 'needs_information' => 2,
+                    'ready', 'ready_for_pickup', 'available_for_download' => 3,
+                    'released', 'completed'                              => 4,
+                    default                                               => 0,
+                };
+                if ($__stage < 2 && $isPaid && $fee > 0) { $__stage = max($__stage, 2); }
+                $__steps = ['Submitted', 'Payment', 'Processing', $isDigital ? 'Ready to download' : 'Ready for pickup', 'Completed'];
+                if ($fee <= 0) { unset($__steps[1]); }
+                $__closed = in_array(strtolower($statusKey), ['rejected', 'cancelled'], true);
+                ?>
+                <?php if (!$__closed): ?>
+                <ol class="doc-timeline mt-3" aria-label="Request progress">
+                    <?php foreach ($__steps as $__i => $__label):
+                        $__state = $__i < $__stage ? 'done' : ($__i === $__stage ? 'current' : 'todo'); ?>
+                        <li class="doc-timeline__step is-<?= $__state ?>"<?= $__state === 'current' ? ' aria-current="step"' : '' ?>>
+                            <span class="doc-timeline__dot" aria-hidden="true"><?= $__state === 'done' ? '✓' : '' ?></span>
+                            <span class="doc-timeline__label"><?= e($__label) ?></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+                <?php endif; ?>
             </div>
             <?php endforeach; ?>
         </div>

@@ -237,16 +237,12 @@ ob_start();
 
                 <!-- 5. PAYMENT -->
                 <td style="white-space:nowrap;">
-                    <span class="status-badge" style="<?= $payBadgeStyle ?>;font-weight:700;font-size:.74rem;">
-                        <?= e($payLabel) ?>
-                    </span>
+                    <?= status_badge($isFree ? 'draft' : ($isPaid ? 'paid' : $pst), $payLabel) ?>
                 </td>
 
                 <!-- 6. REQUEST STATUS -->
                 <td style="white-space:nowrap;">
-                    <span class="status-badge" style="<?= $statusBadgeStyle ?>;font-weight:700;font-size:.74rem;">
-                        <?= e($statusLabel) ?>
-                    </span>
+                    <?= status_badge($st === 'ready' ? ($isDigital ? 'available_for_download' : 'ready_for_pickup') : $st, $statusLabel) ?>
                 </td>
 
                 <!-- 7. DATE -->

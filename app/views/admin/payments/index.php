@@ -324,9 +324,7 @@ $paymongoConfigured = \App\Services\PayMongoService::isConfigured();
 
                     <!-- Payment Status -->
                     <td>
-                        <span class="badge py-1 px-2 fw-semibold" style="<?= $badgeStyle ?>;font-size:.75rem;">
-                            <?= e(\App\Models\DocumentPayment::statusLabel($pst)) ?>
-                        </span>
+                        <?= status_badge($pst, \App\Models\DocumentPayment::statusLabel($pst)) ?>
                         <?php if ($pst === 'PAID_VERIFIED' && !empty($t['verified_by_name'])): ?>
                         <div class="text-muted mt-0.5" style="font-size:.68rem;">
                             ni <?= e((string) $t['verified_by_name']) ?>

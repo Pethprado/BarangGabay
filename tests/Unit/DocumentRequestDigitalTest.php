@@ -15,8 +15,8 @@ final class DocumentRequestDigitalTest extends TestCase
     {
         $this->assertArrayHasKey('pickup', DocumentRequest::DELIVERY_METHODS);
         $this->assertArrayHasKey('digital', DocumentRequest::DELIVERY_METHODS);
-        $this->assertSame('Personal Pickup', DocumentRequest::deliveryLabel('pickup'));
-        $this->assertSame('Digital Soft Copy', DocumentRequest::deliveryLabel('digital'));
+        $this->assertSame('Pickup at Barangay Hall', DocumentRequest::deliveryLabel('pickup'));
+        $this->assertSame('Digital Copy (Online)', DocumentRequest::deliveryLabel('digital'));
     }
 
     public function testStatusTransitions(): void

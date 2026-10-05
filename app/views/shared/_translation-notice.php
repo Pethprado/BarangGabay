@@ -96,12 +96,17 @@ $__tnId   = (int) ($__tnId ?? 0);
 $__tnAuto = $__tnMissing && !$__tnGated && $__tnType !== null && $__tnId > 0;
 ?>
 <?php if ($__tnAuto): ?>
-<div data-translation-notice="translating" class="post-note" role="status" aria-live="polite"
+<div data-translation-notice="translating" class="post-note" style="flex-wrap:wrap;" role="status" aria-live="polite"
      id="tnAuto"
      data-type="<?= e((string) $__tnType) ?>" data-id="<?= $__tnId ?>"
      data-locale="<?= e((string) $__tnPick['locale']) ?>">
     <span class="spinner-border spinner-border-sm" aria-hidden="true" id="tnSpin" style="width:1rem;height:1rem;"></span>
     <span id="tnText"><?= e(t('content_lang.translating', ['language' => $__tnLanguage])) ?></span>
+    <span id="tnSkel" aria-hidden="true" style="display:block;width:100%;margin-top:.6rem;">
+        <span class="ds-skeleton" style="display:block;height:.75rem;width:92%;margin-bottom:.45rem;"></span>
+        <span class="ds-skeleton" style="display:block;height:.75rem;width:78%;margin-bottom:.45rem;"></span>
+        <span class="ds-skeleton" style="display:block;height:.75rem;width:64%;"></span>
+    </span>
     <button type="button" id="tnRetry" class="post-note-shown" style="display:none;text-decoration:underline;background:none;border:0;padding:0;cursor:pointer;">
         <?= e(t('content_lang.translate_retry')) ?>
     </button>
@@ -116,6 +121,7 @@ $__tnAuto = $__tnMissing && !$__tnGated && $__tnType !== null && $__tnId > 0;
 
     function fail(msg) {
         document.getElementById('tnSpin').style.display = 'none';
+        var sk = document.getElementById('tnSkel'); if (sk) { sk.style.display = 'none'; }
         document.getElementById('tnText').textContent = msg;
         document.getElementById('tnRetry').style.display = msg === failedMsg ? 'inline' : 'none';
     }

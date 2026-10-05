@@ -97,7 +97,7 @@ $__pRelative = relative_time($__pStamp);
     <!-- Hero sits between headline and body, the way a news article runs. -->
     <?php if ($__pImage !== null && trim((string) $__pImage) !== ''): ?>
     <figure class="post-hero">
-        <img src="<?= e(asset($__pImage)) ?>" alt="<?= e($__pTitle) ?>" loading="lazy">
+        <img src="<?= e(asset($__pImage)) ?>" alt="<?= e($__pTitle) ?>" loading="lazy" onerror="this.closest('figure').remove()">
     </figure>
     <?php endif; ?>
 </article>

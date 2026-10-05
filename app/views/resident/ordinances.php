@@ -195,7 +195,7 @@ ob_start();
                 <!-- Description excerpt -->
                 <?php if (!empty($ord['description'])): ?>
                 <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-500">
-                    <?= e(mb_substr(strip_tags(localised_text($ord, 'description')), 0, 100)) ?>…
+                    <?= e(mb_strimwidth(\App\Services\SpokenText::repairJoins(\App\Services\SpokenText::plain(localised_text($ord, 'description'))), 0, 110, '…')) ?>
                 </p>
                 <?php endif; ?>
 
@@ -203,16 +203,21 @@ ob_start();
                 <div class="mt-auto pt-3 flex flex-wrap gap-2">
                     <!-- View full detail -->
                     <a href="<?= e(route('ordinances/' . $ord['id'])) ?>"
-                       class="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition"
-                       style="background:#fef3c7;color:#92400e;border:1px solid #d4c48a;">
-                        <i class="bi bi-eye"></i> <?= e(t('res_ordinances.view')) ?>
+                       class="ds-chip">
+                        <i class="bi bi-eye me-1"></i> <?= e(t('res_ordinances.view')) ?>
                     </a>
+
+                    <?php if (!empty($ord['file_url'])): ?>
+                    <a href="<?= e(asset((string) $ord['file_url'])) ?>" download
+                       class="ds-chip" aria-label="Download <?= e((string) ($ord['title'] ?? '')) ?>">
+                        <i class="bi bi-download me-1"></i> PDF
+                    </a>
+                    <?php endif; ?>
 
                     <!-- ✦ I-simplify — opens the AI modal -->
                     <button type="button"
                             @click="openModal(<?= (int) $ord['id'] ?>, '<?= e($ordTitle) ?>')"
-                            class="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition"
-                            style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;">
+                            class="ds-chip is-active">
                         <i class="bi bi-stars"></i>
                         <?= e($hasSumm ? t('res_ordinances.view_summary') : t('res_ordinances.simplify')) ?>
                     </button>

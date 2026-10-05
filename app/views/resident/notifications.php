@@ -147,6 +147,23 @@ ob_start();
 
 <?php else: ?>
 
+<!-- ── Type filter ──────────────────────────────────────────────── -->
+<?php
+$__typesPresent = array_values(array_unique(array_map(static fn ($n) => (string) ($n['type'] ?? 'system'), $notifications)));
+$__typeNames = ['announcement' => 'Announcements', 'event' => 'Events', 'ordinance' => 'Ordinances', 'document' => 'Documents',
+                'payment' => 'Payments', 'emergency' => 'Emergency', 'verification' => 'Account', 'system' => 'System'];
+?>
+<?php if (count($__typesPresent) > 1): ?>
+<div class="ds-chips mb-4" role="group" aria-label="Filter notifications">
+    <button type="button" class="ds-chip" :class="{ 'is-active': typeFilter === '' }" @click="typeFilter = ''">All</button>
+    <?php foreach ($__typesPresent as $__t): ?>
+        <button type="button" class="ds-chip" :class="{ 'is-active': typeFilter === <?= e(json_encode($__t)) ?> }" @click="typeFilter = <?= e(json_encode($__t)) ?>">
+            <?= e($__typeNames[$__t] ?? ucfirst($__t)) ?>
+        </button>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
 <!-- ── Grouped notification list ────────────────────────────────── -->
 <?php foreach ($groups as $groupKey => $groupItems):
     if (empty($groupItems)) continue; ?>
@@ -173,6 +190,7 @@ ob_start();
           // this page was unclickable. htmlspecialchars turns the quotes into
           // &quot;, which the browser decodes back to " before Alpine reads it. ?>
     <div class="notif-row <?= $rowClass ?>"
+         x-show="typeFilter === '' || typeFilter === <?= e(json_encode($typeKey)) ?>"
          :class="{ 'marked-read': isMarked(<?= (int)$notif['id'] ?>) }"
          @click="markAndGo(<?= (int)$notif['id'] ?>, <?= e($urlJson) ?>)"
          role="button"
@@ -247,6 +265,7 @@ function notifPage() {
         unreadOnLoad: <?= $unreadIdsJson ?>,
         /* IDs the user has clicked "read" during this session */
         markedIds:   [],
+        typeFilter:  '',
         csrf:        <?= $csrfJson ?>,
         base:        <?= $baseJson ?>,
 

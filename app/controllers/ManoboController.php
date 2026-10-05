@@ -68,7 +68,49 @@ class ManoboController
             $totalWords = 0;
         }
 
-        view('resident/manobo', compact('entries', 'categories', 'search', 'category', 'totalWords'));
+        // Language filter: Manobo (default) or the Bisaya dictionary, which the
+        // translator uses as its fallback. Shown in the same card layout.
+        $lang = ($_GET['lang'] ?? '') === 'ceb' ? 'ceb' : 'msm';
+        if ($lang === 'ceb') {
+            try {
+                $rows = db()->query(
+                    'SELECT bisaya AS manobo, english, tagalog, part_of_speech, category, notes
+                       FROM bisaya_dictionary WHERE deleted_at IS NULL ORDER BY bisaya'
+                )->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $totalWords = count($rows);
+                $categories = array_values(array_unique(array_filter(array_column($rows, 'category'))));
+                sort($categories);
+                $needle  = mb_strtolower($search);
+                $entries = array_values(array_filter($rows, static function (array $r) use ($needle, $category): bool {
+                    if ($category !== '' && ($r['category'] ?? '') !== $category) {
+                        return false;
+                    }
+                    if ($needle === '') {
+                        return true;
+                    }
+                    foreach (['manobo', 'english', 'tagalog'] as $col) {
+                        if (str_contains(mb_strtolower((string) ($r[$col] ?? '')), $needle)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }));
+            } catch (\Throwable $e) {
+                error_log('[ManoboController::residentIndex] bisaya: ' . $e->getMessage());
+                $entries = $categories = [];
+                $totalWords = 0;
+            }
+        }
+
+        // Approved voice recordings for each headword (Voice Training dataset).
+        $audio = \App\Services\VoiceResolver::index($lang)['map'];
+        foreach ($entries as &$entry) {
+            $key = \App\Services\VoiceText::normalize((string) ($entry['manobo'] ?? ''));
+            $entry['audio'] = $audio[$key]['audio_url'] ?? null;
+        }
+        unset($entry);
+
+        view('resident/manobo', compact('entries', 'categories', 'search', 'category', 'totalWords', 'lang'));
     }
 
     /**

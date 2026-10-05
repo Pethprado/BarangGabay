@@ -1595,3 +1595,29 @@ function t(string $key, array $replace = [], ?string $locale = null): string
 
     return $value;
 }
+
+/**
+ * Badge tone for any status in the system (documents, payments, events,
+ * ordinances, voice samples), so one meaning has one colour everywhere.
+ * Returns a .ds-status modifier: neutral | info | warning | success | danger.
+ */
+function status_tone(string $status): string
+{
+    return match (strtolower(trim($status))) {
+        'draft', 'pending', 'pending_review', 'submitted', 'upcoming', 'scheduled' => 'neutral',
+        'awaiting_payment', 'payment_pending', 'payment_proof_submitted', 'needs_information', 'pay_at_pickup' => 'warning',
+        'under_review', 'processing', 'ongoing', 'in_progress', 'approved', 'active' => 'info',
+        'ready', 'ready_for_pickup', 'available_for_download', 'released', 'completed', 'paid', 'paid_verified', 'verified', 'published' => 'success',
+        'rejected', 'cancelled', 'payment_rejected', 'failed', 'repealed', 'suspended', 'refunded' => 'danger',
+        default => 'neutral',
+    };
+}
+
+/**
+ * Render a status badge: <span class="ds-status ds-status--{tone}">label</span>.
+ */
+function status_badge(string $status, ?string $label = null): string
+{
+    $label ??= ucwords(strtolower(str_replace('_', ' ', $status)));
+    return '<span class="ds-status ds-status--' . status_tone($status) . '">' . e($label) . '</span>';
+}

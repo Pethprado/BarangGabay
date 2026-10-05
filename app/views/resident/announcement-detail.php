@@ -250,7 +250,7 @@ ob_start();
                 <a href="<?= e(route('announcements/' . $rel['slug'])) ?>"
                    class="group flex gap-3 rounded-xl border border-slate-100 border-l-4 <?= $relBdr ?> p-3 transition hover:bg-blue-50 hover:border-blue-100">
                     <?php if (!empty($rel['cover_image_url'])): ?>
-                    <img src="<?= e(asset($rel['cover_image_url'])) ?>" alt=""
+                    <img src="<?= e(asset($rel['cover_image_url'])) ?>" onerror="this.remove()" loading="lazy" alt=""
                          class="h-14 w-14 flex-shrink-0 rounded-lg object-cover">
                     <?php else: ?>
                     <div class="h-14 w-14 flex-shrink-0 rounded-lg bg-blue-50 flex items-center justify-center">

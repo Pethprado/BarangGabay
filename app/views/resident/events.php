@@ -126,7 +126,7 @@ ob_start();
                 <!-- Cover image -->
                 <?php if (!empty($ev['cover_image_url'])): ?>
                 <div class="relative aspect-video w-full overflow-hidden bg-slate-100">
-                    <img src="<?= e(asset($ev['cover_image_url'])) ?>"
+                    <img src="<?= e(asset($ev['cover_image_url'])) ?>" onerror="this.remove()" loading="lazy"
                          alt="<?= e(localised_text($ev, 'title')) ?>"
                          class="h-full w-full object-cover">
                     <span class="absolute right-3 top-3 inline-flex items-center rounded-full <?= $sCls ?> px-2.5 py-0.5 text-xs font-semibold shadow-sm backdrop-blur-sm">

@@ -159,11 +159,12 @@ ob_start();
                              'border-l-amber-400':  ann.urgency === 'important',
                              'border-l-slate-300':  ann.urgency === 'normal' || !ann.urgency
                          }">
-                    <template x-if="ann.cover_image_url">
-                        <div class="aspect-video w-full overflow-hidden bg-slate-100">
-                            <img :src="baseUrl + ann.cover_image_url" :alt="ann.title" class="h-full w-full object-cover">
-                        </div>
-                    </template>
+                    <div class="ds-media">
+                        <i class="bi bi-megaphone" aria-hidden="true"></i>
+                        <template x-if="ann.cover_image_url">
+                            <img :src="baseUrl + ann.cover_image_url" alt="" loading="lazy" onerror="this.remove()">
+                        </template>
+                    </div>
                     <div class="flex flex-1 flex-col p-5">
                         <div class="mb-2 flex flex-wrap gap-2">
                             <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700"
@@ -224,25 +225,25 @@ ob_start();
         <?php endif; ?>
     </div>
     <?php else: ?>
-    <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <?php foreach ($announcements as $__i => $ann):
             $cat    = $ann['category'] ?? 'general';
             $urg    = $ann['urgency']  ?? 'normal';
             $catLbl = $categoryOptions[$cat] ?? ucfirst($cat);
             $catCls = category_badge_class($cat);
             $bdr    = urgency_border_class($urg);
-            $excerpt = strip_tags(localised_text($ann, 'body'));
+            $excerpt = \App\Services\SpokenText::repairJoins(\App\Services\SpokenText::plain(localised_text($ann, 'body')));
             $excerpt = mb_strlen($excerpt) > 150 ? mb_substr($excerpt, 0, 150) . '…' : $excerpt;
             $fadeDelay = 'fade-up-delay-' . (($__i % 4) + 1);
         ?>
         <article class="fade-up <?= $fadeDelay ?> flex flex-col overflow-hidden rounded-2xl border border-slate-200 border-l-4 <?= $bdr ?> bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
 
-            <?php if (!empty($ann['cover_image_url'])): ?>
-            <div class="aspect-video w-full overflow-hidden bg-slate-100">
-                <img src="<?= e(asset($ann['cover_image_url'])) ?>" alt="<?= e(localised_text($ann, 'title')) ?>"
-                     class="h-full w-full object-cover">
+            <div class="ds-media">
+                <i class="bi bi-megaphone" aria-hidden="true"></i>
+                <?php if (!empty($ann['cover_image_url'])): ?>
+                <img src="<?= e(asset($ann['cover_image_url'])) ?>" alt="" loading="lazy" onerror="this.remove()">
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
 
             <div class="flex flex-1 flex-col p-5">
                 <div class="mb-2 flex flex-wrap items-center gap-2">

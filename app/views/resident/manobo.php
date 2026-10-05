@@ -11,6 +11,7 @@ $categories = $categories ?? [];
 $search     = (string) ($search   ?? '');
 $category   = (string) ($category ?? '');
 $totalWords = (int)    ($totalWords ?? 0);
+$lang       = ($lang ?? 'msm') === 'ceb' ? 'ceb' : 'msm';
 
 // Sort entries alphabetically by manobo headword
 usort($entries, static fn (array $a, array $b): int => strcasecmp($a['manobo'] ?? '', $b['manobo'] ?? ''));
@@ -20,7 +21,7 @@ $catColors = [
     'animal'    => 'bg-orange-100 text-orange-700',
     'animals'   => 'bg-orange-100 text-orange-700',
     'numbers'   => 'bg-blue-100 text-blue-700',
-    'family'    => 'bg-purple-100 text-purple-700',
+    'family'    => 'bg-blue-100 text-blue-700',
     'health'    => 'bg-green-100 text-green-700',
     'nature'    => 'bg-green-100 text-green-700',
     'food'      => 'bg-amber-100 text-amber-700',
@@ -28,7 +29,7 @@ $catColors = [
     'time'      => 'bg-teal-100 text-teal-700',
     'pronoun'   => 'bg-rose-100 text-rose-700',
     'verb'      => 'bg-blue-100 text-blue-700',
-    'adjective' => 'bg-purple-100 text-purple-700',
+    'adjective' => 'bg-blue-100 text-blue-700',
     'noun'      => 'bg-orange-100 text-orange-700',
     'emotion'   => 'bg-amber-100 text-amber-700',
     'direction' => 'bg-teal-100 text-teal-700',
@@ -43,14 +44,18 @@ ob_start();
 
 <!-- ── Page header ────────────────────────────────────────────── -->
 <div class="mb-6">
-    <p class="text-xs font-bold uppercase tracking-widest text-purple-700"><?= e(t('res_manobo.eyebrow')) ?></p>
+    <p class="text-xs font-bold uppercase tracking-widest text-blue-700"><?= e(t('res_manobo.eyebrow')) ?></p>
     <div class="mt-1 flex flex-wrap items-baseline gap-3">
         <h1 class="text-2xl font-bold text-slate-900 sm:text-3xl"><?= e(t('res_manobo.title')) ?></h1>
-        <span class="rounded-full bg-purple-100 px-3 py-0.5 text-xs font-semibold text-purple-700">
+        <span class="rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700">
             <span><?= $totalWords ?></span> <?= e(t('admin_manobo.words_label') ?? 'mga salita') ?>
         </span>
     </div>
     <p class="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500"><?= e(t('res_manobo.subtitle')) ?></p>
+    <nav class="ds-chips mt-3" aria-label="Dictionary language">
+        <a href="<?= e(route('dictionary')) ?>" class="ds-chip<?= $lang === 'msm' ? ' is-active' : '' ?>" aria-current="<?= $lang === 'msm' ? 'true' : 'false' ?>">Manobo</a>
+        <a href="<?= e(route('dictionary') . '?lang=ceb') ?>" class="ds-chip<?= $lang === 'ceb' ? ' is-active' : '' ?>" aria-current="<?= $lang === 'ceb' ? 'true' : 'false' ?>">Bisaya</a>
+    </nav>
 </div>
 
 <?php if ($totalWords === 0): ?>
@@ -78,7 +83,7 @@ ob_start();
                            x-model="query"
                            @input.debounce.250ms="onSearchChange()"
                            placeholder="<?= e(t('res_manobo.placeholder')) ?>"
-                           class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-800 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100">
+                           class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100">
                 </div>
             </div>
 
@@ -87,7 +92,7 @@ ob_start();
                     <?= e(t('res_announcements.category_label')) ?>
                 </label>
                 <select id="category" name="category" x-model="category" @change="onSearchChange()"
-                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100">
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100">
                     <option value=""><?= e(t('res_manobo.all_categories')) ?></option>
                     <?php foreach ($categories as $cat): ?>
                     <option value="<?= e($cat) ?>"><?= e(ucfirst($cat)) ?></option>
@@ -95,7 +100,7 @@ ob_start();
                 </select>
             </div>
 
-            <button type="button" @click="onSearchChange()" class="flex-shrink-0 rounded-xl bg-purple-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-purple-800">
+            <button type="button" @click="onSearchChange()" class="flex-shrink-0 rounded-xl bg-blue-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-800">
                 <i class="bi bi-search me-1"></i><?= e(t('res_manobo.filter')) ?>
             </button>
 
@@ -110,7 +115,7 @@ ob_start();
             <div>
                 <span><?= e(t('admin_manobo.total_label') ?? 'Kabuuan:') ?> <strong><?= $totalWords ?></strong> <?= e(t('admin_manobo.words_label') ?? 'mga salita') ?></span>
                 <span x-show="selectedLetter !== 'ALL'" class="ms-2">
-                    &middot; Letra <strong class="text-purple-700" x-text="selectedLetter"></strong>: <span class="font-bold text-slate-800" x-text="filteredEntries.length"></span> entri
+                    &middot; Letra <strong class="text-blue-700" x-text="selectedLetter"></strong>: <span class="font-bold text-slate-800" x-text="filteredEntries.length"></span> entri
                 </span>
                 <span x-show="selectedLetter === 'ALL'" class="ms-2">
                     &middot; Na-filter: <span class="font-bold text-slate-800" x-text="filteredEntries.length"></span> entri
@@ -127,7 +132,7 @@ ob_start();
         <div class="flex items-center justify-between gap-2 mb-3">
             <button type="button" @click="prevLetter()"
                     :disabled="isPrevLetterDisabled"
-                    :class="isPrevLetterDisabled ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'"
+                    :class="isPrevLetterDisabled ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'"
                     class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
                 <i class="bi bi-chevron-left"></i>
                 <span class="hidden sm:inline">Nakalipas na Letra</span>
@@ -136,14 +141,14 @@ ob_start();
 
             <div class="text-center">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-600">
-                    <span x-show="selectedLetter !== 'ALL'">Mga Salitang Nagsisimula sa <span class="text-base font-black text-purple-700" x-text="selectedLetter"></span></span>
+                    <span x-show="selectedLetter !== 'ALL'">Mga Salitang Nagsisimula sa <span class="text-base font-black text-blue-700" x-text="selectedLetter"></span></span>
                     <span x-show="selectedLetter === 'ALL'">Lahat ng Letra</span>
                 </span>
             </div>
 
             <button type="button" @click="nextLetter()"
                     :disabled="isNextLetterDisabled"
-                    :class="isNextLetterDisabled ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'"
+                    :class="isNextLetterDisabled ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'"
                     class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
                 <span class="hidden sm:inline">Susunod na Letra</span>
                 <span class="sm:hidden">Susunod</span>
@@ -156,7 +161,7 @@ ob_start();
             <button type="button"
                     @click="selectLetter('ALL')"
                     :aria-pressed="selectedLetter === 'ALL' ? 'true' : 'false'"
-                    :class="selectedLetter === 'ALL' ? 'bg-purple-700 text-white font-black shadow-sm ring-2 ring-purple-300' : 'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-700'"
+                    :class="selectedLetter === 'ALL' ? 'bg-blue-700 text-white font-black shadow-sm ring-2 ring-blue-300' : 'bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-700'"
                     class="flex h-8 px-2.5 items-center justify-center rounded-lg text-xs font-bold transition">
                 Lahat
             </button>
@@ -167,8 +172,8 @@ ob_start();
                         :aria-pressed="selectedLetter === l ? 'true' : 'false'"
                         :disabled="!availableSet[l]"
                         :class="{
-                            'bg-purple-700 text-white font-black shadow-sm ring-2 ring-purple-300': selectedLetter === l,
-                            'bg-purple-100 text-purple-700 font-bold hover:bg-purple-700 hover:text-white': selectedLetter !== l && availableSet[l],
+                            'bg-blue-700 text-white font-black shadow-sm ring-2 ring-blue-300': selectedLetter === l,
+                            'bg-blue-100 text-blue-700 font-bold hover:bg-blue-700 hover:text-white': selectedLetter !== l && availableSet[l],
                             'bg-slate-100 text-slate-300 font-normal cursor-not-allowed opacity-50': !availableSet[l]
                         }"
                         class="flex h-8 w-8 items-center justify-center rounded-lg text-xs transition">
@@ -186,9 +191,17 @@ ob_start();
                          @click="openEntry(entry)">
 
                     <div class="flex items-start justify-between gap-3">
-                        <p class="text-lg font-black leading-tight text-purple-700" x-text="entry.manobo"></p>
+                        <p class="flex items-center gap-2 text-lg font-black leading-tight text-blue-700">
+                            <span x-text="entry.manobo"></span>
+                            <button type="button" x-show="entry.audio" x-cloak
+                                    @click.stop="(window.__dictAudio = window.__dictAudio || new Audio()).src = entry.audio; window.__dictAudio.play()"
+                                    class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700"
+                                    :aria-label="'Play recording of ' + entry.manobo" title="Approved recording">
+                                <i class="bi bi-volume-up-fill" aria-hidden="true"></i>
+                            </button>
+                        </p>
                         <span x-show="entry.category"
-                              class="flex-shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-purple-100 text-purple-700"
+                              class="flex-shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-100 text-blue-700"
                               x-text="entry.category">
                         </span>
                     </div>
@@ -216,7 +229,7 @@ ob_start();
                         </div>
                     </dl>
 
-                    <p x-show="entry.notes" class="mt-3 text-xs font-semibold text-purple-700">
+                    <p x-show="entry.notes" class="mt-3 text-xs font-semibold text-blue-700">
                         <i class="bi bi-info-circle me-1"></i><?= e(t('res_manobo.notes')) ?>
                     </p>
                 </article>
@@ -229,13 +242,13 @@ ob_start();
         <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center">
             <i class="bi bi-search text-3xl text-slate-300"></i>
             <p class="mt-3 text-base font-bold text-slate-700">
-                <span x-show="selectedLetter !== 'ALL'">Walang nahanap na salitang Manobo para sa letrang <span class="text-purple-700" x-text="selectedLetter"></span>.</span>
+                <span x-show="selectedLetter !== 'ALL'">Walang nahanap na salitang Manobo para sa letrang <span class="text-blue-700" x-text="selectedLetter"></span>.</span>
                 <span x-show="selectedLetter === 'ALL'">Walang nahanap na salitang tumutugma sa iyong paghahanap.</span>
             </p>
             <p class="mx-auto mt-1 max-w-sm text-sm text-slate-500">
                 Subukang pumili ng ibang letra o palitan ang iyong ginamit na keyword.
             </p>
-            <button type="button" @click="resetFilters()" class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-purple-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-purple-800">
+            <button type="button" @click="resetFilters()" class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-blue-800">
                 <i class="bi bi-arrow-counterclockwise"></i>I-reset ang mga Filter
             </button>
         </div>
@@ -244,7 +257,7 @@ ob_start();
     <!-- ── Pagination Controls within active letter ────────────────── -->
     <div x-show="totalPages > 1" class="mt-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <button type="button" @click="prevPage()" :disabled="currentPage === 1"
-                :class="currentPage === 1 ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-700'"
+                :class="currentPage === 1 ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-700'"
                 class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
             <i class="bi bi-arrow-left me-1"></i>Nakalipas na Pahina
         </button>
@@ -254,7 +267,7 @@ ob_start();
         </span>
 
         <button type="button" @click="nextPage()" :disabled="currentPage >= totalPages"
-                :class="currentPage >= totalPages ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-700'"
+                :class="currentPage >= totalPages ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-700'"
                 class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
             Susunod na Pahina<i class="bi bi-arrow-right ms-1"></i>
         </button>
@@ -268,14 +281,14 @@ ob_start();
             <template x-if="activeEntry">
                 <div>
                     <div class="flex items-start justify-between gap-3">
-                        <h2 class="text-2xl font-black text-purple-700" x-text="activeEntry.manobo"></h2>
+                        <h2 class="text-2xl font-black text-blue-700" x-text="activeEntry.manobo"></h2>
                         <button type="button" class="flex-shrink-0 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                                 @click="activeEntry = null" aria-label="<?= e(t('res_manobo.close')) ?>">
                             <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
                     <p class="mt-0.5 text-xs italic text-slate-500" x-show="activeEntry.part_of_speech" x-text="activeEntry.part_of_speech"></p>
-                    <span class="mt-2 inline-block rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700" x-text="activeEntry.category"></span>
+                    <span class="mt-2 inline-block rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700" x-text="activeEntry.category"></span>
 
                     <dl class="mt-4 space-y-2 border-t border-slate-100 pt-4">
                         <div>

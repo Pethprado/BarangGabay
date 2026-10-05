@@ -117,6 +117,11 @@ class AdminController
             ['no_manobo',    static fn (): int => Announcement::countWithoutManobo()
                                                 + Event::countWithoutManobo()
                                                 + Ordinance::countWithoutManobo(),             '/admin/announcements', 'bi-translate',      $everyone],
+            ['documents',    static fn (): int => \App\Models\DocumentRequest::countOpen(),  '/admin/documents',    'bi-file-earmark-check', $everyone],
+            ['payments',     static fn (): int => (int) db()->query("SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAYMENT_PROOF_SUBMITTED'")->fetchColumn(),
+                                                                                                '/admin/payments',     'bi-wallet2',            $everyone],
+            ['voice',        static fn (): int => (int) db()->query("SELECT COUNT(*) FROM voice_samples WHERE LOWER(status) = 'pending'")->fetchColumn(),
+                                                                                                '/admin/voice-training?status=pending#samples', 'bi-mic', $adminsOnly],
         ];
 
         foreach ($rows as [$key, $countFn, $url, $icon, $roles]) {

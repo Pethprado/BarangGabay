@@ -100,6 +100,11 @@
 
                 <?php if (!empty($_SESSION['user_id'])): ?>
 
+                <!-- Global search -->
+                <a href="<?= e(route('search')) ?>" class="bell-btn" title="Search" aria-label="Search announcements, events, ordinances">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                </a>
+
                 <!-- Notification bell with dropdown -->
                 <div x-data="notifDropdown()" @click.outside="open = false" class="relative">
                     <button type="button"
@@ -243,6 +248,7 @@
                     <a href="<?= e(route('evacuation')) ?>"    class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">🏫 <?= e(t('nav.evacuation')) ?></a>
                     <a href="<?= e(route('manobo')) ?>"        class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">📖 <?= e(t('nav.dictionary')) ?></a>
                     <a href="<?= e(route('feedback')) ?>"      class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">💬 <?= e(t('nav.feedback')) ?></a>
+                    <a href="<?= e(route('search')) ?>"        class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">🔎 Search</a>
                     <a href="<?= e(route('notifications')) ?>" class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                         🔔 <?= e(t('nav.notifications')) ?> <span id="notif-badge-mobile" class="font-bold text-red-600"></span>
                     </a>

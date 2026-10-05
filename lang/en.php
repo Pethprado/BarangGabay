@@ -1803,6 +1803,10 @@ return [
         'pw_very_strong'   => 'Very Strong',
     ],
     'dashboard' => [
+        'attention_title_staff' => 'Your tasks',
+        'attention_documents' => ':n document request(s) waiting for action',
+        'attention_payments' => ':n payment proof(s) to verify',
+        'attention_voice' => ':n voice sample(s) waiting for approval',
         'attention_title'        => 'Needs your attention',
         'attention_help'         => 'Open work you can clear right now. Anything already handled is not listed.',
         'attention_clear'        => 'Nothing is waiting — you are all caught up.',

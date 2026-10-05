@@ -21,6 +21,8 @@ return [
     // /admin/manobo; this one only looks words up.
     ['GET', '/manobo', 'ManoboController@residentIndex', ['auth', 'verified']],
     ['GET', '/dictionary', 'ManoboController@residentIndex', ['auth', 'verified']],
+    // Global resident search — public content only (posts, ordinances, document types, dictionary).
+    ['GET', '/search', 'SearchController@index', ['auth', 'verified']],
     ['GET', '/notifications', 'NotificationController@index', ['auth', 'verified']],
     ['POST', '/notifications/mark-read', 'NotificationController@markRead', ['auth', 'verified']],
     ['GET', '/profile', 'ResidentController@profile', ['auth', 'verified']],

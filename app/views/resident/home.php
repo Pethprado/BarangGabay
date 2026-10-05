@@ -1268,7 +1268,7 @@ $docState = (string) ($docOpen['status'] ?? '');
 
             <?php if (!empty($ann['cover_image_url'])): ?>
             <div class="aspect-video w-full overflow-hidden bg-slate-100">
-                <img src="<?= e(asset($ann['cover_image_url'])) ?>"
+                <img src="<?= e(asset($ann['cover_image_url'])) ?>" onerror="this.remove()" loading="lazy"
                      alt="<?= e(localised_text($ann, 'title')) ?>"
                      class="h-full w-full object-cover">
             </div>
@@ -1357,7 +1357,7 @@ $docState = (string) ($docOpen['status'] ?? '');
 
             <?php if (!empty($ev['cover_image_url'])): ?>
             <div class="aspect-video w-full overflow-hidden bg-slate-100">
-                <img src="<?= e(asset($ev['cover_image_url'])) ?>" alt="<?= e(localised_text($ev, 'title')) ?>"
+                <img src="<?= e(asset($ev['cover_image_url'])) ?>" onerror="this.remove()" loading="lazy" alt="<?= e(localised_text($ev, 'title')) ?>"
                      class="h-full w-full object-cover">
             </div>
             <?php else: ?>

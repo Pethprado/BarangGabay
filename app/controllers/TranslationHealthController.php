@@ -46,8 +46,25 @@ class TranslationHealthController
         $pageTitle    = t('translation_health.page_title');
         $pendingCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn();
 
+        // Translation dashboard summary (real data): Manobo coverage of posts,
+        // the gap queue the hybrid translator fills, and its top entries.
+        $mnStats = ['posts' => 0, 'with_mn' => 0, 'gaps' => 0, 'bisaya_fallback' => 0, 'unresolved' => 0, 'top' => []];
+        try {
+            foreach (['announcements', 'events', 'ordinances'] as $tbl) {
+                $mnStats['posts']   += (int) db()->query("SELECT COUNT(*) FROM {$tbl}")->fetchColumn();
+                $mnStats['with_mn'] += (int) db()->query("SELECT COUNT(*) FROM {$tbl} WHERE COALESCE(title_manobo, '') <> ''")->fetchColumn();
+            }
+            $mnStats['gaps']            = (int) db()->query("SELECT COUNT(*) FROM manobo_missing_concepts WHERE review_status = 'pending'")->fetchColumn();
+            $mnStats['bisaya_fallback'] = (int) db()->query("SELECT COUNT(*) FROM manobo_missing_concepts WHERE review_status = 'pending' AND bisaya_fallback IS NOT NULL")->fetchColumn();
+            $mnStats['unresolved']      = $mnStats['gaps'] - $mnStats['bisaya_fallback'];
+            $mnStats['top'] = db()->query("SELECT concept, bisaya_fallback, usage_count FROM manobo_missing_concepts WHERE review_status = 'pending' ORDER BY usage_count DESC, last_seen_at DESC LIMIT 12")
+                                  ->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            error_log('[TranslationHealthController::index] mn stats: ' . $e->getMessage());
+        }
+
         view('admin/translations/health', compact(
-            'providers', 'overview', 'rows', 'lang', 'pageTitle', 'pendingCount'
+            'providers', 'overview', 'rows', 'lang', 'pageTitle', 'pendingCount', 'mnStats'
         ));
     }
 

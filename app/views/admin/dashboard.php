@@ -94,7 +94,7 @@ $weekEvents  = $weekEvents  ?? [];
     <div class="admin-card-header">
         <h2 class="admin-card-title mb-0" style="font-size:1rem;">
             <i class="bi bi-list-check me-1" style="color:var(--brand-primary);"></i>
-            <?= e(t('dashboard.attention_title')) ?>
+            <?= e(($_SESSION['role'] ?? '') === 'staff' ? t('dashboard.attention_title_staff') : t('dashboard.attention_title')) ?>
         </h2>
         <p class="text-muted mb-0 mt-1" style="font-size:.78rem;"><?= e(t('dashboard.attention_help')) ?></p>
     </div>

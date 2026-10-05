@@ -1763,6 +1763,10 @@ return [
         'pw_very_strong'   => 'Napakalakas',
     ],
     'dashboard' => [
+        'attention_title_staff' => 'Mga gawain mo',
+        'attention_documents' => ':n kahilingan ng dokumento ang naghihintay',
+        'attention_payments' => ':n patunay ng bayad ang susuriin',
+        'attention_voice' => ':n voice sample ang naghihintay ng pag-apruba',
         'attention_title'        => 'Kailangan ng iyong atensyon',
         'attention_help'         => 'Mga bukas na gawain na kaya mong tapusin ngayon. Hindi kasama ang naasikaso na.',
         'attention_clear'        => 'Walang naghihintay — wala kang pending.',

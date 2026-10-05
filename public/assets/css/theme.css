@@ -183,7 +183,7 @@
 
     /* main.css's hand-rolled Tailwind-style colour utilities
        (.text-blue-700 / .bg-blue-100 and their hover variants). */
-    --tw-blue-700:     var(--motif-gold-ink);
+    --tw-blue-700:     var(--brand-primary);
     --tw-bg-blue-100:  var(--brand-primary-light);
 }
 
@@ -235,8 +235,8 @@
     --shadow-card:  0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.30);
     --shadow-lift:  0 6px 18px rgba(0,0,0,.45);
 
-    --tw-blue-700:     var(--motif-gold-night);
-    --tw-bg-blue-100:  rgba(226,185,85,.16);
+    --tw-blue-700:     var(--brand-primary);
+    --tw-bg-blue-100:  var(--brand-primary-light);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -279,8 +279,8 @@
         --shadow-card:  0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.30);
         --shadow-lift:  0 6px 18px rgba(0,0,0,.45);
 
-        --tw-blue-700:     var(--motif-gold-night);
-        --tw-bg-blue-100:  rgba(226,185,85,.16);
+        --tw-blue-700:     var(--brand-primary);
+        --tw-bg-blue-100:  var(--brand-primary-light);
     }
 }
 
@@ -1069,4 +1069,60 @@ table.table tbody tr:hover td {
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .baranggabay-logo-wrapper .logo-light-variant { display: none; }
     :root:not([data-theme="light"]) .baranggabay-logo-wrapper .logo-dark-variant  { display: block; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DESIGN SYSTEM — shared components for every portal (mockup pass)
+   Tokens only, so light and dark mode both work.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Page header: eyebrow + title + supporting line */
+.ds-page-head { margin-bottom: 1.5rem; }
+.ds-page-head__eyebrow { margin: 0; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--brand-primary); }
+.ds-page-head__title { margin: .25rem 0 0; font-family: var(--font-heading); font-weight: 800; font-size: clamp(1.45rem, 2.6vw, 1.9rem); line-height: 1.15; color: var(--text-primary); }
+.ds-page-head__sub { margin: .35rem 0 0; font-size: .92rem; color: var(--text-secondary); max-width: 46rem; }
+
+/* Card */
+.ds-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 1rem; box-shadow: var(--shadow-card); }
+.ds-card--hover { transition: transform .15s ease, box-shadow .15s ease; }
+.ds-card--hover:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+
+/* Media header for post cards (cover image with an icon fallback) */
+.ds-media { position: relative; aspect-ratio: 16 / 9; display: grid; place-items: center; overflow: hidden; background: linear-gradient(135deg, var(--brand-primary-light), var(--surface-muted)); color: var(--brand-primary); font-size: 1.8rem; }
+.ds-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* Status badges — one colour per meaning, used by documents, payments,
+   events and ordinances so a status looks the same on every page. */
+.ds-status { display: inline-flex; align-items: center; gap: .3rem; padding: .18rem .6rem; border-radius: 999px; font-size: .72rem; font-weight: 800; line-height: 1.4; white-space: nowrap; }
+.ds-status::before { content: ''; width: .45rem; height: .45rem; border-radius: 999px; background: currentColor; opacity: .85; }
+.ds-status--neutral  { background: var(--surface-muted);     color: var(--text-secondary); }
+.ds-status--info     { background: var(--brand-primary-light); color: var(--brand-primary); }
+.ds-status--warning  { background: var(--status-warning-bg); color: var(--status-warning); }
+.ds-status--success  { background: var(--status-success-bg); color: var(--status-success); }
+.ds-status--danger   { background: var(--status-danger-bg);  color: var(--status-danger); }
+
+/* Loading skeleton */
+.ds-skeleton { position: relative; overflow: hidden; background: var(--surface-muted); border-radius: .5rem; min-height: 1rem; }
+.ds-skeleton::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); animation: ds-shimmer 1.2s infinite; }
+:root[data-theme="dark"] .ds-skeleton::after { background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent); }
+@keyframes ds-shimmer { 100% { transform: translateX(100%); } }
+
+/* Empty state */
+.ds-empty { padding: 2.5rem 1.25rem; text-align: center; color: var(--text-muted); }
+.ds-empty i { display: block; font-size: 2rem; margin-bottom: .5rem; color: var(--brand-primary); opacity: .7; }
+.ds-empty strong { display: block; color: var(--text-primary); margin-bottom: .2rem; }
+
+/* Alphabet / filter chips */
+.ds-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.ds-chip { display: inline-flex; align-items: center; justify-content: center; min-width: 2.1rem; min-height: 2.1rem; padding: .25rem .65rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-card); color: var(--text-secondary); font-size: .82rem; font-weight: 700; text-decoration: none; }
+.ds-chip:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+.ds-chip.is-active, .ds-chip[aria-current="true"] { background: var(--action-solid); border-color: var(--action-solid); color: var(--text-on-action); }
+
+/* Visible keyboard focus everywhere */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: var(--focus-ring-width, 3px) solid var(--focus-ring); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .ds-card--hover, .ds-card--hover:hover { transition: none; transform: none; }
+    .ds-skeleton::after { animation: none; }
 }
