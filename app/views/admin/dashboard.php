@@ -75,167 +75,222 @@ ob_start();
     </span>
 </div>
 
-<!-- ── Stat cards ─────────────────────────────────────────────────────
-     Each card is one link over its whole surface, and each one opens the
-     list FILTERED to exactly what the card counted. A card reading "1
-     verified resident" that opened the full resident list would have made
-     the reader do the counting a second time.
-
-     One anchor per card rather than a small link inside it: the number is
-     the thing people aim at, and a 12-pixel "Manage" beneath it is a poor
-     target on a phone. That also means no nested anchors — the old inner
-     links are gone, replaced by a hint line that is part of the card.
-
-     All four destinations sit behind the same role:admin,staff as this
-     dashboard, so no card can lead a staff member into a 403. -->
-<div class="row g-3 mb-4">
-
-    <?php
-    $__isStaffView = ($_SESSION['role'] ?? '') === 'staff';
-    $staffKpi      = $staffKpi ?? ['announcements' => 0, 'events' => 0, 'feedback' => 0, 'approvals' => 0];
-    $__card = static fn (string $label, int $value, string $href, string $icon, string $tone, string $hint, string $action, string $delay, bool $urgent = false): array
-        => compact('label', 'value', 'href', 'icon', 'tone', 'hint', 'action', 'delay', 'urgent');
-    $statCards = $__isStaffView ? [
-        $__card('My Announcements', (int) $staffKpi['announcements'], route('admin/announcements'), 'bi-megaphone-fill', 'stat-icon-green', 'Posts you authored', 'Open announcements', ''),
-        $__card('My Events', (int) $staffKpi['events'], route('admin/events'), 'bi-calendar-event-fill', 'stat-icon-blue', 'Events you created', 'Open events', 'fade-up-delay-1'),
-        $__card('Feedback', (int) $staffKpi['feedback'], route('admin/feedback'), 'bi-chat-dots-fill', 'stat-icon-yellow', 'Unread messages from residents', 'Open feedback', 'fade-up-delay-2'),
-        $__card('Pending Approvals', (int) $staffKpi['approvals'], route('admin/documents') . '?status=pending', 'bi-hourglass-split', 'stat-icon-red', 'Document requests waiting', 'Review requests', 'fade-up-delay-3', (int) $staffKpi['approvals'] > 0),
-    ] : [
-        $__card('Total Residents', (int) ($totalResidents ?? $verifiedCount), route('admin/residents'), 'bi-people-fill', 'stat-icon-green', number_format((int) $verifiedCount) . ' verified residents', t('dashboard.stat_verified_cta'), '', (int) $pendingCount > 0),
-        $__card('Active Staff', (int) ($activeStaffCount ?? 0), route('admin/staff'), 'bi-person-badge-fill', 'stat-icon-blue', 'Staff and admin accounts', 'Manage staff', 'fade-up-delay-1'),
-        $__card('Total Announcements', (int) $publishedCount, route('admin/announcements') . '?status=published', 'bi-megaphone-fill', 'stat-icon-yellow', 'Visible to residents now', t('dashboard.stat_published_cta'), 'fade-up-delay-2'),
-        $__card('Active Events', (int) $upcomingCount, route('admin/events') . '?status=upcoming', 'bi-calendar-event-fill', 'stat-icon-red', 'Upcoming on the calendar', t('dashboard.stat_upcoming_cta'), 'fade-up-delay-3'),
-    ];
-    ?>
-
-    <?php foreach ($statCards as $__c):
-        $__urgent = !empty($__c['urgent']); ?>
-    <div class="col-sm-6 col-xl-3 fade-up <?= e($__c['delay']) ?>">
-        <?php /* data-accent keeps the existing gold top-bar treatment on the
-                 pending card — see .stat-card[data-accent="gold"] in admin.css. */ ?>
-        <a class="stat-card stat-card-link<?= $__urgent ? ' stat-card-urgent' : '' ?>"
-           <?= $__urgent ? 'data-accent="gold"' : '' ?>
-           href="<?= e($__c['href']) ?>"
-           aria-label="<?= e($__c['label'] . ': ' . number_format($__c['value']) . '. ' . $__c['action']) ?>">
-            <div class="d-flex align-items-start justify-content-between gap-3">
-                <div style="min-width:0;">
-                    <p class="stat-card-label"><?= e($__c['label']) ?></p>
-                    <p class="stat-card-value"<?= $__urgent ? ' style="color:var(--status-warning);"' : '' ?>>
-                        <span data-countup="<?= $__c['value'] ?>"><?= number_format($__c['value']) ?></span>
-                    </p>
-                    <?php if ($__c['hint'] !== ''): ?>
-                    <p class="mb-0" style="font-size:.73rem;color:var(--text-muted);"><?= e($__c['hint']) ?></p>
-                    <?php endif; ?>
-                    <span class="stat-card-action<?= $__urgent ? ' stat-card-action-urgent' : '' ?>">
-                        <?= e($__c['action']) ?><i class="bi bi-arrow-right-short" aria-hidden="true"></i>
-                    </span>
-                </div>
-                <div class="stat-card-icon <?= e($__c['tone']) ?> flex-shrink-0">
-                    <i class="bi <?= e($__c['icon']) ?>" aria-hidden="true"></i>
-                </div>
-            </div>
-        </a>
-    </div>
-    <?php endforeach; ?>
-
-</div><!-- /stat cards -->
-
+<!-- ── Mockup dashboard: KPI row, modules, activity, coverage ─────────
+     Admin and staff share one shell; what differs is the data. Every
+     number is a live count — the reference image's figures are only
+     placeholders and none of them are reproduced here. -->
 <?php
-/*
- * Priority modules + language dataset coverage (mockup). Coverage figures
- * are real: the share of the distinct words residents meet in visible posts
- * that have an approved voice recording, per language, plus how many Manobo
- * dictionary entries have one. Nothing here is a target or an estimate.
- */
-$__isAdmin  = in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true);
+$__isStaffView = ($_SESSION['role'] ?? '') === 'staff';
+$__isAdmin     = in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true);
+$staffKpi      = $staffKpi ?? ['announcements' => 0, 'events' => 0, 'feedback' => 0, 'approvals' => 0];
+$recentTasks   = $recentTasks ?? [];
+$__kpis = $__isStaffView ? [
+    ['My Announcements', (int) $staffKpi['announcements'], route('admin/announcements'), 'bi-megaphone-fill', 'green'],
+    ['My Events', (int) $staffKpi['events'], route('admin/events'), 'bi-calendar-event-fill', 'orange'],
+    ['Feedback', (int) $staffKpi['feedback'], route('admin/feedback'), 'bi-chat-square-text-fill', 'blue'],
+    ['Pending Approvals', (int) $staffKpi['approvals'], route('admin/documents') . '?status=pending', 'bi-shield-fill-exclamation', 'red'],
+] : [
+    ['Total Residents', (int) ($totalResidents ?? $verifiedCount), route('admin/residents'), 'bi-people-fill', 'green'],
+    ['Active Staff', (int) ($activeStaffCount ?? 0), $__isAdmin ? route('admin/staff') : route('admin'), 'bi-person-fill', 'blue'],
+    ['Total Announcements', (int) $publishedCount, route('admin/announcements') . '?status=published', 'bi-file-earmark-text-fill', 'orange'],
+    ['Active Events', (int) $upcomingCount, route('admin/events') . '?status=upcoming', 'bi-calendar2-week-fill', 'purple'],
+];
 $__langName = ['msm' => 'Manobo', 'en' => 'English', 'fil' => 'Filipino', 'ceb' => 'Bisaya'];
-$__langIcon = ['msm' => 'bi-mic-fill', 'en' => 'bi-globe', 'fil' => 'bi-translate', 'ceb' => 'bi-chat-quote-fill'];
+$__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
 ?>
 <style>
-.dash-module { display:flex; gap:1rem; align-items:flex-start; padding:1.25rem; height:100%; }
-.dash-module__icon { width:52px; height:52px; border-radius:14px; display:grid; place-items:center; font-size:1.5rem; flex-shrink:0; background:var(--brand-primary-light); color:var(--brand-primary); }
-.dash-module h2 { font-size:1.05rem; font-weight:800; margin:0 0 .25rem; color:var(--text-primary); }
-.dash-module p { font-size:.86rem; color:var(--text-secondary); margin:0 0 .85rem; }
-.dash-cov-row { padding:.55rem 0; border-bottom:1px solid var(--tb-border); }
+.dash-kpis { display:grid; gap:1rem; grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:1rem; }
+@media (min-width:1200px) { .dash-kpis { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+.dash-kpi { display:flex; align-items:center; gap:.9rem; padding:1rem 1.1rem; border-radius:14px; background:var(--surface-card); border:1px solid var(--tb-border); box-shadow:var(--shadow-card); text-decoration:none; transition:transform .15s, box-shadow .15s; }
+.dash-kpi:hover { transform:translateY(-2px); box-shadow:var(--shadow-lift); text-decoration:none; }
+.dash-kpi strong { display:block; font-size:1.55rem; font-weight:800; line-height:1.1; color:var(--text-primary); }
+.dash-kpi small { display:block; margin-top:.15rem; font-size:.8rem; color:var(--text-secondary); }
+.dash-ico { width:48px; height:48px; flex-shrink:0; border-radius:12px; display:grid; place-items:center; font-size:1.3rem; }
+.dash-ico--green { background:#e2f2e8; color:#168a4b; } .dash-ico--blue { background:#e3ecfb; color:#2468d8; }
+.dash-ico--orange { background:#fcebd9; color:#d9731a; } .dash-ico--purple { background:#ece6fb; color:#7451d6; }
+.dash-ico--red { background:#f8e1e1; color:#b23a3a; }
+:root[data-theme="dark"] .dash-ico--green { background:rgba(22,138,75,.22); color:#7ee2a8; }
+:root[data-theme="dark"] .dash-ico--blue { background:rgba(36,104,216,.25); color:#9cc0ff; }
+:root[data-theme="dark"] .dash-ico--orange { background:rgba(217,115,26,.25); color:#ffc48a; }
+:root[data-theme="dark"] .dash-ico--purple { background:rgba(116,81,214,.28); color:#c7b6ff; }
+:root[data-theme="dark"] .dash-ico--red { background:rgba(178,58,58,.3); color:#ffaaaa; }
+.dash-module { display:flex; gap:1rem; align-items:flex-start; padding:1.25rem 1.35rem; height:100%; }
+.dash-module__icon { width:56px; height:56px; border-radius:14px; display:grid; place-items:center; font-size:1.6rem; flex-shrink:0; background:var(--brand-primary-light); color:var(--brand-primary); }
+.dash-module h2 { font-size:1.1rem; font-weight:800; margin:0 0 .3rem; color:var(--text-primary); }
+.dash-module p { font-size:.86rem; color:var(--text-secondary); margin:0 0 .9rem; }
+.dash-h { font-size:1rem; font-weight:800; margin:0; color:var(--text-primary); }
+.dash-act { display:flex; align-items:center; gap:.75rem; padding:.6rem 0; border-bottom:1px solid var(--tb-border); }
+.dash-act:last-child { border-bottom:0; }
+.dash-act .dash-ico { width:30px; height:30px; border-radius:999px; font-size:.8rem; }
+.dash-act p { margin:0; flex:1; min-width:0; font-size:.85rem; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dash-act time { font-size:.75rem; color:var(--text-muted); white-space:nowrap; }
+.dash-cov-row { padding:.6rem 0; border-bottom:1px solid var(--tb-border); display:flex; gap:.75rem; align-items:center; }
 .dash-cov-row:last-child { border-bottom:none; }
+.dash-cov-flag { width:34px; height:34px; flex-shrink:0; border-radius:999px; display:grid; place-items:center; font-size:.66rem; font-weight:800; background:var(--brand-primary-light); color:var(--brand-primary); }
 .dash-cov-top { display:flex; justify-content:space-between; gap:.5rem; font-size:.85rem; color:var(--text-primary); }
 .dash-cov-top small { color:var(--text-muted); }
 .dash-cov-bar { height:8px; border-radius:999px; background:var(--surface-muted); overflow:hidden; margin-top:.35rem; }
-.dash-cov-bar > span { display:block; height:100%; border-radius:999px; background:var(--action-solid); }
-.dash-cov-bar > span.is-low { background:var(--motif-gold); }
+.dash-cov-bar > span { display:block; height:100%; border-radius:999px; background:#168a4b; }
+.dash-cov-bar > span.is-low { background:#d9731a; }
+.dash-qa { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }
+.dash-qa a { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.35rem; min-height:86px; padding:.75rem .5rem; border-radius:12px; text-align:center; font-size:.8rem; font-weight:700; text-decoration:none; }
+.dash-qa a i { font-size:1.35rem; }
+.dash-qa .qa-green { background:#e2f2e8; color:#0f6b3a; } .dash-qa .qa-orange { background:#fcebd9; color:#a65410; }
+.dash-qa .qa-blue { background:#e3ecfb; color:#1d55b3; } .dash-qa .qa-gold { background:#f8eed6; color:#8a6412; }
+:root[data-theme="dark"] .dash-qa .qa-green { background:rgba(22,138,75,.22); color:#9ef0c0; }
+:root[data-theme="dark"] .dash-qa .qa-orange { background:rgba(217,115,26,.22); color:#ffcf9e; }
+:root[data-theme="dark"] .dash-qa .qa-blue { background:rgba(36,104,216,.25); color:#b8d2ff; }
+:root[data-theme="dark"] .dash-qa .qa-gold { background:rgba(201,154,55,.22); color:#f3d68f; }
+.dash-task { display:flex; align-items:center; gap:.75rem; padding:.7rem 0; border-bottom:1px solid var(--tb-border); text-decoration:none; }
+.dash-task:last-child { border-bottom:0; }
+.dash-ev { display:flex; gap:.85rem; align-items:flex-start; padding:.6rem 0; border-bottom:1px solid var(--tb-border); text-decoration:none; }
+.dash-ev:last-child { border-bottom:0; }
+.dash-ev__date { width:48px; flex-shrink:0; border-radius:10px; overflow:hidden; text-align:center; border:1px solid var(--tb-border); background:var(--surface-card); }
+.dash-ev__date span { display:block; background:#b23a3a; color:#fff; font-size:.62rem; font-weight:800; letter-spacing:.06em; padding:.1rem 0; }
+.dash-ev__date strong { display:block; font-size:1.2rem; font-weight:800; color:var(--text-primary); padding:.15rem 0; }
+@media (prefers-reduced-motion: reduce) { .dash-kpi { transition:none; } .dash-kpi:hover { transform:none; } }
 </style>
-<div class="row g-3 mb-4">
+
+<div class="dash-kpis fade-up">
+    <?php foreach ($__kpis as [$__l, $__v, $__h, $__i, $__t]): ?>
+        <a class="dash-kpi" href="<?= e($__h) ?>" aria-label="<?= e($__l . ': ' . number_format($__v)) ?>">
+            <span class="dash-ico dash-ico--<?= $__t ?>" aria-hidden="true"><i class="bi <?= $__i ?>"></i></span>
+            <span><strong data-countup="<?= $__v ?>"><?= number_format($__v) ?></strong><small><?= e($__l) ?></small></span>
+        </a>
+    <?php endforeach; ?>
+</div>
+
+<?php if (!$__isStaffView): ?>
+<div class="row g-3 mb-3">
     <?php if ($__isAdmin): ?>
-    <div class="col-12 col-md-6 col-xl-4">
+    <div class="col-12 col-lg-6">
         <div class="admin-card dash-module">
             <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-soundwave"></i></div>
             <div>
                 <h2>Voice Training &amp; AI Dataset Hub</h2>
-                <p>Record and approve native pronunciations for Manobo, Filipino, English and Bisaya. Residents hear only approved recordings.</p>
+                <p>Train native voice pronunciations and manage datasets for Manobo, Filipino, English and Bisaya. Residents hear only approved recordings.</p>
                 <a href="<?= e(route('admin/voice-training')) ?>" class="btn-barangay">Manage Voice Dataset <i class="bi bi-arrow-right ms-1"></i></a>
             </div>
         </div>
     </div>
     <?php endif; ?>
-    <div class="col-12 col-md-6 col-xl-4">
+    <div class="col-12 col-lg-<?= $__isAdmin ? '6' : '12' ?>">
         <div class="admin-card dash-module">
             <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-translate"></i></div>
             <div>
                 <h2>Translation Management</h2>
-                <p>Review translation health for every post, retry failures and rebuild Manobo translations with the current dictionaries.</p>
+                <p>Manage translations for all content types. New posts are auto-translated; review failures and rebuild Manobo with the current dictionaries.</p>
                 <a href="<?= e(route('admin/translation-health')) ?>" class="btn-barangay">Manage Translations <i class="bi bi-arrow-right ms-1"></i></a>
             </div>
         </div>
     </div>
-    <div class="col-12 col-xl-4">
-        <div class="admin-card h-100" style="padding:1.25rem;">
-            <h2 class="admin-card-title mb-1" style="font-size:1rem;">Language Dataset Coverage</h2>
-            <p class="mb-2" style="font-size:.78rem;color:var(--text-muted);">Words used in visible posts that have an approved recording.</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12 col-lg-7">
+        <div class="admin-card h-100" style="padding:1.15rem 1.25rem;">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h2 class="dash-h">System Activity</h2>
+                <a href="<?= e(route('admin/reports')) ?>" style="font-size:.78rem;font-weight:700;color:var(--brand-primary);">View all <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <?php if (empty($recentActivity)): ?>
+                <p class="mb-0 mt-2" style="font-size:.85rem;color:var(--text-muted);"><?= e(t('dashboard.no_activity')) ?></p>
+            <?php else: foreach (array_slice($recentActivity, 0, 6) as $__log):
+                [$__ic] = $actionIcon($__log['action'] ?? '');
+                $__tone = str_starts_with((string) $__log['action'], 'announcement') ? 'green'
+                    : (str_starts_with((string) $__log['action'], 'event') ? 'orange'
+                    : (str_starts_with((string) $__log['action'], 'voice') ? 'purple' : 'blue'));
+                $__desc = $__log['description'] ?: ucwords(str_replace(['.', '_'], [': ', ' '], (string) ($__log['action'] ?? 'system')));
+            ?>
+                <div class="dash-act">
+                    <span class="dash-ico dash-ico--<?= $__tone ?>" aria-hidden="true"><i class="bi <?= $__ic ?>"></i></span>
+                    <p title="<?= e($__desc) ?>"><?= e($__desc) ?></p>
+                    <time datetime="<?= e((string) $__log['created_at']) ?>"><?= e(relative_time((string) $__log['created_at'])) ?></time>
+                </div>
+            <?php endforeach; endif; ?>
+        </div>
+    </div>
+    <div class="col-12 col-lg-5">
+        <div class="admin-card h-100" style="padding:1.15rem 1.25rem;">
+            <h2 class="dash-h mb-1">Language Dataset Coverage</h2>
+            <p class="mb-1" style="font-size:.76rem;color:var(--text-muted);">Words used in visible posts that have an approved recording.</p>
             <?php foreach (($datasetCoverage ?? []) as $__lc => $__r):
                 $__pct = (float) ($__r['usage_coverage'] ?? 0); ?>
                 <div class="dash-cov-row">
-                    <div class="dash-cov-top">
-                        <span><i class="bi <?= $__langIcon[$__lc] ?? 'bi-dot' ?> me-1" aria-hidden="true"></i><?= e($__langName[$__lc] ?? $__lc) ?></span>
-                        <span><strong><?= number_format($__pct, 0) ?>%</strong> <small><?= (int) $__r['used_recorded'] ?> / <?= (int) $__r['used_words'] ?></small></span>
+                    <span class="dash-cov-flag" aria-hidden="true"><?= e($__langFlag[$__lc] ?? strtoupper($__lc)) ?></span>
+                    <div style="flex:1;min-width:0;">
+                        <div class="dash-cov-top">
+                            <span><strong><?= e($__langName[$__lc] ?? $__lc) ?> Words</strong><br><small><?= number_format((int) $__r['used_recorded']) ?> / <?= number_format((int) $__r['used_words']) ?></small></span>
+                            <strong><?= number_format($__pct, 0) ?>%</strong>
+                        </div>
+                        <div class="dash-cov-bar" role="progressbar" aria-label="<?= e($__langName[$__lc] ?? $__lc) ?> coverage" aria-valuenow="<?= $__pct ?>" aria-valuemin="0" aria-valuemax="100"><span class="<?= $__pct < 50 ? 'is-low' : '' ?>" style="width:<?= max(0, min(100, $__pct)) ?>%"></span></div>
                     </div>
-                    <div class="dash-cov-bar" role="progressbar" aria-label="<?= e($__langName[$__lc] ?? $__lc) ?> coverage" aria-valuenow="<?= $__pct ?>" aria-valuemin="0" aria-valuemax="100"><span class="<?= $__pct < 50 ? 'is-low' : '' ?>" style="width:<?= $__pct ?>%"></span></div>
                 </div>
             <?php endforeach; ?>
             <?php if (!empty($manoboDictionary['total_dictionary_words'])): ?>
-                <p class="mb-0 mt-2" style="font-size:.78rem;color:var(--text-muted);">
-                    Manobo dictionary: <?= (int) $manoboDictionary['words_with_audio'] ?> of <?= (int) $manoboDictionary['total_dictionary_words'] ?> entries recorded.
-                </p>
+                <p class="mb-0 mt-2" style="font-size:.76rem;color:var(--text-muted);">Manobo dictionary: <?= (int) $manoboDictionary['words_with_audio'] ?> of <?= (int) $manoboDictionary['total_dictionary_words'] ?> entries recorded.</p>
             <?php endif; ?>
         </div>
     </div>
 </div>
-
-<?php if (($_SESSION['role'] ?? '') === 'staff'):
+<?php else:
     $__taskPill = static function (string $st): array {
         if ($st === 'pending') { return ['Pending', 'warning']; }
         if (in_array($st, ['released', 'completed', 'claimed'], true)) { return ['Completed', 'success']; }
         if (in_array($st, ['rejected', 'cancelled'], true)) { return [ucfirst($st), 'neutral']; }
         return ['In Progress', 'info'];
     };
+    $__upcoming = array_slice(array_merge($todayEvents ?? [], $weekEvents ?? []), 0, 3);
 ?>
-<div class="admin-card mb-4 fade-up">
-    <div class="admin-card-header d-flex justify-content-between align-items-center">
-        <h2 class="admin-card-title mb-0" style="font-size:1rem;"><i class="bi bi-clipboard-check me-1" style="color:var(--brand-primary);"></i>Recent Tasks</h2>
-        <a href="<?= e(route('admin/documents')) ?>" style="font-size:.8rem;font-weight:700;color:var(--brand-primary);">View all <i class="bi bi-arrow-right"></i></a>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-lg-8">
+        <div class="admin-card h-100" style="padding:1.15rem 1.25rem;">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h2 class="dash-h">Recent Tasks</h2>
+                <a href="<?= e(route('admin/documents')) ?>" style="font-size:.78rem;font-weight:700;color:var(--brand-primary);">View all <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <?php if (!$recentTasks): ?>
+                <p class="mb-0 mt-2" style="font-size:.85rem;color:var(--text-muted);">No document requests yet.</p>
+            <?php else: foreach ($recentTasks as $__t): [$__pl, $__tone] = $__taskPill((string) $__t['status']); ?>
+                <a class="dash-task" href="<?= e(route('admin/documents') . '?search=' . rawurlencode((string) $__t['reference_no'])) ?>">
+                    <span class="dash-ico dash-ico--blue" style="width:36px;height:36px;border-radius:999px;font-size:.9rem;" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
+                    <span class="flex-grow-1" style="min-width:0;">
+                        <span class="d-block text-truncate" style="font-size:.86rem;font-weight:700;color:var(--text-primary);"><?= e(\App\Models\DocumentRequest::label((string) $__t['document_type'])) ?></span>
+                        <span class="d-block text-truncate" style="font-size:.75rem;color:var(--text-muted);"><?= e((string) ($__t['full_name'] ?? '')) ?> · <?= e((string) $__t['reference_no']) ?> · <?= e(relative_time((string) $__t['requested_at'])) ?></span>
+                    </span>
+                    <span class="ds-status ds-status--<?= $__tone ?>"><?= e($__pl) ?></span>
+                </a>
+            <?php endforeach; endif; ?>
+        </div>
     </div>
-    <div class="admin-card-body">
-        <?php if (empty($recentTasks)): ?>
-            <p class="mb-0" style="font-size:.86rem;color:var(--text-muted);">No document requests yet.</p>
-        <?php else: foreach ($recentTasks as $__t): [$__pl, $__tone] = $__taskPill((string) $__t['status']); ?>
-            <a href="<?= e(route('admin/documents') . '?search=' . rawurlencode((string) $__t['reference_no'])) ?>" class="d-flex align-items-center gap-3 text-decoration-none" style="padding:.6rem 0;border-bottom:1px solid var(--tb-border);">
-                <i class="bi bi-file-earmark-text" style="color:var(--brand-primary);"></i>
-                <span class="flex-grow-1" style="min-width:0;">
-                    <span class="d-block text-truncate" style="font-size:.86rem;font-weight:600;color:var(--text-primary);"><?= e(\App\Models\DocumentRequest::label((string) $__t['document_type'])) ?> — <?= e((string) ($__t['full_name'] ?? '')) ?></span>
-                    <span class="d-block" style="font-size:.74rem;color:var(--text-muted);"><?= e((string) $__t['reference_no']) ?> · <?= e(relative_time((string) $__t['requested_at'])) ?></span>
-                </span>
-                <span class="ds-status ds-status--<?= $__tone ?>"><?= e($__pl) ?></span>
-            </a>
-        <?php endforeach; endif; ?>
+    <div class="col-12 col-lg-4 d-flex flex-column gap-3">
+        <div class="admin-card" style="padding:1.15rem 1.25rem;">
+            <h2 class="dash-h mb-2">Quick Actions</h2>
+            <div class="dash-qa">
+                <a class="qa-green" href="<?= e(route('admin/announcements/create')) ?>"><i class="bi bi-megaphone-fill" aria-hidden="true"></i>Create Announcement</a>
+                <a class="qa-orange" href="<?= e(route('admin/events/create')) ?>"><i class="bi bi-calendar-plus-fill" aria-hidden="true"></i>Create Event</a>
+                <a class="qa-blue" href="<?= e(route('admin/residents')) ?>"><i class="bi bi-people-fill" aria-hidden="true"></i>Manage Residents</a>
+                <a class="qa-gold" href="<?= e(route('admin/translation-health')) ?>"><i class="bi bi-translate" aria-hidden="true"></i>Review Translations</a>
+            </div>
+        </div>
+        <div class="admin-card" style="padding:1.15rem 1.25rem;">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h2 class="dash-h">Upcoming Activities</h2>
+                <a href="<?= e(route('admin/events')) ?>" style="font-size:.78rem;font-weight:700;color:var(--brand-primary);">View all <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <?php if (!$__upcoming): ?>
+                <p class="mb-0 mt-2" style="font-size:.85rem;color:var(--text-muted);">Nothing scheduled this week.</p>
+            <?php else: foreach ($__upcoming as $__ev): $__ts = strtotime((string) $__ev['event_date']); ?>
+                <a class="dash-ev" href="<?= e(route('admin/events/' . (int) $__ev['id'] . '/edit')) ?>">
+                    <span class="dash-ev__date" aria-hidden="true"><span><?= strtoupper(date('M', $__ts)) ?></span><strong><?= date('j', $__ts) ?></strong></span>
+                    <span style="min-width:0;">
+                        <span class="d-block" style="font-size:.86rem;font-weight:700;color:var(--text-primary);"><?= e((string) $__ev['title']) ?></span>
+                        <span class="d-block" style="font-size:.75rem;color:var(--text-muted);"><i class="bi bi-clock me-1"></i><?= date('g:i A', $__ts) ?><?= !empty($__ev['end_date']) ? ' – ' . date('g:i A', strtotime((string) $__ev['end_date'])) : '' ?></span>
+                        <?php if (!empty($__ev['venue'])): ?><span class="d-block" style="font-size:.75rem;color:var(--text-muted);"><i class="bi bi-geo-alt me-1"></i><?= e((string) $__ev['venue']) ?></span><?php endif; ?>
+                    </span>
+                </a>
+            <?php endforeach; endif; ?>
+        </div>
     </div>
 </div>
 <?php endif; ?>
@@ -292,7 +347,7 @@ $weekEvents  = $weekEvents  ?? [];
         </div>
         <?php endif; ?>
 
-        <?php if ($todayEvents || $weekEvents): ?>
+        <?php if (($todayEvents || $weekEvents) && empty($__isStaffView)): ?>
         <!-- What staff have to be ready for. "Upcoming: 3" on a stat card does
              not say whether that means tonight or next March. -->
         <div class="mt-3 pt-3" style="border-top:1px solid var(--tb-border);">
@@ -530,70 +585,12 @@ $advisoryOn    = $advisoryText !== '';
 
 </div><!-- /charts row -->
 
+<?php if (!$__isStaffView): ?>
 <!-- ── Activity feed + Quick actions ─────────────────────────────── -->
 <div class="row g-3">
 
-    <!-- Recent activity feed -->
-    <div class="col-lg-8 fade-up">
-        <div class="admin-card">
-            <div class="admin-card-header">
-                <div>
-                    <h2 class="admin-card-title mb-0">
-                        <i class="bi bi-activity me-2" style="color:var(--brand-primary);"></i>
-                        <?= e(t('dashboard.recent_activity')) ?>
-                        <span class="live-dot ms-2" title="Live"></span>
-                    </h2>
-                    <p class="text-muted mb-0 mt-1" style="font-size:.78rem;">
-                        <?= e(t('dashboard.recent_activity_desc')) ?>
-                    </p>
-                </div>
-                <span class="badge text-bg-light border" style="font-size:.7rem;">
-                    <?= count($recentActivity) ?> <?= e(t('dashboard.entries_suffix')) ?>
-                </span>
-            </div>
-
-            <?php if (empty($recentActivity)): ?>
-            <div class="admin-card-body text-center py-5">
-                <i class="bi bi-clock-history" style="font-size:2.5rem;color:var(--border);"></i>
-                <p class="mt-3 mb-0 text-muted" style="font-size:.855rem;">
-                    <?= e(t('dashboard.no_activity')) ?>
-                </p>
-            </div>
-            <?php else: ?>
-            <ul class="list-unstyled mb-0">
-                <?php foreach ($recentActivity as $log):
-                    [$iconClass, $iconBg, $iconColor] = $actionIcon($log['action'] ?? '');
-                    $description = $log['description']
-                        ?: ucwords(str_replace(['.', '_'], [': ', ' '], $log['action'] ?? 'system'));
-                    $userName    = $log['user_name'] ?? t('dashboard.system_user');
-                    $timeStr     = $log['created_at']
-                        ? date('M j, Y · g:i A', strtotime($log['created_at']))
-                        : '—';
-                ?>
-                <li class="activity-item">
-                    <div class="activity-icon"
-                         style="background:<?= $iconBg ?>;color:<?= $iconColor ?>;">
-                        <i class="bi <?= $iconClass ?>"></i>
-                    </div>
-                    <div style="min-width:0;flex:1;">
-                        <p class="activity-text"><?= e($description) ?></p>
-                        <p class="activity-meta">
-                            <i class="bi bi-person" style="font-size:.65rem;"></i>
-                            <?= e($userName) ?>
-                            &nbsp;&middot;&nbsp;
-                            <i class="bi bi-clock" style="font-size:.65rem;"></i>
-                            <?= e($timeStr) ?>
-                        </p>
-                    </div>
-                </li>
-                <?php endforeach; ?>
-            </ul>
-            <?php endif; ?>
-        </div>
-    </div>
-
     <!-- Quick actions + system summary -->
-    <div class="col-lg-4 d-flex flex-column gap-3 fade-up fade-up-delay-1">
+    <div class="col-12 d-grid gap-3 fade-up" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));">
 
         <!-- Quick actions card -->
         <div class="admin-card">
@@ -716,6 +713,8 @@ $advisoryOn    = $advisoryText !== '';
     </div><!-- /right column -->
 
 </div><!-- /bottom row -->
+
+<?php endif; ?>
 
 <!-- ── Chart scripts ─────────────────────────────────────────────── -->
 <script>

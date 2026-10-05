@@ -25,10 +25,6 @@ $flashOk  = flash('success');
             --darker: #10241a;
             --gold:   #7a5c11;   /* gold-ink: safe for white text/icons on it */
             --radius: .75rem;
-            --text-primary: #1a1512;
-            --text-secondary: #4a3f38;
-            --text-muted: #6b5d52;
-            --border: #d1d5db;
         }
 
         *, *::before, *::after { box-sizing: border-box; }
@@ -310,6 +306,9 @@ $flashOk  = flash('success');
             .reg-right { padding: 1.75rem 1.5rem; }
         }
     </style>
+    <script>(function(){try{var t=localStorage.getItem('bg-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+    <link rel="stylesheet" href="<?= e(asset_v('assets/css/tokens.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset_v('assets/css/theme.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset_v('assets/css/auth.css')) ?>">
 </head>
 <body class="auth-page">

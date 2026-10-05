@@ -1,5 +1,8 @@
 
-FROM php:8.2-apache
+# Official PHP image via the AWS ECR Public mirror of Docker Hub's library.
+# Same image, but builds no longer depend on Docker Hub's anonymous pull
+# rate limit, which shared build hosts hit often ("toomanyrequests").
+FROM public.ecr.aws/docker/library/php:8.2-apache
 
 # Install required system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -27,8 +30,8 @@ COPY docker/php.ini $PHP_INI_DIR/conf.d/custom.ini
 # Copy Apache VirtualHost configuration
 COPY docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
-# Install Composer from official image
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Install Composer (official installer, Composer 2)
+RUN curl -sS https://getcomposer.org/installer | php -- --2 --install-dir=/usr/bin --filename=composer
 
 # Set working directory
 WORKDIR /var/www/html

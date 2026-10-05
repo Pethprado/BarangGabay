@@ -1129,3 +1129,46 @@ table.table tbody tr:hover td {
 
 /* Admin sidebar: "Admin Panel" / "Staff Panel" under the logo (mockup). */
 .sidebar-panel-label { margin: .35rem 0 0; font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.62); }
+
+/* Dark mode: header icon buttons and resident quick-card icons. */
+:root[data-theme="dark"] .bell-btn { background: rgba(255,255,255,.08); color: #e6efe9; border: 1px solid rgba(255,255,255,.12); }
+:root[data-theme="dark"] .bell-btn:hover { background: rgba(255,255,255,.14); }
+:root[data-theme="dark"] .rd-quick__icon { background: rgba(111,207,151,.16); color: #7ee2a8; }
+:root[data-theme="dark"] .rd-quick__icon--orange { background: rgba(255,140,60,.16); color: #ffab6e; }
+:root[data-theme="dark"] .rd-quick__icon--blue { background: rgba(96,150,255,.18); color: #a9c6ff; }
+:root[data-theme="dark"] .rd-quick__icon--red { background: rgba(255,110,100,.16); color: #ff9b91; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .bell-btn { background: rgba(255,255,255,.08); color: #e6efe9; border: 1px solid rgba(255,255,255,.12); }
+    :root:not([data-theme="light"]) .rd-quick__icon { background: rgba(111,207,151,.16); color: #7ee2a8; }
+}
+:root[data-theme="dark"] .pending-banner { background: #2f2611; border-color: #6b5420; color: #f6e2b0; }
+:root[data-theme="dark"] .pending-banner * { color: inherit; }
+:root[data-theme="dark"] .pending-banner .pending-banner-link { color: #ffd677; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .pending-banner { background: #2f2611; border-color: #6b5420; color: #f6e2b0; }
+    :root:not([data-theme="light"]) .pending-banner .pending-banner-link { color: #ffd677; }
+}
+
+/* Dark mode: light Tailwind tints and inline cream cards that had no dark
+   counterpart (ordinance cards, profile notes, evacuation call buttons). */
+:root[data-theme="dark"] .bg-emerald-50, :root[data-theme="dark"] .bg-emerald-50\/50, :root[data-theme="dark"] .bg-green-50, :root[data-theme="dark"] .bg-emerald-100, :root[data-theme="dark"] .bg-green-100, :root[data-theme="dark"] .bg-teal-50 { background-color: rgba(111,207,151,.10) !important; }
+:root[data-theme="dark"] .border-emerald-200, :root[data-theme="dark"] .border-green-200, :root[data-theme="dark"] .border-emerald-100, :root[data-theme="dark"] .border-green-100 { border-color: rgba(111,207,151,.32) !important; }
+:root[data-theme="dark"] .text-emerald-950, :root[data-theme="dark"] .text-emerald-900, :root[data-theme="dark"] .text-green-900, :root[data-theme="dark"] .text-green-950 { color: #e6f6ec !important; }
+:root[data-theme="dark"] .text-emerald-800, :root[data-theme="dark"] .text-emerald-700, :root[data-theme="dark"] .text-green-800, :root[data-theme="dark"] .text-green-700, :root[data-theme="dark"] .text-emerald-600, :root[data-theme="dark"] .text-green-600 { color: #a9e8c4 !important; }
+:root[data-theme="dark"] .bg-green-600, :root[data-theme="dark"] .bg-emerald-600, :root[data-theme="dark"] .bg-green-500, :root[data-theme="dark"] .bg-emerald-500 { background-color: #17603a !important; color: #fff !important; }
+:root[data-theme="dark"] .hover\:bg-green-700:hover, :root[data-theme="dark"] .hover\:bg-emerald-700:hover { background-color: #1e7a4a !important; }
+:root[data-theme="dark"] [style*="#fffef7"], :root[data-theme="dark"] [style*="#fef9ec"] { background: var(--surface-card) !important; border-color: var(--border) !important; }
+:root[data-theme="dark"] [style*="background:#fff;"], :root[data-theme="dark"] [style*="background: #fff;"], :root[data-theme="dark"] [style*="background:#ffffff"] { background: var(--surface-card) !important; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .bg-emerald-50, :root:not([data-theme="light"]) .bg-emerald-50\/50, :root:not([data-theme="light"]) .bg-green-50, :root:not([data-theme="light"]) .bg-emerald-100, :root:not([data-theme="light"]) .bg-green-100, :root:not([data-theme="light"]) .bg-teal-50 { background-color: rgba(111,207,151,.10) !important; }
+    :root:not([data-theme="light"]) .border-emerald-200, :root:not([data-theme="light"]) .border-green-200, :root:not([data-theme="light"]) .border-emerald-100, :root:not([data-theme="light"]) .border-green-100 { border-color: rgba(111,207,151,.32) !important; }
+    :root:not([data-theme="light"]) .text-emerald-950, :root:not([data-theme="light"]) .text-emerald-900, :root:not([data-theme="light"]) .text-green-900, :root:not([data-theme="light"]) .text-green-950 { color: #e6f6ec !important; }
+    :root:not([data-theme="light"]) .text-emerald-800, :root:not([data-theme="light"]) .text-emerald-700, :root:not([data-theme="light"]) .text-green-800, :root:not([data-theme="light"]) .text-green-700, :root:not([data-theme="light"]) .text-emerald-600, :root:not([data-theme="light"]) .text-green-600 { color: #a9e8c4 !important; }
+    :root:not([data-theme="light"]) .bg-green-600, :root:not([data-theme="light"]) .bg-emerald-600, :root:not([data-theme="light"]) .bg-green-500, :root:not([data-theme="light"]) .bg-emerald-500 { background-color: #17603a !important; color: #fff !important; }
+    :root:not([data-theme="light"]) .hover\:bg-green-700:hover, :root:not([data-theme="light"]) .hover\:bg-emerald-700:hover { background-color: #1e7a4a !important; }
+    :root:not([data-theme="light"]) [style*="#fffef7"], :root:not([data-theme="light"]) [style*="#fef9ec"] { background: var(--surface-card) !important; border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) [style*="background:#fff;"], :root:not([data-theme="light"]) [style*="background: #fff;"], :root:not([data-theme="light"]) [style*="background:#ffffff"] { background: var(--surface-card) !important; }
+}
+/* Dark mode: inline light-grey upload boxes in the admin forms. */
+:root[data-theme="dark"] [style*="background:#f8f9fa"], :root[data-theme="dark"] [style*="background: #f8f9fa"] { background: var(--surface-muted) !important; color: var(--text-secondary) !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) [style*="background:#f8f9fa"] { background: var(--surface-muted) !important; color: var(--text-secondary) !important; } }

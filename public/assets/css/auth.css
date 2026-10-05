@@ -80,3 +80,34 @@
 .auth-grid { display: grid; gap: 0 1rem; }
 @media (min-width: 560px) { .auth-grid--2 { grid-template-columns: 1fr 1fr; } }
 .auth-page :focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+/* Dark mode: the register form still carries some light-only inline colours from
+   before the redesign; these keep every label, field and note readable. */
+:root[data-theme="dark"] .auth-page { --green: #6fcf97; --green-hover: #8fe0b0; }
+:root[data-theme="dark"] .auth-page .form-label, :root[data-theme="dark"] .auth-page .form-check-label, :root[data-theme="dark"] .auth-page [style*="color:#374151"] { color: var(--text-primary) !important; }
+:root[data-theme="dark"] .auth-page .form-control, :root[data-theme="dark"] .auth-page .form-select, :root[data-theme="dark"] .auth-page .auth-ig .toggle-pw, :root[data-theme="dark"] .auth-page .file-zone { background: var(--surface-input) !important; border-color: var(--border-strong) !important; color: var(--text-primary) !important; }
+:root[data-theme="dark"] .auth-page .form-control::placeholder { color: var(--text-muted) !important; }
+:root[data-theme="dark"] .auth-page .auth-ig .input-group-text { background: var(--surface-muted) !important; border-color: var(--border-strong) !important; color: var(--text-secondary) !important; }
+:root[data-theme="dark"] .auth-page .strength-bar-track { background: var(--surface-muted) !important; }
+:root[data-theme="dark"] .auth-page [style*="background:#f"] { background: var(--surface-muted) !important; border-color: var(--border) !important; }
+:root[data-theme="dark"] .auth-page [style*="color:#15803d"], :root[data-theme="dark"] .auth-page [style*="color:#166534"] { color: #9ee6bd !important; }
+:root[data-theme="dark"] .auth-page [style*="color:#9ca3af"] { color: var(--text-muted) !important; }
+:root[data-theme="dark"] .auth-page .text-muted, :root[data-theme="dark"] .auth-page .form-text { color: var(--text-muted) !important; }
+:root[data-theme="dark"] .auth-page .alert-info, :root[data-theme="dark"] .auth-page .alert-success, :root[data-theme="dark"] .auth-page .alert-warning, :root[data-theme="dark"] .auth-page .alert-danger { background: var(--surface-muted) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }
+:root[data-theme="dark"] .auth-page .form-select { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23cfe3d6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important; background-repeat: no-repeat !important; background-position: right .75rem center !important; background-size: 16px 12px !important; }
+:root[data-theme="dark"] .auth-page input[type="date"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .auth-page { --green: #6fcf97; --green-hover: #8fe0b0; }
+    :root:not([data-theme="light"]) .auth-page .form-label, :root:not([data-theme="light"]) .auth-page .form-check-label, :root:not([data-theme="light"]) .auth-page [style*="color:#374151"] { color: var(--text-primary) !important; }
+    :root:not([data-theme="light"]) .auth-page .form-control, :root:not([data-theme="light"]) .auth-page .form-select, :root:not([data-theme="light"]) .auth-page .auth-ig .toggle-pw, :root:not([data-theme="light"]) .auth-page .file-zone { background: var(--surface-input) !important; border-color: var(--border-strong) !important; color: var(--text-primary) !important; }
+    :root:not([data-theme="light"]) .auth-page .form-control::placeholder { color: var(--text-muted) !important; }
+    :root:not([data-theme="light"]) .auth-page .auth-ig .input-group-text { background: var(--surface-muted) !important; border-color: var(--border-strong) !important; color: var(--text-secondary) !important; }
+    :root:not([data-theme="light"]) .auth-page .strength-bar-track { background: var(--surface-muted) !important; }
+    :root:not([data-theme="light"]) .auth-page [style*="background:#f"] { background: var(--surface-muted) !important; border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) .auth-page [style*="color:#15803d"], :root:not([data-theme="light"]) .auth-page [style*="color:#166534"] { color: #9ee6bd !important; }
+    :root:not([data-theme="light"]) .auth-page [style*="color:#9ca3af"] { color: var(--text-muted) !important; }
+    :root:not([data-theme="light"]) .auth-page .text-muted, :root:not([data-theme="light"]) .auth-page .form-text { color: var(--text-muted) !important; }
+    :root:not([data-theme="light"]) .auth-page .alert-info, :root:not([data-theme="light"]) .auth-page .alert-success, :root:not([data-theme="light"]) .auth-page .alert-warning, :root:not([data-theme="light"]) .auth-page .alert-danger { background: var(--surface-muted) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) .auth-page .form-select { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23cfe3d6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important; background-repeat: no-repeat !important; background-position: right .75rem center !important; background-size: 16px 12px !important; }
+    :root:not([data-theme="light"]) .auth-page input[type="date"] { color-scheme: dark; }
+}

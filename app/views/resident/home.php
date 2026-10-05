@@ -113,6 +113,37 @@ ob_start();
 .rd-tags span { padding: .05rem .45rem; border-radius: .35rem; font-size: .66rem; font-weight: 800; background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); }
 /* Alert cards in the mockup's red. */
 .urgent-banner { border-radius: 1rem; overflow: hidden; }
+.rd-h2 { margin: 0 0 .75rem; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+.rd-link { font-size: .85rem; font-weight: 700; color: var(--action-solid); text-decoration: none; }
+:root[data-theme="dark"] .rd-link { color: #7ee2a8; }
+.rd-alerts .urgent-banner { background: #fdecea !important; border: 1px solid #f1c4bf; box-shadow: none; color: #5c1a16; }
+.rd-alerts .urgent-banner-bar { display: none; }
+.rd-alerts .urgent-banner-icon { background: transparent !important; color: #c0392b !important; font-size: 1.9rem; }
+.rd-alerts .urgent-banner-eyebrow { color: #b23a3a !important; }
+.rd-alerts .urgent-banner-title { color: #2b0f0d !important; }
+.rd-alerts .urgent-banner-body { color: #6b2a25 !important; }
+.rd-alerts .urgent-banner-cta { background: #b23a3a !important; color: #fff !important; border: 0; }
+.rd-alerts .urgent-dismiss { color: #8a2c26 !important; background: transparent !important; }
+:root[data-theme="dark"] .rd-alerts .urgent-banner { background: #3b1a19 !important; border-color: #6e2c28; color: #ffdcd8; }
+:root[data-theme="dark"] .rd-alerts .urgent-banner-icon, :root[data-theme="dark"] .rd-alerts .urgent-banner-eyebrow { color: #ff9b91 !important; }
+:root[data-theme="dark"] .rd-alerts .urgent-banner-title { color: #fff1ef !important; }
+:root[data-theme="dark"] .rd-alerts .urgent-banner-body { color: #f6c9c4 !important; }
+:root[data-theme="dark"] .rd-alerts .urgent-dismiss { color: #ffc7c1 !important; }
+@media (min-width: 768px) {
+    .rd-alerts .urgent-banner > .flex { align-items: center; }
+    .rd-alerts .urgent-banner > .flex > .min-w-0 { display: grid; grid-template-columns: 1fr auto; column-gap: 1rem; align-items: center; }
+    .rd-alerts .urgent-banner > .flex > .min-w-0 > * { grid-column: 1; }
+    .rd-alerts .urgent-banner-cta { grid-column: 2 !important; grid-row: 1 / span 3; margin-top: 0 !important; }
+}
+/* Language & Voice: joined segmented control, Listen on the right. */
+@media (min-width: 768px) { .rd-lang { grid-template-columns: auto 1fr; } .rd-lang__voice { display: flex; flex-direction: column; align-items: flex-end; text-align: right; } }
+.rd-lang__opts { gap: 0 !important; padding: 4px; border-radius: .9rem; background: var(--surface-muted); border: 1px solid var(--border); width: max-content; }
+.rd-lang__opt { border: 0 !important; background: transparent !important; min-width: 92px; }
+.rd-lang__opt.is-active { background: #0b4d2c !important; color: #fff !important; box-shadow: var(--shadow-card); }
+.rd-lang__opt.is-active strong, .rd-lang__opt.is-active span { color: #fff !important; }
+@media (min-width: 768px) { .rd-posts > .rd-post:first-child .rd-post__img { width: 240px !important; flex-shrink: 0; } }
+.rd-quick__item { align-items: flex-start !important; text-align: left !important; }
+.rd-quick__item:first-child { border-color: var(--action-solid); }
 .rd-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 1rem; box-shadow: var(--shadow-card); }
 .rd-lang { display: grid; gap: 1rem; padding: 1rem; align-items: center; }
 @media (min-width: 768px) { .rd-lang { grid-template-columns: auto 1fr; } }
@@ -126,7 +157,7 @@ ob_start();
 .rd-btn:hover { background: var(--action-solid-hover); color: var(--text-on-action); }
 .rd-post { overflow: hidden; display: flex; flex-direction: column; transition: transform .15s ease, box-shadow .15s ease; }
 .rd-post:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
-.rd-post__img { aspect-ratio: 16 / 9; background-color: var(--surface-muted); background-size: cover; background-position: center; }
+.rd-post__img { aspect-ratio: 2 / 1; background-color: var(--surface-muted); background-size: cover; background-position: center; }
 .rd-post__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .rd-post__body { padding: .9rem 1rem 1rem; display: flex; flex-direction: column; gap: .4rem; flex: 1; }
 .rd-badge { display: inline-flex; align-items: center; gap: .25rem; padding: .1rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 800; }
@@ -210,7 +241,7 @@ ob_start();
      water interruption. Dismissal is per-announcement and per-device only.
      Rendered visible by default so a resident with JS disabled still sees it. -->
 <?php if (!empty($urgentAnnouncements)): ?>
-<section class="mb-6 space-y-3" aria-label="<?= e(t('resident_home.urgent_label')) ?>">
+<section class="mb-6 space-y-3 rd-alerts" aria-label="<?= e(t('resident_home.urgent_label')) ?>">
     <?php foreach ($urgentAnnouncements as $u): ?>
     <article class="urgent-banner" role="alert" data-urgent-id="<?= (int) $u['id'] ?>">
         <div class="urgent-banner-bar" aria-hidden="true"></div>
@@ -304,7 +335,7 @@ ob_start();
      barangay's approved recordings. -->
 <?php $curLocale = current_locale(); ?>
 <section class="fade-up mb-8" aria-labelledby="rd-lang-title">
-    <h2 id="rd-lang-title" class="mb-3 text-sm font-bold uppercase tracking-widest text-slate-500"><?= e(t('resident_home.lang_voice_title')) ?></h2>
+    <h2 id="rd-lang-title" class="rd-h2"><?= e(t('resident_home.lang_voice_title')) ?></h2>
     <div class="rd-card rd-lang">
         <div class="rd-lang__opts" role="group" aria-label="<?= e(t('resident_home.lang_voice_title')) ?>">
             <?php foreach (['en' => ['EN', 'English'], 'fil' => ['FIL', 'Filipino'], 'msm' => ['MN', 'Manobo']] as $lc => [$lcShort, $lcName]): ?>
@@ -328,8 +359,8 @@ ob_start();
 <?php if (!empty($latestPosts)): ?>
 <section class="fade-up mb-8" aria-labelledby="rd-latest-title">
     <div class="mb-3 flex items-baseline justify-between gap-3">
-        <h2 id="rd-latest-title" class="text-sm font-bold uppercase tracking-widest text-slate-500"><?= e(t('resident_home.latest_posts')) ?></h2>
-        <a href="<?= e(route('announcements')) ?>" class="text-sm font-bold text-blue-700"><?= e(t('resident_home.view_all')) ?> <i class="bi bi-arrow-right"></i></a>
+        <h2 id="rd-latest-title" class="rd-h2" style="margin:0;"><?= e(t('resident_home.latest_posts')) ?></h2>
+        <a href="<?= e(route('announcements')) ?>" class="rd-link"><?= e(t('resident_home.view_all')) ?> <i class="bi bi-arrow-right"></i></a>
     </div>
     <div class="rd-posts">
         <?php foreach ($latestPosts as $lp):
@@ -350,7 +381,7 @@ ob_start();
                 <h3 class="text-base font-bold leading-snug text-slate-900"><a href="<?= e($lpUrl) ?>" class="hover:underline"><?= e($lpTitle) ?></a></h3>
                 <p class="text-sm text-slate-600"><?= e(mb_strimwidth($lpBody, 0, 120, '…')) ?></p>
                 <div class="rd-tags" aria-label="Languages"><span>EN</span><span>FIL</span><span>MN</span></div>
-                <a href="<?= e($lpUrl) ?>" class="mt-auto text-sm font-bold text-blue-700" aria-label="<?= e(t('resident_home.read_more') . ': ' . $lpTitle) ?>"><?= e(t('resident_home.read_more')) ?> <i class="bi bi-arrow-right"></i></a>
+                <a href="<?= e($lpUrl) ?>" class="rd-link mt-auto" aria-label="<?= e(t('resident_home.read_more') . ': ' . $lpTitle) ?>"><?= e(t('resident_home.read_more')) ?> <i class="bi bi-arrow-right"></i></a>
             </div>
         </article>
         <?php endforeach; ?>
