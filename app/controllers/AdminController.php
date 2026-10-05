@@ -167,7 +167,40 @@ class AdminController
             error_log('[AdminController::dashboard] dataset coverage: ' . $e->getMessage());
         }
 
+        /*
+         * Mockup KPI row. Admins see barangay-wide totals; staff see their own
+         * output ("My Announcements" counts posts they authored) and the queue
+         * they can work. Recent Tasks are real document requests, with their
+         * status folded into the mockup's three pills. Every query is wrapped
+         * so a missing table on an older install cannot break the dashboard.
+         */
+        $totalResidents = 0;
+        $staffKpi       = ['announcements' => 0, 'events' => 0, 'feedback' => 0, 'approvals' => 0];
+        $recentTasks    = [];
+        $viewerId       = (int) ($_SESSION['user_id'] ?? 0);
+        try {
+            $totalResidents = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'resident'")->fetchColumn();
+            $mine = $pdo->prepare('SELECT COUNT(*) FROM announcements WHERE author_id = ?');
+            $mine->execute([$viewerId]);
+            $staffKpi['announcements'] = (int) $mine->fetchColumn();
+            $mine = $pdo->prepare('SELECT COUNT(*) FROM events WHERE created_by = ?');
+            $mine->execute([$viewerId]);
+            $staffKpi['events'] = (int) $mine->fetchColumn();
+            $staffKpi['feedback']  = (int) Feedback::unreadCountAdmin();
+            $staffKpi['approvals'] = (int) $pdo->query("SELECT COUNT(*) FROM document_requests WHERE status = 'pending'")->fetchColumn();
+            $recentTasks = $pdo->query(
+                'SELECT dr.id, dr.reference_no, dr.document_type, dr.status, dr.requested_at, u.full_name
+                 FROM document_requests dr LEFT JOIN users u ON u.id = dr.user_id
+                 ORDER BY dr.requested_at DESC LIMIT 5'
+            )->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            error_log('[AdminController::dashboard] kpi row: ' . $e->getMessage());
+        }
+
         view('admin/dashboard', compact(
+            'totalResidents',
+            'staffKpi',
+            'recentTasks',
             'datasetCoverage',
             'manoboDictionary',
             'activeStaffCount',

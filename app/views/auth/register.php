@@ -310,62 +310,42 @@ $flashOk  = flash('success');
             .reg-right { padding: 1.75rem 1.5rem; }
         }
     </style>
+    <link rel="stylesheet" href="<?= e(asset_v('assets/css/auth.css')) ?>">
 </head>
-<body>
+<body class="auth-page">
+<?php
+// Arriving from "Continue with Google/Facebook" with no account yet: prefill.
+$__pre = $_SESSION['oauth_prefill'] ?? [];
+$__preParts = preg_split('/\s+/', trim((string) ($__pre['full_name'] ?? ''))) ?: [];
+$__preFirst = count($__preParts) > 1 ? implode(' ', array_slice($__preParts, 0, -1)) : ($__preParts[0] ?? '');
+$__preLast  = count($__preParts) > 1 ? end($__preParts) : '';
+$__social   = \App\Controllers\SocialAuthController::enabled();
+?>
+<main class="auth-wrap">
+<section class="auth-card auth-card--wide" aria-labelledby="regTitle">
+    <div class="auth-card__body" x-data="registerForm()">
+        <?php require __DIR__ . '/_auth_brand.php'; ?>
+        <h1 class="auth-title" id="regTitle">Create an Account</h1>
+        <p class="auth-sub">Join BarangGabay and be part of a safer community.</p>
 
-<div class="reg-wrapper">
-<div class="reg-card">
+        <?php if ($__social['google'] || $__social['facebook']): ?>
+            <div class="auth-social" style="margin-bottom:.25rem;">
+                <?php if ($__social['google']): ?><a href="<?= e(route('auth/google')) ?>"><i class="bi bi-google" aria-hidden="true"></i>Sign up with Google</a><?php endif; ?>
+                <?php if ($__social['facebook']): ?><a href="<?= e(route('auth/facebook')) ?>"><i class="bi bi-facebook" style="color:#1877f2;" aria-hidden="true"></i>Sign up with Facebook</a><?php endif; ?>
+            </div>
+            <div class="auth-divider">or fill in the form</div>
+        <?php endif; ?>
 
-    <!-- ── Left: welcome panel ────────────────────────────── -->
-    <div class="reg-left">
-        <div class="mb-3">
-            <?= baranggabay_logo('dark', ['size' => 'large', 'href' => route('')]) ?>
+        <div class="auth-field">
+            <span class="auth-label"><i class="bi bi-person-badge" aria-hidden="true"></i>Account Type</span>
+            <div class="auth-type" role="radiogroup" aria-label="Account type">
+                <div class="auth-type__opt is-selected" role="radio" aria-checked="true">
+                    <i class="bi bi-house-heart-fill" aria-hidden="true"></i>
+                    <div><strong>Resident</strong><span>For community members of Barangay Bayogo</span></div>
+                </div>
+                <p style="margin:.15rem 0 0;font-size:.75rem;color:var(--text-muted);"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Staff and admin accounts are created by the barangay, not here.</p>
+            </div>
         </div>
-
-        <h2>Sumali sa aming komunidad</h2>
-        <p>
-            Ang BarangGabay ang opisyal na portal ng Barangay Bayogo, Madrid para sa mga anunsyo, kaganapan, at lokal na ordinansa. I-register ang iyong account para manatiling updated.
-        </p>
-
-        <!-- 3-step registration process -->
-        <ul class="step-list">
-            <li>
-                <div class="step-num">1</div>
-                <div class="step-content">
-                    <strong>Mag-register</strong>
-                    <span>Punan ang form at i-upload ang valid ID.</span>
-                </div>
-            </li>
-            <li>
-                <div class="step-num">2</div>
-                <div class="step-content">
-                    <strong>I-verify ang Email</strong>
-                    <span>I-click ang link na padadalhin sa iyong email.</span>
-                </div>
-            </li>
-            <li>
-                <div class="step-num">3</div>
-                <div class="step-content">
-                    <strong>Admin Approval</strong>
-                    <span>Susuriin ng barangay staff ang iyong ID at iko-confirm ang access.</span>
-                </div>
-            </li>
-        </ul>
-
-        <div class="reg-left-footer">
-            <i class="bi bi-shield-check me-1"></i>
-            Ang iyong impormasyon ay ligtas at ginagamit lamang para sa pagbe-beryipika ng iyong pagkakakilanlan.
-        </div>
-    </div><!-- /reg-left -->
-
-    <!-- ── Right: registration form ──────────────────────── -->
-    <div class="reg-right" x-data="registerForm()">
-
-        <h2 class="h5 fw-bold text-dark mb-1">Gumawa ng Account</h2>
-        <p class="text-secondary mb-3" style="font-size:.85rem;">
-            May account na?
-            <a href="<?= e(route('login')) ?>" style="color:var(--green);font-weight:600;text-decoration:none;">Mag-login dito</a>
-        </p>
 
         <!-- Flash alerts -->
         <?php if ($flashOk): ?>
@@ -399,7 +379,7 @@ $flashOk  = flash('success');
                     <input type="text" id="first_name" name="first_name"
                            class="form-control <?= !empty($errors['first_name']) ? 'is-invalid' : '' ?>"
                            placeholder="Hal. Juan"
-                           value="<?= e(old('first_name')) ?>" required autocomplete="given-name">
+                           value="<?= e(old('first_name', $__preFirst)) ?>" required autocomplete="given-name">
                     <?php if (!empty($errors['first_name'])): ?>
                     <div class="invalid-feedback"><?= e($errors['first_name']) ?></div>
                     <?php endif; ?>
@@ -418,7 +398,7 @@ $flashOk  = flash('success');
                     <input type="text" id="last_name" name="last_name"
                            class="form-control <?= !empty($errors['last_name']) ? 'is-invalid' : '' ?>"
                            placeholder="Hal. Dela Cruz"
-                           value="<?= e(old('last_name')) ?>" required autocomplete="family-name">
+                           value="<?= e(old('last_name', $__preLast)) ?>" required autocomplete="family-name">
                     <?php if (!empty($errors['last_name'])): ?>
                     <div class="invalid-feedback"><?= e($errors['last_name']) ?></div>
                     <?php endif; ?>
@@ -553,7 +533,7 @@ $flashOk  = flash('success');
                     <input type="email" id="reg_email" name="email"
                            class="form-control <?= !empty($errors['email']) ? 'is-invalid' : '' ?>"
                            placeholder="you@example.com"
-                           value="<?= e(old('email')) ?>"
+                           value="<?= e(old('email', (string) ($__pre['email'] ?? ''))) ?>"
                            required autocomplete="email">
                     <?php if (!empty($errors['email'])): ?>
                     <div class="invalid-feedback"><?= e($errors['email']) ?></div>
@@ -738,18 +718,19 @@ $flashOk  = flash('success');
 
                 <!-- Submit -->
                 <div class="col-12 mt-1">
-                    <button type="submit" class="btn-register">
-                        <i class="bi bi-person-check me-2"></i>Mag-register
+                    <button type="submit" class="auth-btn">
+                        Create Account
                     </button>
                 </div>
 
             </div><!-- /row -->
         </form>
 
-    </div><!-- /reg-right -->
-
-</div><!-- /reg-card -->
-</div><!-- /reg-wrapper -->
+        <p class="auth-small">Already have an account? <a class="auth-link" href="<?= e(route('login')) ?>">Sign in</a></p>
+    </div>
+    <div class="auth-card__foot" role="presentation"></div>
+</section>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>

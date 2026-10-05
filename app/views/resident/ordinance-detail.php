@@ -52,7 +52,7 @@ $__pEyebrow = $ordinance['ordinance_no'] ?? null;
 $__pImage   = null;                       // the PDF viewer below is the media
 $__pStamp   = null;
 $__pBadges  = [['label' => $sMeta['label'], 'class' => $sMeta['cls']]];
-require __DIR__ . '/../shared/_post-header.php';
+$__pType = 'ordinance'; $__pId = (int) $ordinance['id']; require __DIR__ . '/../shared/_post-header.php';
 ?>
 
 <?php

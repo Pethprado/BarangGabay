@@ -348,6 +348,35 @@ function syncPostgresSchema(PDO $pdo): void
             UNIQUE (language, normalized_text, content_type, content_id)
         )",
         "CREATE INDEX IF NOT EXISTS idx_vwu_content ON voice_word_usage (content_type, content_id)",
+        // Remember-me tokens, password resets, resident bookmarks.
+        "CREATE TABLE IF NOT EXISTS remember_tokens (
+            id SERIAL PRIMARY KEY,
+            user_id INT NOT NULL,
+            selector CHAR(18) NOT NULL UNIQUE,
+            validator_hash CHAR(64) NOT NULL,
+            user_agent VARCHAR(255) NULL,
+            expires_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_remember_user ON remember_tokens (user_id)",
+        "CREATE TABLE IF NOT EXISTS password_resets (
+            id SERIAL PRIMARY KEY,
+            user_id INT NOT NULL,
+            token_hash CHAR(64) NOT NULL UNIQUE,
+            requested_ip VARCHAR(45) NULL,
+            expires_at TIMESTAMP NOT NULL,
+            used_at TIMESTAMP NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_reset_user ON password_resets (user_id)",
+        "CREATE TABLE IF NOT EXISTS bookmarks (
+            id SERIAL PRIMARY KEY,
+            user_id INT NOT NULL,
+            content_type VARCHAR(20) NOT NULL,
+            content_id INT NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            UNIQUE (user_id, content_type, content_id)
+        )",
 
         // 13. MySQL Compatibility Functions for PostgreSQL
         "CREATE OR REPLACE FUNCTION date_sub(ts timestamp with time zone, iv interval)

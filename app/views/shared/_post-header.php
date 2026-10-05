@@ -85,6 +85,15 @@ $__pRelative = relative_time($__pStamp);
                 <?php endforeach; ?>
             </p>
         </div>
+        <?php if (!empty($__pType) && !empty($__pId) && !empty($_SESSION['user_id'])):
+            $__pSaved = \App\Controllers\BookmarkController::isSaved((string) $__pType, (int) $__pId); ?>
+        <button type="button" class="ds-chip" style="margin-left:auto;" data-bookmark-toggle
+                data-type="<?= e((string) $__pType) ?>" data-id="<?= (int) $__pId ?>"
+                aria-pressed="<?= $__pSaved ? 'true' : 'false' ?>" aria-label="Save to My Bookmarks">
+            <i class="bi <?= $__pSaved ? 'bi-bookmark-fill' : 'bi-bookmark' ?>" aria-hidden="true"></i>
+            <span class="ms-1"><?= $__pSaved ? 'Saved' : 'Save' ?></span>
+        </button>
+        <?php endif; ?>
     </header>
 
     <!-- ── Headline (news) ────────────────────────────────────────────── -->

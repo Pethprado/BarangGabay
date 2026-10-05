@@ -228,6 +228,19 @@ return [
         'social'         => 'Social',
     ],
     'resident_home' => [
+        'side_dashboard' => 'Dashboard',
+        'side_bookmarks' => 'My Bookmarks',
+        'side_settings' => 'Settings',
+        'side_role' => 'Resident',
+        'search_ph' => 'Search announcements, events, ordinances...',
+        'welcome_name' => 'Welcome, :name!',
+        'quick_label' => 'Quick links',
+        'quick_ann_d' => 'Latest updates',
+        'quick_evt_d' => 'Upcoming activities',
+        'quick_ord_d' => 'Barangay laws',
+        'quick_evac' => 'Evacuation',
+        'quick_evac_d' => 'Safe places near you',
+        'listen_page' => 'Listen to This Page',
         'welcome_tagline'  => 'Stay informed. Stay safe. Stay connected.',
         'lang_voice_title' => 'Language & Voice',
         'lang_voice_hint'  => 'Every post can be read aloud in the language you choose, using recordings approved by the barangay.',
@@ -2219,6 +2232,12 @@ return [
      * advertised on the page; it only has a heading.
      */
     'login' => [
+        'welcome_back' => 'Welcome Back',
+        'remember_me' => 'Remember me',
+        'forgot_password' => 'Forgot password?',
+        'or_continue' => 'or continue with',
+        'continue_google' => 'Continue with Google',
+        'continue_facebook' => 'Continue with Facebook',
         'page_title'          => 'Sign in — :system',
         // Split-screen brand panel.
         'republic'            => 'Republic of the Philippines',
@@ -2552,6 +2571,7 @@ return [
         'approx_flag_title'  => 'The Manobo audio for this post is a Filipino voice reading Manobo text. A recording by a Manobo speaker would be better — upload one in the edit form.',
     ],
     'landing' => [
+        'about_btn' => 'About BarangGabay',
         'nav_home' => 'Home',
         'nav_services' => 'Services',
         'nav_announcements' => 'Announcements',

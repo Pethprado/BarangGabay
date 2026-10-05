@@ -1621,3 +1621,19 @@ function status_badge(string $status, ?string $label = null): string
     $label ??= ucwords(strtolower(str_replace('_', ' ', $status)));
     return '<span class="ds-status ds-status--' . status_tone($status) . '">' . e($label) . '</span>';
 }
+
+/**
+ * Placeholder photo for a post with no cover image (or whose file is gone):
+ * safety/urgent → storm, government/infrastructure → barangay hall,
+ * everything else → community. Public URL.
+ */
+function post_placeholder_image(?string $category, ?string $urgency = null): string
+{
+    $category = strtolower((string) $category);
+    $file = match (true) {
+        $urgency === 'urgent' || $category === 'safety'                => 'post-typhoon.jpg',
+        in_array($category, ['government', 'infrastructure'], true)   => 'post-hall.jpg',
+        default                                                        => 'post-community.jpg',
+    };
+    return asset('assets/images/ui/' . $file);
+}

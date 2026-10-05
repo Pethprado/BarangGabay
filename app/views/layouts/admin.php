@@ -93,7 +93,10 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
         <!-- Brand -->
         <div class="sidebar-brand">
             <div class="sidebar-brand-text d-flex align-items-center">
+                <div>
                 <?= baranggabay_logo('dark', ['size' => 'large', 'href' => route('admin')]) ?>
+                <p class="sidebar-panel-label"><?= ($_SESSION['role'] ?? '') === 'staff' ? 'Staff Panel' : 'Admin Panel' ?></p>
+                </div>
             </div>
             <button class="sidebar-close d-lg-none" @click="sidebarOpen = false"
                     aria-label="Close sidebar">

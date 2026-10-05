@@ -26,6 +26,9 @@ require __DIR__ . '/../config/database.php';
 require __DIR__ . '/ErrorHandler.php';
 ErrorHandler::register();
 
+// "Remember me": restore a returning visitor's session from their cookie.
+\App\Services\RememberMe::attempt();
+
 /*
  * Apply the timezone chosen in Super Admin → Settings, overriding the value
  * config/app.php set from .env. Guarded because settings live in the database

@@ -8,6 +8,22 @@ return [
     ['POST', '/login', 'AuthController@login', []],
     ['GET', '/register', 'AuthController@showRegister', []],
     ['POST', '/register', 'AuthController@register', []],
+
+    // Self-service password reset (emailed single-use link).
+    ['GET',  '/forgot-password', 'PasswordResetController@showForgot', []],
+    ['POST', '/forgot-password', 'PasswordResetController@sendLink',   []],
+    ['GET',  '/reset-password',  'PasswordResetController@showReset',  []],
+    ['POST', '/reset-password',  'PasswordResetController@reset',      []],
+
+    // Continue with Google / Facebook (residents; enabled when keys are set).
+    ['GET', '/auth/google',            'SocialAuthController@google',           []],
+    ['GET', '/auth/google/callback',   'SocialAuthController@googleCallback',   []],
+    ['GET', '/auth/facebook',          'SocialAuthController@facebook',         []],
+    ['GET', '/auth/facebook/callback', 'SocialAuthController@facebookCallback', []],
+
+    // Resident bookmarks.
+    ['GET',  '/bookmarks',        'BookmarkController@index',  ['auth', 'verified']],
+    ['POST', '/bookmarks/toggle', 'BookmarkController@toggle', ['auth', 'verified']],
     ['GET', '/logout', 'AuthController@logout', ['auth']],
     ['GET', '/pending', 'AuthController@pending', ['auth']],
     ['GET', '/announcements', 'AnnouncementController@index', ['auth', 'verified']],

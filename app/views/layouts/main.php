@@ -46,20 +46,83 @@
     <!-- Favicon -->
     <link rel="icon" href="<?= e(asset('images/logo-icon.svg')) ?>" type="image/svg+xml">
     <link rel="alternate icon" href="<?= e(asset('favicon.ico')) ?>">
+    <style>
+        /* Resident sidebar shell (mockup): fixed green-on-white rail at lg+, header becomes the top bar. */
+        .rs-side { display: none; }
+        @media (min-width: 1024px) {
+            body.has-rs-side { padding-left: 256px; }
+            .rs-side { display: flex; flex-direction: column; position: fixed; inset: 0 auto 0 0; width: 256px; z-index: 40; padding: 1.1rem .9rem; background: var(--surface-card); border-right: 1px solid var(--border); overflow-y: auto; }
+            body.has-rs-side #mainNav .rs-hide-lg { display: none !important; }
+            body.has-rs-side .rs-search { display: flex !important; }
+        }
+        .rs-side__brand { padding: .25rem .5rem 1.1rem; }
+        .rs-side__nav { display: flex; flex-direction: column; gap: .15rem; }
+        .rs-side__nav a { display: flex; align-items: center; gap: .75rem; padding: .62rem .8rem; border-radius: .7rem; font-size: .9rem; font-weight: 600; color: var(--text-secondary); text-decoration: none; }
+        .rs-side__nav a i { font-size: 1.05rem; width: 1.2rem; text-align: center; }
+        .rs-side__nav a:hover { background: var(--surface-muted); color: var(--text-primary); }
+        .rs-side__nav a.is-active { background: var(--action-solid); color: #fff; }
+        .rs-side__user { margin-top: auto; display: flex; align-items: center; gap: .65rem; padding: .75rem .6rem; border-top: 1px solid var(--border); }
+        .rs-side__avatar { width: 38px; height: 38px; flex-shrink: 0; border-radius: 999px; display: grid; place-items: center; background: var(--action-solid); color: #fff; font-weight: 800; }
+        .rs-search { display: none; align-items: center; gap: .5rem; flex: 1; max-width: 420px; margin: 0 1rem; padding: .45rem .85rem; border-radius: .75rem; border: 1px solid var(--border); background: var(--surface-muted); }
+        .rs-search input { flex: 1; border: 0; background: transparent; outline: none; font-size: .88rem; color: var(--text-primary); }
+        body.rs-bare .content-card { background: transparent !important; box-shadow: none !important; --tw-ring-shadow: 0 0 #0000 !important; padding: 0 !important; }
+        body.rs-bare main { padding-top: 1.5rem !important; }
+    </style>
 </head>
-<body class="text-slate-900 antialiased">
+<?php
+$__rsShell = !empty($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'resident' && ($_SESSION['status'] ?? '') === 'verified';
+$__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '?'), strlen(rtrim((string) parse_url(base_url(), PHP_URL_PATH), '/'))), '/');
+?>
+<body class="text-slate-900 antialiased<?= $__rsShell ? ' has-rs-side' : '' ?><?= $__rsShell && !empty($bareContent) ? ' rs-bare' : '' ?>">
+<?php if ($__rsShell): ?>
+    <aside class="rs-side" aria-label="Resident menu">
+        <div class="rs-side__brand"><?= baranggabay_logo('auto', ['size' => 'medium', 'href' => route('')]) ?></div>
+        <nav class="rs-side__nav">
+            <?php foreach ([
+                ['/', 'bi-grid-1x2-fill', t('resident_home.side_dashboard')],
+                ['/announcements', 'bi-megaphone', t('nav.announcements')],
+                ['/events', 'bi-calendar-event', t('nav.events')],
+                ['/ordinances', 'bi-journal-text', t('nav.ordinances')],
+                ['/documents', 'bi-file-earmark-text', t('nav.documents')],
+                ['/evacuation', 'bi-house-heart', t('nav.evacuation')],
+                ['/feedback', 'bi-chat-dots', t('nav.feedback')],
+                ['/manobo', 'bi-book', t('nav.dictionary')],
+                ['/bookmarks', 'bi-bookmark', t('resident_home.side_bookmarks')],
+                ['/profile', 'bi-gear', t('resident_home.side_settings')],
+            ] as [$__p, $__i, $__l]):
+                $__on = $__p === '/' ? $__rsPath === '/' : ($__rsPath === $__p || str_starts_with($__rsPath, $__p . '/'));
+            ?>
+                <a href="<?= e(route(ltrim($__p, '/'))) ?>" class="<?= $__on ? 'is-active' : '' ?>"<?= $__on ? ' aria-current="page"' : '' ?>><i class="bi <?= $__i ?>" aria-hidden="true"></i><?= e($__l) ?></a>
+            <?php endforeach; ?>
+        </nav>
+        <div class="rs-side__user">
+            <span class="rs-side__avatar" aria-hidden="true"><?= e(strtoupper(mb_substr($_SESSION['full_name'] ?? 'U', 0, 1, 'UTF-8'))) ?></span>
+            <div style="min-width:0;flex:1;">
+                <p style="margin:0;font-size:.85rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= e($_SESSION['full_name'] ?? '') ?></p>
+                <p style="margin:0;font-size:.72rem;color:var(--text-muted);"><?= e(t('resident_home.side_role')) ?></p>
+            </div>
+            <a href="<?= e(route('logout')) ?>" title="<?= e(t('nav.logout')) ?>" aria-label="<?= e(t('nav.logout')) ?>" style="color:var(--text-muted);"><i class="bi bi-box-arrow-right"></i></a>
+        </div>
+    </aside>
+<?php endif; ?>
 
     <!-- ── PREMIUM NAVBAR ─────────────────────────────────────────── -->
     <header id="mainNav" class="navbar-premium">
         <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
 
             <!-- Logo -->
-            <div class="flex items-center gap-3 flex-shrink-0">
+            <div class="flex items-center gap-3 flex-shrink-0 rs-hide-lg">
                 <?= baranggabay_logo('auto', ['size' => 'medium', 'href' => route('')]) ?>
             </div>
+            <?php if ($__rsShell): ?>
+            <form class="rs-search" method="get" action="<?= e(route('search')) ?>" role="search">
+                <i class="bi bi-search" aria-hidden="true" style="color:var(--text-muted);"></i>
+                <input type="search" name="q" placeholder="<?= e(t('resident_home.search_ph')) ?>" aria-label="<?= e(t('resident_home.search_ph')) ?>">
+            </form>
+            <?php endif; ?>
 
             <!-- Desktop nav links -->
-            <nav class="hidden items-center gap-1 md:flex">
+            <nav class="hidden items-center gap-1 md:flex rs-hide-lg">
                 <a href="<?= e(route('')) ?>"              class="nav-link-premium"><?= e(t('nav.home')) ?></a>
                 <a href="<?= e(route('announcements')) ?>" class="nav-link-premium"><?= e(t('nav.announcements')) ?></a>
                 <a href="<?= e(route('events')) ?>"        class="nav-link-premium"><?= e(t('nav.events')) ?></a>
@@ -101,7 +164,7 @@
                 <?php if (!empty($_SESSION['user_id'])): ?>
 
                 <!-- Global search -->
-                <a href="<?= e(route('search')) ?>" class="bell-btn" title="Search" aria-label="Search announcements, events, ordinances">
+                <a href="<?= e(route('search')) ?>" class="bell-btn rs-hide-lg" title="Search" aria-label="Search announcements, events, ordinances">
                     <i class="bi bi-search" aria-hidden="true"></i>
                 </a>
 
@@ -588,5 +651,27 @@
             });
         }
     </script>
+<script>
+// Bookmark toggles (post pages and My Bookmarks): POST /bookmarks/toggle.
+document.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('[data-bookmark-toggle]');
+    if (!btn) { return; }
+    var fd = new FormData();
+    fd.set('content_type', btn.dataset.type);
+    fd.set('content_id', btn.dataset.id);
+    fd.set('csrf_token', (window.BarangGabay && window.BarangGabay.csrfToken) || '');
+    btn.disabled = true;
+    fetch(((window.BarangGabay && window.BarangGabay.baseUrl) || '').replace(/\/$/, '') + '/bookmarks/toggle', { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            if (!d.success) { return; }
+            btn.setAttribute('aria-pressed', d.saved ? 'true' : 'false');
+            var i = btn.querySelector('i'); if (i) { i.className = 'bi ' + (d.saved ? 'bi-bookmark-fill' : 'bi-bookmark'); }
+            var label = btn.querySelector('span'); if (label) { label.textContent = d.saved ? 'Saved' : 'Save'; }
+            if (!d.saved && btn.closest('li') && location.pathname.indexOf('/bookmarks') !== -1) { btn.closest('li').remove(); }
+        })
+        .finally(function () { btn.disabled = false; });
+});
+</script>
 </body>
 </html>

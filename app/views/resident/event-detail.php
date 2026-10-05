@@ -64,7 +64,7 @@ ob_start();
         $__pEyebrow = null;
         $__pStamp   = null;
         $__pBadges  = [['label' => $sLbl, 'class' => $sCls]];
-        require __DIR__ . '/../shared/_post-header.php';
+        $__pType = 'event'; $__pId = (int) $event['id']; require __DIR__ . '/../shared/_post-header.php';
 
         // Description language follows the header's FIL / EN / MN switch.
         // The stored description is plain text in every language here, so the

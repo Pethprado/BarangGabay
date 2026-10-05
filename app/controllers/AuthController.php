@@ -361,6 +361,11 @@ class AuthController
             redirect($back);
         }
 
+        // "Remember me": keep this device signed in for 30 days.
+        if (!empty($_POST['remember'])) {
+            \App\Services\RememberMe::issue((int) $user['id']);
+        }
+
         // Password is correct. Log user in directly (2FA disabled).
         $this->completeLogin($user, (string) $email);
     }
@@ -686,6 +691,7 @@ class AuthController
             $token
         );
 
+        unset($_SESSION['oauth_prefill']);
         flash('success', 'Matagumpay na nairehistro! Suriin ang iyong email para ma-verify ang iyong account.');
         redirect('/login');
     }
@@ -802,6 +808,9 @@ class AuthController
             UserSession::end(session_id());
             AuditLog::record((int) $userId, 'auth.logout', 'User logout');
         }
+
+        // Signing out also forgets this device for "Remember me".
+        \App\Services\RememberMe::forget();
 
         session_unset();
         session_destroy();

@@ -95,7 +95,7 @@ ob_start();
                 'class' => 'bg-blue-100 text-blue-700',
             ];
         }
-        require __DIR__ . '/../shared/_post-header.php';
+        $__pType = 'announcement'; $__pId = (int) $announcement['id']; require __DIR__ . '/../shared/_post-header.php';
         ?>
 
         <?php

@@ -62,11 +62,11 @@ ob_start();
         ?>
         <h1 class="mb-0 mt-1"
             style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;font-family:var(--font-heading);">
-            <?= e($__greet . ($__first !== '' ? ', ' . $__first : '')) ?>!
+            <?= e($__role === 'staff' ? 'Welcome, ' . ($__first !== '' ? $__first : 'Staff') : $__greet . ', ' . trim((string) ($_SESSION['full_name'] ?? 'Admin'))) ?>!
         </h1>
         <p class="mb-0 mt-1" style="font-size:.9rem;color:var(--text-secondary);">
             <?= $__role === 'staff'
-                ? 'Here are your tasks and recent activity.'
+                ? 'Here are your assigned tasks and recent activities.'
                 : 'Manage your barangay information, voice dataset, and system settings.' ?>
         </p>
     </div>
@@ -74,6 +74,171 @@ ob_start();
         <?= e(date('l, F j, Y')) ?>
     </span>
 </div>
+
+<!-- ── Stat cards ─────────────────────────────────────────────────────
+     Each card is one link over its whole surface, and each one opens the
+     list FILTERED to exactly what the card counted. A card reading "1
+     verified resident" that opened the full resident list would have made
+     the reader do the counting a second time.
+
+     One anchor per card rather than a small link inside it: the number is
+     the thing people aim at, and a 12-pixel "Manage" beneath it is a poor
+     target on a phone. That also means no nested anchors — the old inner
+     links are gone, replaced by a hint line that is part of the card.
+
+     All four destinations sit behind the same role:admin,staff as this
+     dashboard, so no card can lead a staff member into a 403. -->
+<div class="row g-3 mb-4">
+
+    <?php
+    $__isStaffView = ($_SESSION['role'] ?? '') === 'staff';
+    $staffKpi      = $staffKpi ?? ['announcements' => 0, 'events' => 0, 'feedback' => 0, 'approvals' => 0];
+    $__card = static fn (string $label, int $value, string $href, string $icon, string $tone, string $hint, string $action, string $delay, bool $urgent = false): array
+        => compact('label', 'value', 'href', 'icon', 'tone', 'hint', 'action', 'delay', 'urgent');
+    $statCards = $__isStaffView ? [
+        $__card('My Announcements', (int) $staffKpi['announcements'], route('admin/announcements'), 'bi-megaphone-fill', 'stat-icon-green', 'Posts you authored', 'Open announcements', ''),
+        $__card('My Events', (int) $staffKpi['events'], route('admin/events'), 'bi-calendar-event-fill', 'stat-icon-blue', 'Events you created', 'Open events', 'fade-up-delay-1'),
+        $__card('Feedback', (int) $staffKpi['feedback'], route('admin/feedback'), 'bi-chat-dots-fill', 'stat-icon-yellow', 'Unread messages from residents', 'Open feedback', 'fade-up-delay-2'),
+        $__card('Pending Approvals', (int) $staffKpi['approvals'], route('admin/documents') . '?status=pending', 'bi-hourglass-split', 'stat-icon-red', 'Document requests waiting', 'Review requests', 'fade-up-delay-3', (int) $staffKpi['approvals'] > 0),
+    ] : [
+        $__card('Total Residents', (int) ($totalResidents ?? $verifiedCount), route('admin/residents'), 'bi-people-fill', 'stat-icon-green', number_format((int) $verifiedCount) . ' verified residents', t('dashboard.stat_verified_cta'), '', (int) $pendingCount > 0),
+        $__card('Active Staff', (int) ($activeStaffCount ?? 0), route('admin/staff'), 'bi-person-badge-fill', 'stat-icon-blue', 'Staff and admin accounts', 'Manage staff', 'fade-up-delay-1'),
+        $__card('Total Announcements', (int) $publishedCount, route('admin/announcements') . '?status=published', 'bi-megaphone-fill', 'stat-icon-yellow', 'Visible to residents now', t('dashboard.stat_published_cta'), 'fade-up-delay-2'),
+        $__card('Active Events', (int) $upcomingCount, route('admin/events') . '?status=upcoming', 'bi-calendar-event-fill', 'stat-icon-red', 'Upcoming on the calendar', t('dashboard.stat_upcoming_cta'), 'fade-up-delay-3'),
+    ];
+    ?>
+
+    <?php foreach ($statCards as $__c):
+        $__urgent = !empty($__c['urgent']); ?>
+    <div class="col-sm-6 col-xl-3 fade-up <?= e($__c['delay']) ?>">
+        <?php /* data-accent keeps the existing gold top-bar treatment on the
+                 pending card — see .stat-card[data-accent="gold"] in admin.css. */ ?>
+        <a class="stat-card stat-card-link<?= $__urgent ? ' stat-card-urgent' : '' ?>"
+           <?= $__urgent ? 'data-accent="gold"' : '' ?>
+           href="<?= e($__c['href']) ?>"
+           aria-label="<?= e($__c['label'] . ': ' . number_format($__c['value']) . '. ' . $__c['action']) ?>">
+            <div class="d-flex align-items-start justify-content-between gap-3">
+                <div style="min-width:0;">
+                    <p class="stat-card-label"><?= e($__c['label']) ?></p>
+                    <p class="stat-card-value"<?= $__urgent ? ' style="color:var(--status-warning);"' : '' ?>>
+                        <span data-countup="<?= $__c['value'] ?>"><?= number_format($__c['value']) ?></span>
+                    </p>
+                    <?php if ($__c['hint'] !== ''): ?>
+                    <p class="mb-0" style="font-size:.73rem;color:var(--text-muted);"><?= e($__c['hint']) ?></p>
+                    <?php endif; ?>
+                    <span class="stat-card-action<?= $__urgent ? ' stat-card-action-urgent' : '' ?>">
+                        <?= e($__c['action']) ?><i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+                    </span>
+                </div>
+                <div class="stat-card-icon <?= e($__c['tone']) ?> flex-shrink-0">
+                    <i class="bi <?= e($__c['icon']) ?>" aria-hidden="true"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <?php endforeach; ?>
+
+</div><!-- /stat cards -->
+
+<?php
+/*
+ * Priority modules + language dataset coverage (mockup). Coverage figures
+ * are real: the share of the distinct words residents meet in visible posts
+ * that have an approved voice recording, per language, plus how many Manobo
+ * dictionary entries have one. Nothing here is a target or an estimate.
+ */
+$__isAdmin  = in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true);
+$__langName = ['msm' => 'Manobo', 'en' => 'English', 'fil' => 'Filipino', 'ceb' => 'Bisaya'];
+$__langIcon = ['msm' => 'bi-mic-fill', 'en' => 'bi-globe', 'fil' => 'bi-translate', 'ceb' => 'bi-chat-quote-fill'];
+?>
+<style>
+.dash-module { display:flex; gap:1rem; align-items:flex-start; padding:1.25rem; height:100%; }
+.dash-module__icon { width:52px; height:52px; border-radius:14px; display:grid; place-items:center; font-size:1.5rem; flex-shrink:0; background:var(--brand-primary-light); color:var(--brand-primary); }
+.dash-module h2 { font-size:1.05rem; font-weight:800; margin:0 0 .25rem; color:var(--text-primary); }
+.dash-module p { font-size:.86rem; color:var(--text-secondary); margin:0 0 .85rem; }
+.dash-cov-row { padding:.55rem 0; border-bottom:1px solid var(--tb-border); }
+.dash-cov-row:last-child { border-bottom:none; }
+.dash-cov-top { display:flex; justify-content:space-between; gap:.5rem; font-size:.85rem; color:var(--text-primary); }
+.dash-cov-top small { color:var(--text-muted); }
+.dash-cov-bar { height:8px; border-radius:999px; background:var(--surface-muted); overflow:hidden; margin-top:.35rem; }
+.dash-cov-bar > span { display:block; height:100%; border-radius:999px; background:var(--action-solid); }
+.dash-cov-bar > span.is-low { background:var(--motif-gold); }
+</style>
+<div class="row g-3 mb-4">
+    <?php if ($__isAdmin): ?>
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="admin-card dash-module">
+            <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-soundwave"></i></div>
+            <div>
+                <h2>Voice Training &amp; AI Dataset Hub</h2>
+                <p>Record and approve native pronunciations for Manobo, Filipino, English and Bisaya. Residents hear only approved recordings.</p>
+                <a href="<?= e(route('admin/voice-training')) ?>" class="btn-barangay">Manage Voice Dataset <i class="bi bi-arrow-right ms-1"></i></a>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="admin-card dash-module">
+            <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-translate"></i></div>
+            <div>
+                <h2>Translation Management</h2>
+                <p>Review translation health for every post, retry failures and rebuild Manobo translations with the current dictionaries.</p>
+                <a href="<?= e(route('admin/translation-health')) ?>" class="btn-barangay">Manage Translations <i class="bi bi-arrow-right ms-1"></i></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <div class="admin-card h-100" style="padding:1.25rem;">
+            <h2 class="admin-card-title mb-1" style="font-size:1rem;">Language Dataset Coverage</h2>
+            <p class="mb-2" style="font-size:.78rem;color:var(--text-muted);">Words used in visible posts that have an approved recording.</p>
+            <?php foreach (($datasetCoverage ?? []) as $__lc => $__r):
+                $__pct = (float) ($__r['usage_coverage'] ?? 0); ?>
+                <div class="dash-cov-row">
+                    <div class="dash-cov-top">
+                        <span><i class="bi <?= $__langIcon[$__lc] ?? 'bi-dot' ?> me-1" aria-hidden="true"></i><?= e($__langName[$__lc] ?? $__lc) ?></span>
+                        <span><strong><?= number_format($__pct, 0) ?>%</strong> <small><?= (int) $__r['used_recorded'] ?> / <?= (int) $__r['used_words'] ?></small></span>
+                    </div>
+                    <div class="dash-cov-bar" role="progressbar" aria-label="<?= e($__langName[$__lc] ?? $__lc) ?> coverage" aria-valuenow="<?= $__pct ?>" aria-valuemin="0" aria-valuemax="100"><span class="<?= $__pct < 50 ? 'is-low' : '' ?>" style="width:<?= $__pct ?>%"></span></div>
+                </div>
+            <?php endforeach; ?>
+            <?php if (!empty($manoboDictionary['total_dictionary_words'])): ?>
+                <p class="mb-0 mt-2" style="font-size:.78rem;color:var(--text-muted);">
+                    Manobo dictionary: <?= (int) $manoboDictionary['words_with_audio'] ?> of <?= (int) $manoboDictionary['total_dictionary_words'] ?> entries recorded.
+                </p>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<?php if (($_SESSION['role'] ?? '') === 'staff'):
+    $__taskPill = static function (string $st): array {
+        if ($st === 'pending') { return ['Pending', 'warning']; }
+        if (in_array($st, ['released', 'completed', 'claimed'], true)) { return ['Completed', 'success']; }
+        if (in_array($st, ['rejected', 'cancelled'], true)) { return [ucfirst($st), 'neutral']; }
+        return ['In Progress', 'info'];
+    };
+?>
+<div class="admin-card mb-4 fade-up">
+    <div class="admin-card-header d-flex justify-content-between align-items-center">
+        <h2 class="admin-card-title mb-0" style="font-size:1rem;"><i class="bi bi-clipboard-check me-1" style="color:var(--brand-primary);"></i>Recent Tasks</h2>
+        <a href="<?= e(route('admin/documents')) ?>" style="font-size:.8rem;font-weight:700;color:var(--brand-primary);">View all <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="admin-card-body">
+        <?php if (empty($recentTasks)): ?>
+            <p class="mb-0" style="font-size:.86rem;color:var(--text-muted);">No document requests yet.</p>
+        <?php else: foreach ($recentTasks as $__t): [$__pl, $__tone] = $__taskPill((string) $__t['status']); ?>
+            <a href="<?= e(route('admin/documents') . '?search=' . rawurlencode((string) $__t['reference_no'])) ?>" class="d-flex align-items-center gap-3 text-decoration-none" style="padding:.6rem 0;border-bottom:1px solid var(--tb-border);">
+                <i class="bi bi-file-earmark-text" style="color:var(--brand-primary);"></i>
+                <span class="flex-grow-1" style="min-width:0;">
+                    <span class="d-block text-truncate" style="font-size:.86rem;font-weight:600;color:var(--text-primary);"><?= e(\App\Models\DocumentRequest::label((string) $__t['document_type'])) ?> — <?= e((string) ($__t['full_name'] ?? '')) ?></span>
+                    <span class="d-block" style="font-size:.74rem;color:var(--text-muted);"><?= e((string) $__t['reference_no']) ?> · <?= e(relative_time((string) $__t['requested_at'])) ?></span>
+                </span>
+                <span class="ds-status ds-status--<?= $__tone ?>"><?= e($__pl) ?></span>
+            </a>
+        <?php endforeach; endif; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ── Needs your attention ───────────────────────────────────────────
      The open work, above the numbers.
@@ -218,171 +383,6 @@ $advisoryOn    = $advisoryText !== '';
                 <?php endif; ?>
             </div>
         </form>
-    </div>
-</div>
-
-<!-- ── Stat cards ─────────────────────────────────────────────────────
-     Each card is one link over its whole surface, and each one opens the
-     list FILTERED to exactly what the card counted. A card reading "1
-     verified resident" that opened the full resident list would have made
-     the reader do the counting a second time.
-
-     One anchor per card rather than a small link inside it: the number is
-     the thing people aim at, and a 12-pixel "Manage" beneath it is a poor
-     target on a phone. That also means no nested anchors — the old inner
-     links are gone, replaced by a hint line that is part of the card.
-
-     All four destinations sit behind the same role:admin,staff as this
-     dashboard, so no card can lead a staff member into a 403. -->
-<div class="row g-3 mb-4">
-
-    <?php
-    $statCards = [
-        [
-            'label'  => t('dashboard.stat_verified'),
-            'value'  => (int) $verifiedCount,
-            'href'   => route('admin/residents') . '?status=verified',
-            'icon'   => 'bi-people-fill',
-            'tone'   => 'stat-icon-green',
-            'hint'   => t('dashboard.stat_verified_sub'),
-            'action' => t('dashboard.stat_verified_cta'),
-            'delay'  => '',
-        ],
-        [
-            'label'  => t('dashboard.stat_pending'),
-            'value'  => (int) $pendingCount,
-            'href'   => route('admin/residents') . '?status=pending',
-            'icon'   => 'bi-clock-fill',
-            'tone'   => 'stat-icon-yellow',
-            // With nothing waiting, the card still opens the queue — it just
-            // says so plainly instead of implying there is work to do.
-            'hint'   => $pendingCount > 0 ? '' : t('dashboard.stat_pending_none'),
-            'action' => $pendingCount > 0 ? t('dashboard.stat_pending_cta') : t('dashboard.stat_pending_view'),
-            'urgent' => $pendingCount > 0,
-            'delay'  => 'fade-up-delay-1',
-        ],
-        [
-            'label'  => t('dashboard.stat_published'),
-            'value'  => (int) $publishedCount,
-            'href'   => route('admin/announcements') . '?status=published',
-            'icon'   => 'bi-megaphone-fill',
-            'tone'   => 'stat-icon-blue',
-            'hint'   => '',
-            'action' => t('dashboard.stat_published_cta'),
-            'delay'  => 'fade-up-delay-2',
-        ],
-        [
-            'label'  => t('dashboard.stat_upcoming'),
-            'value'  => (int) $upcomingCount,
-            'href'   => route('admin/events') . '?status=upcoming',
-            'icon'   => 'bi-calendar-event-fill',
-            'tone'   => 'stat-icon-green',
-            'hint'   => '',
-            'action' => t('dashboard.stat_upcoming_cta'),
-            'delay'  => 'fade-up-delay-3',
-        ],
-    ];
-    ?>
-
-    <?php foreach ($statCards as $__c):
-        $__urgent = !empty($__c['urgent']); ?>
-    <div class="col-sm-6 col-xl-3 fade-up <?= e($__c['delay']) ?>">
-        <?php /* data-accent keeps the existing gold top-bar treatment on the
-                 pending card — see .stat-card[data-accent="gold"] in admin.css. */ ?>
-        <a class="stat-card stat-card-link<?= $__urgent ? ' stat-card-urgent' : '' ?>"
-           <?= $__urgent ? 'data-accent="gold"' : '' ?>
-           href="<?= e($__c['href']) ?>"
-           aria-label="<?= e($__c['label'] . ': ' . number_format($__c['value']) . '. ' . $__c['action']) ?>">
-            <div class="d-flex align-items-start justify-content-between gap-3">
-                <div style="min-width:0;">
-                    <p class="stat-card-label"><?= e($__c['label']) ?></p>
-                    <p class="stat-card-value"<?= $__urgent ? ' style="color:var(--status-warning);"' : '' ?>>
-                        <span data-countup="<?= $__c['value'] ?>"><?= number_format($__c['value']) ?></span>
-                    </p>
-                    <?php if ($__c['hint'] !== ''): ?>
-                    <p class="mb-0" style="font-size:.73rem;color:var(--text-muted);"><?= e($__c['hint']) ?></p>
-                    <?php endif; ?>
-                    <span class="stat-card-action<?= $__urgent ? ' stat-card-action-urgent' : '' ?>">
-                        <?= e($__c['action']) ?><i class="bi bi-arrow-right-short" aria-hidden="true"></i>
-                    </span>
-                </div>
-                <div class="stat-card-icon <?= e($__c['tone']) ?> flex-shrink-0">
-                    <i class="bi <?= e($__c['icon']) ?>" aria-hidden="true"></i>
-                </div>
-            </div>
-        </a>
-    </div>
-    <?php endforeach; ?>
-
-</div><!-- /stat cards -->
-
-<?php
-/*
- * Priority modules + language dataset coverage (mockup). Coverage figures
- * are real: the share of the distinct words residents meet in visible posts
- * that have an approved voice recording, per language, plus how many Manobo
- * dictionary entries have one. Nothing here is a target or an estimate.
- */
-$__isAdmin  = in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true);
-$__langName = ['msm' => 'Manobo', 'en' => 'English', 'fil' => 'Filipino', 'ceb' => 'Bisaya'];
-$__langIcon = ['msm' => 'bi-mic-fill', 'en' => 'bi-globe', 'fil' => 'bi-translate', 'ceb' => 'bi-chat-quote-fill'];
-?>
-<style>
-.dash-module { display:flex; gap:1rem; align-items:flex-start; padding:1.25rem; height:100%; }
-.dash-module__icon { width:52px; height:52px; border-radius:14px; display:grid; place-items:center; font-size:1.5rem; flex-shrink:0; background:var(--brand-primary-light); color:var(--brand-primary); }
-.dash-module h2 { font-size:1.05rem; font-weight:800; margin:0 0 .25rem; color:var(--text-primary); }
-.dash-module p { font-size:.86rem; color:var(--text-secondary); margin:0 0 .85rem; }
-.dash-cov-row { padding:.55rem 0; border-bottom:1px solid var(--tb-border); }
-.dash-cov-row:last-child { border-bottom:none; }
-.dash-cov-top { display:flex; justify-content:space-between; gap:.5rem; font-size:.85rem; color:var(--text-primary); }
-.dash-cov-top small { color:var(--text-muted); }
-.dash-cov-bar { height:8px; border-radius:999px; background:var(--surface-muted); overflow:hidden; margin-top:.35rem; }
-.dash-cov-bar > span { display:block; height:100%; border-radius:999px; background:var(--action-solid); }
-.dash-cov-bar > span.is-low { background:var(--motif-gold); }
-</style>
-<div class="row g-3 mb-4">
-    <?php if ($__isAdmin): ?>
-    <div class="col-12 col-md-6 col-xl-4">
-        <div class="admin-card dash-module">
-            <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-soundwave"></i></div>
-            <div>
-                <h2>Voice Training &amp; AI Dataset Hub</h2>
-                <p>Record and approve native pronunciations for Manobo, Filipino, English and Bisaya. Residents hear only approved recordings.</p>
-                <a href="<?= e(route('admin/voice-training')) ?>" class="btn-barangay">Manage Voice Dataset <i class="bi bi-arrow-right ms-1"></i></a>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
-    <div class="col-12 col-md-6 col-xl-4">
-        <div class="admin-card dash-module">
-            <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-translate"></i></div>
-            <div>
-                <h2>Translation Management</h2>
-                <p>Review translation health for every post, retry failures and rebuild Manobo translations with the current dictionaries.</p>
-                <a href="<?= e(route('admin/translation-health')) ?>" class="btn-barangay">Manage Translations <i class="bi bi-arrow-right ms-1"></i></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-12 col-xl-4">
-        <div class="admin-card h-100" style="padding:1.25rem;">
-            <h2 class="admin-card-title mb-1" style="font-size:1rem;">Language Dataset Coverage</h2>
-            <p class="mb-2" style="font-size:.78rem;color:var(--text-muted);">Words used in visible posts that have an approved recording.</p>
-            <?php foreach (($datasetCoverage ?? []) as $__lc => $__r):
-                $__pct = (float) ($__r['usage_coverage'] ?? 0); ?>
-                <div class="dash-cov-row">
-                    <div class="dash-cov-top">
-                        <span><i class="bi <?= $__langIcon[$__lc] ?? 'bi-dot' ?> me-1" aria-hidden="true"></i><?= e($__langName[$__lc] ?? $__lc) ?></span>
-                        <span><strong><?= number_format($__pct, 0) ?>%</strong> <small><?= (int) $__r['used_recorded'] ?> / <?= (int) $__r['used_words'] ?></small></span>
-                    </div>
-                    <div class="dash-cov-bar" role="progressbar" aria-label="<?= e($__langName[$__lc] ?? $__lc) ?> coverage" aria-valuenow="<?= $__pct ?>" aria-valuemin="0" aria-valuemax="100"><span class="<?= $__pct < 50 ? 'is-low' : '' ?>" style="width:<?= $__pct ?>%"></span></div>
-                </div>
-            <?php endforeach; ?>
-            <?php if (!empty($manoboDictionary['total_dictionary_words'])): ?>
-                <p class="mb-0 mt-2" style="font-size:.78rem;color:var(--text-muted);">
-                    Manobo dictionary: <?= (int) $manoboDictionary['words_with_audio'] ?> of <?= (int) $manoboDictionary['total_dictionary_words'] ?> entries recorded.
-                </p>
-            <?php endif; ?>
-        </div>
     </div>
 </div>
 

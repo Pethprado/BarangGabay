@@ -202,6 +202,19 @@ return [
         'social'         => 'Panlipunan',
     ],
     'resident_home' => [
+        'side_dashboard' => 'Dashboard',
+        'side_bookmarks' => 'Mga Naka-save',
+        'side_settings' => 'Settings',
+        'side_role' => 'Residente',
+        'search_ph' => 'Maghanap ng anunsyo, event, ordinansa...',
+        'welcome_name' => 'Maligayang pagdating, :name!',
+        'quick_label' => 'Mabilis na link',
+        'quick_ann_d' => 'Pinakabagong balita',
+        'quick_evt_d' => 'Mga darating na aktibidad',
+        'quick_ord_d' => 'Mga batas ng barangay',
+        'quick_evac' => 'Evacuation',
+        'quick_evac_d' => 'Ligtas na lugar malapit sa iyo',
+        'listen_page' => 'Pakinggan ang Pahinang Ito',
         'welcome_tagline'  => 'Manatiling may alam. Manatiling ligtas. Manatiling konektado.',
         'lang_voice_title' => 'Wika at Boses',
         'lang_voice_hint'  => 'Maaaring pakinggan ang bawat post sa wikang pipiliin mo, gamit ang mga recording na inaprubahan ng barangay.',
@@ -2173,6 +2186,12 @@ return [
      * ay galing sa user record pagkatapos ma-verify ang password.
      */
     'login' => [
+        'welcome_back' => 'Maligayang Pagbabalik',
+        'remember_me' => 'Tandaan ako',
+        'forgot_password' => 'Nakalimutan ang password?',
+        'or_continue' => 'o magpatuloy gamit ang',
+        'continue_google' => 'Magpatuloy gamit ang Google',
+        'continue_facebook' => 'Magpatuloy gamit ang Facebook',
         'page_title'          => 'Mag-login — :system',
         // Panel ng barangay sa kaliwa ng split-screen.
         'republic'            => 'Republika ng Pilipinas',
@@ -2502,6 +2521,7 @@ return [
         'approx_flag_title'  => 'Filipino na boses ang bumabasa ng Manobong teksto sa post na ito. Mas mainam ang recording ng tunay na tagapagsalita ng Manobo — mag-upload sa edit form.',
     ],
     'landing' => [
+        'about_btn' => 'Tungkol sa BarangGabay',
         'nav_home' => 'Home',
         'nav_services' => 'Mga Serbisyo',
         'nav_announcements' => 'Mga Anunsyo',

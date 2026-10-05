@@ -248,6 +248,17 @@ class User
     }
 
     /**
+     * Set a password hash after the owner proved control of the account's
+     * email with a single-use reset link (PasswordResetController). The
+     * caller hashes; this never sees plaintext or touches role/status.
+     */
+    public static function setPasswordHashByResetToken(int $id, string $passwordHash): void
+    {
+        db()->prepare('UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$passwordHash, $id]);
+    }
+
+    /**
      * Set another user's password hash, for an admin-issued reset.
      *
      * Deliberately separate from updateOwnPassword() even though the SQL is

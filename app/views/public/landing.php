@@ -30,8 +30,9 @@
 <body class="landing antialiased">
 <?php
 /*
- * Public landing page (guests). Strings come from lang/*.php 'landing'; the
- * announcement grid is real published content — no invented statistics.
+ * Public landing page — mockup layout: photo hero (text left, quote over the
+ * photo), five service cards overlapping its foot, Latest Announcements with
+ * photos. Announcements are real published posts; no invented statistics.
  */
 $__locale = current_locale();
 $__latest = [];
@@ -45,116 +46,120 @@ $__contactEmail = trim((string) setting('contact_email', ''));
 $__location     = trim((string) setting('location_full', 'Barangay Bayogo, Madrid, Surigao del Sur'));
 $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
 ?>
-<!-- Apply the saved light/dark choice before paint (same key as the app layouts). -->
 <script>
     (function () {
         try { var t = localStorage.getItem('bg-theme'); if (t === 'dark' || t === 'light') { document.documentElement.setAttribute('data-theme', t); } } catch (e) {}
     })();
 </script>
 <style>
-    .lp-wrap { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
-    @media (min-width: 640px) { .lp-wrap { padding: 0 1.5rem; } }
-    .lp-nav { position: sticky; top: 0; z-index: 40; background: var(--surface-card); border-bottom: 1px solid var(--border); }
-    .lp-nav__row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 72px; }
-    .lp-nav__links { display: none; gap: .25rem; }
-    .lp-nav__links a { padding: .5rem .8rem; border-radius: .6rem; font-size: .92rem; font-weight: 600; color: var(--text-secondary); text-decoration: none; }
-    .lp-nav__links a:hover, .lp-nav__links a:focus-visible { color: var(--brand-primary); background: var(--brand-primary-light); }
-    @media (min-width: 900px) { .lp-nav__links { display: flex; } }
-    .lp-lang { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-muted); }
-    .lp-lang a { padding: .3rem .7rem; border-radius: 999px; font-size: .78rem; font-weight: 800; color: var(--text-secondary); text-decoration: none; }
-    .lp-lang a[aria-current="true"] { background: var(--surface-card); color: var(--brand-primary); box-shadow: var(--shadow-card); }
-    .lp-iconbtn { width: 40px; height: 40px; display: inline-grid; place-items: center; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-card); color: var(--text-primary); cursor: pointer; }
-    .lp-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; padding: .7rem 1.25rem; min-height: 44px; border-radius: .75rem; font-weight: 700; font-size: .95rem; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease; }
-    .lp-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
-    .lp-btn--solid { background: var(--action-solid); color: var(--text-on-action); }
-    .lp-btn--solid:hover { background: var(--action-solid-hover); color: var(--text-on-action); }
-    .lp-btn--ghost { background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-strong); }
-    .lp-hero { position: relative; overflow: hidden; background: linear-gradient(180deg, var(--surface-page) 0%, var(--brand-primary-light) 100%); }
-    .lp-hero__grid { display: grid; gap: 2.5rem; align-items: center; padding: 3.5rem 0 7rem; position: relative; z-index: 2; }
-    @media (min-width: 1024px) { .lp-hero__grid { grid-template-columns: 1.1fr .9fr; padding: 5rem 0 9rem; } }
-    .lp-hero h1 { font-family: var(--font-heading); font-weight: 800; line-height: 1.05; font-size: clamp(2.3rem, 5vw, 3.9rem); color: var(--text-primary); margin: 0 0 1.25rem; }
-    .lp-hero h1 .lp-accent { color: var(--brand-primary); }
-    .lp-hero p.lp-sub { font-size: 1.08rem; line-height: 1.7; color: var(--text-secondary); max-width: 36rem; margin: 0 0 2rem; }
-    .lp-quote { background: var(--surface-card); border: 1px solid var(--border); border-left: 4px solid var(--motif-gold); border-radius: 1rem; padding: 1.5rem 1.75rem; box-shadow: var(--shadow-card); }
-    .lp-quote p { margin: 0; font-family: var(--font-heading); font-style: italic; font-size: 1.35rem; color: var(--text-primary); }
-    .lp-quote span { display: block; margin-top: .6rem; color: var(--text-muted); font-size: .9rem; }
-    .lp-scape { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 46%; z-index: 1; opacity: .9; }
-    .lp-services { position: relative; z-index: 3; margin-top: -4.5rem; display: grid; gap: .9rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    @media (min-width: 768px) { .lp-services { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    @media (min-width: 1100px) { .lp-services { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-    .lp-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 1rem; box-shadow: var(--shadow-card); transition: transform .15s ease, box-shadow .15s ease; }
-    .lp-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
-    .lp-service { padding: 1.1rem 1rem; text-align: center; }
-    .lp-service__icon { width: 44px; height: 44px; margin: 0 auto .6rem; display: grid; place-items: center; border-radius: .8rem; background: var(--brand-primary-light); color: var(--brand-primary); font-size: 1.25rem; }
-    .lp-service__icon--alert { background: var(--status-danger-bg); color: var(--status-danger); }
-    .lp-service__icon--gold { background: rgba(200,153,46,.16); color: var(--motif-gold-ink); }
-    .lp-service h3 { margin: 0; font-size: .92rem; font-weight: 800; color: var(--text-primary); }
-    .lp-service p { margin: .2rem 0 0; font-size: .8rem; color: var(--text-muted); }
-    .lp-section { padding: 3.5rem 0; }
-    .lp-section h2 { font-family: var(--font-heading); font-weight: 800; font-size: 1.6rem; color: var(--text-primary); margin: 0; }
-    .lp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
-    .lp-head a { color: var(--brand-primary); font-weight: 700; text-decoration: none; font-size: .92rem; }
-    .lp-posts { display: grid; gap: 1.25rem; }
-    @media (min-width: 768px) { .lp-posts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    .lp-post { overflow: hidden; display: flex; flex-direction: column; }
-    .lp-post__img { aspect-ratio: 16 / 9; background: linear-gradient(135deg, var(--brand-primary-light), var(--surface-muted)); display: grid; place-items: center; color: var(--brand-primary); font-size: 2rem; }
-    .lp-post__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .lp-post__body { padding: 1rem 1.1rem 1.2rem; display: flex; flex-direction: column; gap: .4rem; flex: 1; }
-    .lp-post__meta { display: flex; align-items: center; gap: .5rem; font-size: .78rem; color: var(--text-muted); }
-    .lp-badge { display: inline-flex; align-items: center; gap: .25rem; padding: .15rem .55rem; border-radius: 999px; font-size: .72rem; font-weight: 800; }
-    .lp-badge--urgent { background: var(--status-danger-bg); color: var(--status-danger); }
-    .lp-badge--important { background: var(--status-warning-bg); color: var(--status-warning); }
-    .lp-post h3 { margin: 0; font-size: 1.02rem; font-weight: 800; line-height: 1.35; color: var(--text-primary); }
-    .lp-post p { margin: 0; font-size: .88rem; line-height: 1.55; color: var(--text-secondary); }
-    .lp-post .lp-more { margin-top: auto; padding-top: .4rem; color: var(--brand-primary); font-weight: 700; font-size: .88rem; text-decoration: none; }
-    .lp-steps { display: grid; gap: 1rem; }
-    @media (min-width: 768px) { .lp-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    .lp-step { padding: 1.4rem; }
-    .lp-step__n { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 999px; background: var(--action-solid); color: var(--text-on-action); font-weight: 800; margin-bottom: .75rem; }
-    .lp-step h3 { margin: 0 0 .3rem; font-size: 1rem; font-weight: 800; color: var(--text-primary); }
-    .lp-step p { margin: 0; font-size: .9rem; color: var(--text-secondary); line-height: 1.55; }
-    .lp-empty { padding: 2rem; text-align: center; color: var(--text-muted); }
-    .lp-mobile { display: block; }
-    @media (min-width: 900px) { .lp-mobile { display: none; } }
-    .lp-mobile summary { list-style: none; cursor: pointer; }
-    .lp-mobile__panel { position: absolute; right: 1rem; top: 68px; z-index: 50; width: 220px; padding: .6rem; background: var(--surface-card); border: 1px solid var(--border); border-radius: 1rem; box-shadow: var(--shadow-lift); }
-    .lp-mobile__panel a { display: block; padding: .6rem .8rem; border-radius: .6rem; color: var(--text-primary); font-weight: 600; text-decoration: none; }
-    .lp-mobile__panel a:hover { background: var(--surface-muted); }
-    .lp-hide-sm { display: none; }
-    @media (min-width: 640px) { .lp-hide-sm { display: inline-flex; } }
-    a:focus-visible, button:focus-visible, summary:focus-visible { outline: var(--focus-ring-width, 3px) solid var(--focus-ring); outline-offset: 2px; }
-    @media (prefers-reduced-motion: reduce) { .lp-btn, .lp-card { transition: none; } .lp-btn:hover, .lp-card:hover { transform: none; } }
+    .mk { --mk-max: 1240px; font-family: var(--font-body); color: var(--text-primary); background: var(--surface-page); }
+    .mk-wrap { max-width: var(--mk-max); margin: 0 auto; padding: 0 1.25rem; }
+    /* Nav */
+    .mk-nav { position: sticky; top: 0; z-index: 50; background: rgba(255,253,248,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+    :root[data-theme="dark"] .mk-nav { background: rgba(16,36,26,.92); }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mk-nav { background: rgba(16,36,26,.92); } }
+    .mk-nav__row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 68px; }
+    .mk-nav__links { display: none; align-items: center; gap: .15rem; }
+    .mk-nav__links a { padding: .45rem .7rem; border-radius: .5rem; font-size: .88rem; font-weight: 600; color: var(--text-primary); text-decoration: none; }
+    .mk-nav__links a:hover { color: var(--brand-primary); }
+    @media (min-width: 1000px) { .mk-nav__links { display: flex; } }
+    .mk-lang { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--surface-muted); border: 1px solid var(--border); }
+    .mk-lang a { padding: .25rem .6rem; border-radius: 999px; font-size: .72rem; font-weight: 800; color: var(--text-secondary); text-decoration: none; }
+    .mk-lang a[aria-current="true"] { background: var(--surface-card); color: var(--text-primary); box-shadow: var(--shadow-card); }
+    .mk-round { width: 38px; height: 38px; display: inline-grid; place-items: center; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-card); color: var(--brand-primary); cursor: pointer; }
+    .mk-btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 44px; padding: .65rem 1.25rem; border-radius: .7rem; font-weight: 700; font-size: .92rem; text-decoration: none; border: 1px solid transparent; transition: transform .15s, box-shadow .15s; }
+    .mk-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+    .mk .mk-btn--solid, .mk .mk-btn--solid:visited { background: var(--action-solid); color: #fff !important; }
+    .mk .mk-btn--solid:hover { background: var(--action-solid-hover); color: #fff !important; }
+    .mk-btn--ghost { background: var(--surface-card); color: var(--text-primary); border-color: var(--action-solid); }
+    .mk-hide-sm { display: none; }
+    @media (min-width: 640px) { .mk-hide-sm { display: inline-flex; } }
+    /* Hero */
+    .mk-hero { position: relative; overflow: hidden; background-color: var(--surface-page);
+        background-image: linear-gradient(90deg, var(--surface-page) 0%, var(--surface-page) 34%, rgba(250,244,232,.55) 50%, rgba(250,244,232,0) 64%), url('<?= e(asset('assets/images/ui/hero-landscape.jpg')) ?>');
+        background-repeat: no-repeat; background-size: auto, auto 100%; background-position: 0 0, right center; }
+    :root[data-theme="dark"] .mk-hero { background-image: linear-gradient(90deg, var(--surface-page) 0%, var(--surface-page) 34%, rgba(13,21,17,.55) 50%, rgba(13,21,17,0) 64%), url('<?= e(asset('assets/images/ui/hero-landscape.jpg')) ?>'); }
+    .mk-hero__grid { position: relative; display: grid; gap: 1.5rem; align-items: start; padding: 3.5rem 0 7.5rem; }
+    @media (min-width: 900px) { .mk-hero__grid { grid-template-columns: 1fr 1fr; padding: 4.5rem 0 8.5rem; } }
+    @media (max-width: 899px) { .mk-hero { background-size: auto, cover; background-image: linear-gradient(180deg, rgba(250,244,232,.92) 0%, rgba(250,244,232,.86) 60%, rgba(250,244,232,.6) 100%), url('<?= e(asset('assets/images/ui/hero-landscape.jpg')) ?>'); } }
+    .mk-hero h1 { margin: 0 0 1.1rem; font-weight: 900; line-height: 1.04; letter-spacing: -.02em; font-size: clamp(2.3rem, 5.2vw, 3.6rem); color: #10241a; }
+    :root[data-theme="dark"] .mk-hero h1 { color: #f3f7f4; }
+    .mk-hero h1 .mk-g { color: var(--action-solid); }
+    :root[data-theme="dark"] .mk-hero h1 .mk-g { color: #6fcf97; }
+    .mk-hero p.mk-sub { margin: 0 0 1.75rem; max-width: 34rem; font-size: 1.05rem; line-height: 1.65; color: var(--text-secondary); }
+    .mk-quote { justify-self: end; max-width: 22rem; margin-top: 1.5rem; text-align: right; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.45); }
+    .mk-quote p { margin: 0; font-style: italic; font-size: 1.45rem; line-height: 1.35; font-weight: 500; }
+    .mk-quote span { display: block; margin-top: .6rem; font-size: .85rem; opacity: .95; }
+    @media (max-width: 899px) { .mk-quote { display: none; } }
+    /* Services */
+    .mk-services { position: relative; z-index: 2; margin-top: -5rem; display: grid; gap: .9rem; grid-template-columns: repeat(2, minmax(0,1fr)); }
+    @media (min-width: 760px) { .mk-services { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (min-width: 1100px) { .mk-services { grid-template-columns: repeat(5, minmax(0,1fr)); } }
+    .mk-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 1rem; box-shadow: var(--shadow-card); transition: transform .15s, box-shadow .15s; }
+    .mk-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+    .mk-svc { display: block; padding: 1.15rem .9rem; text-align: center; text-decoration: none; }
+    .mk-svc__icon { width: 46px; height: 46px; margin: 0 auto .7rem; display: grid; place-items: center; border-radius: 999px; font-size: 1.25rem; background: var(--brand-primary-light); color: var(--action-solid); }
+    .mk-svc__icon--red { background: var(--status-danger-bg); color: #e8590c; }
+    .mk-svc__icon--orange { background: rgba(232,89,12,.12); color: #e8590c; }
+    .mk-svc h3 { margin: 0; font-size: .92rem; font-weight: 800; color: var(--text-primary); }
+    .mk-svc p { margin: .25rem 0 0; font-size: .78rem; color: var(--text-muted); }
+    /* Posts */
+    .mk-section { padding: 3rem 0 3.5rem; }
+    .mk-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1.1rem; }
+    .mk-head h2 { margin: 0; font-size: 1.45rem; font-weight: 800; color: var(--text-primary); }
+    .mk-head a { color: var(--action-solid); font-weight: 700; font-size: .9rem; text-decoration: none; }
+    :root[data-theme="dark"] .mk-head a { color: #6fcf97; }
+    .mk-posts { display: grid; gap: 1.25rem; }
+    @media (min-width: 760px) { .mk-posts { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    .mk-post { overflow: hidden; display: flex; flex-direction: column; }
+    .mk-post__img { aspect-ratio: 3 / 1.05; background-size: cover; background-position: center; }
+    .mk-post__body { padding: .9rem 1rem 1.1rem; display: flex; flex-direction: column; gap: .35rem; flex: 1; }
+    .mk-post__meta { display: flex; align-items: center; gap: .5rem; font-size: .76rem; color: var(--text-muted); }
+    .mk-badge { display: inline-flex; align-items: center; gap: .25rem; padding: .12rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 800; background: var(--status-danger-bg); color: var(--status-danger); }
+    .mk-post h3 { margin: 0; font-size: 1rem; font-weight: 800; line-height: 1.3; color: var(--text-primary); }
+    .mk-post p { margin: 0; font-size: .86rem; line-height: 1.5; color: var(--text-secondary); }
+    .mk-post .mk-more { margin-top: auto; padding-top: .35rem; font-size: .86rem; font-weight: 700; color: var(--action-solid); text-decoration: none; }
+    :root[data-theme="dark"] .mk-post .mk-more { color: #6fcf97; }
+    .mk-mobile { display: block; position: relative; }
+    @media (min-width: 1000px) { .mk-mobile { display: none; } }
+    .mk-mobile summary { list-style: none; cursor: pointer; }
+    .mk-mobile__panel { position: absolute; right: 0; top: 46px; z-index: 60; width: 220px; padding: .5rem; background: var(--surface-card); border: 1px solid var(--border); border-radius: 1rem; box-shadow: var(--shadow-lift); }
+    .mk-mobile__panel a { display: block; padding: .55rem .75rem; border-radius: .5rem; color: var(--text-primary); font-weight: 600; text-decoration: none; }
+    .mk-mobile__panel a:hover { background: var(--surface-muted); }
+    .mk :focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { .mk-btn, .mk-card { transition: none; } .mk-btn:hover, .mk-card:hover { transform: none; } }
 </style>
 
-<header class="lp-nav" id="mainNav">
-    <div class="lp-wrap lp-nav__row">
+<div class="mk">
+<header class="mk-nav">
+    <div class="mk-wrap mk-nav__row">
         <?= baranggabay_logo('auto', ['size' => 'medium', 'href' => route('')]) ?>
-
-        <nav class="lp-nav__links" aria-label="Main">
-            <a href="#top"><?= e(t('landing.nav_home')) ?></a>
-            <a href="#services"><?= e(t('landing.nav_services')) ?></a>
-            <a href="#latest"><?= e(t('landing.nav_announcements')) ?></a>
-            <a href="#how"><?= e(t('landing.nav_about')) ?></a>
+        <nav class="mk-nav__links" aria-label="Main">
+            <a href="<?= e(route('')) ?>"><?= e(t('landing.nav_home')) ?></a>
+            <a href="<?= e(route('announcements')) ?>"><?= e(t('landing.nav_announcements')) ?></a>
+            <a href="<?= e(route('events')) ?>"><?= e(t('nav.events')) ?></a>
+            <a href="<?= e(route('ordinances')) ?>"><?= e(t('nav.ordinances')) ?></a>
+            <a href="<?= e(route('documents')) ?>"><?= e(t('nav.documents')) ?></a>
+            <a href="#about"><?= e(t('landing.nav_about')) ?></a>
         </nav>
-
-        <div class="d-flex" style="display:flex;align-items:center;gap:.5rem;">
-            <div class="lp-lang lp-hide-sm" role="group" aria-label="Language">
+        <div style="display:flex;align-items:center;gap:.5rem;">
+            <div class="mk-lang mk-hide-sm" role="group" aria-label="Language">
                 <?php foreach ($__langs as $code => $label): ?>
-                    <a href="<?= e(route('set-locale/' . $code)) ?>" aria-current="<?= $__locale === $code ? 'true' : 'false' ?>" lang="<?= $code === 'msm' ? 'mbt' : $code ?>"><?= $label ?></a>
+                    <a href="<?= e(route('set-locale/' . $code)) ?>" aria-current="<?= $__locale === $code ? 'true' : 'false' ?>"><?= $label ?></a>
                 <?php endforeach; ?>
             </div>
-            <button type="button" class="lp-iconbtn" onclick="lpToggleTheme()" aria-label="Toggle dark mode"><i class="bi bi-moon-stars-fill" id="lpThemeIcon"></i></button>
-            <a href="<?= e(route('login')) ?>" class="lp-btn lp-btn--ghost lp-hide-sm"><?= e(t('landing.login')) ?></a>
-            <a href="<?= e(route('register')) ?>" class="lp-btn lp-btn--solid lp-hide-sm"><?= e(t('landing.register')) ?></a>
-            <details class="lp-mobile">
-                <summary class="lp-iconbtn" aria-label="Menu"><i class="bi bi-list"></i></summary>
-                <div class="lp-mobile__panel">
-                    <a href="#services"><?= e(t('landing.nav_services')) ?></a>
-                    <a href="#latest"><?= e(t('landing.nav_announcements')) ?></a>
-                    <a href="#how"><?= e(t('landing.nav_about')) ?></a>
+            <button type="button" class="mk-round" onclick="mkToggleTheme()" aria-label="Toggle dark mode"><i class="bi bi-moon-stars-fill" id="mkThemeIcon"></i></button>
+            <a href="<?= e(route('login')) ?>" class="mk-btn mk-btn--solid mk-hide-sm" style="min-height:40px;padding:.5rem 1.2rem;"><?= e(t('landing.login')) ?></a>
+            <details class="mk-mobile">
+                <summary class="mk-round" aria-label="Menu"><i class="bi bi-list"></i></summary>
+                <div class="mk-mobile__panel">
+                    <a href="<?= e(route('announcements')) ?>"><?= e(t('landing.nav_announcements')) ?></a>
+                    <a href="<?= e(route('events')) ?>"><?= e(t('nav.events')) ?></a>
+                    <a href="<?= e(route('ordinances')) ?>"><?= e(t('nav.ordinances')) ?></a>
+                    <a href="<?= e(route('documents')) ?>"><?= e(t('nav.documents')) ?></a>
                     <a href="<?= e(route('login')) ?>"><?= e(t('landing.login')) ?></a>
                     <a href="<?= e(route('register')) ?>"><?= e(t('landing.register')) ?></a>
-                    <div class="lp-lang" style="margin-top:.4rem;" role="group" aria-label="Language">
+                    <div class="mk-lang" style="margin:.4rem .5rem;">
                         <?php foreach ($__langs as $code => $label): ?>
                             <a href="<?= e(route('set-locale/' . $code)) ?>" aria-current="<?= $__locale === $code ? 'true' : 'false' ?>"><?= $label ?></a>
                         <?php endforeach; ?>
@@ -165,58 +170,37 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
     </div>
 </header>
 
-<main id="top">
-<section class="lp-hero" aria-labelledby="lpHeroTitle">
-    <div class="lp-wrap">
-        <div class="lp-hero__grid">
+<main>
+<section class="mk-hero" aria-labelledby="mkTitle">
+    <div class="mk-wrap">
+        <div class="mk-hero__grid">
             <div>
-                <h1 id="lpHeroTitle">
-                    <?= e(t('landing.hero_title_1')) ?><br>
-                    <span class="lp-accent"><?= e(t('landing.hero_title_2')) ?></span><br>
-                    <span class="lp-accent"><?= e(t('landing.hero_title_3')) ?></span>
-                </h1>
-                <p class="lp-sub"><?= e(t('landing.hero_sub')) ?></p>
+                <h1 id="mkTitle"><?= e(t('landing.hero_title_1')) ?><br><span class="mk-g"><?= e(t('landing.hero_title_2')) ?></span><br><span class="mk-g"><?= e(t('landing.hero_title_3')) ?></span></h1>
+                <p class="mk-sub"><?= e(t('landing.hero_sub')) ?></p>
                 <div style="display:flex;flex-wrap:wrap;gap:.75rem;">
-                    <a href="<?= e(route('announcements')) ?>" class="lp-btn lp-btn--solid"><i class="bi bi-megaphone-fill"></i><?= e(t('landing.cta_announcements')) ?></a>
-                    <a href="#services" class="lp-btn lp-btn--ghost"><?= e(t('landing.cta_services')) ?></a>
+                    <a href="<?= e(route('announcements')) ?>" class="mk-btn mk-btn--solid"><?= e(t('landing.cta_announcements')) ?></a>
+                    <a href="#about" class="mk-btn mk-btn--ghost"><?= e(t('landing.about_btn')) ?></a>
                 </div>
             </div>
-            <div>
-                <figure class="lp-quote">
-                    <p lang="ceb">&ldquo;<?= e(t('landing.quote')) ?>&rdquo;</p>
-                    <span><?= e(t('landing.quote_sub')) ?></span>
-                </figure>
-            </div>
+            <figure class="mk-quote">
+                <p lang="ceb">&ldquo;<?= e(t('landing.quote')) ?>&rdquo;</p>
+                <span><?= e(t('landing.quote_sub')) ?></span>
+            </figure>
         </div>
     </div>
-    <?php /* Flat landscape — ridgelines, river mouth, coconut silhouettes. A
-             place, not a people; inline SVG so it needs no image file. */ ?>
-    <svg class="lp-scape" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
-        <path d="M0 250 L180 150 L300 215 L430 120 L560 220 L700 160 L840 235 L980 145 L1120 225 L1260 165 L1440 245 L1440 420 L0 420 Z" fill="#2f6b45" opacity=".45"/>
-        <path d="M0 305 L150 235 L290 300 L430 245 L580 310 L730 255 L880 315 L1030 250 L1180 305 L1320 255 L1440 300 L1440 420 L0 420 Z" fill="#1f5135" opacity=".7"/>
-        <path d="M690 420 C 705 350, 665 320, 690 300 C 712 282, 700 262, 718 252 C 736 262, 726 284, 744 302 C 768 324, 730 352, 748 420 Z" fill="#7fb7c9" opacity=".55"/>
-        <g fill="#163c27" opacity=".85">
-            <rect x="196" y="318" width="5" height="102" rx="2"/>
-            <path d="M198 322c-30-16-54-12-70 4 22-4 44-2 62 8zM198 322c30-16 54-12 70 4-22-4-44-2-62 8z"/>
-            <path d="M198 320c-12-28-8-50 6-64 6 22 6 44 0 62zM198 320c14-26 34-38 54-36-14 16-32 30-48 40z"/>
-            <rect x="1258" y="332" width="4" height="88" rx="2"/>
-            <path d="M1260 336c-24-13-43-10-56 3 18-3 35-2 50 6zM1260 336c24-13 43-10 56 3-18-3-35-2-50 6z"/>
-        </g>
-    </svg>
 </section>
 
-<div class="lp-wrap" id="services">
-    <div class="lp-services">
+<div class="mk-wrap">
+    <div class="mk-services">
         <?php foreach ([
             ['bi-megaphone-fill', 's_announce', '', route('announcements')],
-            ['bi-exclamation-triangle-fill', 's_alerts', 'alert', route('evacuation')],
+            ['bi-exclamation-triangle-fill', 's_alerts', 'orange', route('evacuation')],
             ['bi-translate', 's_lang', '', route('dictionary')],
-            ['bi-volume-up-fill', 's_voice', 'gold', route('announcements')],
-            ['bi-calendar-event-fill', 's_events', 'gold', route('events')],
-            ['bi-file-earmark-text-fill', 's_docs', '', route('documents')],
+            ['bi-volume-up-fill', 's_voice', '', route('announcements')],
+            ['bi-calendar-event-fill', 's_events', 'orange', route('events')],
         ] as [$icon, $key, $tone, $href]): ?>
-            <a href="<?= e($href) ?>" class="lp-card lp-service" style="text-decoration:none;">
-                <div class="lp-service__icon <?= $tone ? 'lp-service__icon--' . $tone : '' ?>" aria-hidden="true"><i class="bi <?= $icon ?>"></i></div>
+            <a href="<?= e($href) ?>" class="mk-card mk-svc">
+                <div class="mk-svc__icon <?= $tone ? 'mk-svc__icon--' . $tone : '' ?>" aria-hidden="true"><i class="bi <?= $icon ?>"></i></div>
                 <h3><?= e(t('landing.' . $key)) ?></h3>
                 <p><?= e(t('landing.' . $key . '_d')) ?></p>
             </a>
@@ -224,39 +208,34 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
     </div>
 </div>
 
-<section class="lp-section" id="latest" aria-labelledby="lpLatest">
-    <div class="lp-wrap">
-        <div class="lp-head">
-            <h2 id="lpLatest"><?= e(t('landing.latest')) ?></h2>
+<section class="mk-section" aria-labelledby="mkLatest">
+    <div class="mk-wrap">
+        <div class="mk-head">
+            <h2 id="mkLatest"><?= e(t('landing.latest')) ?></h2>
             <a href="<?= e(route('announcements')) ?>"><?= e(t('landing.view_all')) ?> <i class="bi bi-arrow-right"></i></a>
         </div>
         <?php if (!$__latest): ?>
-            <div class="lp-card lp-empty"><?= e(t('landing.no_posts')) ?></div>
+            <div class="mk-card" style="padding:2rem;text-align:center;color:var(--text-muted);"><?= e(t('landing.no_posts')) ?></div>
         <?php else: ?>
-            <div class="lp-posts">
+            <div class="mk-posts">
                 <?php foreach ($__latest as $a):
                     $aTitle = localised_text($a, 'title');
                     $aBody  = \App\Services\SpokenText::repairJoins(\App\Services\SpokenText::plain(localised_text($a, 'body')));
                     $aUrg   = (string) ($a['urgency'] ?? 'normal');
+                    $aPh    = post_placeholder_image($a['category'] ?? '', $aUrg);
                     $aImg   = trim((string) ($a['cover_image_url'] ?? ''));
                     $aUrl   = route('announcements/' . $a['slug']);
                 ?>
-                    <article class="lp-card lp-post">
-                        <div class="lp-post__img">
-                            <?php if ($aImg !== ''): ?>
-                                <img src="<?= e(asset($aImg)) ?>" alt="" loading="lazy" onerror="this.remove()">
-                            <?php endif; ?>
-                            <i class="bi bi-megaphone" aria-hidden="true"></i>
-                        </div>
-                        <div class="lp-post__body">
-                            <div class="lp-post__meta">
-                                <?php if ($aUrg === 'urgent'): ?><span class="lp-badge lp-badge--urgent"><i class="bi bi-exclamation-triangle-fill"></i><?= e(t('landing.urgent')) ?></span><?php endif; ?>
-                                <?php if ($aUrg === 'important'): ?><span class="lp-badge lp-badge--important"><?= e(t('landing.important')) ?></span><?php endif; ?>
-                                <time datetime="<?= e((string) $a['published_at']) ?>"><?= e(date('M j, Y', strtotime((string) ($a['published_at'] ?? 'now')))) ?></time>
+                    <article class="mk-card mk-post">
+                        <div class="mk-post__img" role="img" aria-label="" style="background-image:<?= $aImg !== '' ? "url('" . e(asset($aImg)) . "'), " : '' ?>url('<?= e($aPh) ?>');"></div>
+                        <div class="mk-post__body">
+                            <div class="mk-post__meta">
+                                <?php if ($aUrg === 'urgent'): ?><span class="mk-badge"><i class="bi bi-exclamation-triangle-fill"></i><?= e(t('landing.urgent')) ?></span><?php endif; ?>
+                                <time datetime="<?= e((string) $a['published_at']) ?>"><?= e(relative_time((string) $a['published_at'])) ?></time>
                             </div>
                             <h3><a href="<?= e($aUrl) ?>" style="color:inherit;text-decoration:none;"><?= e($aTitle) ?></a></h3>
-                            <p><?= e(mb_strimwidth($aBody, 0, 130, '…')) ?></p>
-                            <a href="<?= e($aUrl) ?>" class="lp-more" aria-label="<?= e(t('landing.read_more') . ': ' . $aTitle) ?>"><?= e(t('landing.read_more')) ?> <i class="bi bi-arrow-right"></i></a>
+                            <p><?= e(mb_strimwidth($aBody, 0, 95, '…')) ?></p>
+                            <a href="<?= e($aUrl) ?>" class="mk-more" aria-label="<?= e(t('landing.read_more') . ': ' . $aTitle) ?>"><?= e(t('landing.read_more')) ?> <i class="bi bi-arrow-right"></i></a>
                         </div>
                     </article>
                 <?php endforeach; ?>
@@ -264,25 +243,10 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
         <?php endif; ?>
     </div>
 </section>
-
-<section class="lp-section" id="how" aria-labelledby="lpHow" style="padding-top:0;">
-    <div class="lp-wrap">
-        <div class="lp-head"><h2 id="lpHow"><?= e(t('landing.how_title')) ?></h2></div>
-        <div class="lp-steps">
-            <?php foreach (['step1', 'step2', 'step3'] as $i => $k): ?>
-                <div class="lp-card lp-step">
-                    <div class="lp-step__n"><?= $i + 1 ?></div>
-                    <h3><?= e(t('landing.' . $k)) ?></h3>
-                    <p><?= e(t('landing.' . $k . '_d')) ?></p>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
 </main>
 
-<footer class="footer-premium">
-    <div class="lp-wrap" style="padding-top:3rem;padding-bottom:2rem;">
+<footer class="footer-premium" id="about">
+    <div class="mk-wrap" style="padding-top:3rem;padding-bottom:2rem;">
         <div class="grid gap-10 lg:grid-cols-3">
             <div>
                 <div class="flex items-center gap-3 mb-4"><?= baranggabay_logo('dark', ['size' => 'medium', 'href' => route('')]) ?></div>
@@ -297,13 +261,12 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
                 </ul>
             </div>
             <div>
-                <p class="font-semibold mb-4"><?= e(t('landing.links')) ?></p>
-                <div class="grid grid-cols-2 gap-x-4">
-                    <a href="<?= e(route('login')) ?>" class="footer-link"><?= e(t('landing.login')) ?></a>
-                    <a href="<?= e(route('register')) ?>" class="footer-link"><?= e(t('landing.register')) ?></a>
-                    <a href="<?= e(route('announcements')) ?>" class="footer-link"><?= e(t('landing.nav_announcements')) ?></a>
-                    <a href="<?= e(route('events')) ?>" class="footer-link"><?= e(t('landing.s_events')) ?></a>
-                </div>
+                <p class="font-semibold mb-4"><?= e(t('landing.how_title')) ?></p>
+                <ol class="space-y-2 text-sm" style="padding-left:1rem;">
+                    <li><?= e(t('landing.step1')) ?> — <?= e(t('landing.step1_d')) ?></li>
+                    <li><?= e(t('landing.step2')) ?> — <?= e(t('landing.step2_d')) ?></li>
+                    <li><?= e(t('landing.step3')) ?> — <?= e(t('landing.step3_d')) ?></li>
+                </ol>
             </div>
         </div>
         <hr class="footer-divider">
@@ -311,22 +274,21 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
         <div class="text-center text-sm footer-copyright">&copy; <?= date('Y') ?> BarangGabay — <?= e($__location) ?></div>
     </div>
 </footer>
+</div>
 
 <script>
-    function lpThemeIcon() {
-        var dark = document.documentElement.getAttribute('data-theme') === 'dark'
-            || (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        var i = document.getElementById('lpThemeIcon');
-        if (i) { i.className = 'bi ' + (dark ? 'bi-sun-fill' : 'bi-moon-stars-fill'); }
-        return dark;
+    function mkDark() {
+        var a = document.documentElement.getAttribute('data-theme');
+        return a === 'dark' || (!a && window.matchMedia('(prefers-color-scheme: dark)').matches);
     }
-    function lpToggleTheme() {
-        var next = lpThemeIcon() ? 'light' : 'dark';
+    function mkIcon() { var i = document.getElementById('mkThemeIcon'); if (i) { i.className = 'bi ' + (mkDark() ? 'bi-sun-fill' : 'bi-moon-stars-fill'); } }
+    function mkToggleTheme() {
+        var next = mkDark() ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
         try { localStorage.setItem('bg-theme', next); } catch (e) {}
-        lpThemeIcon();
+        mkIcon();
     }
-    lpThemeIcon();
+    mkIcon();
 </script>
 </body>
 </html>
