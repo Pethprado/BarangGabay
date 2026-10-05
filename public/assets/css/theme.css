@@ -1172,3 +1172,6 @@ table.table tbody tr:hover td {
 /* Dark mode: inline light-grey upload boxes in the admin forms. */
 :root[data-theme="dark"] [style*="background:#f8f9fa"], :root[data-theme="dark"] [style*="background: #f8f9fa"] { background: var(--surface-muted) !important; color: var(--text-secondary) !important; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) [style*="background:#f8f9fa"] { background: var(--surface-muted) !important; color: var(--text-secondary) !important; } }
+/* Header EN/FIL/MN switch: make the selected language obvious in dark mode. */
+:root[data-theme="dark"] #mainNav [role="group"] a[aria-current="true"] { background: #17603a !important; color: #fff !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #mainNav [role="group"] a[aria-current="true"] { background: #17603a !important; color: #fff !important; } }

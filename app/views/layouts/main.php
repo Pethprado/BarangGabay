@@ -140,21 +140,21 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
                 <?php endif; ?>
             </nav>
 
-            <!-- Language switch — first-class header element, not buried in a menu -->
-            <?php $__curLocale = current_locale(); ?>
-            <div class="hidden items-center gap-0.5 rounded-full border border-slate-200 bg-slate-50 p-0.5 lg:flex" role="group" aria-label="<?= e(t('lang.switch_label')) ?>">
-                <?php foreach (available_locales() as $__code => $__label): ?>
-                <a href="<?= e(route('set-locale/' . $__code)) ?>"
-                   class="rounded-full px-2.5 py-1 text-xs font-bold transition-colors <?= $__curLocale === $__code ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' ?>"
-                   title="<?= e($__label) ?>"
-                   <?= $__curLocale === $__code ? 'aria-current="true"' : '' ?>>
-                    <?= e(locale_short_code($__code)) ?>
-                </a>
-                <?php endforeach; ?>
-            </div>
-
             <!-- Desktop right side -->
             <div class="hidden items-center gap-3 md:flex">
+
+                <!-- Language switch — sits directly left of the dark-mode toggle -->
+                <?php $__curLocale = current_locale(); ?>
+                <div class="hidden items-center gap-0.5 rounded-full border border-slate-200 bg-slate-50 p-0.5 lg:flex" role="group" aria-label="<?= e(t('lang.switch_label')) ?>">
+                    <?php foreach (available_locales() as $__code => $__label): ?>
+                    <a href="<?= e(route('set-locale/' . $__code)) ?>"
+                       class="rounded-full px-2.5 py-1 text-xs font-bold transition-colors <?= $__curLocale === $__code ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' ?>"
+                       title="<?= e($__label) ?>"
+                       <?= $__curLocale === $__code ? 'aria-current="true"' : '' ?>>
+                        <?= e(locale_short_code($__code)) ?>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
 
                 <!-- Dark / light mode toggle -->
                 <button type="button" class="bell-btn" title="<?= e(t('theme.toggle')) ?>" aria-label="<?= e(t('theme.toggle')) ?>" onclick="window.toggleBgTheme()">
