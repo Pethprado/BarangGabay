@@ -30,6 +30,34 @@ class AuthController
     public const PASSWORD_MIN_LENGTH = 8;
 
     /**
+     * The rules a NEW password must meet — the same five the registration
+     * page's checklist shows, so the screen never promises less or more than
+     * the server enforces. Checked only when a password is set (register,
+     * reset, change); existing passwords keep working.
+     *
+     * @return list<string> Keys of the rules that failed: length, upper,
+     *                      lower, number, symbol. Empty when the password passes.
+     */
+    public static function passwordRuleFailures(string $password): array
+    {
+        $failed = [];
+        if (\strlen($password) < self::PASSWORD_MIN_LENGTH) { $failed[] = 'length'; }
+        if (!preg_match('/[A-Z]/', $password))             { $failed[] = 'upper'; }
+        if (!preg_match('/[a-z]/', $password))             { $failed[] = 'lower'; }
+        if (!preg_match('/[0-9]/', $password))             { $failed[] = 'number'; }
+        if (!preg_match('/[^A-Za-z0-9]/', $password))      { $failed[] = 'symbol'; }
+
+        return $failed;
+    }
+
+    /** One readable sentence naming the password rules. */
+    public static function passwordRuleSentence(): string
+    {
+        return 'Use at least ' . self::PASSWORD_MIN_LENGTH
+            . ' characters with an uppercase letter, a lowercase letter, a number and a symbol.';
+    }
+
+    /**
      * Login entry points.
      *
      * A school portal puts "Student" and "Faculty" doors on one login page, and
@@ -484,9 +512,9 @@ class AuthController
 
         if (!$password) {
             $errors['password'] = 'Password ay kinakailangan.';
-        } elseif (\strlen($password) < self::PASSWORD_MIN_LENGTH) {
-            $errors['password'] = 'Ang password ay dapat hindi bababa sa '
-                . self::PASSWORD_MIN_LENGTH . ' karakter.';
+        } elseif (self::passwordRuleFailures($password) !== []) {
+            $errors['password'] = 'Ang password ay dapat may hindi bababa sa '
+                . self::PASSWORD_MIN_LENGTH . ' karakter, malaking titik, maliit na titik, numero at simbolo.';
         }
 
         if ($password !== $confirm) {

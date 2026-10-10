@@ -1448,6 +1448,43 @@ function localised_text(array $row, string $baseField): string
 /**
  * Set the active UI locale for this session and persist to cookie/profile.
  */
+/**
+ * The interface language of the back office (staff/admin pages).
+ *
+ * Kept apart from current_locale() on purpose. current_locale() also decides
+ * which language version of a post is rendered, and the back office must keep
+ * showing the original text — an edit form pre-filled with a machine
+ * translation would save that translation over the source. So staff pages
+ * stay pinned to English for CONTENT, while their labels, menus and headings
+ * follow the EN / FIL / MN switch in the admin top bar.
+ *
+ * Defaults to English and has its own session key, so a staff member's
+ * choice here never changes what language they read resident pages in.
+ */
+function back_office_locale(): string
+{
+    $locale = $_SESSION['bo_locale'] ?? $_COOKIE['bg_bo_locale'] ?? 'en';
+
+    return is_string($locale) && array_key_exists($locale, available_locales()) ? $locale : 'en';
+}
+
+/** Persist the back-office interface language. See back_office_locale(). */
+function set_back_office_locale(string $locale): void
+{
+    if (!array_key_exists($locale, available_locales())) {
+        return;
+    }
+    $_SESSION['bo_locale'] = $locale;
+    if (!headers_sent()) {
+        setcookie('bg_bo_locale', $locale, [
+            'expires'  => time() + 86400 * 365,
+            'path'     => '/',
+            'httponly' => false,
+            'samesite' => 'Lax',
+        ]);
+    }
+}
+
 function set_locale(string $locale): void
 {
     if (array_key_exists($locale, available_locales())) {
@@ -1498,7 +1535,7 @@ function t(string $key, array $replace = [], ?string $locale = null): string
 
     $locale = $locale !== null && array_key_exists($locale, available_locales())
         ? $locale
-        : current_locale();
+        : (is_back_office_request() ? back_office_locale() : current_locale());
     if (!isset($cache[$locale])) {
         $file = __DIR__ . '/../lang/' . $locale . '.php';
         $cache[$locale] = is_file($file) ? require $file : [];

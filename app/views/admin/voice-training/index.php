@@ -915,7 +915,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             <div class="vt-coverage-block">
                 <div class="vt-coverage-top">
                     <span>Used-in-posts coverage</span>
-                    <span style="color: #c8992e;"><?= number_format((float) $usage['usage_coverage'], 1) ?>%</span>
+                    <span style="color: var(--status-warning);"><?= number_format((float) $usage['usage_coverage'], 1) ?>%</span>
                 </div>
                 <div class="vt-progress-track"><div class="vt-progress-fill" style="width: <?= (float) $usage['usage_coverage'] ?>%;"></div></div>
                 <span class="vt-coverage-sub"><?= (int) $usage['used_recorded'] ?> of <?= (int) $usage['used_words'] ?> Manobo words in visible posts have a recording</span>

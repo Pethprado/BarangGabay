@@ -8,7 +8,7 @@ ob_start();
 .ql-container { font-size:.9rem; font-family:inherit; min-height:220px; border-bottom-left-radius:.5rem!important; border-bottom-right-radius:.5rem!important; }
 .ql-toolbar { border-top-left-radius:.5rem!important; border-top-right-radius:.5rem!important; background:#f9fafb; }
 .ql-editor { min-height:220px; line-height:1.7; }
-.ql-editor.ql-blank::before { color:#94a3b8; font-style:normal; }
+.ql-editor.ql-blank::before { color:var(--text-muted); font-style:normal; }
 </style>
 
 <!-- Breadcrumb -->
@@ -27,7 +27,7 @@ ob_start();
 <!-- Page header -->
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-4">
     <div>
-        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;"><?= e(t('admin_announcements.eyebrow')) ?></p>
+        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);"><?= e(t('admin_announcements.eyebrow')) ?></p>
         <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;"><?= e(t('admin_announcements.create_btn')) ?></h1>
         <p class="text-muted mt-1 mb-0" style="font-size:.82rem;"><?= e(t('admin_announcements.create_subtitle')) ?></p>
     </div>
@@ -166,10 +166,10 @@ ob_start();
                             <div>
                                 <i class="bi bi-cloud-arrow-up"
                                    style="font-size:2rem;color:#a8d5b5;display:block;margin-bottom:.5rem;"></i>
-                                <p style="margin:0;font-size:.855rem;color:#4a5568;font-weight:600;">
+                                <p style="margin:0;font-size:.855rem;color:var(--text-secondary);font-weight:600;">
                                     <?= e(t('admin_announcements.dropzone_text')) ?>
                                 </p>
-                                <p style="margin:.25rem 0 0;font-size:.77rem;color:#94a3b8;">
+                                <p style="margin:.25rem 0 0;font-size:.77rem;color:var(--text-muted);">
                                     <?= e(t('admin_announcements.dropzone_hint')) ?>
                                 </p>
                             </div>
@@ -347,7 +347,7 @@ ob_start();
                     <p style="font-size:.8rem;font-weight:700;color:var(--brand-green);margin:0 0 6px;">
                         <i class="bi bi-lightbulb-fill me-1"></i><?= e(t('admin_announcements.tips_title')) ?>
                     </p>
-                    <ul style="font-size:.77rem;color:#4a5568;margin:0;padding-left:1.1rem;line-height:1.9;">
+                    <ul style="font-size:.77rem;color:var(--text-secondary);margin:0;padding-left:1.1rem;line-height:1.9;">
                         <li><?= t('admin_announcements.tip_published') ?></li>
                         <li><?= t('admin_announcements.tip_draft') ?></li>
                         <li><?= t('admin_announcements.tip_urgent') ?></li>

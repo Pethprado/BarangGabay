@@ -190,10 +190,10 @@ ob_start();
                             <div>
                                 <i class="bi bi-cloud-arrow-up"
                                    style="font-size:2rem;color:#a8d5b5;display:block;margin-bottom:.5rem;"></i>
-                                <p style="margin:0;font-size:.855rem;color:#4a5568;font-weight:600;">
+                                <p style="margin:0;font-size:.855rem;color:var(--text-secondary);font-weight:600;">
                                     <?= e(t('admin_announcements.dropzone_replace_text')) ?>
                                 </p>
-                                <p style="margin:.25rem 0 0;font-size:.77rem;color:#94a3b8;">
+                                <p style="margin:.25rem 0 0;font-size:.77rem;color:var(--text-muted);">
                                     <?= e(t('admin_announcements.dropzone_hint')) ?>
                                 </p>
                             </div>

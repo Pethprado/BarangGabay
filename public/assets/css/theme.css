@@ -79,7 +79,7 @@
    notes for the full set of pairs actually used here, all >= 4.5:1. */
 :root {
     /* ── Fonts ─────────────────────────────────────────────────────── */
-    --font-heading: 'Bitter', Georgia, 'Times New Roman', serif;
+    --font-heading: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     --font-body:    'Inter', 'Segoe UI', system-ui, sans-serif;
 
     /* ── Motif colours (global; landing's --l-* tokens are scoped to
@@ -87,45 +87,45 @@
     --motif-gold:      #c8992e;   /* decoration only — 2.38:1, never text */
     --motif-gold-ink:  #7a5c11;   /* the gold that MAY carry text */
     --motif-gold-night:#e2b955;   /* gold on a dark ground */
-    --motif-maroon-dk: #0f4a2a;
-    --motif-night:     #10241a;
-    --motif-night-2:   #1a3a29;
+    --motif-maroon-dk: #064e3b;
+    --motif-night:     #071d22;
+    --motif-night-2:   #0b2a2c;
 
     /* ── Surfaces — cream content, dark brown panels (rule: dashboards
          stay light for all-day readability; dark stays for sidebar,
          login and headers only) ───────────────────────────────────── */
-    --surface-page:     #faf4e8;
-    --surface-card:     #fffdf8;
-    --surface-raised:   #fffdf8;
-    --surface-muted:    #f1e6d2;
-    --surface-input:    #fdf9ef;
+    --surface-page:     #faf7ef;
+    --surface-card:     #ffffff;
+    --surface-raised:   #ffffff;
+    --surface-muted:    #f3f1ea;
+    --surface-input:    #ffffff;
 
     --surface-panel:    var(--motif-night);
     --surface-panel-2:  var(--motif-night-2);
 
     /* ── Text ──────────────────────────────────────────────────────── */
-    --text-primary:     #1a1512;   /* 17.81:1 on --surface-card */
-    --text-secondary:   #4a3f38;   /* 10.03:1 */
-    --text-muted:       #6b5d52;   /*  6.24:1 */
+    --text-primary:     #0d1b1e;   /* 17.4:1 on --surface-card */
+    --text-secondary:   #3f4a47;   /*  9.4:1 */
+    --text-muted:       #66706c;   /*  4.97:1 on white, 4.6:1 on page */
 
-    --text-on-panel:        #fdf8ee;   /* 15.93:1 on --surface-panel */
-    --text-on-panel-soft:   #e6d9c8;   /* 12.15:1 */
-    --text-on-panel-faint:  #c3b2a0;   /*  8.19:1 */
+    --text-on-panel:        #f4f8f6;   /* 16.6:1 on --surface-panel */
+    --text-on-panel-soft:   #d3ddd9;   /* 12.6:1 */
+    --text-on-panel-faint:  #b3c2bd;   /*  9.2:1 */
 
     /* ── Brand — text/link colour. A gold LOOKS right here, but raw gold
          (--motif-gold) is 2.38:1 and unusable for text, so the ink-shade
          of gold carries words instead; raw gold stays for borders/fills. */
-    --brand-primary:        #17603a;                 /* barangay green, 7.4:1 on card */
-    --brand-primary-dark:   #0f4a2a;                 /* hover */
-    --brand-primary-light:  #e3efe6;                 /* pale green wash */
-    --brand-secondary:      #2f5d3a;                 /* earthy green, 7.52:1 */
+    --brand-primary:        #087a4b;                 /* primary green, 5.4:1 on white */
+    --brand-primary-dark:   #064e3b;                 /* hover */
+    --brand-primary-light:  #e8f6ee;                 /* soft green wash */
+    --brand-secondary:      #0c7a45;                 /* text-safe green, 5.4:1 (#16a36d is fills-only: 2.7:1 as text) */
     --brand-secondary-dark: #1f3f27;
     --brand-secondary-light:#e3ede4;
 
     /* ── Actions — solid fill, carries white text. Fixed across themes
          on purpose (see tokens.css's own rule + DesignTokensTest, which
          this file follows even though it only scans tokens.css itself). */
-    --action-solid:       #17603a;   /* deep barangay green — white on it 7.6:1 */
+    --action-solid:       #087a4b;   /* primary green — white on it 5.4:1 */
     --action-solid-hover: var(--motif-maroon-dk);   /* white on it 13.08:1 */
     --text-on-action:     #ffffff;
 
@@ -137,19 +137,19 @@
 
     /* ── Status — success/warning/danger/info pulled into the same
          earthy family, each measured against card AND its own tint. ── */
-    --status-success:    #3f6b34;
-    --status-warning:    #8a5a12;
-    --status-danger:     #a3311c;
-    --status-info:       #5b5240;
+    --status-success:    #0c7a45;
+    --status-warning:    #8a5a00;
+    --status-danger:     #b3312f;
+    --status-info:       #1460bd;
 
-    --status-success-bg: #e6ecdf;
-    --status-warning-bg: #f5e8d0;
-    --status-danger-bg:  #f6ded7;
-    --status-info-bg:    #ece7dd;
+    --status-success-bg: #e8f6ee;
+    --status-warning-bg: #fdf1d8;
+    --status-danger-bg:  #fce7e3;
+    --status-info-bg:    #e5f0fd;
 
     /* ── Lines and focus ───────────────────────────────────────────── */
-    --border:           #e4d7c2;
-    --border-strong:    #cdbb9c;
+    --border:           #e8e4da;
+    --border-strong:    #d6d1c4;
     --focus-ring:       rgba(23,96,58,.40);   /* maroon, visible on cream and dark alike */
     --focus-ring-width: 3px;
 
@@ -157,7 +157,7 @@
     --radius-pill: 999px;
 
     /* ── Depth — same shadow scale, warmed from slate-grey to a brown tint */
-    --shadow-card:  0 1px 2px rgba(16,36,26,.08), 0 2px 8px rgba(16,36,26,.06);
+    --shadow-card:  0 1px 2px rgba(13,27,30,.04), 0 4px 14px rgba(13,27,30,.04);
     --shadow-lift:  0 6px 18px rgba(16,36,26,.12);
     --shadow-modal: 0 28px 70px rgba(8,18,13,.50), 0 4px 18px rgba(8,18,13,.28);
 
@@ -168,15 +168,15 @@
     --sb-bg:          var(--motif-night);
     --sb-bg-mid:      var(--motif-night-2);
     --sb-hover:       rgba(253,248,238,.08);
-    --sb-active:      #2e8b57;                    /* green active item (mockup) */
-    --sb-active-glow: rgba(46,139,87,.35);
+    --sb-active:      #087a4b;                    /* green active item (mockup) */
+    --sb-active-glow: rgba(8,122,75,.35);
     --sb-text:        var(--text-on-panel-faint);
     --sb-text-bright: var(--text-on-panel);
 
     /* admin.css's premium-layer gradients (hardcode a blue literal
        blended with a token, so a var-only override upstream can't reach
        them — redeclared whole here). */
-    --brand-gradient:      linear-gradient(135deg, #17603a 0%, #1f7a45 100%);
+    --brand-gradient:      linear-gradient(135deg, #087a4b 0%, #16a36d 100%);
     --brand-gradient-gold: linear-gradient(135deg, #c8992e 0%, #7a5c11 100%);
     --glow-green:          0 0 0 4px rgba(23,96,58,.14);
     --glow-gold:           0 0 0 4px rgba(200,153,46,.18);
@@ -194,19 +194,19 @@
    hand, the same discipline DesignTokensTest enforces on tokens.css itself.
    ═══════════════════════════════════════════════════════════════════════ */
 :root[data-theme="dark"] {
-    --surface-page:     #0d1511;
-    --surface-card:     var(--motif-night);
-    --surface-raised:   #1a2620;
-    --surface-muted:    #1a2620;
-    --surface-input:    #1a2620;
+    --surface-page:     #08161a;
+    --surface-card:     #0f2226;
+    --surface-raised:   #152c30;
+    --surface-muted:    #152c30;
+    --surface-input:    #12282c;
 
-    --text-primary:     #fdf8ee;   /* 15.93:1 on dark card */
-    --text-secondary:   #e6d9c8;   /* 12.15:1 */
-    --text-muted:       #c3b2a0;   /*  8.19:1 */
+    --text-primary:     #eef5f2;   /* 15.93:1 on dark card */
+    --text-secondary:   #c9d7d2;   /* 12.15:1 */
+    --text-muted:       #a2b4ae;   /*  8.19:1 */
 
     --brand-primary:        #6fcf97;                  /* light green on dark card */
     --brand-primary-dark:   #a7e3bd;
-    --brand-primary-light:  #1c3326;
+    --brand-primary-light:  #123a2c;
     --brand-secondary:      #6fae7e;                  /* 6.45:1 on dark card */
     --brand-secondary-light:#1f3324;
 
@@ -216,21 +216,21 @@
                                        too dark to read as TEXT on a dark
                                        ground; the action fill itself
                                        (--action-solid) does not change */
-    --role-system:      #c3b2a0;
+    --role-system:      #a2b4ae;
 
-    --border:           #2a3b32;
-    --border-strong:    #37493f;
+    --border:           #21393c;
+    --border-strong:    #2f4a4c;
     --focus-ring:       rgba(111,207,151,.45);
 
-    --status-success:    #9bc78a;
+    --status-success:    #7fd9a8;
     --status-warning:    #e0b25c;
-    --status-danger:     #e2907c;
-    --status-info:       #cbbfa0;
+    --status-danger:     #f3a097;
+    --status-info:       #8cc0f5;
 
-    --status-success-bg: rgba(63,107,52,.22);
+    --status-success-bg: rgba(22,163,109,.18);
     --status-warning-bg: rgba(138,90,18,.24);
-    --status-danger-bg:  rgba(163,49,28,.22);
-    --status-info-bg:    rgba(91,82,64,.30);
+    --status-danger-bg:  rgba(201,60,60,.20);
+    --status-info-bg:    rgba(22,119,232,.18);
 
     --shadow-card:  0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.30);
     --shadow-lift:  0 6px 18px rgba(0,0,0,.45);
@@ -241,40 +241,40 @@
 
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-        --surface-page:     #0d1511;
-        --surface-card:     var(--motif-night);
-        --surface-raised:   #1a2620;
-        --surface-muted:    #1a2620;
-        --surface-input:    #1a2620;
+        --surface-page:     #08161a;
+        --surface-card:     #0f2226;
+        --surface-raised:   #152c30;
+        --surface-muted:    #152c30;
+        --surface-input:    #12282c;
 
-        --text-primary:     #fdf8ee;
-        --text-secondary:   #e6d9c8;
-        --text-muted:       #c3b2a0;
+        --text-primary:     #eef5f2;
+        --text-secondary:   #c9d7d2;
+        --text-muted:       #a2b4ae;
 
         --brand-primary:        #6fcf97;
         --brand-primary-dark:   #a7e3bd;
-        --brand-primary-light:  #1c3326;
+        --brand-primary-light:  #123a2c;
         --brand-secondary:      #6fae7e;
         --brand-secondary-light:#1f3324;
 
         --role-resident:    var(--motif-gold-night);
         --role-staff:       #6fae7e;
         --role-admin:       #e2907c;
-        --role-system:      #c3b2a0;
+        --role-system:      #a2b4ae;
 
-        --border:           #2a3b32;
-        --border-strong:    #37493f;
+        --border:           #21393c;
+        --border-strong:    #2f4a4c;
         --focus-ring:       rgba(111,207,151,.45);
 
-        --status-success:    #9bc78a;
+        --status-success:    #7fd9a8;
         --status-warning:    #e0b25c;
-        --status-danger:     #e2907c;
-        --status-info:       #cbbfa0;
+        --status-danger:     #f3a097;
+        --status-info:       #8cc0f5;
 
-        --status-success-bg: rgba(63,107,52,.22);
+        --status-success-bg: rgba(22,163,109,.18);
         --status-warning-bg: rgba(138,90,18,.24);
-        --status-danger-bg:  rgba(163,49,28,.22);
-        --status-info-bg:    rgba(91,82,64,.30);
+        --status-danger-bg:  rgba(201,60,60,.20);
+        --status-info-bg:    rgba(22,119,232,.18);
 
         --shadow-card:  0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.30);
         --shadow-lift:  0 6px 18px rgba(0,0,0,.45);
@@ -294,7 +294,7 @@
    failure, not a cosmetic one. Dark ink on gold measures 6.94:1. */
 .sidebar-link.active,
 .sidebar-link.active .nav-icon {
-    color: var(--text-primary) !important;
+    color: #ffffff !important;   /* white on the #087a4b fill: 5.4:1 */
 }
 .sidebar-link.active::before {
     /* the little left-edge accent bar — was --brand-gold (now green via
@@ -1175,3 +1175,477 @@ table.table tbody tr:hover td {
 /* Header EN/FIL/MN switch: make the selected language obvious in dark mode. */
 :root[data-theme="dark"] #mainNav [role="group"] a[aria-current="true"] { background: #17603a !important; color: #fff !important; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #mainNav [role="group"] a[aria-current="true"] { background: #17603a !important; color: #fff !important; } }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LEGIBILITY LAYER — every word readable in both themes
+   ═══════════════════════════════════════════════════════════════════════
+   Found by an automated contrast sweep of every page in light and dark mode
+   (text under 3:1 against its real background), and grouped by CAUSE so a
+   new view using the same classes or inline colours is covered too:
+
+     • Bootstrap utilities (.text-muted, .text-dark, .bg-white …) are light-only.
+     • Older views paint pastel chips inline (background:#fef3c7; color:#b45309).
+       In dark mode each pastel FAMILY maps to its dark tint AND its matching
+       text colour together — recolouring one without the other is what broke
+       chips before.
+     • --brand-primary turns light in dark mode; fills under white text use
+       --action-solid, which never changes.
+
+   Generated from one list (tools/gen-legibility-css.py) so the two dark
+   blocks below stay identical.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Both themes: table headers sit on the green header fill; some views set an
+   inline muted colour meant for a plain header. On green, white always wins. */
+table.table thead th[style*="color:var(--text-muted)"],
+table.table thead th[style*="color: var(--text-muted)"],
+table.table thead th.text-muted { color: #ffffff !important; }
+
+/* Both themes: a gold chip with white text measures 2.2:1 — dark ink instead. */
+.badge[style*="#e8a020"], .badge[style*="232,160,32"], .badge.bg-warning, .badge.text-bg-warning { color: #2a1d00 !important; }
+
+/* Both themes: a muted count inside an active (green) pill inherits the pill's white. */
+.active .vt-text-muted, input:checked + .vt-lang-btn .vt-text-muted, [aria-pressed="true"] .vt-text-muted, .btn-success .vt-text-muted { color: inherit !important; opacity: .85; }
+
+/* ── DARK MODE (explicit toggle) ─────────────────────────────────────── */
+:root[data-theme="dark"] .text-muted,
+:root[data-theme="dark"] .text-secondary,
+:root[data-theme="dark"] .form-text { color: var(--text-muted) !important; }
+:root[data-theme="dark"] .text-dark:not(.badge),
+:root[data-theme="dark"] .text-body,
+:root[data-theme="dark"] .text-black { color: var(--text-primary) !important; }
+:root[data-theme="dark"] .text-primary { color: var(--brand-primary) !important; }
+:root[data-theme="dark"] .text-success { color: var(--status-success) !important; }
+:root[data-theme="dark"] .text-danger { color: var(--status-danger) !important; }
+:root[data-theme="dark"] .text-info { color: var(--status-info) !important; }
+:root[data-theme="dark"] .bg-white,
+:root[data-theme="dark"] .bg-light,
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .list-group-item,
+:root[data-theme="dark"] [style*="background:#fff;"],
+:root[data-theme="dark"] [style*="background: #fff;"],
+:root[data-theme="dark"] [style$="background:#fff"],
+:root[data-theme="dark"] [style*="background:#ffffff"],
+:root[data-theme="dark"] [style*="background: #ffffff"],
+:root[data-theme="dark"] [style*="background:white"],
+:root[data-theme="dark"] [style*="background-color:#fff;"],
+:root[data-theme="dark"] [style*="background:#fcfdfc"],
+:root[data-theme="dark"] [style*="background:#fffdf8"] { background-color: var(--surface-card) !important; color: var(--text-primary); border-color: var(--border) !important; }
+:root[data-theme="dark"] [style*="background:#f8f9fa"],
+:root[data-theme="dark"] [style*="background: #f8f9fa"],
+:root[data-theme="dark"] [style*="background-color:#f8f9fa"],
+:root[data-theme="dark"] [style*="background:#f9fafb"],
+:root[data-theme="dark"] [style*="background: #f9fafb"],
+:root[data-theme="dark"] [style*="background-color:#f9fafb"],
+:root[data-theme="dark"] [style*="background:#f1f5f9"],
+:root[data-theme="dark"] [style*="background: #f1f5f9"],
+:root[data-theme="dark"] [style*="background-color:#f1f5f9"],
+:root[data-theme="dark"] [style*="background:#e9ecef"],
+:root[data-theme="dark"] [style*="background: #e9ecef"],
+:root[data-theme="dark"] [style*="background-color:#e9ecef"],
+:root[data-theme="dark"] [style*="background:#f8fafc"],
+:root[data-theme="dark"] [style*="background: #f8fafc"],
+:root[data-theme="dark"] [style*="background-color:#f8fafc"],
+:root[data-theme="dark"] [style*="background:#e2e8f0"],
+:root[data-theme="dark"] [style*="background: #e2e8f0"],
+:root[data-theme="dark"] [style*="background-color:#e2e8f0"],
+:root[data-theme="dark"] [style*="background:#f8fbf9"],
+:root[data-theme="dark"] [style*="background: #f8fbf9"],
+:root[data-theme="dark"] [style*="background-color:#f8fbf9"],
+:root[data-theme="dark"] [style*="background:#f3f4f6"],
+:root[data-theme="dark"] [style*="background: #f3f4f6"],
+:root[data-theme="dark"] [style*="background-color:#f3f4f6"],
+:root[data-theme="dark"] [style*="background:#f5f5f5"],
+:root[data-theme="dark"] [style*="background: #f5f5f5"],
+:root[data-theme="dark"] [style*="background-color:#f5f5f5"],
+:root[data-theme="dark"] [style*="background:#f0f0f0"],
+:root[data-theme="dark"] [style*="background: #f0f0f0"],
+:root[data-theme="dark"] [style*="background-color:#f0f0f0"] { background: var(--surface-muted) !important; color: var(--text-secondary) !important; border-color: var(--border) !important; }
+:root[data-theme="dark"] [style*="background:#f0faf4"],
+:root[data-theme="dark"] [style*="background: #f0faf4"],
+:root[data-theme="dark"] [style*="background-color:#f0faf4"],
+:root[data-theme="dark"] [style*="background:#dcfce7"],
+:root[data-theme="dark"] [style*="background: #dcfce7"],
+:root[data-theme="dark"] [style*="background-color:#dcfce7"],
+:root[data-theme="dark"] [style*="background:#d1fae5"],
+:root[data-theme="dark"] [style*="background: #d1fae5"],
+:root[data-theme="dark"] [style*="background-color:#d1fae5"],
+:root[data-theme="dark"] [style*="background:#e3ede4"],
+:root[data-theme="dark"] [style*="background: #e3ede4"],
+:root[data-theme="dark"] [style*="background-color:#e3ede4"],
+:root[data-theme="dark"] [style*="background:#ecfdf5"],
+:root[data-theme="dark"] [style*="background: #ecfdf5"],
+:root[data-theme="dark"] [style*="background-color:#ecfdf5"],
+:root[data-theme="dark"] [style*="background:#f0fdf4"],
+:root[data-theme="dark"] [style*="background: #f0fdf4"],
+:root[data-theme="dark"] [style*="background-color:#f0fdf4"],
+:root[data-theme="dark"] [style*="background:#e6f4ea"],
+:root[data-theme="dark"] [style*="background: #e6f4ea"],
+:root[data-theme="dark"] [style*="background-color:#e6f4ea"],
+:root[data-theme="dark"] [style*="background:#e8f6ee"],
+:root[data-theme="dark"] [style*="background: #e8f6ee"],
+:root[data-theme="dark"] [style*="background-color:#e8f6ee"],
+:root[data-theme="dark"] [style*="background:#e2f2e8"],
+:root[data-theme="dark"] [style*="background: #e2f2e8"],
+:root[data-theme="dark"] [style*="background-color:#e2f2e8"],
+:root[data-theme="dark"] .bg-success-subtle { background: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(22,163,109,.3) !important; }
+:root[data-theme="dark"] [style*="background:#fef3c7"],
+:root[data-theme="dark"] [style*="background: #fef3c7"],
+:root[data-theme="dark"] [style*="background-color:#fef3c7"],
+:root[data-theme="dark"] [style*="background:#fffbeb"],
+:root[data-theme="dark"] [style*="background: #fffbeb"],
+:root[data-theme="dark"] [style*="background-color:#fffbeb"],
+:root[data-theme="dark"] [style*="background:#fff3cd"],
+:root[data-theme="dark"] [style*="background: #fff3cd"],
+:root[data-theme="dark"] [style*="background-color:#fff3cd"],
+:root[data-theme="dark"] [style*="background:#fefce8"],
+:root[data-theme="dark"] [style*="background: #fefce8"],
+:root[data-theme="dark"] [style*="background-color:#fefce8"],
+:root[data-theme="dark"] [style*="background:#fef9c3"],
+:root[data-theme="dark"] [style*="background: #fef9c3"],
+:root[data-theme="dark"] [style*="background-color:#fef9c3"],
+:root[data-theme="dark"] [style*="background:#fdf1d8"],
+:root[data-theme="dark"] [style*="background: #fdf1d8"],
+:root[data-theme="dark"] [style*="background-color:#fdf1d8"],
+:root[data-theme="dark"] [style*="background:#fff7ed"],
+:root[data-theme="dark"] [style*="background: #fff7ed"],
+:root[data-theme="dark"] [style*="background-color:#fff7ed"],
+:root[data-theme="dark"] [style*="background:#ffedd5"],
+:root[data-theme="dark"] [style*="background: #ffedd5"],
+:root[data-theme="dark"] [style*="background-color:#ffedd5"],
+:root[data-theme="dark"] [style*="background:#fcebd9"],
+:root[data-theme="dark"] [style*="background: #fcebd9"],
+:root[data-theme="dark"] [style*="background-color:#fcebd9"],
+:root[data-theme="dark"] [style*="background:#f8eed6"],
+:root[data-theme="dark"] [style*="background: #f8eed6"],
+:root[data-theme="dark"] [style*="background-color:#f8eed6"] { background: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(224,178,92,.3) !important; }
+:root[data-theme="dark"] [style*="background:#e0f2fe"],
+:root[data-theme="dark"] [style*="background: #e0f2fe"],
+:root[data-theme="dark"] [style*="background-color:#e0f2fe"],
+:root[data-theme="dark"] [style*="background:#eef2ff"],
+:root[data-theme="dark"] [style*="background: #eef2ff"],
+:root[data-theme="dark"] [style*="background-color:#eef2ff"],
+:root[data-theme="dark"] [style*="background:#cfe2ff"],
+:root[data-theme="dark"] [style*="background: #cfe2ff"],
+:root[data-theme="dark"] [style*="background-color:#cfe2ff"],
+:root[data-theme="dark"] [style*="background:#dbeafe"],
+:root[data-theme="dark"] [style*="background: #dbeafe"],
+:root[data-theme="dark"] [style*="background-color:#dbeafe"],
+:root[data-theme="dark"] [style*="background:#eff6ff"],
+:root[data-theme="dark"] [style*="background: #eff6ff"],
+:root[data-theme="dark"] [style*="background-color:#eff6ff"],
+:root[data-theme="dark"] [style*="background:#e0e7ff"],
+:root[data-theme="dark"] [style*="background: #e0e7ff"],
+:root[data-theme="dark"] [style*="background-color:#e0e7ff"],
+:root[data-theme="dark"] [style*="background:#e3ecfb"],
+:root[data-theme="dark"] [style*="background: #e3ecfb"],
+:root[data-theme="dark"] [style*="background-color:#e3ecfb"],
+:root[data-theme="dark"] [style*="background:#e5f0fd"],
+:root[data-theme="dark"] [style*="background: #e5f0fd"],
+:root[data-theme="dark"] [style*="background-color:#e5f0fd"],
+:root[data-theme="dark"] .bg-primary-subtle,
+:root[data-theme="dark"] .bg-info-subtle { background: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(140,192,245,.3) !important; }
+:root[data-theme="dark"] [style*="background:#fee2e2"],
+:root[data-theme="dark"] [style*="background: #fee2e2"],
+:root[data-theme="dark"] [style*="background-color:#fee2e2"],
+:root[data-theme="dark"] [style*="background:#fef2f2"],
+:root[data-theme="dark"] [style*="background: #fef2f2"],
+:root[data-theme="dark"] [style*="background-color:#fef2f2"],
+:root[data-theme="dark"] [style*="background:#fce7e3"],
+:root[data-theme="dark"] [style*="background: #fce7e3"],
+:root[data-theme="dark"] [style*="background-color:#fce7e3"],
+:root[data-theme="dark"] [style*="background:#ffe4e6"],
+:root[data-theme="dark"] [style*="background: #ffe4e6"],
+:root[data-theme="dark"] [style*="background-color:#ffe4e6"],
+:root[data-theme="dark"] [style*="background:#f8e1e1"],
+:root[data-theme="dark"] [style*="background: #f8e1e1"],
+:root[data-theme="dark"] [style*="background-color:#f8e1e1"],
+:root[data-theme="dark"] [style*="background:#fde8e8"],
+:root[data-theme="dark"] [style*="background: #fde8e8"],
+:root[data-theme="dark"] [style*="background-color:#fde8e8"],
+:root[data-theme="dark"] .bg-danger-subtle { background: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(243,160,151,.3) !important; }
+:root[data-theme="dark"] [style*="color:#374151"],
+:root[data-theme="dark"] [style*="color:#1f2937"],
+:root[data-theme="dark"] [style*="color:#111827"],
+:root[data-theme="dark"] [style*="color:#2d3748"],
+:root[data-theme="dark"] [style*="color:#334155"],
+:root[data-theme="dark"] [style*="color:#475569"],
+:root[data-theme="dark"] [style*="color:#1e293b"],
+:root[data-theme="dark"] [style*="color:#212529"] { color: var(--text-primary) !important; }
+:root[data-theme="dark"] [style*="color:#6b7280"],
+:root[data-theme="dark"] [style*="color:#64748b"],
+:root[data-theme="dark"] [style*="color:#6c757d"] { color: var(--text-muted) !important; }
+:root[data-theme="dark"] [style*="color:#b45309"],
+:root[data-theme="dark"] [style*="color:#c8992e"],
+:root[data-theme="dark"] [style*="color:#f59e0b"],
+:root[data-theme="dark"] [style*="color:#856404"],
+:root[data-theme="dark"] [style*="color:#92400e"],
+:root[data-theme="dark"] [style*="color:#a16207"],
+:root[data-theme="dark"] [style*="color:#78350f"],
+:root[data-theme="dark"] [style*="color:#713f12"] { color: var(--status-warning) !important; }
+:root[data-theme="dark"] [style*="color:#15803d"],
+:root[data-theme="dark"] [style*="color:#166534"],
+:root[data-theme="dark"] [style*="color:#047857"],
+:root[data-theme="dark"] [style*="color:#0f6b3a"] { color: var(--status-success) !important; }
+:root[data-theme="dark"] [style*="color:#b91c1c"],
+:root[data-theme="dark"] [style*="color:#991b1b"],
+:root[data-theme="dark"] [style*="color:#dc2626"],
+:root[data-theme="dark"] [style*="color:#7b1e22"] { color: var(--status-danger) !important; }
+:root[data-theme="dark"] [style*="color:#4338ca"],
+:root[data-theme="dark"] [style*="color:#1d4ed8"],
+:root[data-theme="dark"] [style*="color:#2563eb"],
+:root[data-theme="dark"] [style*="color:#1e40af"] { color: var(--status-info) !important; }
+:root[data-theme="dark"] .badge.bg-warning,
+:root[data-theme="dark"] .badge.bg-warning.text-dark,
+:root[data-theme="dark"] .badge.text-bg-warning { color: #2a1d00 !important; }
+:root[data-theme="dark"] .aic-fab,
+:root[data-theme="dark"] .tab-pill.active,
+:root[data-theme="dark"] .btn-primary,
+:root[data-theme="dark"] .btn-success,
+:root[data-theme="dark"] .btn-barangay,
+:root[data-theme="dark"] .btn-admin-primary { background: var(--action-solid) !important; border-color: var(--action-solid) !important; color: #fff !important; }
+:root[data-theme="dark"] .btn-outline-primary,
+:root[data-theme="dark"] .btn-outline-success,
+:root[data-theme="dark"] .btn-outline-secondary,
+:root[data-theme="dark"] .btn-light { color: var(--text-primary) !important; border-color: var(--border-strong) !important; background: transparent !important; }
+:root[data-theme="dark"] .page-link { background: var(--surface-card) !important; border-color: var(--border) !important; color: var(--brand-primary) !important; }
+:root[data-theme="dark"] .page-item.active .page-link { background: var(--action-solid) !important; color: #fff !important; }
+:root[data-theme="dark"] .modal-content,
+:root[data-theme="dark"] .dropdown-menu { background: var(--surface-card) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }
+:root[data-theme="dark"] .dropdown-item { color: var(--text-primary) !important; }
+:root[data-theme="dark"] .dropdown-item:hover,
+:root[data-theme="dark"] .dropdown-item:focus { background: var(--surface-muted) !important; }
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select { background-color: var(--surface-input) !important; color: var(--text-primary) !important; border-color: var(--border-strong) !important; }
+:root[data-theme="dark"] .form-control::placeholder { color: var(--text-muted) !important; opacity: 1; }
+:root[data-theme="dark"] .form-label,
+:root[data-theme="dark"] .form-check-label { color: var(--text-primary); }
+:root[data-theme="dark"] .input-group-text { background: var(--surface-muted) !important; color: var(--text-secondary) !important; border-color: var(--border-strong) !important; }
+:root[data-theme="dark"] .table { --bs-table-color: var(--text-primary); --bs-table-bg: transparent; --bs-table-striped-color: var(--text-primary); --bs-table-hover-color: var(--text-primary); color: var(--text-primary); }
+:root[data-theme="dark"] input[type="date"],
+:root[data-theme="dark"] input[type="time"],
+:root[data-theme="dark"] input[type="datetime-local"],
+:root[data-theme="dark"] select { color-scheme: dark; }
+
+/* ── DARK MODE (OS preference, no explicit choice) — identical rules ── */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .text-muted,
+    :root:not([data-theme="light"]) .text-secondary,
+    :root:not([data-theme="light"]) .form-text { color: var(--text-muted) !important; }
+    :root:not([data-theme="light"]) .text-dark:not(.badge),
+    :root:not([data-theme="light"]) .text-body,
+    :root:not([data-theme="light"]) .text-black { color: var(--text-primary) !important; }
+    :root:not([data-theme="light"]) .text-primary { color: var(--brand-primary) !important; }
+    :root:not([data-theme="light"]) .text-success { color: var(--status-success) !important; }
+    :root:not([data-theme="light"]) .text-danger { color: var(--status-danger) !important; }
+    :root:not([data-theme="light"]) .text-info { color: var(--status-info) !important; }
+    :root:not([data-theme="light"]) .bg-white,
+    :root:not([data-theme="light"]) .bg-light,
+    :root:not([data-theme="light"]) .card,
+    :root:not([data-theme="light"]) .list-group-item,
+    :root:not([data-theme="light"]) [style*="background:#fff;"],
+    :root:not([data-theme="light"]) [style*="background: #fff;"],
+    :root:not([data-theme="light"]) [style$="background:#fff"],
+    :root:not([data-theme="light"]) [style*="background:#ffffff"],
+    :root:not([data-theme="light"]) [style*="background: #ffffff"],
+    :root:not([data-theme="light"]) [style*="background:white"],
+    :root:not([data-theme="light"]) [style*="background-color:#fff;"],
+    :root:not([data-theme="light"]) [style*="background:#fcfdfc"],
+    :root:not([data-theme="light"]) [style*="background:#fffdf8"] { background-color: var(--surface-card) !important; color: var(--text-primary); border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) [style*="background:#f8f9fa"],
+    :root:not([data-theme="light"]) [style*="background: #f8f9fa"],
+    :root:not([data-theme="light"]) [style*="background-color:#f8f9fa"],
+    :root:not([data-theme="light"]) [style*="background:#f9fafb"],
+    :root:not([data-theme="light"]) [style*="background: #f9fafb"],
+    :root:not([data-theme="light"]) [style*="background-color:#f9fafb"],
+    :root:not([data-theme="light"]) [style*="background:#f1f5f9"],
+    :root:not([data-theme="light"]) [style*="background: #f1f5f9"],
+    :root:not([data-theme="light"]) [style*="background-color:#f1f5f9"],
+    :root:not([data-theme="light"]) [style*="background:#e9ecef"],
+    :root:not([data-theme="light"]) [style*="background: #e9ecef"],
+    :root:not([data-theme="light"]) [style*="background-color:#e9ecef"],
+    :root:not([data-theme="light"]) [style*="background:#f8fafc"],
+    :root:not([data-theme="light"]) [style*="background: #f8fafc"],
+    :root:not([data-theme="light"]) [style*="background-color:#f8fafc"],
+    :root:not([data-theme="light"]) [style*="background:#e2e8f0"],
+    :root:not([data-theme="light"]) [style*="background: #e2e8f0"],
+    :root:not([data-theme="light"]) [style*="background-color:#e2e8f0"],
+    :root:not([data-theme="light"]) [style*="background:#f8fbf9"],
+    :root:not([data-theme="light"]) [style*="background: #f8fbf9"],
+    :root:not([data-theme="light"]) [style*="background-color:#f8fbf9"],
+    :root:not([data-theme="light"]) [style*="background:#f3f4f6"],
+    :root:not([data-theme="light"]) [style*="background: #f3f4f6"],
+    :root:not([data-theme="light"]) [style*="background-color:#f3f4f6"],
+    :root:not([data-theme="light"]) [style*="background:#f5f5f5"],
+    :root:not([data-theme="light"]) [style*="background: #f5f5f5"],
+    :root:not([data-theme="light"]) [style*="background-color:#f5f5f5"],
+    :root:not([data-theme="light"]) [style*="background:#f0f0f0"],
+    :root:not([data-theme="light"]) [style*="background: #f0f0f0"],
+    :root:not([data-theme="light"]) [style*="background-color:#f0f0f0"] { background: var(--surface-muted) !important; color: var(--text-secondary) !important; border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) [style*="background:#f0faf4"],
+    :root:not([data-theme="light"]) [style*="background: #f0faf4"],
+    :root:not([data-theme="light"]) [style*="background-color:#f0faf4"],
+    :root:not([data-theme="light"]) [style*="background:#dcfce7"],
+    :root:not([data-theme="light"]) [style*="background: #dcfce7"],
+    :root:not([data-theme="light"]) [style*="background-color:#dcfce7"],
+    :root:not([data-theme="light"]) [style*="background:#d1fae5"],
+    :root:not([data-theme="light"]) [style*="background: #d1fae5"],
+    :root:not([data-theme="light"]) [style*="background-color:#d1fae5"],
+    :root:not([data-theme="light"]) [style*="background:#e3ede4"],
+    :root:not([data-theme="light"]) [style*="background: #e3ede4"],
+    :root:not([data-theme="light"]) [style*="background-color:#e3ede4"],
+    :root:not([data-theme="light"]) [style*="background:#ecfdf5"],
+    :root:not([data-theme="light"]) [style*="background: #ecfdf5"],
+    :root:not([data-theme="light"]) [style*="background-color:#ecfdf5"],
+    :root:not([data-theme="light"]) [style*="background:#f0fdf4"],
+    :root:not([data-theme="light"]) [style*="background: #f0fdf4"],
+    :root:not([data-theme="light"]) [style*="background-color:#f0fdf4"],
+    :root:not([data-theme="light"]) [style*="background:#e6f4ea"],
+    :root:not([data-theme="light"]) [style*="background: #e6f4ea"],
+    :root:not([data-theme="light"]) [style*="background-color:#e6f4ea"],
+    :root:not([data-theme="light"]) [style*="background:#e8f6ee"],
+    :root:not([data-theme="light"]) [style*="background: #e8f6ee"],
+    :root:not([data-theme="light"]) [style*="background-color:#e8f6ee"],
+    :root:not([data-theme="light"]) [style*="background:#e2f2e8"],
+    :root:not([data-theme="light"]) [style*="background: #e2f2e8"],
+    :root:not([data-theme="light"]) [style*="background-color:#e2f2e8"],
+    :root:not([data-theme="light"]) .bg-success-subtle { background: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(22,163,109,.3) !important; }
+    :root:not([data-theme="light"]) [style*="background:#fef3c7"],
+    :root:not([data-theme="light"]) [style*="background: #fef3c7"],
+    :root:not([data-theme="light"]) [style*="background-color:#fef3c7"],
+    :root:not([data-theme="light"]) [style*="background:#fffbeb"],
+    :root:not([data-theme="light"]) [style*="background: #fffbeb"],
+    :root:not([data-theme="light"]) [style*="background-color:#fffbeb"],
+    :root:not([data-theme="light"]) [style*="background:#fff3cd"],
+    :root:not([data-theme="light"]) [style*="background: #fff3cd"],
+    :root:not([data-theme="light"]) [style*="background-color:#fff3cd"],
+    :root:not([data-theme="light"]) [style*="background:#fefce8"],
+    :root:not([data-theme="light"]) [style*="background: #fefce8"],
+    :root:not([data-theme="light"]) [style*="background-color:#fefce8"],
+    :root:not([data-theme="light"]) [style*="background:#fef9c3"],
+    :root:not([data-theme="light"]) [style*="background: #fef9c3"],
+    :root:not([data-theme="light"]) [style*="background-color:#fef9c3"],
+    :root:not([data-theme="light"]) [style*="background:#fdf1d8"],
+    :root:not([data-theme="light"]) [style*="background: #fdf1d8"],
+    :root:not([data-theme="light"]) [style*="background-color:#fdf1d8"],
+    :root:not([data-theme="light"]) [style*="background:#fff7ed"],
+    :root:not([data-theme="light"]) [style*="background: #fff7ed"],
+    :root:not([data-theme="light"]) [style*="background-color:#fff7ed"],
+    :root:not([data-theme="light"]) [style*="background:#ffedd5"],
+    :root:not([data-theme="light"]) [style*="background: #ffedd5"],
+    :root:not([data-theme="light"]) [style*="background-color:#ffedd5"],
+    :root:not([data-theme="light"]) [style*="background:#fcebd9"],
+    :root:not([data-theme="light"]) [style*="background: #fcebd9"],
+    :root:not([data-theme="light"]) [style*="background-color:#fcebd9"],
+    :root:not([data-theme="light"]) [style*="background:#f8eed6"],
+    :root:not([data-theme="light"]) [style*="background: #f8eed6"],
+    :root:not([data-theme="light"]) [style*="background-color:#f8eed6"] { background: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(224,178,92,.3) !important; }
+    :root:not([data-theme="light"]) [style*="background:#e0f2fe"],
+    :root:not([data-theme="light"]) [style*="background: #e0f2fe"],
+    :root:not([data-theme="light"]) [style*="background-color:#e0f2fe"],
+    :root:not([data-theme="light"]) [style*="background:#eef2ff"],
+    :root:not([data-theme="light"]) [style*="background: #eef2ff"],
+    :root:not([data-theme="light"]) [style*="background-color:#eef2ff"],
+    :root:not([data-theme="light"]) [style*="background:#cfe2ff"],
+    :root:not([data-theme="light"]) [style*="background: #cfe2ff"],
+    :root:not([data-theme="light"]) [style*="background-color:#cfe2ff"],
+    :root:not([data-theme="light"]) [style*="background:#dbeafe"],
+    :root:not([data-theme="light"]) [style*="background: #dbeafe"],
+    :root:not([data-theme="light"]) [style*="background-color:#dbeafe"],
+    :root:not([data-theme="light"]) [style*="background:#eff6ff"],
+    :root:not([data-theme="light"]) [style*="background: #eff6ff"],
+    :root:not([data-theme="light"]) [style*="background-color:#eff6ff"],
+    :root:not([data-theme="light"]) [style*="background:#e0e7ff"],
+    :root:not([data-theme="light"]) [style*="background: #e0e7ff"],
+    :root:not([data-theme="light"]) [style*="background-color:#e0e7ff"],
+    :root:not([data-theme="light"]) [style*="background:#e3ecfb"],
+    :root:not([data-theme="light"]) [style*="background: #e3ecfb"],
+    :root:not([data-theme="light"]) [style*="background-color:#e3ecfb"],
+    :root:not([data-theme="light"]) [style*="background:#e5f0fd"],
+    :root:not([data-theme="light"]) [style*="background: #e5f0fd"],
+    :root:not([data-theme="light"]) [style*="background-color:#e5f0fd"],
+    :root:not([data-theme="light"]) .bg-primary-subtle,
+    :root:not([data-theme="light"]) .bg-info-subtle { background: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(140,192,245,.3) !important; }
+    :root:not([data-theme="light"]) [style*="background:#fee2e2"],
+    :root:not([data-theme="light"]) [style*="background: #fee2e2"],
+    :root:not([data-theme="light"]) [style*="background-color:#fee2e2"],
+    :root:not([data-theme="light"]) [style*="background:#fef2f2"],
+    :root:not([data-theme="light"]) [style*="background: #fef2f2"],
+    :root:not([data-theme="light"]) [style*="background-color:#fef2f2"],
+    :root:not([data-theme="light"]) [style*="background:#fce7e3"],
+    :root:not([data-theme="light"]) [style*="background: #fce7e3"],
+    :root:not([data-theme="light"]) [style*="background-color:#fce7e3"],
+    :root:not([data-theme="light"]) [style*="background:#ffe4e6"],
+    :root:not([data-theme="light"]) [style*="background: #ffe4e6"],
+    :root:not([data-theme="light"]) [style*="background-color:#ffe4e6"],
+    :root:not([data-theme="light"]) [style*="background:#f8e1e1"],
+    :root:not([data-theme="light"]) [style*="background: #f8e1e1"],
+    :root:not([data-theme="light"]) [style*="background-color:#f8e1e1"],
+    :root:not([data-theme="light"]) [style*="background:#fde8e8"],
+    :root:not([data-theme="light"]) [style*="background: #fde8e8"],
+    :root:not([data-theme="light"]) [style*="background-color:#fde8e8"],
+    :root:not([data-theme="light"]) .bg-danger-subtle { background: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(243,160,151,.3) !important; }
+    :root:not([data-theme="light"]) [style*="color:#374151"],
+    :root:not([data-theme="light"]) [style*="color:#1f2937"],
+    :root:not([data-theme="light"]) [style*="color:#111827"],
+    :root:not([data-theme="light"]) [style*="color:#2d3748"],
+    :root:not([data-theme="light"]) [style*="color:#334155"],
+    :root:not([data-theme="light"]) [style*="color:#475569"],
+    :root:not([data-theme="light"]) [style*="color:#1e293b"],
+    :root:not([data-theme="light"]) [style*="color:#212529"] { color: var(--text-primary) !important; }
+    :root:not([data-theme="light"]) [style*="color:#6b7280"],
+    :root:not([data-theme="light"]) [style*="color:#64748b"],
+    :root:not([data-theme="light"]) [style*="color:#6c757d"] { color: var(--text-muted) !important; }
+    :root:not([data-theme="light"]) [style*="color:#b45309"],
+    :root:not([data-theme="light"]) [style*="color:#c8992e"],
+    :root:not([data-theme="light"]) [style*="color:#f59e0b"],
+    :root:not([data-theme="light"]) [style*="color:#856404"],
+    :root:not([data-theme="light"]) [style*="color:#92400e"],
+    :root:not([data-theme="light"]) [style*="color:#a16207"],
+    :root:not([data-theme="light"]) [style*="color:#78350f"],
+    :root:not([data-theme="light"]) [style*="color:#713f12"] { color: var(--status-warning) !important; }
+    :root:not([data-theme="light"]) [style*="color:#15803d"],
+    :root:not([data-theme="light"]) [style*="color:#166534"],
+    :root:not([data-theme="light"]) [style*="color:#047857"],
+    :root:not([data-theme="light"]) [style*="color:#0f6b3a"] { color: var(--status-success) !important; }
+    :root:not([data-theme="light"]) [style*="color:#b91c1c"],
+    :root:not([data-theme="light"]) [style*="color:#991b1b"],
+    :root:not([data-theme="light"]) [style*="color:#dc2626"],
+    :root:not([data-theme="light"]) [style*="color:#7b1e22"] { color: var(--status-danger) !important; }
+    :root:not([data-theme="light"]) [style*="color:#4338ca"],
+    :root:not([data-theme="light"]) [style*="color:#1d4ed8"],
+    :root:not([data-theme="light"]) [style*="color:#2563eb"],
+    :root:not([data-theme="light"]) [style*="color:#1e40af"] { color: var(--status-info) !important; }
+    :root:not([data-theme="light"]) .badge.bg-warning,
+    :root:not([data-theme="light"]) .badge.bg-warning.text-dark,
+    :root:not([data-theme="light"]) .badge.text-bg-warning { color: #2a1d00 !important; }
+    :root:not([data-theme="light"]) .aic-fab,
+    :root:not([data-theme="light"]) .tab-pill.active,
+    :root:not([data-theme="light"]) .btn-primary,
+    :root:not([data-theme="light"]) .btn-success,
+    :root:not([data-theme="light"]) .btn-barangay,
+    :root:not([data-theme="light"]) .btn-admin-primary { background: var(--action-solid) !important; border-color: var(--action-solid) !important; color: #fff !important; }
+    :root:not([data-theme="light"]) .btn-outline-primary,
+    :root:not([data-theme="light"]) .btn-outline-success,
+    :root:not([data-theme="light"]) .btn-outline-secondary,
+    :root:not([data-theme="light"]) .btn-light { color: var(--text-primary) !important; border-color: var(--border-strong) !important; background: transparent !important; }
+    :root:not([data-theme="light"]) .page-link { background: var(--surface-card) !important; border-color: var(--border) !important; color: var(--brand-primary) !important; }
+    :root:not([data-theme="light"]) .page-item.active .page-link { background: var(--action-solid) !important; color: #fff !important; }
+    :root:not([data-theme="light"]) .modal-content,
+    :root:not([data-theme="light"]) .dropdown-menu { background: var(--surface-card) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) .dropdown-item { color: var(--text-primary) !important; }
+    :root:not([data-theme="light"]) .dropdown-item:hover,
+    :root:not([data-theme="light"]) .dropdown-item:focus { background: var(--surface-muted) !important; }
+    :root:not([data-theme="light"]) .form-control,
+    :root:not([data-theme="light"]) .form-select { background-color: var(--surface-input) !important; color: var(--text-primary) !important; border-color: var(--border-strong) !important; }
+    :root:not([data-theme="light"]) .form-control::placeholder { color: var(--text-muted) !important; opacity: 1; }
+    :root:not([data-theme="light"]) .form-label,
+    :root:not([data-theme="light"]) .form-check-label { color: var(--text-primary); }
+    :root:not([data-theme="light"]) .input-group-text { background: var(--surface-muted) !important; color: var(--text-secondary) !important; border-color: var(--border-strong) !important; }
+    :root:not([data-theme="light"]) .table { --bs-table-color: var(--text-primary); --bs-table-bg: transparent; --bs-table-striped-color: var(--text-primary); --bs-table-hover-color: var(--text-primary); color: var(--text-primary); }
+    :root:not([data-theme="light"]) input[type="date"],
+    :root:not([data-theme="light"]) input[type="time"],
+    :root:not([data-theme="light"]) input[type="datetime-local"],
+    :root:not([data-theme="light"]) select { color-scheme: dark; }
+}

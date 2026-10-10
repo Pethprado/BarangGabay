@@ -32,7 +32,7 @@ ob_start();
 <!-- ── Page header ─────────────────────────────────────────────────────── -->
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-4">
     <div>
-        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;"><?= e(t('admin_nav.management')) ?></p>
+        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);"><?= e(t('admin_nav.management')) ?></p>
         <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;"><?= e(t('admin_nav.sms')) ?></h1>
         <p class="text-muted mt-1 mb-0" style="font-size:.82rem;">
             <?= e(t('admin_sms.subtitle', ['count' => $recipientCount])) ?>
@@ -181,7 +181,7 @@ ob_start();
                                             @click="choose(r)"
                                             class="sms-recipient-row d-flex w-100 align-items-center gap-2 border-0 text-start px-3 py-2">
                                         <span class="d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                                              style="width:1.9rem;height:1.9rem;border-radius:999px;background:var(--brand-primary);color:#fff;font-size:.75rem;font-weight:700;"
+                                              style="width:1.9rem;height:1.9rem;border-radius:999px;background:var(--action-solid);color:#fff;font-size:.75rem;font-weight:700;"
                                               x-text="r.name.charAt(0).toUpperCase()"></span>
                                         <span class="flex-grow-1" style="min-width:0;">
                                             <span class="d-block text-truncate" style="font-size:.85rem;font-weight:600;color:var(--text-primary);" x-text="r.name"></span>
@@ -363,7 +363,7 @@ ob_start();
                             <button type="button"
                                     class="w-100 text-start border-0 p-2 d-flex justify-content-between align-items-start gap-2"
                                     :style="post && post.id === p.id
-                                        ? 'background:var(--brand-primary);color:#fff;'
+                                        ? 'background:var(--action-solid);color:#fff;'
                                         : 'background:transparent;color:var(--text-primary);'"
                                     @click="choose(p)">
                                 <span style="min-width:0;">

@@ -28,7 +28,7 @@ ob_start();
 <!-- ── Page header ─────────────────────────────────────────────────────── -->
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-4">
     <div>
-        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;">
+        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">
             <?= e(t('admin_nav.management')) ?>
         </p>
         <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;">

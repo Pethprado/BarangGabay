@@ -22,8 +22,10 @@ foreach (array_keys($statusChips) as $__s) {
 }
 
 /** Clicking the active chip again clears the filter. */
-$chipUrl = static function (string $want) use ($status): string {
-    return route('admin/events') . ($status === $want ? '' : '?status=' . $want);
+$mine = (bool) ($mine ?? false);
+$chipUrl = static function (string $want) use ($status, $mine): string {
+    $query = array_filter(['status' => $status === $want ? '' : $want, 'mine' => $mine ? '1' : '']);
+    return route('admin/events') . ($query ? '?' . http_build_query($query) : '');
 };
 
 $userRole = $_SESSION['role'] ?? 'staff';
@@ -35,7 +37,7 @@ ob_start();
 <!-- Page header -->
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
     <div>
-        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;">CONTENT MANAGEMENT</p>
+        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">CONTENT MANAGEMENT</p>
         <h1 class="mb-0 mt-1" style="font-size:1.65rem;font-weight:800;color:var(--text-primary);line-height:1.1;">Events</h1>
         <p class="text-muted mt-1 mb-0" style="font-size:.85rem;">
             Manage barangay events and schedules.

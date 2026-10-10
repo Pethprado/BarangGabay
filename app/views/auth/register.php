@@ -29,17 +29,7 @@ $flashOk  = flash('success');
 
         *, *::before, *::after { box-sizing: border-box; }
 
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background:
-                radial-gradient(ellipse at 20% 30%, rgba(200,153,46,.16) 0%, transparent 55%),
-                linear-gradient(145deg, #10241a 0%, #17603a 60%, #1a3a29 100%);
-        }
+        /* body layout comes from auth.css (.auth-page / .auth-split) */
 
         /* ── Outer wrapper ──────────────────────────────────── */
         .reg-wrapper {
@@ -319,8 +309,9 @@ $__preParts = preg_split('/\s+/', trim((string) ($__pre['full_name'] ?? ''))) ?:
 $__preFirst = count($__preParts) > 1 ? implode(' ', array_slice($__preParts, 0, -1)) : ($__preParts[0] ?? '');
 $__preLast  = count($__preParts) > 1 ? end($__preParts) : '';
 $__social   = \App\Controllers\SocialAuthController::enabled();
+$authWide   = true;
+require __DIR__ . '/_auth_open.php';
 ?>
-<main class="auth-wrap">
 <section class="auth-card auth-card--wide" aria-labelledby="regTitle">
     <div class="auth-card__body" x-data="registerForm()">
         <?php require __DIR__ . '/_auth_brand.php'; ?>
@@ -335,15 +326,33 @@ $__social   = \App\Controllers\SocialAuthController::enabled();
             <div class="auth-divider">or fill in the form</div>
         <?php endif; ?>
 
-        <div class="auth-field">
-            <span class="auth-label"><i class="bi bi-person-badge" aria-hidden="true"></i>Account Type</span>
-            <div class="auth-type" role="radiogroup" aria-label="Account type">
-                <div class="auth-type__opt is-selected" role="radio" aria-checked="true">
-                    <i class="bi bi-house-heart-fill" aria-hidden="true"></i>
-                    <div><strong>Resident</strong><span>For community members of Barangay Bayogo</span></div>
+        <!-- Account type. Resident is the only self-service type; Staff and Admin are
+             shown so people know where those accounts come from, but they cannot be
+             chosen here — the controller hardcodes role = 'resident' regardless. -->
+        <div class="auth-field" x-data="{ lockedNote: false }">
+            <span class="auth-label" id="acctTypeLabel"><i class="bi bi-person-badge" aria-hidden="true"></i>Account Type</span>
+            <div class="auth-type auth-type--row" role="radiogroup" aria-labelledby="acctTypeLabel">
+                <div class="auth-type__opt is-selected" role="radio" aria-checked="true" tabindex="0">
+                    <span class="auth-type__ico" aria-hidden="true"><i class="bi bi-house-door-fill"></i></span>
+                    <span><strong>Resident</strong><span class="auth-type__desc">For community members</span></span>
+                    <i class="bi bi-check-circle-fill auth-type__check" aria-hidden="true"></i>
                 </div>
-                <p style="margin:.15rem 0 0;font-size:.75rem;color:var(--text-muted);"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Staff and admin accounts are created by the barangay, not here.</p>
+                <div class="auth-type__opt is-locked" role="radio" aria-checked="false" aria-disabled="true" tabindex="0"
+                     @click="lockedNote = true" @keydown.enter.prevent="lockedNote = true" @keydown.space.prevent="lockedNote = true">
+                    <span class="auth-type__ico" aria-hidden="true"><i class="bi bi-people-fill"></i></span>
+                    <span><strong>Staff</strong><span class="auth-type__desc">For barangay staff</span></span>
+                    <span class="auth-type__lock"><i class="bi bi-lock-fill" aria-hidden="true"></i><?= e(t('auth_hero.type_locked')) ?></span>
+                </div>
+                <div class="auth-type__opt is-locked" role="radio" aria-checked="false" aria-disabled="true" tabindex="0"
+                     @click="lockedNote = true" @keydown.enter.prevent="lockedNote = true" @keydown.space.prevent="lockedNote = true">
+                    <span class="auth-type__ico" aria-hidden="true"><i class="bi bi-shield-lock-fill"></i></span>
+                    <span><strong>Admin</strong><span class="auth-type__desc">For system administrators</span></span>
+                    <span class="auth-type__lock"><i class="bi bi-lock-fill" aria-hidden="true"></i><?= e(t('auth_hero.type_locked')) ?></span>
+                </div>
             </div>
+            <p class="auth-note" :class="{ 'auth-note--strong': lockedNote }" aria-live="polite">
+                <i class="bi bi-info-circle" aria-hidden="true"></i><span><?= e(t('auth_hero.type_locked_note')) ?></span>
+            </p>
         </div>
 
         <!-- Flash alerts -->
@@ -361,7 +370,7 @@ $__social   = \App\Controllers\SocialAuthController::enabled();
         <?php endif; ?>
 
         <form method="post" action="<?= e(route('register')) ?>"
-              enctype="multipart/form-data" novalidate>
+              enctype="multipart/form-data" novalidate data-auth-form x-ref="regForm">
             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 
             <div class="row g-3">
@@ -568,6 +577,7 @@ $__social   = \App\Controllers\SocialAuthController::enabled();
                                class="form-control has-btn <?= !empty($errors['password']) ? 'is-invalid' : '' ?>"
                                placeholder="Min. 8 karakter"
                                @input="checkStrength($event.target.value)"
+                               aria-describedby="pwRules"
                                required autocomplete="new-password">
                         <button type="button" class="toggle-pw"
                                 @click="showPw = !showPw">
@@ -580,9 +590,19 @@ $__social   = \App\Controllers\SocialAuthController::enabled();
                              :style="{ width: strengthPct + '%', backgroundColor: strengthColor }"></div>
                     </div>
                     <div x-show="strengthLabel" class="mt-1"
-                         style="font-size:.75rem;" :style="{ color: strengthColor }">
+                         style="font-size:.75rem;font-weight:600;" :style="{ color: strengthColor }">
                         <span x-text="strengthLabel"></span>
                     </div>
+                    <p class="visually-hidden" id="pwRulesTitle"><?= e(t('auth_hero.pw_rules')) ?></p>
+                    <ul class="pw-rules" aria-labelledby="pwRulesTitle" id="pwRules">
+                        <template x-for="rule in ruleList" :key="rule.key">
+                            <li :class="{ 'is-met': rules[rule.key] }">
+                                <i class="bi" :class="rules[rule.key] ? 'bi-check-circle-fill' : 'bi-circle'" aria-hidden="true"></i>
+                                <span x-text="rule.label"></span>
+                                <span class="visually-hidden" x-text="rules[rule.key] ? '✓' : '✗'"></span>
+                            </li>
+                        </template>
+                    </ul>
                     <?php if (!empty($errors['password'])): ?>
                     <div class="text-danger mt-1" style="font-size:.8rem;"><?= e($errors['password']) ?></div>
                     <?php endif; ?>
@@ -597,7 +617,13 @@ $__social   = \App\Controllers\SocialAuthController::enabled();
                            id="reg_password_confirm" name="password_confirmation"
                            class="form-control <?= !empty($errors['password_confirmation']) ? 'is-invalid' : '' ?>"
                            placeholder="Ulitin ang password"
+                           x-model="confirmPw"
                            required autocomplete="new-password">
+                    <p class="mt-1 mb-0" style="font-size:.76rem;" x-show="confirmPw.length > 0" aria-live="polite"
+                       :style="{ color: confirmPw === password ? 'var(--status-success)' : 'var(--status-danger)' }">
+                        <i class="bi" :class="confirmPw === password ? 'bi-check-circle-fill' : 'bi-x-circle'" aria-hidden="true"></i>
+                        <span x-text="confirmPw === password ? <?= e(json_encode(t('auth_hero.pw_match'))) ?> : <?= e(json_encode(t('auth_hero.pw_nomatch'))) ?>"></span>
+                    </p>
                     <?php if (!empty($errors['password_confirmation'])): ?>
                     <div class="invalid-feedback"><?= e($errors['password_confirmation']) ?></div>
                     <?php endif; ?>
@@ -630,7 +656,7 @@ $__social   = \App\Controllers\SocialAuthController::enabled();
                     <details style="margin-bottom:.75rem;">
                         <summary style="font-size:.75rem;font-weight:600;color:#374151;cursor:pointer;user-select:none;padding:6px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:.5rem;list-style:none;display:flex;align-items:center;gap:6px;">
                             <i class="bi bi-card-list" style="color:var(--green);"></i>
-                            Mga katanggap-tanggap na Valid ID <span style="margin-left:auto;font-size:.7rem;color:#9ca3af;">(i-click para makita)</span>
+                            Mga katanggap-tanggap na Valid ID <span style="margin-left:auto;font-size:.7rem;color:var(--text-muted);">(i-click para makita)</span>
                         </summary>
                         <div style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 .5rem .5rem;">
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;">
@@ -705,19 +731,19 @@ $__social   = \App\Controllers\SocialAuthController::enabled();
                 <div class="col-12">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="terms"
-                               name="terms" value="1" required>
-                        <label class="form-check-label" for="terms"
-                               style="font-size:.82rem; color:var(--text-secondary);">
-                            Sumasang-ayon ako na ang aking impormasyon ay susuriin ng barangay staff
-                            para sa pagbe-beryipika ng aking pagkakakilanlan. Ang datos ay gagamitin
-                            lamang para sa mga serbisyo ng Barangay Bayogo, Madrid.
+                               name="terms" value="1" required data-validate aria-describedby="termsBody">
+                        <label class="form-check-label" for="terms" style="font-size:.86rem; font-weight:600; color:var(--text-primary);">
+                            <?= e(t('auth_hero.terms_label')) ?>
                         </label>
+                        <p id="termsBody" class="mb-0 mt-1" style="font-size:.78rem; color:var(--text-muted);">
+                            <?= e(t('auth_hero.terms_body')) ?>
+                        </p>
                     </div>
                 </div>
 
                 <!-- Submit -->
                 <div class="col-12 mt-1">
-                    <button type="submit" class="auth-btn">
+                    <button type="submit" class="auth-btn" data-loading-text="<?= e(t('auth_hero.creating')) ?>">
                         Create Account
                     </button>
                 </div>
@@ -727,9 +753,7 @@ $__social   = \App\Controllers\SocialAuthController::enabled();
 
         <p class="auth-small">Already have an account? <a class="auth-link" href="<?= e(route('login')) ?>">Sign in</a></p>
     </div>
-    <div class="auth-card__foot" role="presentation"></div>
 </section>
-</main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
@@ -743,9 +767,40 @@ $__social   = \App\Controllers\SocialAuthController::enabled();
             strengthPct:  0,
             strengthColor:'#d1d5db',
             strengthLabel:'',
+            password:     '',
+            confirmPw:    '',
+            rules:        { length: false, upper: false, lower: false, number: false, symbol: false },
+            ruleList: [
+                { key: 'length', label: <?= json_encode(t('auth_hero.pw_len')) ?> },
+                { key: 'upper',  label: <?= json_encode(t('auth_hero.pw_upper')) ?> },
+                { key: 'lower',  label: <?= json_encode(t('auth_hero.pw_lower')) ?> },
+                { key: 'number', label: <?= json_encode(t('auth_hero.pw_number')) ?> },
+                { key: 'symbol', label: <?= json_encode(t('auth_hero.pw_symbol')) ?> },
+            ],
+
+            /** Blocks submit (via _auth_close.php) until every password rule passes and both entries match. */
+            init() {
+                const form = this.$refs.regForm;
+                if (!form) return;
+                form.authExtraCheck = () => {
+                    const pw = document.getElementById('reg_password');
+                    const confirm = document.getElementById('reg_password_confirm');
+                    if (!Object.values(this.rules).every(Boolean)) return pw;
+                    if (this.confirmPw !== this.password) return confirm;
+                    return null;
+                };
+            },
 
             /** Password strength checker */
             checkStrength(pw) {
+                this.password = pw;
+                this.rules = {
+                    length: pw.length >= 8,
+                    upper:  /[A-Z]/.test(pw),
+                    lower:  /[a-z]/.test(pw),
+                    number: /[0-9]/.test(pw),
+                    symbol: /[^A-Za-z0-9]/.test(pw),
+                };
                 if (!pw) { this.strengthPct = 0; this.strengthLabel = ''; return; }
                 let score = 0;
                 if (pw.length >= 8)              score++;
@@ -805,5 +860,4 @@ $__social   = \App\Controllers\SocialAuthController::enabled();
         };
     }
 </script>
-</body>
-</html>
+<?php require __DIR__ . '/_auth_close.php'; ?>

@@ -146,6 +146,17 @@ class EventController
         $status    = trim($_GET['status'] ?? '');
         $allEvents = Event::allAdmin();
 
+        // ?mine=1 — the staff sidebar's "My Events". See
+        // AnnouncementController::adminIndex().
+        $mine = ($_GET['mine'] ?? '') === '1';
+        if ($mine) {
+            $me = (int) ($_SESSION['user_id'] ?? 0);
+            $allEvents = array_values(array_filter(
+                $allEvents,
+                static fn (array $e): bool => (int) ($e['created_by'] ?? 0) === $me
+            ));
+        }
+
         $valid  = ['upcoming', 'ongoing', 'completed', 'cancelled'];
         $status = \in_array($status, $valid, true) ? $status : '';
 
@@ -167,7 +178,7 @@ class EventController
         );
 
         view('admin/events/index', compact(
-            'events', 'allEvents', 'status', 'pageTitle', 'pendingCount', 'evAttempts'
+            'events', 'allEvents', 'status', 'pageTitle', 'pendingCount', 'evAttempts', 'mine'
         ));
     }
 

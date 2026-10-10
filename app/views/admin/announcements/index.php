@@ -13,12 +13,14 @@ $draft     = count(array_filter($allAnnouncements, static fn($a) => $a['status']
 $archived  = count(array_filter($allAnnouncements, static fn($a) => $a['status'] === 'archived'));
 
 /** A card's URL: clicking the active one again clears the filter. */
-$filterUrl = static function (string $want) use ($status): string {
-    return route('admin/announcements') . ($status === $want ? '' : '?status=' . $want);
+$mine = (bool) ($mine ?? false);
+$filterUrl = static function (string $want) use ($status, $mine): string {
+    $query = array_filter(['status' => $status === $want ? '' : $want, 'mine' => $mine ? '1' : '']);
+    return route('admin/announcements') . ($query ? '?' . http_build_query($query) : '');
 };
 
 $categoryMeta = [
-    'general'        => ['General',        'background:#e0f2fe;color:#0369a1;'],
+    'general'        => ['General',        'background:#e0f2fe;color:var(--status-info);'],
     'health'         => ['Health',          'background:#ccfbf1;color:#065f46;'],
     'safety'         => ['Safety',          'background:#fef9c3;color:#92400e;'],
     'government'     => ['Government',      'background:#d4edda;color:#155724;'],
@@ -40,7 +42,7 @@ ob_start();
 <!-- Page header -->
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
     <div>
-        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;">CONTENT MANAGEMENT</p>
+        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">CONTENT MANAGEMENT</p>
         <h1 class="mb-0 mt-1" style="font-size:1.65rem;font-weight:800;color:var(--text-primary);line-height:1.1;"><?= e(t('admin_announcements.title')) ?></h1>
         <p class="text-muted mt-1 mb-0" style="font-size:.85rem;">
             Manage barangay announcements and public notices.

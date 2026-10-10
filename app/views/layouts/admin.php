@@ -33,15 +33,11 @@ $isActive = static function (string $navPath, bool $exact = false) use ($current
     return $match ? 'active' : '';
 };
 
-// Pre-compute accordion open-states (used as PHP-to-Alpine boot values).
-$announcementsOpen = str_starts_with($currentPath, '/admin/announcements') ? 'true' : 'false';
-$eventsOpen        = str_starts_with($currentPath, '/admin/events')        ? 'true' : 'false';
-
 // Avatar initial – first character of full name.
 $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= e(back_office_locale()) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -56,7 +52,7 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Bitter:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Bootstrap 5.3 -->
     <link rel="stylesheet"
@@ -74,6 +70,8 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
     <!-- System theme (Manobo-inspired earth palette) — loaded LAST so its
          overrides of tokens.css/admin.css win the cascade. -->
     <link rel="stylesheet" href="<?= e(asset_v('assets/css/theme.css')) ?>">
+    <!-- App shell: sidebar, top bar and dark-mode legibility. After theme.css. -->
+    <link rel="stylesheet" href="<?= e(asset_v('assets/css/shell.css')) ?>">
 </head>
 <body>
 
@@ -85,270 +83,156 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
          x-transition.opacity
          @click="sidebarOpen = false"></div>
 
+    <?php
+    /*
+     * Sidebar items, one list per role, in the order the mockup shows them.
+     * Each entry: [path, icon, label, extra active prefixes, badge count, exact?].
+     * Every link here is already guarded by its route's role middleware —
+     * this list only decides what is SHOWN, never what is allowed.
+     */
+    $__isStaff = $userRole === 'staff';
+    try { $__pendingTx = \App\Models\Announcement::countAwaitingTranslationReview(); } catch (\Throwable) { $__pendingTx = 0; }
+    try { $__docOpen = \App\Models\DocumentRequest::countOpen(); } catch (\Throwable) { $__docOpen = 0; }
+    try { $__fbUnread = (int) \App\Models\Feedback::unreadCountAdmin(); } catch (\Throwable) { $__fbUnread = 0; }
+    try {
+        $__payPending = (int) db()->query("SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAYMENT_PROOF_SUBMITTED'")->fetchColumn();
+    } catch (\Throwable) { $__payPending = 0; }
+    $__sysErrors = 0;
+    if ($userRole === 'superadmin') {
+        try {
+            $__sysErrors = (int) db()->query("SELECT COUNT(*) FROM error_logs WHERE resolved_at IS NULL AND severity = 'critical'")->fetchColumn();
+        } catch (\Throwable) {}
+    }
+
+    if ($__isStaff) {
+        $__primary = [
+            ['/admin',                     'bi-grid-1x2',          t('admin_nav.dashboard'),          [], 0, true],
+            ['/admin/announcements?mine=1','bi-megaphone',         t('admin_nav.my_announcements'),   ['/admin/announcements'], 0],
+            ['/admin/events?mine=1',       'bi-calendar-event',    t('admin_nav.my_events'),          ['/admin/events'], 0],
+            ['/admin#tasks',               'bi-list-check',        t('admin_nav.assigned_tasks'),     [], 0, 'never'],
+            ['/admin/residents',           'bi-people',            t('admin_nav.residents'),          [], $pendingCount],
+            ['/admin/documents',           'bi-file-earmark-text', t('admin_nav.documents'),          [], $__docOpen],
+            ['/admin/feedback',            'bi-chat-left-text',    t('admin_nav.feedback'),           [], $__fbUnread],
+            ['/admin/translation-health',  'bi-translate',         t('admin_nav.translation_review'), ['/admin/translations'], $__pendingTx],
+            ['/admin/account',             'bi-person',            t('admin_nav.my_profile'),         [], 0],
+        ];
+        $__tools = [
+            ['/admin/ordinances', 'bi-journal-text',      t('admin_nav.ordinances'), [], 0],
+            ['/admin/payments',   'bi-wallet2',           t('admin_nav.payments'),   [], $__payPending],
+            ['/admin/evacuation', 'bi-house-exclamation', t('admin_nav.evacuation'), [], 0],
+            ['/admin/safety',     'bi-shield-check',      t('admin_nav.safety'),     [], 0],
+            ['/admin/reports',    'bi-bar-chart-line',    t('admin_nav.analytics'),  [], 0],
+            ['/admin/sms',        'bi-phone',             t('admin_nav.sms'),        [], 0],
+        ];
+    } else {
+        $__primary = [
+            ['/admin',                    'bi-grid-1x2',          t('admin_nav.dashboard'),       [], 0, true],
+            ['/admin/announcements',      'bi-megaphone',         t('admin_nav.announcements'),   [], 0],
+            ['/admin/events',             'bi-calendar-event',    t('admin_nav.events'),          [], 0],
+            ['/admin/ordinances',         'bi-journal-text',      t('admin_nav.ordinances'),      [], 0],
+            ['/admin/residents',          'bi-people',            t('admin_nav.residents'),       ['/admin/profile-updates'], $pendingCount],
+            ['/admin/staff',              'bi-person-badge',      t('staff_list.title'),          [], 0],
+            ['/admin/translation-health', 'bi-translate',         t('admin_nav.translation_hub'), ['/admin/translations'], $__pendingTx],
+            ['/admin/documents',          'bi-file-earmark-text', t('admin_nav.documents'),       [], $__docOpen],
+            ['/admin/reports',            'bi-bar-chart-line',    t('admin_nav.analytics'),       [], 0],
+        ];
+        if ($userRole === 'superadmin') {
+            $__primary[] = ['/superadmin/settings', 'bi-gear', t('admin_nav.system_settings'), [], setting('maintenance_mode', false) ? '!' : 0];
+        }
+        $__tools = [
+            ['/admin/voice-training', 'bi-mic',               t('admin_nav.voice_training'), [], 0],
+            ['/admin/manobo',         'bi-book',              t('admin_nav.manobo'),         ['/admin/dictionary', '/admin/bisaya'], 0],
+            ['/admin/payments',       'bi-wallet2',           t('admin_nav.payments'),       [], $__payPending],
+            ['/admin/feedback',       'bi-chat-left-text',    t('admin_nav.feedback'),       [], $__fbUnread],
+            ['/admin/evacuation',     'bi-house-exclamation', t('admin_nav.evacuation'),     [], 0],
+            ['/admin/safety',         'bi-shield-check',      t('admin_nav.safety'),         [], 0],
+            ['/admin/sms',            'bi-phone',             t('admin_nav.sms'),            [], 0],
+        ];
+        if ($userRole === 'superadmin') {
+            array_push(
+                $__tools,
+                ['/superadmin/errors',      'bi-bug',          t('admin_nav.error_logs'),  [], $__sysErrors],
+                ['/superadmin/sessions',    'bi-person-check', t('admin_nav.sessions'),    [], 0],
+                ['/superadmin/backups',     'bi-database',     t('admin_nav.backups'),     [], 0],
+                ['/superadmin/ai-accuracy', 'bi-graph-up',     t('admin_nav.ai_accuracy'), [], 0]
+            );
+        }
+    }
+
+    $__renderNav = static function (array $items) use ($isActive): string {
+        $html = '';
+        foreach ($items as $item) {
+            [$path, $icon, $label, $extra, $badge] = $item;
+            $exact  = $item[5] ?? false;
+            $bare   = (string) strtok($path, '?#');
+            $active = $exact === 'never' ? '' : $isActive($bare, $exact === true);
+            foreach ($extra as $prefix) {
+                $active = $active ?: $isActive($prefix);
+            }
+            $badgeHtml = ($badge === '!' || (int) $badge > 0)
+                ? '<span class="sidebar-badge">' . e((string) $badge) . '</span>'
+                : '';
+            $html .= '<a href="' . e(route(ltrim($path, '/'))) . '" class="sidebar-link ' . $active . '"'
+                . ($active ? ' aria-current="page"' : '') . '>'
+                . '<i class="bi ' . $icon . ' nav-icon" aria-hidden="true"></i><span>' . e($label) . '</span>'
+                . $badgeHtml . '</a>';
+        }
+        return $html;
+    };
+    $__primaryHtml = $__renderNav($__primary);
+    $__toolsHtml   = $__renderNav($__tools);
+    $__toolsOpen   = str_contains($__toolsHtml, 'sidebar-link active');
+    $__roleLabel   = t('admin_nav.role_' . (in_array($userRole, ['superadmin', 'admin', 'staff'], true) ? $userRole : 'staff'));
+    $__panelLabel  = $__isStaff ? t('admin_nav.staff_panel') : t('admin_nav.admin_panel');
+    $__boLocale    = back_office_locale();
+    ?>
+
     <!-- ====================================================
          SIDEBAR
          ==================================================== -->
-    <aside class="admin-sidebar" :class="{ 'sidebar-hidden': !sidebarOpen && isMobile }">
+    <aside class="admin-sidebar" id="adminSidebar" :class="{ 'sidebar-hidden': !sidebarOpen && isMobile }">
 
-        <!-- Brand -->
         <div class="sidebar-brand">
-            <div class="sidebar-brand-text d-flex align-items-center">
-                <div>
+            <div class="sidebar-brand-text">
                 <?= baranggabay_logo('dark', ['size' => 'large', 'href' => route('admin')]) ?>
-                <p class="sidebar-panel-label"><?= ($_SESSION['role'] ?? '') === 'staff' ? 'Staff Panel' : 'Admin Panel' ?></p>
-                </div>
+                <p class="sidebar-panel-label"><?= e($__panelLabel) ?></p>
             </div>
-            <button class="sidebar-close d-lg-none" @click="sidebarOpen = false"
-                    aria-label="Close sidebar">
-                <i class="bi bi-x-lg"></i>
+            <button class="sidebar-close d-lg-none" type="button" @click="sidebarOpen = false"
+                    aria-label="<?= e(t('admin_nav.close_menu')) ?>">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
             </button>
         </div>
 
-        <!-- Navigation -->
-        <nav class="sidebar-nav" aria-label="Admin navigation">
+        <nav class="sidebar-nav" aria-label="<?= e($__panelLabel) ?>">
+            <?= $__primaryHtml ?>
 
-            <!-- ── Overview ─────────────────────────────── -->
-            <p class="nav-section-label"><?= e(t('admin_nav.overview')) ?></p>
-
-            <a href="<?= e(route('admin')) ?>"
-               class="sidebar-link <?= $isActive('/admin', true) ?>">
-                <i class="bi bi-speedometer2 nav-icon"></i>
-                <span><?= e(t('admin_nav.dashboard')) ?></span>
-            </a>
-
-            <!-- ── Content ──────────────────────────────── -->
-            <p class="nav-section-label"><?= e(t('admin_nav.content')) ?></p>
-
-            <!-- Announcements -->
-            <a href="<?= e(route('admin/announcements')) ?>"
-               class="sidebar-link <?= $isActive('/admin/announcements', false) ?>">
-                <i class="bi bi-megaphone nav-icon"></i>
-                <span><?= e(t('admin_nav.announcements')) ?></span>
-            </a>
-
-            <!-- Events -->
-            <a href="<?= e(route('admin/events')) ?>"
-               class="sidebar-link <?= $isActive('/admin/events', false) ?>">
-                <i class="bi bi-calendar-event nav-icon"></i>
-                <span><?= e(t('admin_nav.events')) ?></span>
-            </a>
-
-            <!-- Ordinances -->
-            <a href="<?= e(route('admin/ordinances')) ?>"
-               class="sidebar-link <?= $isActive('/admin/ordinances', false) ?>">
-                <i class="bi bi-journal-text nav-icon"></i>
-                <span><?= e(t('admin_nav.ordinances')) ?></span>
-            </a>
-
-            <!-- ── Management (admin + staff + superadmin). Every link here is
-                 open to all three, matching each one's route:role restriction;
-                 Manobo below is the one exception and stays admin-only. ── -->
-            <?php if (in_array($userRole, ['admin', 'staff', 'superadmin'], true)): ?>
-
-            <p class="nav-section-label"><?= e(t('admin_nav.community')) ?></p>
-
-            <a href="<?= e(route('admin/residents')) ?>"
-               class="sidebar-link <?= $isActive('/admin/residents', false) ?>">
-                <i class="bi bi-people nav-icon"></i>
-                <span><?= e(t('admin_nav.residents')) ?></span>
-                <?php if ($pendingCount > 0): ?>
-                <span class="sidebar-badge"><?= $pendingCount ?></span>
-                <?php endif; ?>
-            </a>
-
-            <!-- Staff accounts. Admin/superadmin only, matching the route:
-                 a staff member cannot manage other back-office accounts. -->
-            <?php if (in_array($userRole, ['admin', 'superadmin'], true)): ?>
-            <a href="<?= e(route('admin/staff')) ?>"
-               class="sidebar-link <?= $isActive('/admin/staff', false) ?>">
-                <i class="bi bi-person-badge nav-icon"></i>
-                <span><?= e(t('staff_list.title')) ?></span>
-            </a>
-            <?php endif; ?>
-
-            <p class="nav-section-label"><?= e(t('admin_nav.language')) ?></p>
-
-            <!-- Urgent announcements whose machine translation is held back.
-                 Badged, because holding a storm warning's translation is only
-                 responsible if somebody is told it is being held. -->
-            <?php
-            try {
-                $__pendingTx = \App\Models\Announcement::countAwaitingTranslationReview();
-            } catch (\Throwable) {
-                $__pendingTx = 0;
-            }
-            ?>
-            <?php if ($__pendingTx > 0): ?>
-            <a href="<?= e(route('admin/translations')) ?>"
-               class="sidebar-link <?= $isActive('/admin/translations', false) ?>">
-                <i class="bi bi-translate nav-icon"></i>
-                <span><?= e(t('translation_review.title')) ?></span>
-                <span class="sidebar-badge"><?= (int) $__pendingTx ?></span>
-            </a>
-            <?php endif; ?>
-
-            <?php /* Always present, unlike the review queue above, which
-                     only appears when something is waiting. "Is anything
-                     missing?" is a question worth being able to ask on a
-                     day when the answer is no. */ ?>
-            <a href="<?= e(route('admin/translation-health')) ?>"
-               class="sidebar-link <?= $isActive('/admin/translation-health', false) ?>">
-                <i class="bi bi-clipboard-check nav-icon"></i>
-                <span><?= e(t('translation_health.page_title')) ?></span>
-            </a>
-
-            <?php if (in_array($userRole, ['admin', 'superadmin'], true)): ?>
-            <a href="<?= e(route('admin/manobo')) ?>"
-               class="sidebar-link <?= $isActive('/admin/manobo', false) ?>">
-                <i class="bi bi-translate nav-icon"></i>
-                <span><?= e(t('admin_nav.manobo')) ?></span>
-            </a>
-            <a href="<?= e(route('admin/voice-training')) ?>"
-               class="sidebar-link <?= $isActive('/admin/voice-training', false) ?>">
-                <i class="bi bi-mic nav-icon"></i>
-                <span>Voice Training</span>
-            </a>
-            <?php endif; ?>
-
-            <p class="nav-section-label"><?= e(t('admin_nav.services')) ?></p>
-
-            <?php /* Document requests carry a badge for the same reason the
-                     verification queue does: it is work waiting on a person,
-                     and an unbadged link is one nobody opens until reminded. */ ?>
-            <a href="<?= e(route('admin/documents')) ?>"
-               class="sidebar-link <?= $isActive('/admin/documents', false) ?>">
-                <i class="bi bi-file-earmark-text nav-icon"></i>
-                <span><?= e(t('admin_nav.documents')) ?></span>
-                <?php
-                $__docOpen = \App\Models\DocumentRequest::countOpen();
-                if ($__docOpen > 0): ?>
-                <span class="sidebar-badge"><?= (int) $__docOpen ?></span>
-                <?php endif; ?>
-            </a>
-
-            <a href="<?= e(route('admin/payments')) ?>"
-               class="sidebar-link <?= $isActive('/admin/payments', false) ?>">
-                <i class="bi bi-wallet2 nav-icon"></i>
-                <span><?= e(t('admin_nav.payments')) ?></span>
-                <?php
-                try {
-                    $__payPending = (int) db()->query("SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAYMENT_PROOF_SUBMITTED'")->fetchColumn();
-                    if ($__payPending > 0): ?>
-                <span class="sidebar-badge" style="background:#e11d48;color:#fff;"><?= (int) $__payPending ?></span>
-                <?php endif; } catch (\Throwable) {} ?>
-            </a>
-
-            <a href="<?= e(route('admin/feedback')) ?>"
-               class="sidebar-link <?= $isActive('/admin/feedback', false) ?>">
-                <i class="bi bi-chat-dots nav-icon"></i>
-                <span><?= e(t('admin_nav.feedback')) ?></span>
-                <?php
-                try {
-                    $fbUnread = \App\Models\Feedback::unreadCountAdmin();
-                    if ($fbUnread > 0): ?>
-                <span class="sidebar-badge"><?= $fbUnread ?></span>
-                <?php endif; } catch (\Throwable) {} ?>
-            </a>
-
-            <a href="<?= e(route('admin/evacuation')) ?>"
-               class="sidebar-link <?= $isActive('/admin/evacuation', false) ?>">
-                <i class="bi bi-house-exclamation nav-icon"></i>
-                <span><?= e(t('admin_nav.evacuation')) ?></span>
-            </a>
-
-            <a href="<?= e(route('admin/safety')) ?>"
-               class="sidebar-link <?= $isActive('/admin/safety', false) ?>">
-                <i class="bi bi-shield-check nav-icon"></i>
-                <span><?= e(t('admin_nav.safety')) ?></span>
-            </a>
-
-            <p class="nav-section-label"><?= e(t('admin_nav.insights')) ?></p>
-
-            <a href="<?= e(route('admin/reports')) ?>"
-               class="sidebar-link <?= $isActive('/admin/reports', false) ?>">
-                <i class="bi bi-bar-chart-line nav-icon"></i>
-                <span><?= e(t('admin_nav.reports')) ?></span>
-            </a>
-
-            <a href="<?= e(route('admin/sms')) ?>"
-               class="sidebar-link <?= $isActive('/admin/sms', false) ?>">
-                <i class="bi bi-phone nav-icon"></i>
-                <span><?= e(t('admin_nav.sms')) ?></span>
-            </a>
-
-            <?php endif; ?>
-
-            <!-- ── System (superadmin only) ──────────────────── -->
-            <?php if ($userRole === 'superadmin'): ?>
-            <p class="nav-section-label"><?= e(t('admin_nav.system')) ?></p>
-
-            <a href="<?= e(route('superadmin/errors')) ?>"
-               class="sidebar-link <?= $isActive('/superadmin/errors', false) ?>">
-                <i class="bi bi-bug nav-icon"></i>
-                <span><?= e(t('admin_nav.error_logs')) ?></span>
-                <?php
-                try {
-                    $sysErrors = (int) db()->query(
-                        "SELECT COUNT(*) FROM error_logs WHERE resolved_at IS NULL AND severity = 'critical'"
-                    )->fetchColumn();
-                    if ($sysErrors > 0): ?>
-                <span class="sidebar-badge"><?= $sysErrors ?></span>
-                <?php endif;
-                } catch (\Throwable $e) {
-                    // Table not migrated yet — the nav link still works.
-                }
-                ?>
-            </a>
-
-            <a href="<?= e(route('superadmin/sessions')) ?>"
-               class="sidebar-link <?= $isActive('/superadmin/sessions', false) ?>">
-                <i class="bi bi-person-check nav-icon"></i>
-                <span><?= e(t('admin_nav.sessions')) ?></span>
-            </a>
-
-            <a href="<?= e(route('superadmin/backups')) ?>"
-               class="sidebar-link <?= $isActive('/superadmin/backups', false) ?>">
-                <i class="bi bi-database nav-icon"></i>
-                <span><?= e(t('admin_nav.backups')) ?></span>
-            </a>
-
-            <a href="<?= e(route('superadmin/ai-accuracy')) ?>"
-               class="sidebar-link <?= $isActive('/superadmin/ai-accuracy', false) ?>">
-                <i class="bi bi-graph-up nav-icon"></i>
-                <span><?= e(t('admin_nav.ai_accuracy')) ?></span>
-            </a>
-
-            <a href="<?= e(route('superadmin/settings')) ?>"
-               class="sidebar-link <?= $isActive('/superadmin/settings', false) ?>">
-                <i class="bi bi-sliders nav-icon"></i>
-                <span><?= e(t('admin_nav.settings')) ?></span>
-                <?php if (setting('maintenance_mode', false)): ?>
-                <span class="sidebar-badge" style="background:#dc2626;" title="Maintenance mode is on">!</span>
-                <?php endif; ?>
-            </a>
-            <?php endif; ?>
-
-        </nav><!-- /sidebar-nav -->
-
-        <!-- User footer -->
-        <div class="sidebar-footer">
-            <div class="sidebar-user">
-                <div class="sidebar-avatar" aria-hidden="true"><?= e($avatarInitial) ?></div>
-                <div class="sidebar-user-info">
-                    <p class="sidebar-user-name"><?= e($userName) ?></p>
-                    <p class="sidebar-user-role"><?= ucfirst(e($userRole)) ?></p>
+            <div class="sidebar-group" x-data="{ open: <?= $__toolsOpen ? 'true' : 'false' ?> }">
+                <button type="button" class="nav-section-toggle" @click="open = !open"
+                        :aria-expanded="open.toString()" aria-controls="sidebarTools">
+                    <span><?= e(t('admin_nav.tools')) ?></span>
+                    <i class="bi bi-chevron-down" :class="{ 'is-open': open }" aria-hidden="true"></i>
+                </button>
+                <div id="sidebarTools" x-show="open"<?= $__toolsOpen ? '' : ' style="display:none"' ?>>
+                    <?= $__toolsHtml ?>
                 </div>
             </div>
-            <!-- Self-service account settings — the back-office counterpart of
-                 the resident /profile page. Open to every back-office role. -->
-            <a href="<?= e(route('admin/account')) ?>"
-               class="sidebar-link <?= $isActive('/admin/account', false) ?>">
-                <i class="bi bi-person-gear nav-icon"></i>
-                <span><?= e(t('admin_nav.account')) ?></span>
-            </a>
-            <a href="<?= e(route('logout')) ?>" class="sidebar-logout">
-                <i class="bi bi-box-arrow-right"></i> <?= e(t('admin_nav.signout')) ?>
-            </a>
+        </nav>
+
+        <!-- User card — opens a small account menu, like the mockup's chevron row. -->
+        <div class="sidebar-footer" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+            <div class="sidebar-user-menu" x-show="open" x-transition.opacity style="display:none" role="menu">
+                <a href="<?= e(route('admin/account')) ?>" role="menuitem"><i class="bi bi-person-gear" aria-hidden="true"></i><?= e(t('admin_nav.account')) ?></a>
+                <a href="<?= e(route('logout')) ?>" role="menuitem"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><?= e(t('admin_nav.signout')) ?></a>
+            </div>
+            <button type="button" class="sidebar-user" @click="open = !open" :aria-expanded="open.toString()"
+                    aria-haspopup="menu" aria-label="<?= e(t('admin_nav.user_menu')) ?>">
+                <span class="sidebar-avatar" aria-hidden="true"><?= e($avatarInitial) ?></span>
+                <span class="sidebar-user-info">
+                    <span class="sidebar-user-name"><?= e($userName) ?></span>
+                    <span class="sidebar-user-role"><?= e($__roleLabel) ?></span>
+                </span>
+                <i class="bi bi-chevron-right sidebar-user-chevron" aria-hidden="true"></i>
+            </button>
         </div>
 
     </aside><!-- /admin-sidebar -->
@@ -361,51 +245,64 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
         <!-- Top bar -->
         <header class="admin-topbar">
             <div class="topbar-left">
-                <!-- Hamburger (mobile only) -->
-                <button class="topbar-hamburger d-lg-none"
+                <button class="topbar-hamburger d-lg-none" type="button"
                         @click="sidebarOpen = !sidebarOpen"
-                        aria-label="Toggle sidebar">
-                    <i class="bi bi-list"></i>
+                        aria-controls="adminSidebar" :aria-expanded="sidebarOpen.toString()"
+                        aria-label="<?= e(t('admin_nav.open_menu')) ?>">
+                    <i class="bi bi-list" aria-hidden="true"></i>
                 </button>
-                <h1 class="topbar-title"><?= e($pageTitle) ?></h1>
+                <?php if (!empty($topbarGreeting)): ?>
+                    <span class="topbar-greet-icon" aria-hidden="true"><i class="bi <?= e($topbarIcon ?? 'bi-person-workspace') ?>"></i></span>
+                    <div class="topbar-heading">
+                        <h1 class="topbar-title"><?= e($topbarGreeting) ?></h1>
+                        <?php if (!empty($topbarSubtitle)): ?><p class="topbar-sub"><?= e($topbarSubtitle) ?></p><?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <h1 class="topbar-title"><?= e($pageTitle) ?></h1>
+                <?php endif; ?>
             </div>
 
             <div class="topbar-right">
-                <!-- No language switch here on purpose. The FIL / EN / MN
-                     buttons are a resident feature: they exist so Manobo
-                     residents can read barangay announcements in a language
-                     they are comfortable with. The back office is written
-                     Tagalog-first throughout and always renders in Filipino
-                     (see current_locale()), so a switch here would have
-                     nothing to switch. Staff who want the resident view in
-                     another language still get the buttons on those pages. -->
+                <!-- Interface language. Labels and menus follow it; post CONTENT in
+                     the back office stays the original text (see back_office_locale()). -->
+                <div class="topbar-lang d-none d-md-inline-flex" role="group" aria-label="<?= e(t('lang.switch_label')) ?>">
+                    <?php foreach (available_locales() as $__code => $__label): ?>
+                        <a href="<?= e(route('set-locale/' . $__code) . '?scope=admin') ?>" title="<?= e($__label) ?>"
+                           class="<?= $__boLocale === $__code ? 'is-active' : '' ?>"<?= $__boLocale === $__code ? ' aria-current="true"' : '' ?>><?= e(locale_short_code($__code)) ?></a>
+                    <?php endforeach; ?>
+                </div>
 
-                <!-- Dark / light mode toggle -->
                 <button type="button" class="topbar-icon-btn" onclick="window.toggleBgTheme()"
                         title="<?= e(t('theme.toggle')) ?>" aria-label="<?= e(t('theme.toggle')) ?>">
-                    <i class="bi theme-toggle-icon"></i>
+                    <i class="bi theme-toggle-icon" aria-hidden="true"></i>
                 </button>
 
-                <!-- Notification bell -->
-                <a href="<?= e(route('notifications')) ?>" class="topbar-icon-btn"
+                <a href="<?= e(route('notifications')) ?>" class="topbar-icon-btn topbar-bell"
+                   x-data="unreadBell(<?= e(json_encode(route('api/notifications/unread'))) ?>)"
                    title="<?= e(t('nav.notifications')) ?>" aria-label="<?= e(t('nav.notifications')) ?>">
-                    <i class="bi bi-bell"></i>
+                    <i class="bi bi-bell" aria-hidden="true"></i>
+                    <span class="topbar-badge" x-show="count > 0" x-text="count > 99 ? '99+' : count" style="display:none"></span>
                 </a>
 
-                <!-- Role badge -->
-                <span class="role-badge role-<?= e($userRole) ?>"><?= ucfirst(e($userRole)) ?></span>
-
-                <!-- Admin name — links to their own account settings -->
-                <a href="<?= e(route('admin/account')) ?>" class="topbar-username d-none d-sm-inline"
-                   title="<?= e(t('admin_nav.account')) ?>" style="text-decoration:none;color:inherit;">
-                    <?= e($userName) ?>
-                </a>
-
-                <!-- Logout button (desktop) -->
-                <a href="<?= e(route('logout')) ?>" class="topbar-logout d-none d-md-inline-flex">
-                    <i class="bi bi-box-arrow-right"></i>
-                    <span><?= e(t('admin_nav.signout')) ?></span>
-                </a>
+                <div class="topbar-user" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+                    <button type="button" class="topbar-user-btn" @click="open = !open" :aria-expanded="open.toString()"
+                            aria-haspopup="menu" aria-label="<?= e(t('admin_nav.user_menu')) ?>">
+                        <span class="topbar-avatar" aria-hidden="true"><?= e($avatarInitial) ?></span>
+                        <span class="topbar-username"><?= e($userName) ?></span>
+                        <i class="bi bi-chevron-down topbar-user-caret" aria-hidden="true"></i>
+                    </button>
+                    <div class="topbar-user-menu" x-show="open" x-transition.opacity style="display:none" role="menu">
+                        <div class="topbar-user-menu__head"><strong><?= e($userName) ?></strong><span><?= e($__roleLabel) ?></span></div>
+                        <div class="topbar-lang topbar-lang--menu d-md-none" role="group" aria-label="<?= e(t('lang.switch_label')) ?>">
+                            <?php foreach (available_locales() as $__code => $__label): ?>
+                                <a href="<?= e(route('set-locale/' . $__code) . '?scope=admin') ?>" title="<?= e($__label) ?>"
+                                   class="<?= $__boLocale === $__code ? 'is-active' : '' ?>"><?= e(locale_short_code($__code)) ?></a>
+                            <?php endforeach; ?>
+                        </div>
+                        <a href="<?= e(route('admin/account')) ?>" role="menuitem"><i class="bi bi-person-gear" aria-hidden="true"></i><?= e(t('admin_nav.account')) ?></a>
+                        <a href="<?= e(route('logout')) ?>" role="menuitem"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><?= e(t('admin_nav.signout')) ?></a>
+                    </div>
+                </div>
             </div>
         </header><!-- /admin-topbar -->
 
@@ -480,6 +377,24 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
         updateThemeIcons();
     };
     updateThemeIcons();
+
+    /**
+     * Top-bar bell: polls the unread count once a minute (CLAUDE.md 7.5).
+     * A failed poll leaves the last count in place rather than flashing 0.
+     */
+    function unreadBell(url) {
+        return {
+            count: 0,
+            init() {
+                const poll = () => fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+                    .then((r) => (r.ok ? r.json() : null))
+                    .then((d) => { if (d) { this.count = parseInt(d.count ?? d.unread ?? 0, 10) || 0; } })
+                    .catch(() => {});
+                poll();
+                setInterval(poll, 60000);
+            }
+        };
+    }
 
     /**
      * Root Alpine component: manages sidebar state and

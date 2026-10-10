@@ -87,7 +87,7 @@
 .landing h2,
 .landing h3,
 .landing .l-display {
-    font-family: 'Bitter', Georgia, 'Times New Roman', serif;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     letter-spacing: -0.01em;
 }
 
@@ -327,7 +327,7 @@
     border-top: 1px solid rgba(226, 185, 85, .25);
 }
 .l-stat__n {
-    font-family: 'Bitter', Georgia, serif;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     font-size: 1.65rem;
     font-weight: 700;
     line-height: 1;
@@ -370,7 +370,7 @@
 }
 .l-hero-card__icon { font-size: 1.7rem; line-height: 1; margin-bottom: .7rem; }
 .l-hero-card__t {
-    font-family: 'Bitter', Georgia, serif;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     font-size: 1rem;
     font-weight: 700;
     color: var(--l-on-night);

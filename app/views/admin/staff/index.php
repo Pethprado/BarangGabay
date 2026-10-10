@@ -55,7 +55,7 @@ ob_start();
             <code style="display:block;font-size:1.05rem;font-weight:700;letter-spacing:.04em;background:#fff;border:1px solid #c3e6cb;border-radius:6px;padding:10px 13px;word-break:break-all;color:#1a6b3a;">
                 <?= e($freshPassword) ?>
             </code>
-            <p style="font-size:.74rem;color:#4a5568;margin:8px 0 0;">
+            <p style="font-size:.74rem;color:var(--text-secondary);margin:8px 0 0;">
                 <?= e(t('residents_detail.reset_pw_advise')) ?>
             </p>
         </div>

@@ -101,8 +101,8 @@ class PasswordResetController
             flash('error', 'This reset link is invalid or has expired. Ask for a new one.');
             redirect('/forgot-password');
         }
-        if (strlen($password) < AuthController::PASSWORD_MIN_LENGTH) {
-            flash('error', 'The password must be at least ' . AuthController::PASSWORD_MIN_LENGTH . ' characters.');
+        if (AuthController::passwordRuleFailures($password) !== []) {
+            flash('error', AuthController::passwordRuleSentence());
             redirect($back);
         }
         if (!hash_equals($password, $confirm)) {

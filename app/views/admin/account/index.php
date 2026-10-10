@@ -64,7 +64,7 @@ ob_start();
     .acct-avatar { width:76px; height:76px; border-radius:50%; object-fit:cover; }
     .acct-avatar-fallback { width:76px; height:76px; border-radius:50%; display:flex;
                             align-items:center; justify-content:center; font-size:1.75rem;
-                            font-weight:800; color:#fff; background:var(--brand-primary); }
+                            font-weight:800; color:#fff; background:var(--action-solid); }
     .acct-locked { font-size:.74rem; color:var(--text-muted); line-height:1.6; }
     .acct-pill   { display:inline-flex; align-items:center; gap:.3rem; border-radius:999px;
                    padding:2px 10px; font-size:.7rem; font-weight:700; }
@@ -82,7 +82,7 @@ ob_start();
 
 <!-- ── Page header ─────────────────────────────────────────────────────── -->
 <div class="mb-4">
-    <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;">
+    <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">
         <?= e(t('account.eyebrow')) ?>
     </p>
     <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;">

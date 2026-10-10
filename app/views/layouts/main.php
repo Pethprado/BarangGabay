@@ -14,7 +14,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Bitter:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <!-- Shared design tokens. Must come BEFORE main.css, which reads them. -->
@@ -122,7 +122,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
             <?php endif; ?>
 
             <!-- Desktop nav links -->
-            <nav class="hidden items-center gap-1 md:flex rs-hide-lg">
+            <nav class="hidden items-center gap-1 xl:flex rs-hide-lg">
                 <a href="<?= e(route('')) ?>"              class="nav-link-premium"><?= e(t('nav.home')) ?></a>
                 <a href="<?= e(route('announcements')) ?>" class="nav-link-premium"><?= e(t('nav.announcements')) ?></a>
                 <a href="<?= e(route('events')) ?>"        class="nav-link-premium"><?= e(t('nav.events')) ?></a>
@@ -285,7 +285,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
             </div><!-- /desktop right -->
 
             <!-- Mobile hamburger -->
-            <details class="md:hidden relative">
+            <details class="xl:hidden relative rs-hide-lg">
                 <summary class="cursor-pointer list-none rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm"><?= e(t('nav.menu')) ?></summary>
                 <div class="absolute right-0 top-full mt-2 w-56 space-y-1 rounded-3xl bg-white p-4 shadow-xl border border-slate-100 z-50">
                     <button type="button" onclick="window.toggleBgTheme()"

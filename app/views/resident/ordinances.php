@@ -154,7 +154,7 @@ ob_start();
                         <i class="bi bi-file-earmark-text" style="font-size:1.3rem;color:var(--tw-amber-700);"></i>
                     </div>
                     <div class="w-full py-0.5 text-center text-[8px] font-bold uppercase tracking-widest"
-                         style="background:#d4c48a;color:#78350f;">
+                         style="background:#d4c48a;color:#4a2508;">
                         PDF
                     </div>
                 </div>
@@ -346,6 +346,10 @@ function ordinanceAI() {
         ordinanceTitle: '',
         ordinanceId:    0,
         detailUrl:      '',
+        // Declared up front: the modal template reads these before openModal() runs.
+        retryable:      true,
+        fallback:       '',
+        fallbackLabel:  '',
 
         openModal(id, title) {
             this.ordinanceId    = id;

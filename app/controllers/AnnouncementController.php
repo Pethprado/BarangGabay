@@ -222,6 +222,17 @@ class AnnouncementController
         $status           = trim($_GET['status'] ?? '');
         $allAnnouncements = Announcement::allAdmin();
 
+        // ?mine=1 — the staff sidebar's "My Announcements". Applied to the
+        // full list too, so the summary counts describe the same scope.
+        $mine = ($_GET['mine'] ?? '') === '1';
+        if ($mine) {
+            $me = (int) ($_SESSION['user_id'] ?? 0);
+            $allAnnouncements = array_values(array_filter(
+                $allAnnouncements,
+                static fn (array $a): bool => (int) ($a['author_id'] ?? 0) === $me
+            ));
+        }
+
         $announcements = match ($status) {
             'published' => array_values(array_filter($allAnnouncements, [Announcement::class, 'isVisibleNow'])),
             'scheduled' => array_values(array_filter($allAnnouncements, [Announcement::class, 'isScheduled'])),
@@ -251,7 +262,8 @@ class AnnouncementController
             'allAnnouncements',
             'status',
             'pendingCount',
-            'annAttempts'
+            'annAttempts',
+            'mine'
         ));
     }
 

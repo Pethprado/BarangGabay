@@ -33,7 +33,7 @@ ob_start();
 <!-- ── Page header ─────────────────────────────────────────────────────── -->
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-4">
     <div>
-        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;">
+        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">
             <?= e(t('admin_nav.management')) ?>
         </p>
         <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;">
@@ -347,7 +347,7 @@ ob_start();
                             </td>
                             <td x-text="entry.english || '—'"></td>
                             <td x-text="entry.tagalog || '—'"></td>
-                            <td style="color:#0369a1;font-weight:500;" x-text="entry.bisaya || '—'"></td>
+                            <td style="color:var(--status-info);font-weight:500;" x-text="entry.bisaya || '—'"></td>
                             <td>
                                 <span style="font-size:.72rem;font-weight:600;background:var(--surface-muted,#f1f5f9);
                                              color:var(--text-muted);border-radius:20px;padding:2px 10px;"

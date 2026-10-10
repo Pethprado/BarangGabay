@@ -17,7 +17,7 @@
     display: inline-flex;
     align-items: center;
     gap: .5rem;
-    background: var(--brand-primary);
+    background: var(--action-solid);
     color: #fff;
     border: none;
     border-radius: 9999px;
@@ -209,7 +209,7 @@
     line-height: 1;
 }
 .aic-msg-ai   .aic-avatar { background: var(--brand-secondary-light); color: var(--brand-secondary); }
-.aic-msg-user .aic-avatar { background: var(--brand-primary); color: #fff; }
+.aic-msg-user .aic-avatar { background:var(--action-solid); color: #fff; }
 
 .aic-bubble {
     padding: .6rem .9rem;
@@ -226,7 +226,7 @@
     box-shadow: 0 1px 4px rgba(0,0,0,.07);
 }
 .aic-msg-user .aic-bubble {
-    background: var(--brand-primary);
+    background: var(--action-solid);
     color: #fff;
     border-bottom-right-radius: .3rem;
 }
@@ -287,7 +287,7 @@
 .aic-textarea::placeholder  { color: var(--text-muted); }
 
 .aic-send-btn {
-    background: var(--brand-primary);
+    background: var(--action-solid);
     color: #fff;
     border: none;
     border-radius: .75rem;

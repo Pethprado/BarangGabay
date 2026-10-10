@@ -7,10 +7,9 @@
     <base href="<?= e(base_url()) ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- CHANGED: Bitter joins Inter — a sturdy serif for headings against a
-         plain sans for reading. The pairing carries more of the page's
-         character than any ornament does. -->
-    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@600;700;800&family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+    <!-- Plus Jakarta Sans for headings, Inter for reading — the geometric sans
+         pairing the reference mockup uses across every screen. -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <!-- Shared design tokens. Must come BEFORE main.css, which reads them.

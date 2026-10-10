@@ -44,7 +44,7 @@ ob_start();
 
     <div class="col-6 col-lg-3">
         <div class="admin-card text-center py-4" style="border-top:3px solid #f59e0b;">
-            <p class="fs-2 fw-black mb-0" style="color:#f59e0b;"><?= $eventStats['total'] ?></p>
+            <p class="fs-2 fw-black mb-0" style="color:var(--status-warning);"><?= $eventStats['total'] ?></p>
             <p class="small fw-semibold text-muted mb-0"><?= e(t('admin_reports.stat_events')) ?></p>
             <p class="text-muted mb-0" style="font-size:.7rem;">
                 <?= t('admin_reports.stat_upcoming_ongoing', ['upcoming' => $eventStats['upcoming'], 'ongoing' => $eventStats['ongoing']]) ?>
@@ -185,7 +185,7 @@ ob_start();
             <span class="badge" style="background:#d1fae5;color:#065f46;font-weight:600;padding:.35rem .6rem;">
                 <?= $translationStats['this_month'] ?> <?= e(t('admin_reports.this_month_suffix')) ?>
             </span>
-            <span class="badge" style="background:#e0f2fe;color:#0369a1;font-weight:600;padding:.35rem .6rem;">
+            <span class="badge" style="background:#e0f2fe;color:var(--status-info);font-weight:600;padding:.35rem .6rem;">
                 <?= $translationStats['total'] ?> <?= e(t('admin_reports.total_suffix')) ?>
             </span>
         </div>

@@ -40,40 +40,25 @@ ob_start();
 .activity-meta { margin:0; font-size:.72rem; color:var(--text-muted); }
 .quick-action-btn { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:8px; font-size:.875rem; font-weight:600; text-decoration:none; color:var(--text-primary); background:var(--surface-muted); border:1px solid var(--tb-border); transition:all .15s; }
 .quick-action-btn:hover { background:var(--brand-primary-light); border-color:var(--brand-primary); color:var(--brand-primary-dark); text-decoration:none; }
-.quick-action-btn .qa-icon { width:34px; height:34px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:.95rem; flex-shrink:0; background:var(--brand-primary); color:#fff; }
+.quick-action-btn .qa-icon { width:34px; height:34px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:.95rem; flex-shrink:0; background:var(--action-solid); color:#fff; }
 .chart-placeholder { display:flex; align-items:center; justify-content:center; min-height:200px; color:var(--text-muted); font-size:.85rem; }
 .sys-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--tb-border); font-size:.845rem; color:var(--text-primary); }
 .sys-row:last-child { border-bottom:none; padding-bottom:0; }
 .sys-row .text-muted { color:var(--text-secondary) !important; }
 </style>
 
-<!-- ── Page heading ──────────────────────────────────────────────── -->
-<div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-4">
-    <div>
-        <p class="mb-0"
-           style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">
-            <?= e(t('dashboard.eyebrow')) ?>
-        </p>
-        <?php
-        $__hour  = (int) date('G');
-        $__greet = $__hour < 12 ? 'Good morning' : ($__hour < 18 ? 'Good afternoon' : 'Good evening');
-        $__first = explode(' ', trim((string) ($_SESSION['full_name'] ?? '')))[0] ?? '';
-        $__role  = (string) ($_SESSION['role'] ?? '');
-        ?>
-        <h1 class="mb-0 mt-1"
-            style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;font-family:var(--font-heading);">
-            <?= e($__role === 'staff' ? 'Welcome, ' . ($__first !== '' ? $__first : 'Staff') : $__greet . ', ' . trim((string) ($_SESSION['full_name'] ?? 'Admin'))) ?>!
-        </h1>
-        <p class="mb-0 mt-1" style="font-size:.9rem;color:var(--text-secondary);">
-            <?= $__role === 'staff'
-                ? 'Here are your assigned tasks and recent activities.'
-                : 'Manage your barangay information, voice dataset, and system settings.' ?>
-        </p>
-    </div>
-    <span class="text-muted" style="font-size:.8rem;padding-top:4px;">
-        <?= e(date('l, F j, Y')) ?>
-    </span>
-</div>
+<?php
+// The greeting lives in the layout's top bar, as in the mockup.
+$__hour  = (int) date('G');
+$__greet = t('admin_nav.' . ($__hour < 12 ? 'greet_morning' : ($__hour < 18 ? 'greet_afternoon' : 'greet_evening')));
+$__first = explode(' ', trim((string) ($_SESSION['full_name'] ?? '')))[0] ?? '';
+$__role  = (string) ($_SESSION['role'] ?? '');
+$topbarGreeting = $__role === 'staff'
+    ? t('admin_nav.welcome_name', ['name' => $__first !== '' ? $__first : 'Staff'])
+    : t('admin_nav.greet_name', ['greeting' => $__greet, 'name' => trim((string) ($_SESSION['full_name'] ?? 'Admin'))]);
+$topbarSubtitle = t($__role === 'staff' ? 'admin_nav.dash_staff_sub' : 'admin_nav.dash_admin_sub');
+$topbarIcon     = $__role === 'staff' ? 'bi-person-workspace' : 'bi-person-gear';
+?>
 
 <!-- ── Mockup dashboard: KPI row, modules, activity, coverage ─────────
      Admin and staff share one shell; what differs is the data. Every
@@ -85,8 +70,8 @@ $__isAdmin     = in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true
 $staffKpi      = $staffKpi ?? ['announcements' => 0, 'events' => 0, 'feedback' => 0, 'approvals' => 0];
 $recentTasks   = $recentTasks ?? [];
 $__kpis = $__isStaffView ? [
-    ['My Announcements', (int) $staffKpi['announcements'], route('admin/announcements'), 'bi-megaphone-fill', 'green'],
-    ['My Events', (int) $staffKpi['events'], route('admin/events'), 'bi-calendar-event-fill', 'orange'],
+    ['My Announcements', (int) $staffKpi['announcements'], route('admin/announcements') . '?mine=1', 'bi-megaphone-fill', 'green'],
+    ['My Events', (int) $staffKpi['events'], route('admin/events') . '?mine=1', 'bi-calendar-event-fill', 'orange'],
     ['Feedback', (int) $staffKpi['feedback'], route('admin/feedback'), 'bi-chat-square-text-fill', 'blue'],
     ['Pending Approvals', (int) $staffKpi['approvals'], route('admin/documents') . '?status=pending', 'bi-shield-fill-exclamation', 'red'],
 ] : [
@@ -244,7 +229,7 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
 ?>
 <div class="row g-3 mb-4">
     <div class="col-12 col-lg-8">
-        <div class="admin-card h-100" style="padding:1.15rem 1.25rem;">
+        <div class="admin-card h-100" id="tasks" style="padding:1.15rem 1.25rem;scroll-margin-top:90px;">
             <div class="d-flex justify-content-between align-items-center mb-1">
                 <h2 class="dash-h">Recent Tasks</h2>
                 <a href="<?= e(route('admin/documents')) ?>" style="font-size:.78rem;font-weight:700;color:var(--brand-primary);">View all <i class="bi bi-arrow-right"></i></a>
@@ -338,7 +323,7 @@ $weekEvents  = $weekEvents  ?? [];
                     <?= e(t('dashboard.attention_' . $item['key'], ['n' => $item['count']])) ?>
                 </span>
                 <span class="badge rounded-pill"
-                      style="background:var(--brand-primary);color:#fff;font-size:.72rem;font-weight:700;">
+                      style="background:var(--action-solid);color:#fff;font-size:.72rem;font-weight:700;">
                     <?= (int) $item['count'] ?>
                 </span>
                 <i class="bi bi-chevron-right" style="color:var(--text-muted);font-size:.75rem;"></i>

@@ -29,7 +29,7 @@ ob_start();
 /* ── Residents page styles ─────────────────────────────────── */
 .tab-pill { display:inline-flex; align-items:center; gap:6px; padding:7px 15px; border-radius:20px; text-decoration:none; font-size:.82rem; font-weight:600; border:1px solid var(--tb-border); background:var(--surface-card); color:var(--text-secondary); transition:all .15s; }
 .tab-pill:hover { background:var(--brand-primary-light); border-color:var(--brand-primary); color:var(--brand-primary); text-decoration:none; }
-.tab-pill.active { background:var(--brand-primary); border-color:var(--brand-primary); color:#fff; }
+.tab-pill.active { background:var(--action-solid); border-color:var(--action-solid); color:#fff; }
 .tab-pill .tab-count { font-size:.72rem; opacity:.85; }
 .tab-pill.active .tab-count { opacity:.9; }
 .tab-pill.tab-pending.active, .tab-pill.tab-pending:hover { background:#d97706; border-color:#d97706; color:#fff; }
@@ -51,7 +51,7 @@ ob_start();
 <!-- ── Page header ──────────────────────────────────────────────── -->
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-4">
     <div>
-        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;"><?= e(t('residents.eyebrow')) ?></p>
+        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);"><?= e(t('residents.eyebrow')) ?></p>
         <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;"><?= e(t('residents.title')) ?></h1>
         <p class="text-muted mt-1 mb-0" style="font-size:.82rem;">
             <?= e(t('residents.summary', ['all' => number_format($counts['all']), 'pending' => number_format($counts['pending'])])) ?>
@@ -100,7 +100,7 @@ ob_start();
         <?php endif; ?>
         <div class="input-group" style="max-width:360px;">
             <span class="input-group-text" style="background:#f8fbf9;border-color:#dee2e6;">
-                <i class="bi bi-search" style="font-size:.8rem;color:#94a3b8;"></i>
+                <i class="bi bi-search" style="font-size:.8rem;color:var(--text-muted);"></i>
             </span>
             <input type="text" name="search"
                    value="<?= e($search) ?>"
@@ -124,7 +124,7 @@ ob_start();
          x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0 translate-x-2"
          x-transition:enter-end="opacity-100 translate-x-0"
-         class="d-flex align-items-center gap-2 ms-auto">
+         class="d-flex flex-wrap align-items-center gap-2 ms-auto">
         <span class="text-muted" style="font-size:.8rem;white-space:nowrap;">
             <span x-text="selected.length"></span> <?= e(t('residents.selected_suffix')) ?>
         </span>
@@ -280,7 +280,7 @@ ob_start();
                             <i class="bi <?= $s['icon'] ?>"></i> <?= $s['label'] ?>
                         </span>
                         <?php elseif (!empty($res['id_photo_url'])): ?>
-                        <br><span style="font-size:.68rem;color:#94a3b8;margin-top:2px;display:inline-block;">
+                        <br><span style="font-size:.68rem;color:var(--text-muted);margin-top:2px;display:inline-block;">
                             <i class="bi bi-card-image"></i> <?= e(t('residents.has_id')) ?>
                         </span>
                         <?php endif; ?>
@@ -295,7 +295,7 @@ ob_start();
                             <button type="button"
                                     @click="openIdModal('<?= e(asset(ltrim($res['id_photo_url'], '/'))) ?>', '<?= e(htmlspecialchars(addslashes($res['full_name']), ENT_QUOTES, 'UTF-8')) ?>')"
                                     title="<?= e(t('residents.view_id')) ?>"
-                                    style="padding:4px 9px;font-size:.75rem;background:#f8fbf9;border:1px solid #e4ece6;border-radius:6px;cursor:pointer;color:#4a5568;display:inline-flex;align-items:center;gap:4px;transition:all .15s;"
+                                    style="padding:4px 9px;font-size:.75rem;background:#f8fbf9;border:1px solid #e4ece6;border-radius:6px;cursor:pointer;color:var(--text-secondary);display:inline-flex;align-items:center;gap:4px;transition:all .15s;"
                                     onmouseover="this.style.background='#d1ecf1';this.style.borderColor='#bee5eb';this.style.color='#0c5460';"
                                     onmouseout="this.style.background='#f8fbf9';this.style.borderColor='#e4ece6';this.style.color='#4a5568';">
                                 <i class="bi bi-card-image"></i> ID
@@ -305,7 +305,7 @@ ob_start();
                             <!-- Detail link -->
                             <a href="<?= e(route('admin/residents/' . (int) $res['id'])) ?>"
                                title="<?= e(t('residents.view_details')) ?>"
-                               style="padding:4px 9px;font-size:.75rem;background:#f8fbf9;border:1px solid #e4ece6;border-radius:6px;color:#4a5568;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all .15s;"
+                               style="padding:4px 9px;font-size:.75rem;background:#f8fbf9;border:1px solid #e4ece6;border-radius:6px;color:var(--text-secondary);text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all .15s;"
                                onmouseover="this.style.background='#f0faf4';this.style.borderColor='#a8d5b5';this.style.color='#155724';"
                                onmouseout="this.style.background='#f8fbf9';this.style.borderColor='#e4ece6';this.style.color='#4a5568';">
                                 <i class="bi bi-eye"></i>
@@ -386,7 +386,7 @@ ob_start();
         </div>
         <!-- Footer hint -->
         <div style="padding:10px 16px;background:#f8fbf9;border-top:1px solid #e4ece6;text-align:center;">
-            <p style="margin:0;font-size:.75rem;color:#94a3b8;">
+            <p style="margin:0;font-size:.75rem;color:var(--text-muted);">
                 <i class="bi bi-zoom-in me-1"></i><?= e(t('residents.zoom_hint')) ?>
                 &nbsp;&middot;&nbsp;
                 <a :href="idPhoto" target="_blank" rel="noopener"
@@ -430,7 +430,7 @@ ob_start();
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
             <div style="padding:20px;">
                 <label style="font-size:.845rem;font-weight:600;color:var(--text-primary);display:block;margin-bottom:6px;">
-                    <?= e(t('residents.suspend_reason_label')) ?> <span style="color:#94a3b8;font-weight:400;"><?= e(t('common.optional')) ?></span>
+                    <?= e(t('residents.suspend_reason_label')) ?> <span style="color:var(--text-muted);font-weight:400;"><?= e(t('common.optional')) ?></span>
                 </label>
                 <textarea name="reason"
                           x-model="suspendReason"
@@ -439,13 +439,13 @@ ob_start();
                           style="width:100%;border:1px solid #dee2e6;border-radius:8px;padding:9px 12px;font-size:.845rem;resize:vertical;outline:none;font-family:inherit;"
                           onfocus="this.style.borderColor='#dc3545';"
                           onblur="this.style.borderColor='#dee2e6';"></textarea>
-                <p style="font-size:.75rem;color:#94a3b8;margin:6px 0 0;">
+                <p style="font-size:.75rem;color:var(--text-muted);margin:6px 0 0;">
                     <?= e(t('residents.suspend_notice')) ?>
                 </p>
             </div>
             <div style="padding:14px 20px;background:#f8fbf9;border-top:1px solid #e4ece6;display:flex;justify-content:flex-end;gap:10px;">
                 <button type="button" @click="suspendModal = false"
-                        style="padding:8px 18px;font-size:.845rem;background:#fff;border:1px solid #dee2e6;border-radius:7px;cursor:pointer;color:#4a5568;font-weight:600;">
+                        style="padding:8px 18px;font-size:.845rem;background:#fff;border:1px solid #dee2e6;border-radius:7px;cursor:pointer;color:var(--text-secondary);font-weight:600;">
                     <?= e(t('common.cancel')) ?>
                 </button>
                 <button type="submit"

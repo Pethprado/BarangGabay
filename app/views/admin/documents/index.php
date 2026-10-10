@@ -82,7 +82,7 @@ ob_start();
                 ?>
                 <a href="<?= e($url) ?>"
                    class="status-badge"
-                   style="text-decoration:none;font-size:.78rem;padding:4px 10px;border-radius:20px;<?= $active ? 'background:var(--brand-primary);color:#fff;font-weight:700;' : 'background:var(--surface-muted);color:var(--text-secondary);' ?>">
+                   style="text-decoration:none;font-size:.78rem;padding:4px 10px;border-radius:20px;<?= $active ? 'background:var(--action-solid);color:#fff;font-weight:700;' : 'background:var(--surface-muted);color:var(--text-secondary);' ?>">
                     <?= e($lbl) ?>
                 </a>
                 <?php endforeach; ?>

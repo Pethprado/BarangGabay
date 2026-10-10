@@ -73,7 +73,7 @@ ob_start();
             </div>
 
             <div class="col-12">
-                <button type="submit" class="btn btn-sm" style="background:var(--brand-primary);color:#fff;font-weight:600;">
+                <button type="submit" class="btn btn-sm" style="background:var(--action-solid);color:#fff;font-weight:600;">
                     <i class="bi bi-plus-circle me-1"></i><?= e(t('admin_evacuation.add_btn')) ?>
                 </button>
             </div>

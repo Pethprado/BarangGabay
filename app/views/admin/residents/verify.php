@@ -30,10 +30,10 @@ ob_start();
 
 <!-- ── Breadcrumb ────────────────────────────────────────────────── -->
 <nav style="margin-bottom:20px;" aria-label="breadcrumb">
-    <ol style="list-style:none;display:flex;align-items:center;gap:6px;padding:0;margin:0;font-size:.82rem;color:#94a3b8;">
-        <li><a href="<?= e(route('admin')) ?>" style="color:#94a3b8;text-decoration:none;hover:color:var(--brand-primary);"><?= e(t('admin_nav.dashboard')) ?></a></li>
+    <ol style="list-style:none;display:flex;align-items:center;gap:6px;padding:0;margin:0;font-size:.82rem;color:var(--text-muted);">
+        <li><a href="<?= e(route('admin')) ?>" style="color:var(--text-muted);text-decoration:none;hover:color:var(--brand-primary);"><?= e(t('admin_nav.dashboard')) ?></a></li>
         <li style="color:#e4ece6;">/</li>
-        <li><a href="<?= e(route('admin/residents')) ?>" style="color:#94a3b8;text-decoration:none;"><?= e(t('admin_nav.residents')) ?></a></li>
+        <li><a href="<?= e(route('admin/residents')) ?>" style="color:var(--text-muted);text-decoration:none;"><?= e(t('admin_nav.residents')) ?></a></li>
         <li style="color:#e4ece6;">/</li>
         <li style="color:var(--text-primary);font-weight:600;"><?= e($resident['full_name'] ?? '') ?></li>
     </ol>
@@ -138,7 +138,7 @@ ob_start();
                     <p style="font-size:.845rem;font-weight:700;color:#155724;margin:0 0 6px;">
                         <i class="bi bi-check-circle-fill me-1"></i><?= e(t('residents_detail.approve_title')) ?>
                     </p>
-                    <p style="font-size:.78rem;color:#4a5568;margin:0 0 14px;line-height:1.5;">
+                    <p style="font-size:.78rem;color:var(--text-secondary);margin:0 0 14px;line-height:1.5;">
                         <?= e(t('residents_detail.approve_desc')) ?>
                     </p>
                     <form method="post"
@@ -175,7 +175,7 @@ ob_start();
                               action="<?= e(route('admin/residents/' . (int) $resident['id'] . '/suspend')) ?>">
                             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                             <label style="font-size:.82rem;font-weight:600;color:var(--text-primary);display:block;margin-bottom:6px;">
-                                <?= e(t('residents_detail.reason_label')) ?> <span style="color:#94a3b8;font-weight:400;"><?= e(t('common.optional')) ?></span>
+                                <?= e(t('residents_detail.reason_label')) ?> <span style="color:var(--text-muted);font-weight:400;"><?= e(t('common.optional')) ?></span>
                             </label>
                             <textarea name="reason"
                                       rows="3"
@@ -183,7 +183,7 @@ ob_start();
                                       style="width:100%;border:1px solid #dee2e6;border-radius:8px;padding:9px 12px;font-size:.845rem;resize:vertical;outline:none;font-family:inherit;margin-bottom:12px;"
                                       onfocus="this.style.borderColor='#dc3545';"
                                       onblur="this.style.borderColor='#dee2e6';"></textarea>
-                            <p style="font-size:.75rem;color:#94a3b8;margin:0 0 12px;">
+                            <p style="font-size:.75rem;color:var(--text-muted);margin:0 0 12px;">
                                 <?= e(t('residents_detail.suspend_notice2')) ?>
                             </p>
                             <button type="submit"
@@ -226,7 +226,7 @@ ob_start();
                         <code style="display:block;font-size:1rem;font-weight:700;letter-spacing:.04em;background:#fff;border:1px solid #c3e6cb;border-radius:6px;padding:9px 12px;word-break:break-all;color:#1a6b3a;">
                             <?= e($__freshPw) ?>
                         </code>
-                        <p style="font-size:.74rem;color:#4a5568;margin:8px 0 0;">
+                        <p style="font-size:.74rem;color:var(--text-secondary);margin:8px 0 0;">
                             <?= e(t('residents_detail.reset_pw_advise')) ?>
                         </p>
                     </div>
@@ -286,7 +286,7 @@ ob_start();
                          style="max-height:480px;border:2px solid #e4ece6;">
                         <img src="<?= e(asset(ltrim($resident['id_photo_url'], '/'))) ?>"
                              alt="<?= e($resident['full_name'] ?? '') ?>"
-                             onerror="this.parentElement.innerHTML='<div style=\'padding:48px;text-align:center;color:#94a3b8;\'><i class=\'bi bi-image\' style=\'font-size:2rem;\'></i><p style=\'margin:8px 0 0;font-size:.845rem;\'><?= e(addslashes(t('residents_detail.image_load_error'))) ?></p></div>'">
+                             onerror="this.parentElement.innerHTML='<div style=\'padding:48px;text-align:center;color:var(--text-muted);\'><i class=\'bi bi-image\' style=\'font-size:2rem;\'></i><p style=\'margin:8px 0 0;font-size:.845rem;\'><?= e(addslashes(t('residents_detail.image_load_error'))) ?></p></div>'">
                     </div>
 
                     <!-- ── AI Verification Result ───────────────────── -->
@@ -349,7 +349,7 @@ ob_start();
                     </div>
                     <?php elseif (!$aiStatus): ?>
                     <div style="margin-top:14px;background:#f9fafb;border:1px dashed #e2e8f0;border-radius:10px;padding:10px 14px;">
-                        <p style="margin:0;font-size:.775rem;color:#94a3b8;">
+                        <p style="margin:0;font-size:.775rem;color:var(--text-muted);">
                             <i class="bi bi-robot me-1"></i><?= e(t('residents_detail.no_ai_result')) ?>
                         </p>
                     </div>
@@ -364,18 +364,18 @@ ob_start();
                         <div class="d-flex gap-2">
                             <button type="button"
                                     @click="zoomed = !zoomed"
-                                    style="padding:5px 12px;font-size:.78rem;background:#f8fbf9;border:1px solid #e4ece6;border-radius:6px;cursor:pointer;color:#4a5568;display:inline-flex;align-items:center;gap:5px;">
+                                    style="padding:5px 12px;font-size:.78rem;background:#f8fbf9;border:1px solid #e4ece6;border-radius:6px;cursor:pointer;color:var(--text-secondary);display:inline-flex;align-items:center;gap:5px;">
                                 <i class="bi" :class="zoomed ? 'bi-zoom-out' : 'bi-zoom-in'"></i>
                                 <span x-text="zoomed ? <?= e(json_encode(t('residents_detail.zoom_out'))) ?> : <?= e(json_encode(t('residents_detail.zoom_in'))) ?>"></span>
                             </button>
                             <a href="<?= e(asset(ltrim($resident['id_photo_url'], '/'))) ?>"
                                target="_blank" rel="noopener"
-                               style="padding:5px 12px;font-size:.78rem;background:#f8fbf9;border:1px solid #e4ece6;border-radius:6px;cursor:pointer;color:#4a5568;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
+                               style="padding:5px 12px;font-size:.78rem;background:#f8fbf9;border:1px solid #e4ece6;border-radius:6px;cursor:pointer;color:var(--text-secondary);text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
                                 <i class="bi bi-box-arrow-up-right"></i> <?= e(t('common.open')) ?>
                             </a>
                             <a href="<?= e(asset(ltrim($resident['id_photo_url'], '/'))) ?>"
                                download
-                               style="padding:5px 12px;font-size:.78rem;background:#f8fbf9;border:1px solid #e4ece6;border-radius:6px;cursor:pointer;color:#4a5568;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
+                               style="padding:5px 12px;font-size:.78rem;background:#f8fbf9;border:1px solid #e4ece6;border-radius:6px;cursor:pointer;color:var(--text-secondary);text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
                                 <i class="bi bi-download"></i> <?= e(t('common.download')) ?>
                             </a>
                         </div>

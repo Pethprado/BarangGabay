@@ -276,6 +276,10 @@ class AccountController
             flash('error', t('account.err_password_short', ['n' => AuthController::PASSWORD_MIN_LENGTH]));
             redirect('/admin/account');
         }
+        if (AuthController::passwordRuleFailures($new) !== []) {
+            flash('error', AuthController::passwordRuleSentence());
+            redirect('/admin/account');
+        }
         if ($new !== $confirm) {
             flash('error', t('account.err_password_mismatch'));
             redirect('/admin/account');
