@@ -20,7 +20,10 @@ use App\Models\Setting;
 class MaintenanceMiddleware
 {
     /** Paths that stay reachable while maintenance mode is on. */
-    private const ALLOWED_PREFIXES = ['/login', '/logout', '/set-locale', '/health'];
+    // Payment webhooks stay open: a resident who paid just before maintenance
+    // began must still be confirmed. They are HMAC-authenticated, not session-based.
+    private const ALLOWED_PREFIXES = ['/login', '/logout', '/set-locale', '/health',
+                                      '/api/webhooks/paymongo', '/api/payments/paymongo/webhook', '/payments/paymongo/webhook'];
 
     /**
      * Render the maintenance page and exit when the request should be blocked.

@@ -29,12 +29,11 @@ class DocumentRequestController
         $requests        = DocumentRequest::forUser($userId);
         $types           = DocumentRequest::TYPES;
         $docFees         = \App\Models\DocumentFee::getAll();
-        $defaultGcash    = \App\Models\GcashAccount::getDefault();
-        $gcashAccounts   = \App\Models\GcashAccount::getActive();
+        
         $deliveryEnabled = (bool) \App\Models\Setting::get('doc_delivery_enabled', true);
         $deliveryFee     = (float) \App\Models\Setting::get('doc_delivery_fee', 40.00);
 
-        view('resident/documents', compact('user', 'requests', 'types', 'docFees', 'defaultGcash', 'gcashAccounts', 'deliveryEnabled', 'deliveryFee'));
+        view('resident/documents', compact('user', 'requests', 'types', 'docFees', 'deliveryEnabled', 'deliveryFee'));
     }
 
     /** POST /documents — file a new request. */
@@ -102,7 +101,8 @@ class DocumentRequestController
         // Prevent duplicate open request per document type
         foreach (DocumentRequest::forUser($userId) as $existing) {
             if ($existing['document_type'] === $type
-                && \in_array($existing['status'], ['pending', 'processing', 'ready'], true)) {
+                && \in_array($existing['status'], ['awaiting_payment', 'pending', 'pending_review', 'under_review', 'processing',
+                                                     'needs_information', 'approved', 'ready', 'ready_for_pickup'], true)) {
                 $dupMsg = t('documents.err_duplicate', [
                     'type'      => DocumentRequest::label($type),
                     'reference' => (string) $existing['reference_no'],
@@ -118,8 +118,19 @@ class DocumentRequestController
             }
         }
 
-        // Calculate document fee snapshot
-        $feeInfo   = \App\Models\DocumentFee::getFeeForType($type);
+        // Official fee snapshot, from document_fees only — never from the form.
+        $feeInfo = \App\Models\DocumentFee::getFeeForType($type);
+        if (!$feeInfo['is_active']) {
+            $offMsg = DocumentRequest::label($type) . ' is not available for online requests right now.';
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => $offMsg]);
+                return;
+            }
+            flash('error', $offMsg);
+            redirect('/documents');
+        }
         $feeAmount = $feeInfo['is_free'] ? 0.00 : (float) $feeInfo['amount'];
 
         // Delivery handling
@@ -145,19 +156,12 @@ class DocumentRequestController
         if ($isFree) {
             $paymentMethod = 'free';
         } else {
-            // For digital soft copy or delivery, online payment (PayMongo, GCash or PayPal) is standard
-            if ($deliveryMethod === 'digital' || $deliveryMethod === 'delivery') {
-                $paymentMethod = in_array($chosenMethod, ['paymongo', 'gcash', 'paypal'], true) ? $chosenMethod : 'paymongo';
-            } else {
-                $paymentMethod = in_array($chosenMethod, ['paymongo', 'gcash', 'paypal', 'pickup'], true) ? $chosenMethod : 'paymongo';
-            }
+            // Online payment is GCash through PayMongo. Paying in cash at the
+            // hall is only possible when the document is picked up there.
+            $paymentMethod = ($deliveryMethod === 'pickup' && $chosenMethod === 'pickup') ? 'pickup' : 'gcash';
         }
 
-        $chosenGcashId = !empty($_POST['gcash_account_id']) ? (int) $_POST['gcash_account_id'] : null;
-        if (!$chosenGcashId) {
-            $defaultGcash = \App\Models\GcashAccount::getDefault();
-            $chosenGcashId = $defaultGcash ? (int) $defaultGcash['id'] : null;
-        }
+        
 
         $created = DocumentRequest::create(
             $userId,
@@ -166,8 +170,8 @@ class DocumentRequestController
             $notes,
             $deliveryMethod,
             $feeAmount,
-            $paymentMethod,
-            $chosenGcashId,
+                        $paymentMethod,
+            null,
             $deliveryAddress,
             $deliveryFee
         );
@@ -204,31 +208,13 @@ class DocumentRequestController
                 return;
             }
 
-            // PayMongo Checkout creation for paid document
+            // Start the PayMongo checkout from the server-side fee (shared service).
             $payment = \App\Models\DocumentPayment::findByRequest($newId);
-            if (!$payment) {
-                $payId = \App\Models\DocumentPayment::createForRequest($newId, $userId, $type, $feeAmount, 'gcash');
-                $payment = \App\Models\DocumentPayment::find($payId);
-            }
-
-            $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-            $base   = $scheme . '://' . $host;
-            $successUrl = $base . '/documents/payment/success?request_id=' . $newId;
-            $cancelUrl  = $base . '/documents/payment/cancel?request_id=' . $newId;
-
-            $pmRes = \App\Services\PayMongoService::createCheckoutSession(
-                $newId,
-                (string) $payment['payment_ref'],
-                $feeAmount,
-                DocumentRequest::label($type),
-                $reference,
-                $successUrl,
-                $cancelUrl
-            );
+            $pmRes   = $payment && $paymentMethod === 'gcash'
+                ? \App\Services\PaymongoCheckout::start((int) $payment['id'], $userId)
+                : ['success' => false, 'checkout_url' => null, 'error' => null];
 
             if ($pmRes['success'] && !empty($pmRes['checkout_url'])) {
-                \App\Models\DocumentPayment::setPaymongoCheckout((int) $payment['id'], (string) $pmRes['checkout_id'], json_encode($pmRes['raw'] ?? $pmRes));
                 echo json_encode([
                     'success'      => true,
                     'is_free'      => false,
@@ -241,7 +227,7 @@ class DocumentRequestController
 
             echo json_encode([
                 'success'      => false,
-                'error'        => $pmRes['error'] ?? 'Hindi mabuo ang PayMongo GCash checkout session.',
+                'error'        => $pmRes['error'] ?? 'Nalikha ang kahilingan. Magbayad sa Barangay Hall sa pagkuha.',
                 'request_id'   => $newId,
                 'reference'    => $reference,
                 'fallback_url' => route('documents/' . $newId . '/payment'),
@@ -250,7 +236,7 @@ class DocumentRequestController
         }
 
         // Standard non-AJAX submission
-        if (in_array($paymentMethod, ['paymongo', 'paypal', 'gcash'], true) && !$isFree) {
+        if ($paymentMethod === 'gcash' && !$isFree) {
             flash('info', 'Nalikha na ang inyong kahilingan (' . $reference . '). Kumpletuhin ang pagbabayad gamit ang online checkout.');
             redirect('/documents/' . $newId . '/payment');
         }
@@ -374,15 +360,10 @@ class DocumentRequestController
             redirect('/admin/documents');
         }
 
-        // CRITICAL SERVER-SIDE CHECK: For digital delivery, payment must be verified before marking ready or released
-        if ($request['delivery_method'] === 'digital' && in_array($to, ['ready', 'released'], true) && !DocumentRequest::isPaymentVerified($request)) {
-            flash('error', 'Hindi pa beripikado ang bayad ng residente. Kailangan munang beripikahin ang bayad (PAID_VERIFIED) bago maging handa (Ready) ang digital na dokumento.');
-            redirect('/admin/documents');
-        }
-
-        // CRITICAL SERVER-SIDE CHECK: For pickup delivery, cannot mark released/collected if payment is unpaid or pay at pickup
-        if ($to === 'released' && !DocumentRequest::isPaymentVerified($request)) {
-            flash('error', 'Hindi pa nababayaran ang dokumentong ito. Kumpirmahin muna ang bayad ng residente (Mark Paid at Pickup) bago markahang nakuha (Collected).');
+        // Payment gate (the same rule DocumentRequest::setStatus enforces):
+        // nothing moves forward until the payment is verified.
+        if ($blocked = DocumentRequest::paymentBlocksMove($request, $to)) {
+            flash('error', $blocked);
             redirect('/admin/documents');
         }
 
@@ -755,7 +736,11 @@ class DocumentRequestController
         $staffId = (int) ($_SESSION['user_id'] ?? 0);
         $note    = trim($_POST['staff_note'] ?? '');
 
-        if (DocumentRequest::markAsClaimed($id, $staffId, $note)) {
+        $request = DocumentRequest::find($id);
+        $blocked = $request ? DocumentRequest::paymentBlocksMove($request, 'released') : null;
+        if ($blocked !== null) {
+            flash('error', $blocked . ' Record the payment first.');
+        } elseif (DocumentRequest::markAsClaimed($id, $staffId, $note)) {
             flash('success', 'Matagumpay na minarkahan bilang nakuha na (Claimed) sa Barangay Hall.');
         } else {
             flash('error', 'Nabigong markahan bilang nakuha.');

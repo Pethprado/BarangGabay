@@ -1644,7 +1644,7 @@ function status_tone(string $status): string
         'draft', 'pending', 'pending_review', 'submitted', 'upcoming', 'scheduled' => 'neutral',
         'awaiting_payment', 'payment_pending', 'payment_proof_submitted', 'needs_information', 'pay_at_pickup' => 'warning',
         'under_review', 'processing', 'ongoing', 'in_progress', 'approved', 'active' => 'info',
-        'ready', 'ready_for_pickup', 'available_for_download', 'released', 'completed', 'paid', 'paid_verified', 'verified', 'published' => 'success',
+        'ready', 'ready_for_pickup', 'available_for_download', 'released', 'completed', 'paid', 'paid_verified', 'paid_at_pickup', 'verified', 'published' => 'success',
         'rejected', 'cancelled', 'payment_rejected', 'failed', 'repealed', 'suspended', 'refunded' => 'danger',
         default => 'neutral',
     };

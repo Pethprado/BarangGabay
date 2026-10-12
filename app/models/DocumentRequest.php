@@ -123,6 +123,32 @@ class DocumentRequest
     }
 
     /**
+     * Why payment blocks moving this request to $to, or null if it may move.
+     *
+     * The one rule every status change goes through (setStatus, markAsClaimed,
+     * approveAndGenerate), so no screen or route can release an unpaid document:
+     *   - rejecting or cancelling is always allowed;
+     *   - a paid / free / waived request may move anywhere;
+     *   - a pay-at-the-hall request may be prepared, but not released or
+     *     completed until the cash is recorded;
+     *   - anything else (pending, failed, expired, cancelled payment, or in
+     *     manual review) cannot move forward.
+     */
+    public static function paymentBlocksMove(array $request, string $to): ?string
+    {
+        $to = strtolower(trim($to));
+        if (in_array($to, ['rejected', 'cancelled'], true) || self::isPaymentVerified($request)) {
+            return null;
+        }
+        $status = strtoupper((string) ($request['payment_status'] ?? ''));
+        if ($status === DocumentPayment::STATUS_PAY_AT_PICKUP && !in_array($to, ['released', 'completed'], true)) {
+            return null;
+        }
+        return sprintf('Payment is not verified yet (%s). The document cannot move to "%s" until it is paid.',
+            DocumentPayment::statusLabel($status ?: 'PENDING'), $to);
+    }
+
+    /**
      * Check if this request requires payment.
      */
     public static function requiresPayment(array|int $request): bool
@@ -171,7 +197,7 @@ class DocumentRequest
         // Requirement 21 & 23:
         // Free documents start at pending_review with payment NOT_REQUIRED.
         // Paid documents start at awaiting_payment with payment PENDING until PayMongo confirms!
-        $initialDocStatus = $isFree ? 'pending_review' : 'awaiting_payment';
+        $initialDocStatus = ($isFree || $paymentMethod === 'pickup') ? 'pending_review' : 'awaiting_payment';
 
         $pdo = db();
         $stmt = $pdo->prepare(
@@ -230,9 +256,8 @@ class DocumentRequest
             return ['success' => false, 'error' => 'Hindi nahanap ang request.'];
         }
 
-        // Check payment if required for digital release
-        if ($request['delivery_method'] === 'digital' && !self::isPaymentVerified($request)) {
-            return ['success' => false, 'error' => 'Kailangan munang beripikado ang bayad bago maaprubahan ang digital soft copy.'];
+        if ($blocked = self::paymentBlocksMove($request, 'approved')) {
+            return ['success' => false, 'error' => $blocked];
         }
 
         $resident = User::find((int) $request['user_id']);
@@ -329,14 +354,14 @@ class DocumentRequest
     public static function markAsClaimed(int $id, int $staffId, ?string $notes = null): bool
     {
         $request = self::find($id);
-        if (!$request) {
+        if (!$request || self::paymentBlocksMove($request, 'released') !== null) {
             return false;
         }
 
         $pdo = db();
         $stmt = $pdo->prepare(
             'UPDATE document_requests
-             SET status = "released", claimed_at = NOW(), claimed_by = ?, released_at = NOW(), completed_at = NOW(),
+             SET status = \'released\', claimed_at = NOW(), claimed_by = ?, released_at = NOW(), completed_at = NOW(),
                  staff_note = COALESCE(?, staff_note), updated_at = NOW()
              WHERE id = ?'
         );
@@ -478,11 +503,10 @@ class DocumentRequest
         $stmt = db()->prepare(
             'SELECT r.*, su.full_name AS uploaded_by_name,
                     p.payment_ref, p.amount_reported, p.gcash_reference_no, p.receipt_file_name, p.rejection_reason, p.rejection_note, p.verified_at,
-                    g.account_name AS gcash_account_name, g.mobile_number AS gcash_mobile_number, g.qr_image_data, g.qr_mime_type
+                    p.paid_at, p.verification_type, p.paymongo_payment_id, p.paymongo_source_type
                FROM document_requests r
           LEFT JOIN users su ON su.id = r.document_uploaded_by
           LEFT JOIN document_payments p ON p.id = r.payment_id
-          LEFT JOIN gcash_accounts g ON g.id = p.gcash_account_id
               WHERE r.user_id = ?
               ORDER BY r.requested_at DESC'
         );
@@ -551,6 +575,9 @@ class DocumentRequest
     {
         $current = self::find($id);
         if ($current === null || !self::canMove((string) $current['status'], $to)) {
+            return false;
+        }
+        if (self::paymentBlocksMove($current, $to) !== null) {
             return false;
         }
 

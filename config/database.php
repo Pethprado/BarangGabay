@@ -741,6 +741,25 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paymongo_raw_response TEXT NULL",
         "CREATE INDEX IF NOT EXISTS idx_dp_paymongo_checkout ON document_payments(paymongo_checkout_id)",
         "CREATE INDEX IF NOT EXISTS idx_dp_paymongo_pi ON document_payments(paymongo_payment_intent_id)",
+
+        // 22. PayMongo hardening (mirror of 2026_10_12_000001_paymongo_hardening.sql)
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS verification_type VARCHAR(20) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS failure_reason VARCHAR(255) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS paymongo_event_id VARCHAR(120) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS checkout_url VARCHAR(500) NULL",
+        "ALTER TABLE document_payments ADD COLUMN IF NOT EXISTS checkout_created_at TIMESTAMP NULL",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_dp_paymongo_payment ON document_payments(paymongo_payment_id)",
+        // 'available_for_download' is 22 characters — VARCHAR(20) rejected it.
+        "ALTER TABLE document_requests ALTER COLUMN status TYPE VARCHAR(40)",
+        "ALTER TABLE document_fees ADD COLUMN IF NOT EXISTS description TEXT NULL",
+        "ALTER TABLE document_fees ADD COLUMN IF NOT EXISTS requirements TEXT NULL",
+        "INSERT INTO document_fees (document_type, amount, is_free, is_active, created_at, updated_at)
+         VALUES ('other', 50.00, 0, 1, NOW(), NOW())
+         ON CONFLICT (document_type) DO NOTHING",
+        "DELETE FROM document_requests
+          WHERE reference_no IN ('BRGY-2026-001', 'BRGY-2026-002', 'BRGY-2026-003')
+            AND NOT EXISTS (SELECT 1 FROM document_payments p WHERE p.request_id = document_requests.id)",
     ];
 
     foreach ($statements as $sql) {

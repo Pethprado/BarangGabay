@@ -226,13 +226,10 @@ return [
     ['POST', '/admin/payments/{id}/waive',        'PaymentController@waive',            ['auth', 'role:admin']],
     ['POST', '/admin/payments/{id}/refund',       'PaymentController@refund',           ['auth', 'role:admin']],
     ['GET',  '/admin/payments/{id}/receipt',      'PaymentController@receiptPreview',   ['auth', 'role:admin,staff']],
+    ['POST', '/admin/payments/{id}/check-status', 'PaymentController@checkStatus',      ['auth', 'role:admin,staff']],
+    ['GET',  '/admin/payments/{id}/history',      'PaymentController@auditHistory',     ['auth', 'role:admin,staff']],
     ['GET',  '/admin/payments/fees',              'PaymentController@feesIndex',        ['auth', 'role:admin']],
     ['POST', '/admin/payments/fees',              'PaymentController@feesUpdate',       ['auth', 'role:admin']],
-    ['GET',  '/admin/payments/gcash',             'PaymentController@gcashIndex',       ['auth', 'role:admin,staff']],
-    ['POST', '/admin/payments/gcash',             'PaymentController@gcashStore',       ['auth', 'role:admin,staff']],
-    ['POST', '/admin/payments/gcash/{id}',        'PaymentController@gcashUpdate',      ['auth', 'role:admin,staff']],
-    ['POST', '/admin/payments/gcash/{id}/default','PaymentController@gcashSetDefault',  ['auth', 'role:admin,staff']],
-    ['POST', '/admin/payments/gcash/{id}/toggle', 'PaymentController@gcashToggle',      ['auth', 'role:admin,staff']],
     ['GET',  '/admin/payments/export',            'PaymentController@exportCsv',        ['auth', 'role:admin']],
 
     // PayMongo GCash Online Payment Endpoints
@@ -241,6 +238,9 @@ return [
     ['GET',  '/documents/payment/success',                  'PaymentController@paymentSuccess',         ['auth', 'verified']],
     ['GET',  '/documents/payment/cancel',                   'PaymentController@paymentCancel',          ['auth', 'verified']],
     ['GET',  '/api/payments/status/{id}',                   'PaymentController@apiPaymentStatus',       ['auth', 'verified']],
+    // PayMongo webhook — public on purpose (no auth, no CSRF): the HMAC
+    // Paymongo-Signature header is the authentication. Register the first URL.
+    ['POST', '/api/webhooks/paymongo',                      'PaymentController@paymongoWebhook',        []],
     ['POST', '/api/payments/paymongo/webhook',              'PaymentController@paymongoWebhook',        []],
     ['POST', '/payments/paymongo/webhook',                  'PaymentController@paymongoWebhook',        []],
 

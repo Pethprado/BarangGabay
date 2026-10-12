@@ -1,259 +1,180 @@
 <?php
 /**
- * Resident Payment Checkout Page — BarangGabay
+ * Resident — Pay with GCash (PayMongo hosted checkout).
  *
- * Requirements 7, 10, 18, 24, 37, 38, 39, 40, 41:
- * - GCash through PayMongo ONLY (no PayPal, no cards, no manual QR screenshots)
- * - Single clean summary card
- * - Double-click protection displaying "CREATING SECURE PAYMENT..."
- * - Handling of cancelled, failed, and already paid states
+ * The amount shown and charged is the server-side fee stored on the request.
+ * The button only asks the server to start (or reuse) a checkout; PayMongo,
+ * not this page, decides whether the payment succeeded.
  */
-use App\Models\DocumentRequest;
 use App\Models\DocumentPayment;
+use App\Models\DocumentRequest;
 use App\Services\PayMongoService;
 
-$pageTitle = $pageTitle ?? 'Payment Checkout — BarangGabay';
-$request   = $request ?? [];
-$payment   = $payment ?? [];
+$request = $request ?? [];
+$payment = $payment ?? [];
 
 $reqId     = (int) ($request['id'] ?? 0);
-$docType   = (string) ($request['document_type'] ?? 'clearance');
-$docLabel  = DocumentRequest::label($docType);
-$fee       = (float) ($payment['amount_due'] ?? ($request['fee_amount'] ?? 50.0));
+$docLabel  = DocumentRequest::label((string) ($request['document_type'] ?? ''));
+$fee       = (float) ($payment['amount_due'] ?? 0);
 $reqRef    = (string) ($request['reference_no'] ?? '');
-$payRef    = (string) ($payment['payment_ref'] ?? ('PAY-' . date('Y') . '-' . sprintf('%06d', $reqId)));
-$receiving = (string) ($request['delivery_method'] ?? 'digital') === 'digital' ? 'Digital Copy' : 'Pickup at Barangay Hall';
-$payStatus = (string) ($payment['payment_status'] ?? ($request['payment_status'] ?? 'PENDING'));
+$payRef    = (string) ($payment['payment_ref'] ?? '');
+$receiving = DocumentRequest::deliveryLabel((string) ($request['delivery_method'] ?? 'pickup'));
+$payStatus = (string) ($payment['payment_status'] ?? DocumentPayment::STATUS_PENDING);
 
-$isPaid = in_array($payStatus, [
-    DocumentPayment::STATUS_PAID,
-    DocumentPayment::STATUS_PAID_VERIFIED,
-    DocumentPayment::STATUS_PAID_AT_PICKUP,
-    DocumentPayment::STATUS_FREE,
-    DocumentPayment::STATUS_NOT_REQUIRED,
-    DocumentPayment::STATUS_WAIVED
-], true);
+$isPaid      = in_array($payStatus, DocumentPayment::SETTLED_STATES, true);
+$inReview    = in_array($payStatus, DocumentPayment::FILTER_GROUPS['manual_review'], true);
+$isRetry     = in_array($payStatus, [DocumentPayment::STATUS_CANCELLED, DocumentPayment::STATUS_FAILED, DocumentPayment::STATUS_EXPIRED, DocumentPayment::STATUS_PAYMENT_REJECTED], true);
+$hasCheckout = !empty($payment['paymongo_checkout_id']);
+$configured  = $isPaymongoConfigured ?? PayMongoService::isConfigured();
+$testMode    = PayMongoService::getMode() === 'test';
 
-$isCancelled = ($payStatus === DocumentPayment::STATUS_CANCELLED) || (isset($_GET['status']) && $_GET['status'] === 'cancelled');
-$isFailed    = ($payStatus === DocumentPayment::STATUS_FAILED) || (isset($_GET['status']) && $_GET['status'] === 'failed');
-$isExpired   = ($payStatus === DocumentPayment::STATUS_EXPIRED) || (isset($_GET['status']) && $_GET['status'] === 'expired');
-
-$paymongoMode = PayMongoService::getMode();
+$notice = match ($payStatus) {
+    DocumentPayment::STATUS_CANCELLED        => ['amber', 'Payment not completed', 'Hindi natapos ang pagbabayad. Walang nabawas — maaari kayong magbayad muli.'],
+    DocumentPayment::STATUS_FAILED           => ['rose',  'Payment failed', 'Hindi natuloy ang GCash payment. Walang nabawas — subukang muli.'],
+    DocumentPayment::STATUS_EXPIRED          => ['slate', 'Checkout expired', 'Nag-expire ang nakaraang checkout. Magsimula ng bago sa ibaba.'],
+    DocumentPayment::STATUS_PAYMENT_REJECTED => ['rose',  'Proof not accepted', 'Hindi tinanggap ang ipinadalang patunay: ' . (string) ($payment['rejection_reason'] ?? '') . '. Magbayad muli gamit ang GCash.'],
+    default                                  => null,
+};
 
 ob_start();
 ?>
-
 <div class="mx-auto max-w-xl px-4 py-8 sm:px-6">
+    <a href="<?= e(route('documents?tab=requests')) ?>" class="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> Aking Mga Kahilingan
+    </a>
 
-    <!-- Top Navigation -->
-    <div class="mb-5 flex items-center justify-between">
-        <a href="<?= e(route('documents?tab=requests')) ?>"
-           class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition dark:text-slate-400 dark:hover:text-white">
-            <i class="bi bi-arrow-left"></i>
-            <span>Bumalik sa Aking Mga Kahilingan</span>
-        </a>
-        <div class="flex items-center gap-2 text-xs">
-            <span class="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-                <i class="bi bi-shield-check"></i>
-                <span>SSL Encrypted</span>
-            </span>
-            <span class="text-slate-300 dark:text-slate-700">&bull;</span>
-            <span class="inline-flex items-center gap-1 text-slate-500 font-medium dark:text-slate-400">
-                <i class="bi bi-wallet2 text-blue-600"></i>
-                <span>PayMongo GCash</span>
-            </span>
-        </div>
-    </div>
-
-    <!-- Main Payment Card Container -->
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8 dark:border-slate-800 dark:bg-slate-900 transition-all">
-
-        <!-- Header -->
-        <div class="mb-5 pb-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="payTitle">
+        <div class="mb-5 flex items-start justify-between gap-3">
             <div>
-                <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-0.5">ONLINE CHECKOUT</span>
-                <h1 class="text-xl font-black text-slate-900 dark:text-white">Magbayad gamit ang GCash</h1>
+                <p class="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Document payment</p>
+                <h1 id="payTitle" class="text-2xl font-extrabold text-slate-900 dark:text-white">Pay with GCash</h1>
             </div>
-            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white font-black text-xl shadow-md shadow-blue-500/20">
-                G
-            </div>
+            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                <i class="bi bi-shield-lock-fill" aria-hidden="true"></i> Secured by PayMongo
+            </span>
         </div>
 
-        <!-- Alerts: Cancelled, Failed, or Expired (Requirements 39, 40, 41) -->
-        <?php if ($isCancelled): ?>
-        <div class="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs font-semibold text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-            <div class="flex items-start gap-2.5">
-                <i class="bi bi-exclamation-triangle-fill text-amber-600 text-base shrink-0 mt-0.5"></i>
-                <div>
-                    <strong class="block text-sm font-bold">PAYMENT CANCELLED</strong>
-                    <span>Kinansela mo ang transaksyon. Naka-save pa rin ang inyong kahilingan at maaari itong bayaran muli sa ibaba.</span>
-                </div>
-            </div>
-        </div>
-        <?php elseif ($isFailed): ?>
-        <div class="mb-5 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-xs font-semibold text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
-            <div class="flex items-start gap-2.5">
-                <i class="bi bi-x-circle-fill text-rose-600 text-base shrink-0 mt-0.5"></i>
-                <div>
-                    <strong class="block text-sm font-bold">PAYMENT UNSUCCESSFUL</strong>
-                    <span>Hindi natapos ang inyong pagbabayad sa GCash. Mangyaring subukang muli.</span>
-                </div>
-            </div>
-        </div>
-        <?php elseif ($isExpired): ?>
-        <div class="mb-5 rounded-2xl border border-slate-300 bg-slate-50 p-4 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300">
-            <div class="flex items-start gap-2.5">
-                <i class="bi bi-clock-history text-slate-500 text-base shrink-0 mt-0.5"></i>
-                <div>
-                    <strong class="block text-sm font-bold">PAYMENT EXPIRED</strong>
-                    <span>Nag-expire na ang nakaraang checkout session. Maaari kang magsimula ng bagong payment session sa parehong kahilingan.</span>
-                </div>
-            </div>
+        <?php if ($testMode && !$isPaid): ?>
+        <p class="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+            <i class="bi bi-cone-striped" aria-hidden="true"></i> TEST MODE — no real money is charged. PayMongo shows a test GCash page.
+        </p>
+        <?php endif; ?>
+
+        <?php if ($notice): [$tone, $title, $body] = $notice; ?>
+        <div class="mb-4 rounded-xl border p-3 text-sm <?= $tone === 'rose' ? 'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-200' : ($tone === 'amber' ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200' : 'border-slate-300 bg-slate-50 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200') ?>" role="status">
+            <strong class="block"><?= e($title) ?></strong><?= e($body) ?>
         </div>
         <?php endif; ?>
 
-        <!-- Clean Order Summary (Requirement 24) -->
-        <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/40 mb-6 space-y-3 text-xs">
-            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">REQUEST SUMMARY</div>
+        <dl class="mb-6 divide-y divide-slate-100 rounded-xl border border-slate-100 bg-slate-50 px-4 text-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-800/40">
+            <div class="flex justify-between gap-4 py-2.5"><dt class="text-slate-600 dark:text-slate-400">Document</dt><dd class="font-semibold text-slate-900 dark:text-white"><?= e($docLabel) ?></dd></div>
+            <div class="flex justify-between gap-4 py-2.5"><dt class="text-slate-600 dark:text-slate-400">Request no.</dt><dd class="font-mono font-semibold text-slate-900 dark:text-white"><?= e($reqRef) ?></dd></div>
+            <div class="flex justify-between gap-4 py-2.5"><dt class="text-slate-600 dark:text-slate-400">Payment ref.</dt><dd class="font-mono text-slate-900 dark:text-white"><?= e($payRef) ?></dd></div>
+            <div class="flex justify-between gap-4 py-2.5"><dt class="text-slate-600 dark:text-slate-400">Claiming</dt><dd class="text-slate-900 dark:text-white"><?= e($receiving) ?></dd></div>
+            <div class="flex justify-between gap-4 py-2.5"><dt class="text-slate-600 dark:text-slate-400">Payment status</dt><dd class="font-semibold text-slate-900 dark:text-white"><?= e(DocumentPayment::statusLabel($payStatus)) ?></dd></div>
+            <div class="flex items-center justify-between gap-4 py-3"><dt class="font-bold text-slate-900 dark:text-white">Total</dt><dd class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-400">₱<?= number_format($fee, 2) ?></dd></div>
+        </dl>
 
-            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                <span class="text-slate-500 dark:text-slate-400">Dokumento (Document):</span>
-                <strong class="text-slate-900 dark:text-white"><?= e($docLabel) ?></strong>
-            </div>
-
-            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                <span class="text-slate-500 dark:text-slate-400">Reference Number:</span>
-                <span class="font-mono font-bold text-slate-900 dark:text-white"><?= e($reqRef) ?></span>
-            </div>
-
-            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                <span class="text-slate-500 dark:text-slate-400">Paraan ng Pagtanggap:</span>
-                <strong class="text-slate-900 dark:text-white"><?= e($receiving) ?></strong>
-            </div>
-
-            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                <span class="text-slate-500 dark:text-slate-400">Paraan ng Pagbabayad:</span>
-                <span class="inline-flex items-center gap-1.5 font-bold text-blue-700 dark:text-blue-300">
-                    <i class="bi bi-check-circle-fill text-blue-600"></i> GCash via PayMongo
-                </span>
-            </div>
-
-            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                <span class="text-slate-500 dark:text-slate-400">Bayad sa Dokumento (Fee):</span>
-                <span class="font-bold text-slate-900 dark:text-white">₱<?= number_format($fee, 2) ?></span>
-            </div>
-
-            <div class="flex items-center justify-between pt-1">
-                <span class="text-sm font-black text-slate-900 dark:text-white">KABUUAN (TOTAL):</span>
-                <span class="text-2xl font-black text-blue-600 dark:text-blue-400">₱<?= number_format($fee, 2) ?></span>
-            </div>
-        </div>
-
-        <!-- Dynamic Alert Container -->
-        <div id="checkoutAlert" class="hidden mb-4 rounded-xl p-3.5 text-xs font-semibold"></div>
-
-        <!-- Action: Pay or Already Paid -->
         <?php if ($isPaid): ?>
-        <div class="text-center py-4">
-            <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-                <i class="bi bi-check-lg text-3xl"></i>
+            <div class="rounded-xl bg-emerald-50 p-4 text-center dark:bg-emerald-950/50" role="status">
+                <i class="bi bi-check-circle-fill text-3xl text-emerald-600" aria-hidden="true"></i>
+                <p class="mt-1 font-bold text-slate-900 dark:text-white">Paid</p>
+                <p class="text-sm text-slate-600 dark:text-slate-300">
+                    <?= ($payment['verification_type'] ?? '') === 'paymongo' ? 'Automatically verified through PayMongo' : 'Recorded by the barangay' ?><?= !empty($payment['paid_at']) ? ' · ' . e(format_datetime((string) $payment['paid_at'])) : '' ?>.
+                    Ipoproseso na ang inyong dokumento.
+                </p>
             </div>
-            <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1">NABAYARAN NA ANG KAHILINGANG ITO</h3>
-            <p class="text-xs text-slate-500 mb-5">
-                Naberipika na ang inyong bayad at kasalukuyan nang sinusuri ng barangay.
-            </p>
-            <a href="<?= e(route('documents?tab=requests')) ?>"
-               class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700">
-                Tingnan sa Aking Mga Kahilingan
-            </a>
-        </div>
+        <?php elseif ($inReview): ?>
+            <div class="rounded-xl bg-amber-50 p-4 text-center dark:bg-amber-950/50" role="status">
+                <i class="bi bi-hourglass-split text-3xl text-amber-600" aria-hidden="true"></i>
+                <p class="mt-1 font-bold text-slate-900 dark:text-white">In manual review</p>
+                <p class="text-sm text-slate-600 dark:text-slate-300">Sinusuri ng barangay staff ang inyong bayad. Huwag munang magbayad muli — makakatanggap kayo ng abiso.</p>
+            </div>
+        <?php elseif (!$configured): ?>
+            <div class="rounded-xl bg-slate-100 p-4 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200" role="status">
+                Online payment is not available right now. Please pay at the Barangay Hall, or try again later.
+            </div>
         <?php else: ?>
-        <div>
-            <!-- Pay Button with double click protection (Requirement 38) -->
-            <button type="button" id="payGcashBtn" onclick="initiatePayMongoGCash()"
-                    class="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 py-4 px-6 text-sm font-black text-white shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] transition">
-                <i class="bi bi-lock-fill text-base"></i>
-                <span id="payGcashBtnText">
-                    <?= ($isCancelled || $isFailed || $isExpired) ? 'SUBUKANG MULI ANG PAGBABAYAD (TRY AGAIN)' : 'PAY ₱' . number_format($fee, 2) . ' WITH GCASH' ?>
-                </span>
+            <div id="payAlert" class="mb-3 hidden rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-200" role="alert"></div>
+            <button type="button" id="payBtn"
+                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-4 text-base font-bold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300 disabled:cursor-progress disabled:opacity-80">
+                <i class="bi bi-wallet2" aria-hidden="true"></i>
+                <span id="payBtnText"><?= $isRetry ? 'Try again — ' : '' ?>Pay ₱<?= number_format($fee, 2) ?> with GCash</span>
             </button>
-
-            <!-- Loading Spinner (hidden by default) -->
-            <div id="payGcashSpinner" class="hidden text-center py-4">
-                <div class="h-8 w-8 animate-spin rounded-full border-3 border-blue-600 border-t-transparent mx-auto mb-2"></div>
-                <span class="text-xs font-bold text-slate-600 dark:text-slate-400">Inililipat sa opisyal na PayMongo GCash checkout...</span>
-            </div>
-
-            <p class="mt-4 text-center text-[11px] text-slate-400 dark:text-slate-500">
-                <i class="bi bi-lock-fill me-1"></i> Ligtas na pinoproseso ng PayMongo. Awtomatikong mabe-verify ang inyong bayad nang walang screenshot.
+            <p class="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
+                Dadalhin kayo sa opisyal na PayMongo page. Kapag tapos na, babalik kayo rito at awtomatikong kukumpirmahin ng PayMongo ang bayad — walang kailangang screenshot.
             </p>
-        </div>
+
+            <?php if ($hasCheckout): ?>
+            <details class="mt-6 rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-700">
+                <summary class="cursor-pointer font-semibold text-slate-700 dark:text-slate-200">Nagbayad na pero hindi pa nag-update ang status?</summary>
+                <p class="mt-2 text-xs text-slate-600 dark:text-slate-400">
+                    Ipadala ang inyong GCash reference number at screenshot. Ito ay mapupunta sa <strong>Manual Review</strong> — susuriin ito ng barangay staff laban sa PayMongo records. Hindi ito awtomatikong magiging "bayad na".
+                </p>
+                <form method="post" action="<?= e(route('documents/' . $reqId . '/payment')) ?>" enctype="multipart/form-data" class="mt-3 space-y-3">
+                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                    <div>
+                        <label for="proofRef" class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">GCash reference no.</label>
+                        <input id="proofRef" name="gcash_reference_no" required maxlength="100" inputmode="numeric"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white">
+                    </div>
+                    <div>
+                        <label for="proofFile" class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Screenshot (JPG, PNG or PDF, max 10 MB)</label>
+                        <input id="proofFile" name="receipt_file" type="file" required accept="image/jpeg,image/png,application/pdf"
+                               class="w-full text-sm text-slate-700 dark:text-slate-300">
+                    </div>
+                    <input type="hidden" name="amount_reported" value="<?= e(number_format($fee, 2, '.', '')) ?>">
+                    <button type="submit" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800">Send for manual review</button>
+                </form>
+            </details>
+            <?php endif; ?>
         <?php endif; ?>
-
-    </div>
-
+    </section>
 </div>
 
+<?php if (!$isPaid && !$inReview && $configured): ?>
 <script>
-function initiatePayMongoGCash() {
-    var btn = document.getElementById('payGcashBtn');
-    var btnText = document.getElementById('payGcashBtnText');
-    var spinner = document.getElementById('payGcashSpinner');
-    var alertBox = document.getElementById('checkoutAlert');
+(function () {
+    var btn = document.getElementById('payBtn');
+    var text = document.getElementById('payBtnText');
+    var alertBox = document.getElementById('payAlert');
+    var label = text.textContent;
+    var busy = false;
 
-    // Requirement 38: Immediately disable and show CREATING SECURE PAYMENT...
-    btn.disabled = true;
-    btn.classList.add('opacity-75', 'cursor-not-allowed');
-    btnText.innerText = 'CREATING SECURE PAYMENT...';
-    spinner.classList.remove('hidden');
-    alertBox.classList.add('hidden');
+    btn.addEventListener('click', function () {
+        if (busy) { return; }           // double-click guard (the server also reuses an open session)
+        busy = true;
+        btn.disabled = true;
+        text.textContent = 'Opening secure GCash checkout…';
+        alertBox.classList.add('hidden');
 
-    fetch('<?= e(route('api/payments/paymongo/create-checkout')) ?>', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify({
-            request_id: <?= (int) $reqId ?>,
-            payment_id: <?= (int) ($payment['id'] ?? 0) ?>
+        fetch(<?= json_encode(route('api/payments/paymongo/create-checkout')) ?>, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ request_id: <?= $reqId ?>, csrf_token: <?= json_encode(csrf_token()) ?> })
         })
-    })
-    .then(function(res) {
-        return res.json();
-    })
-    .then(function(data) {
-        if (!data || !data.success || !data.checkout_url) {
+        .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (r) {
+            if (r.ok && r.data.checkout_url) {
+                text.textContent = 'Redirecting to GCash…';
+                window.location.href = r.data.checkout_url;
+                return;
+            }
+            if (r.data.already_paid) { window.location.reload(); return; }
+            throw new Error(r.data.error || 'Could not start the payment. Please try again.');
+        })
+        .catch(function (err) {
+            busy = false;
             btn.disabled = false;
-            btn.classList.remove('opacity-75', 'cursor-not-allowed');
-            btnText.innerText = 'PAY ₱<?= number_format($fee, 2) ?> WITH GCASH';
-            spinner.classList.add('hidden');
-
-            alertBox.className = "mb-4 rounded-xl p-3.5 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-900";
-            alertBox.innerText = data.error || 'Hindi mabuo ang checkout session. Pakisubukan muli.';
+            text.textContent = label;
+            alertBox.textContent = err.message || 'Could not reach the server. Please try again.';
             alertBox.classList.remove('hidden');
-            return;
-        }
-
-        // Direct resident to official PayMongo GCash hosted checkout
-        btnText.innerText = 'REDIRECTING TO GCASH...';
-        window.location.href = data.checkout_url;
-    })
-    .catch(function(err) {
-        console.error('PayMongo Checkout Error:', err);
-        btn.disabled = false;
-        btn.classList.remove('opacity-75', 'cursor-not-allowed');
-        btnText.innerText = 'PAY ₱<?= number_format($fee, 2) ?> WITH GCASH';
-        spinner.classList.add('hidden');
-
-        alertBox.className = "mb-4 rounded-xl p-3.5 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200";
-        alertBox.innerText = 'May naganap na aberya sa koneksyon sa PayMongo. Pakisubukan muli.';
-        alertBox.classList.remove('hidden');
+        });
     });
-}
+})();
 </script>
-
+<?php endif; ?>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layouts/main.php';

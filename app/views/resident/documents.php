@@ -185,14 +185,17 @@ ob_start();
                             </label>
                             <select id="wizard_document_type" name="document_type" onchange="onDocumentTypeChange()"
                                     class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                                <?php foreach ($types as $key => $label): 
-                                    $f = $docFees[$key] ?? ['amount' => 50.0, 'is_free' => false];
+                                <?php foreach ($types as $key => $label):
+                                    $f = $docFees[$key] ?? null;
+                                    if ($f === null || empty($f['is_active'])) { continue; } // disabled by the admin
                                     $isFree = $f['is_free'] || (float)$f['amount'] <= 0;
                                     $feeTxt = $isFree ? ' (LIBRE)' : sprintf(' (₱%.2f)', (float)$f['amount']);
                                 ?>
                                 <option value="<?= e($key) ?>"
                                         data-amount="<?= (float)$f['amount'] ?>"
                                         data-free="<?= $isFree ? '1' : '0' ?>"
+                                        data-requirements="<?= e((string) ($f['requirements'] ?? '')) ?>"
+                                        data-description="<?= e((string) ($f['description'] ?? '')) ?>"
                                         data-label="<?= e($label) ?>">
                                     <?= e($label) . $feeTxt ?>
                                 </option>
@@ -202,6 +205,7 @@ ob_start();
 
                         <!-- Document Details Preview (Requirement 3) -->
                         <div class="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
+                            <p class="mb-3 text-sm text-slate-700 dark:text-slate-300 hidden" id="step1DescDisplay"></p>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                                 <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
                                     <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Bayad sa Dokumento</span>
@@ -209,7 +213,8 @@ ob_start();
                                 </div>
                                 <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
                                     <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Mga Kinakailangan</span>
-                                    <span class="font-bold text-slate-800 dark:text-slate-200" id="step1ReqsDisplay">Valid Government ID</span>
+                                    <ul class="font-bold text-slate-800 dark:text-slate-200 list-disc ps-4" id="step1ReqsDisplay"><li>Valid Government ID</li></ul>
+                                    <span class="mt-1 block text-[11px] font-semibold text-slate-500" id="step1PayReq"></span>
                                 </div>
                                 <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
                                     <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Processing Time</span>
@@ -538,10 +543,17 @@ ob_start();
                 } elseif (in_array($payStatus, ['FAILED', 'PAYMENT_REJECTED'], true)) {
                     $payDisplay = 'Failed';
                     $payBadgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300';
-                } elseif ($payStatus === 'CANCELLED') {
-                    $payDisplay = 'Cancelled';
+                } elseif (in_array($payStatus, ['CANCELLED', 'EXPIRED'], true)) {
+                    $payDisplay = $payStatus === 'EXPIRED' ? 'Checkout expired' : 'Not completed';
                     $payBadgeClass = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+                } elseif (in_array($payStatus, ['PAYMENT_PROOF_SUBMITTED', 'UNDER_REVIEW'], true)) {
+                    $payDisplay = 'Payment verification';
+                } elseif ($payStatus === DocumentPayment::STATUS_PAY_AT_PICKUP) {
+                    $payDisplay = 'Pay at the hall';
                 }
+                $canPayOnline = !$isPaid && $fee > 0
+                    && !in_array($payStatus, ['PAYMENT_PROOF_SUBMITTED', 'UNDER_REVIEW', DocumentPayment::STATUS_PAY_AT_PICKUP], true)
+                    && !in_array($statusKey, ['rejected', 'cancelled'], true);
             ?>
             <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs transition hover:border-slate-300 sm:p-5 dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -580,10 +592,10 @@ ob_start();
 
                         <!-- Action: View Details or Pay -->
                         <div class="flex items-center gap-1.5">
-                            <?php if (!$isPaid && $fee > 0): ?>
+                            <?php if ($canPayOnline): ?>
                             <a href="<?= e(route('documents/' . $reqId . '/payment')) ?>"
-                               class="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition">
-                                <i class="bi bi-credit-card-2-front"></i> Pay GCash
+                               class="inline-flex items-center gap-1 rounded-xl bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition">
+                                <i class="bi bi-wallet2" aria-hidden="true"></i> Pay with GCash
                             </a>
                             <?php endif; ?>
 
@@ -689,6 +701,18 @@ ob_start();
                     <span class="text-slate-500">Payment Reference:</span>
                     <span class="font-mono font-bold text-slate-900 dark:text-white" id="modalPayRef"></span>
                 </div>
+                <div class="flex justify-between" id="modalPaidRow">
+                    <span class="text-slate-500">Paid on:</span>
+                    <strong class="text-slate-900 dark:text-white" id="modalPaidAt"></strong>
+                </div>
+                <div class="flex justify-between gap-3" id="modalVerifyRow">
+                    <span class="text-slate-500">Verification:</span>
+                    <strong class="text-right text-slate-900 dark:text-white" id="modalVerification"></strong>
+                </div>
+                <div class="flex justify-between" id="modalPmRow">
+                    <span class="text-slate-500">PayMongo ref.:</span>
+                    <span class="font-mono text-slate-900 dark:text-white" id="modalPmRef"></span>
+                </div>
             </div>
 
             <!-- Process Timeline Tracker (Requirement 26) -->
@@ -713,7 +737,7 @@ ob_start();
 </div>
 
 <script>
-var docFeesData = <?= json_encode($docFees) ?>;
+var docFeesData = <?= json_encode($docFees, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 var currentStep = 1;
 var selectedFee = 50.0;
 var isSelectedFree = false;
@@ -747,6 +771,18 @@ function onDocumentTypeChange() {
     isSelectedFree = isFree;
 
     var feeText = isFree ? 'LIBRE (₱0.00)' : '₱' + amt.toFixed(2);
+
+    // Description + requirements come from the admin's Document Fees page.
+    var reqs = (opt.getAttribute('data-requirements') || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!reqs.length) { reqs = ['Valid Government ID']; }
+    var reqList = document.getElementById('step1ReqsDisplay');
+    reqList.textContent = '';
+    reqs.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; reqList.appendChild(li); });
+    var desc = opt.getAttribute('data-description') || '';
+    var descEl = document.getElementById('step1DescDisplay');
+    descEl.textContent = desc;
+    descEl.classList.toggle('hidden', desc === '');
+    document.getElementById('step1PayReq').textContent = isFree ? 'No payment required' : 'Payment required — GCash via PayMongo';
     document.getElementById('step1FeeDisplay').innerText = feeText;
     document.getElementById('summaryDocFee').innerText = feeText;
     document.getElementById('summaryTotal').innerText = isFree ? '₱0.00' : '₱' + amt.toFixed(2);
@@ -896,6 +932,13 @@ function openDetailsModal(r) {
     document.getElementById('modalPayRef').innerText = r.payment_ref || (r.reference_no ? 'PAY-' + r.reference_no : 'N/A');
 
     var pst = (r.payment_status || 'UNPAID').toUpperCase();
+    var verification = { paymongo: 'Automatically verified through PayMongo', manual: 'Manually verified by the barangay', counter: 'Paid in cash at the Barangay Hall', waiver: 'Fee waived by the barangay' }[r.verification_type || ''] || '';
+    document.getElementById('modalPaidAt').innerText = r.paid_at ? new Date(String(r.paid_at).replace(' ', 'T')).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+    document.getElementById('modalVerification').innerText = verification;
+    document.getElementById('modalPmRef').innerText = r.paymongo_payment_id || '';
+    document.getElementById('modalPaidRow').classList.toggle('hidden', !r.paid_at);
+    document.getElementById('modalVerifyRow').classList.toggle('hidden', !verification);
+    document.getElementById('modalPmRow').classList.toggle('hidden', !r.paymongo_payment_id);
     var isPaid = (pst === 'PAID' || pst === 'PAID_VERIFIED' || pst === 'PAID_AT_PICKUP' || pst === 'FREE' || pst === 'NOT_REQUIRED' || fee <= 0);
     var pstEl = document.getElementById('modalPaymentStatus');
     if (isPaid) {

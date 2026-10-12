@@ -27,16 +27,26 @@ class HealthController
             'app'         => 'ok',
             'php'         => PHP_VERSION,
             'timestamp'   => date('c'),
-            'version'     => '2.7.0-gcash-paypal-hybrid',
-            'paypal_mode' => \App\Services\PayPalService::getMode(),
+            'version'     => '2.8.0-paymongo-gcash',
+            // Yes/no only — never a key, never part of one.
+            'paymongo'    => [
+                'configured'     => \App\Services\PayMongoService::isConfigured(),
+                'mode'           => \App\Services\PayMongoService::getMode(),
+                'webhook_secret' => \App\Services\PayMongoService::isWebhookConfigured(),
+                'methods'        => \App\Services\PayMongoService::paymentMethodTypes(),
+            ],
         ];
+
+        // Table lists, payment rows and recent errors are for the superadmin
+        // only: error messages and stack traces must never be public.
+        $isSuperadmin = ($_SESSION['role'] ?? '') === 'superadmin';
 
         try {
             $pdo = db();
             $pdo->query('SELECT 1');
             $result['database'] = 'ok';
 
-            if (isset($_GET['tables'])) {
+            if ($isSuperadmin && isset($_GET['tables'])) {
                 $tblStmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name");
                 $result['tables'] = $tblStmt->fetchAll(\PDO::FETCH_COLUMN);
 
@@ -44,21 +54,19 @@ class HealthController
                 $result['user_columns'] = $colStmt->fetchAll(\PDO::FETCH_COLUMN);
             }
 
-            if (isset($_GET['payments']) || isset($_GET['paypal'])) {
+            if ($isSuperadmin && isset($_GET['payments'])) {
                 $pTblStmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_name IN ('document_fees', 'gcash_accounts', 'document_payments', 'payment_audit_logs', 'payment_webhook_events')");
                 $result['payment_tables'] = $pTblStmt->fetchAll(\PDO::FETCH_COLUMN);
 
-                $dpColStmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name='document_payments' AND column_name IN ('provider', 'currency', 'paypal_order_id', 'paypal_capture_id', 'paypal_payer_id', 'paypal_payer_email')");
-                $result['paypal_payment_cols'] = $dpColStmt->fetchAll(\PDO::FETCH_COLUMN);
+                $dpColStmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name='document_payments' AND column_name IN ('paymongo_checkout_id', 'paymongo_payment_id', 'paid_at', 'verification_type', 'checkout_url')");
+                $result['paymongo_payment_cols'] = $dpColStmt->fetchAll(\PDO::FETCH_COLUMN);
 
                 $feesStmt = $pdo->query("SELECT document_type, amount, is_free FROM document_fees");
                 $result['seeded_fees'] = $feesStmt->fetchAll(\PDO::FETCH_ASSOC);
 
-                $gcashStmt = $pdo->query("SELECT id, account_name, mobile_number, is_default, is_active FROM gcash_accounts");
-                $result['seeded_gcash'] = $gcashStmt->fetchAll(\PDO::FETCH_ASSOC);
             }
 
-            try {
+            if ($isSuperadmin) try {
                 $errStmt = $pdo->query("SELECT error_id, severity, type, message, file, line, stack_trace, created_at FROM error_logs ORDER BY id DESC LIMIT 5");
                 $result['latest_errors'] = $errStmt->fetchAll(\PDO::FETCH_ASSOC);
             } catch (\Throwable $errEx) {

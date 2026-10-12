@@ -29,18 +29,32 @@ class DocumentPayment
     public const STATUS_PAID_AT_PICKUP   = 'PAID_AT_PICKUP';
     public const STATUS_WAIVED           = 'WAIVED';
 
+    /** Paid one way or another — the request may proceed. */
+    public const PAID_STATES = ['PAID', 'PAID_VERIFIED', 'PAID_AT_PICKUP'];
+
+    /** No further payment can happen: paid, or settled without money. */
+    public const SETTLED_STATES = ['PAID', 'PAID_VERIFIED', 'PAID_AT_PICKUP', 'WAIVED', 'REFUNDED', 'NOT_REQUIRED', 'FREE'];
+
+    /** Admin filter tabs → the statuses each one covers. */
+    public const FILTER_GROUPS = [
+        'awaiting'      => ['PENDING', 'UNPAID', 'PAYMENT_PENDING', 'PROCESSING'],
+        'manual_review' => ['PAYMENT_PROOF_SUBMITTED', 'UNDER_REVIEW'],
+        'failed'        => ['FAILED', 'PAYMENT_REJECTED'],
+        'expired'       => ['EXPIRED', 'CANCELLED'],
+    ];
+
     public const STATUS_LABELS = [
         self::STATUS_PAID             => 'Bayad na (Paid ✓)',
         self::STATUS_PAID_VERIFIED    => 'Bayad na (Paid ✓)',
-        self::STATUS_PENDING          => 'Naghihintay ng Bayad (Pending)',
+        self::STATUS_PENDING          => 'Naghihintay ng Bayad (Awaiting Payment)',
         self::STATUS_PROCESSING       => 'Ipinoproseso (Processing)',
         self::STATUS_NOT_REQUIRED     => 'Libre (Not Required)',
         self::STATUS_FREE             => 'Libre (Free)',
         self::STATUS_UNPAID           => 'Kailangang Bayaran (Unpaid)',
         self::STATUS_PAYMENT_PENDING  => 'Naghihintay ng Bayad (Pending)',
         self::STATUS_APPROVED         => 'Inaprubahan (Approved)',
-        self::STATUS_PROOF_SUBMITTED  => 'Naipadala ang Patunay (Proof Submitted)',
-        self::STATUS_UNDER_REVIEW     => 'Sinusuri (Under Review)',
+        self::STATUS_PROOF_SUBMITTED  => 'Manual Review — may patunay',
+        self::STATUS_UNDER_REVIEW     => 'Manual Review',
         self::STATUS_PAYMENT_REJECTED => 'Tinanggihan (Rejected)',
         self::STATUS_FAILED           => 'Bigo ang Pagbabayad (Failed)',
         self::STATUS_CANCELLED        => 'Kinansela (Cancelled)',
@@ -57,11 +71,11 @@ class DocumentPayment
     }
 
     /**
-     * Generate unique payment reference: PAY-YYYY-XXXXXX
+     * Unique, unguessable payment reference: BG-YYYY-XXXXXXXX (8 random hex)
      */
     public static function generatePaymentRef(): string
     {
-        return 'PAY-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
+        return 'BG-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(4)));
     }
 
     /**
@@ -80,7 +94,6 @@ class DocumentPayment
         
         $provider = match ($method) {
             'paymongo', 'gcash' => 'paymongo',
-            'paypal'            => 'paypal',
             default             => 'manual',
         };
         $initialStatus = match ($method) {
@@ -301,21 +314,27 @@ class DocumentPayment
         try {
             $stmt = $pdo->prepare(
                 'UPDATE document_payments 
-                    SET payment_status = ?, verified_by = ?, verified_at = NOW(), notes = COALESCE(?, notes), updated_at = NOW()
-                  WHERE id = ?'
+                    SET payment_status = ?, verification_type = \'manual\', verified_by = ?, verified_at = NOW(),
+                        paid_at = COALESCE(paid_at, NOW()), notes = COALESCE(?, notes), updated_at = NOW()
+                  WHERE id = ? AND payment_status IN (\'PAYMENT_PROOF_SUBMITTED\', \'UNDER_REVIEW\')'
             );
             $stmt->execute([$newStatus, $staffId, $note ? trim($note) : null, $paymentId]);
+
+            if ($stmt->rowCount() !== 1) {
+                $pdo->rollBack();
+                return false; // not in a state this action applies to
+            }
 
             // Update request row: mark verified and activate to pending if awaiting payment
             $pdo->prepare(
                 'UPDATE document_requests 
                     SET payment_status = ?, 
-                        status = CASE WHEN status = \'awaiting_payment\' THEN \'pending\' ELSE status END,
-                        updated_at = NOW() 
+                        status = CASE WHEN status = \'awaiting_payment\' THEN \'pending_review\' ELSE status END,
+                        updated_at = NOW()
                   WHERE id = ?'
             )->execute([$newStatus, (int) $payment['request_id']]);
 
-            $details = sprintf('Payment verified by Staff ID #%d', $staffId);
+            $details = sprintf('Payment manually verified by Staff ID #%d', $staffId);
             if ($note) {
                 $details .= ' (Note: ' . trim($note) . ')';
             }
@@ -324,7 +343,7 @@ class DocumentPayment
                 (int) $payment['request_id'],
                 $paymentId,
                 $staffId,
-                'payment_verified',
+                'PAYMENT_MANUALLY_VERIFIED',
                 $oldStatus,
                 $newStatus,
                 $details
@@ -358,9 +377,14 @@ class DocumentPayment
             $stmt = $pdo->prepare(
                 'UPDATE document_payments 
                     SET payment_status = ?, rejection_reason = ?, rejection_note = ?, updated_at = NOW()
-                  WHERE id = ?'
+                  WHERE id = ? AND payment_status IN (\'PAYMENT_PROOF_SUBMITTED\', \'UNDER_REVIEW\')'
             );
             $stmt->execute([$newStatus, trim($reason), $note ? trim($note) : null, $paymentId]);
+
+            if ($stmt->rowCount() !== 1) {
+                $pdo->rollBack();
+                return false; // not in a state this action applies to
+            }
 
             // Update request row
             $pdo->prepare(
@@ -376,7 +400,7 @@ class DocumentPayment
                 (int) $payment['request_id'],
                 $paymentId,
                 $staffId,
-                'payment_rejected',
+                'PAYMENT_REJECTED',
                 $oldStatus,
                 $newStatus,
                 $details
@@ -409,13 +433,23 @@ class DocumentPayment
         try {
             $stmt = $pdo->prepare(
                 'UPDATE document_payments 
-                    SET payment_status = ?, amount_reported = amount_due, verified_by = ?, verified_at = NOW(), notes = COALESCE(?, notes), updated_at = NOW()
-                  WHERE id = ?'
+                    SET payment_status = ?, verification_type = \'counter\', amount_reported = amount_due, verified_by = ?,
+                        verified_at = NOW(), paid_at = NOW(), notes = COALESCE(?, notes), updated_at = NOW()
+                  WHERE id = ? AND payment_status NOT IN (' . self::inList(self::SETTLED_STATES) . ')'
             );
             $stmt->execute([$newStatus, $staffId, $note ? trim($note) : null, $paymentId]);
 
+            if ($stmt->rowCount() !== 1) {
+                $pdo->rollBack();
+                return false; // not in a state this action applies to
+            }
+
             $pdo->prepare(
-                'UPDATE document_requests SET payment_status = ?, updated_at = NOW() WHERE id = ?'
+                'UPDATE document_requests
+                    SET payment_status = ?,
+                        status = CASE WHEN status = \'awaiting_payment\' THEN \'pending_review\' ELSE status END,
+                        updated_at = NOW()
+                  WHERE id = ?'
             )->execute([$newStatus, (int) $payment['request_id']]);
 
             $details = sprintf('Cash payment collected at pickup counter by Staff ID #%d', $staffId);
@@ -460,16 +494,21 @@ class DocumentPayment
         try {
             $stmt = $pdo->prepare(
                 'UPDATE document_payments 
-                    SET payment_status = ?, waiver_reason = ?, verified_by = ?, verified_at = NOW(), updated_at = NOW()
-                  WHERE id = ?'
+                    SET payment_status = ?, verification_type = \'waiver\', waiver_reason = ?, verified_by = ?, verified_at = NOW(), updated_at = NOW()
+                  WHERE id = ? AND payment_status NOT IN (' . self::inList(self::SETTLED_STATES) . ')'
             );
             $stmt->execute([$newStatus, trim($reason), $staffId, $paymentId]);
+
+            if ($stmt->rowCount() !== 1) {
+                $pdo->rollBack();
+                return false; // not in a state this action applies to
+            }
 
             $pdo->prepare(
                 'UPDATE document_requests 
                     SET payment_status = ?, 
-                        status = CASE WHEN status = \'awaiting_payment\' THEN \'pending\' ELSE status END,
-                        updated_at = NOW() 
+                        status = CASE WHEN status = \'awaiting_payment\' THEN \'pending_review\' ELSE status END,
+                        updated_at = NOW()
                   WHERE id = ?'
             )->execute([$newStatus, (int) $payment['request_id']]);
 
@@ -642,69 +681,60 @@ class DocumentPayment
     }
 
     /**
-     * Dashboard stats for Admin Payment Management.
+     * Dashboard stats for Admin Payment Management — real rows only.
      */
     public static function getDashboardStats(): array
     {
         $stats = [
-            'today_collected'     => 0.00,
+            'today_collected'   => 0.00,
+            'total_collected'   => 0.00,
+            'awaiting_count'    => 0,
+            'review_count'      => 0,
+            'paid_today_count'  => 0,
+            'failed_count'      => 0,
+            // Kept for older views that still read them.
             'pending_count'       => 0,
             'verified_today'      => 0,
             'pay_at_pickup_count' => 0,
             'rejected_count'      => 0,
-            'total_collected'     => 0.00,
         ];
+
+        $paid     = self::inList(self::PAID_STATES);
+        $awaiting = self::inList(self::FILTER_GROUPS['awaiting']);
+        $review   = self::inList(self::FILTER_GROUPS['manual_review']);
+        $failed   = self::inList(self::FILTER_GROUPS['failed']);
 
         try {
             $pdo = db();
-            // Total collected (verified paid + paid at pickup)
-            $totalStmt = $pdo->query(
-                "SELECT COALESCE(SUM(amount_due), 0) FROM document_payments WHERE payment_status IN ('PAID_VERIFIED', 'PAID_AT_PICKUP')"
-            );
-            $stats['total_collected'] = (float) $totalStmt->fetchColumn();
-
-            // Today collected
-            $todayStmt = $pdo->query(
-                "SELECT COALESCE(SUM(amount_due), 0) FROM document_payments 
-                  WHERE payment_status IN ('PAID_VERIFIED', 'PAID_AT_PICKUP') 
-                    AND (verified_at >= CURRENT_DATE OR updated_at >= CURRENT_DATE)"
-            );
-            $stats['today_collected'] = (float) $todayStmt->fetchColumn();
-
-            // Pending verification count
-            $pendingStmt = $pdo->query(
-                "SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAYMENT_PROOF_SUBMITTED'"
-            );
-            $stats['pending_count'] = (int) $pendingStmt->fetchColumn();
-
-            // Verified today count
-            $verTodayStmt = $pdo->query(
-                "SELECT COUNT(*) FROM document_payments 
-                  WHERE payment_status = 'PAID_VERIFIED' 
-                    AND (verified_at >= CURRENT_DATE OR updated_at >= CURRENT_DATE)"
-            );
-            $stats['verified_today'] = (int) $verTodayStmt->fetchColumn();
-
-            // Pay at pickup count
-            $pickupStmt = $pdo->query(
-                "SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAY_AT_PICKUP'"
-            );
-            $stats['pay_at_pickup_count'] = (int) $pickupStmt->fetchColumn();
-
-            // Rejected count
-            $rejStmt = $pdo->query(
-                "SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAYMENT_REJECTED'"
-            );
-            $stats['rejected_count'] = (int) $rejStmt->fetchColumn();
+            $stats['total_collected']  = (float) $pdo->query("SELECT COALESCE(SUM(amount_due), 0) FROM document_payments WHERE payment_status IN ($paid)")->fetchColumn();
+            $stats['today_collected']  = (float) $pdo->query("SELECT COALESCE(SUM(amount_due), 0) FROM document_payments WHERE payment_status IN ($paid) AND COALESCE(paid_at, verified_at, updated_at) >= CURRENT_DATE")->fetchColumn();
+            $stats['paid_today_count'] = (int) $pdo->query("SELECT COUNT(*) FROM document_payments WHERE payment_status IN ($paid) AND COALESCE(paid_at, verified_at, updated_at) >= CURRENT_DATE")->fetchColumn();
+            $stats['awaiting_count']   = (int) $pdo->query("SELECT COUNT(*) FROM document_payments WHERE payment_status IN ($awaiting)")->fetchColumn();
+            $stats['review_count']     = (int) $pdo->query("SELECT COUNT(*) FROM document_payments WHERE payment_status IN ($review)")->fetchColumn();
+            $stats['failed_count']     = (int) $pdo->query("SELECT COUNT(*) FROM document_payments WHERE payment_status IN ($failed)")->fetchColumn();
+            $stats['pay_at_pickup_count'] = (int) $pdo->query("SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAY_AT_PICKUP'")->fetchColumn();
         } catch (\Throwable $e) {
             error_log('[DocumentPayment::getDashboardStats] ' . $e->getMessage());
         }
 
+        $stats['pending_count']  = $stats['review_count'];
+        $stats['verified_today'] = $stats['paid_today_count'];
+        $stats['rejected_count'] = $stats['failed_count'];
+
         return $stats;
     }
 
+    /** Quoted IN-list of status constants (constants only, never user input). */
+    private static function inList(array $statuses): string
+    {
+        return implode(', ', array_map(static fn (string $s): string => "'" . str_replace("'", '', $s) . "'", $statuses));
+    }
+
     /**
-     * Get transaction list with filtering and search.
+     * Transactions with filtering and search.
+     *
+     * Filters: group (awaiting|paid|failed|expired|manual_review), status, method,
+     * doc_type, search (payment ref, request ref, resident, document, PayMongo ids).
      */
     public static function getTransactions(array $filters = []): array
     {
@@ -720,38 +750,40 @@ class DocumentPayment
                  WHERE 1=1";
         $params = [];
 
+        $group = (string) ($filters['group'] ?? '');
+        if ($group === 'paid') {
+            $sql .= ' AND p.payment_status IN (' . self::inList(self::PAID_STATES) . ')';
+        } elseif (isset(self::FILTER_GROUPS[$group])) {
+            $sql .= ' AND p.payment_status IN (' . self::inList(self::FILTER_GROUPS[$group]) . ')';
+        }
+
         if (!empty($filters['status'])) {
             $sql .= ' AND p.payment_status = ?';
-            $params[] = $filters['status'];
+            $params[] = (string) $filters['status'];
         }
-
         if (!empty($filters['method'])) {
             $sql .= ' AND p.payment_method = ?';
-            $params[] = $filters['method'];
+            $params[] = (string) $filters['method'];
         }
-
         if (!empty($filters['doc_type'])) {
             $sql .= ' AND p.document_type = ?';
-            $params[] = $filters['doc_type'];
+            $params[] = (string) $filters['doc_type'];
         }
-
         if (!empty($filters['search'])) {
-            $search = '%' . trim($filters['search']) . '%';
-            $sql .= ' AND (p.payment_ref ILIKE ? OR r.reference_no ILIKE ? OR u.full_name ILIKE ? OR p.gcash_reference_no ILIKE ?)';
-            $params[] = $search;
-            $params[] = $search;
-            $params[] = $search;
-            $params[] = $search;
+            // LOWER() LIKE works on both MariaDB (local) and PostgreSQL (Render).
+            $needle  = '%' . mb_strtolower(trim((string) $filters['search'])) . '%';
+            $columns = ['p.payment_ref', 'r.reference_no', 'u.full_name', 'p.document_type', 'p.gcash_reference_no',
+                        'p.paymongo_checkout_id', 'p.paymongo_payment_id', 'p.paymongo_payment_intent_id'];
+            $sql .= ' AND (' . implode(' OR ', array_map(static fn (string $c): string => "LOWER(COALESCE($c, '')) LIKE ?", $columns)) . ')';
+            foreach ($columns as $_) {
+                $params[] = $needle;
+            }
         }
 
-        $sql .= " ORDER BY CASE p.payment_status 
-                     WHEN 'PAYMENT_PROOF_SUBMITTED' THEN 1 
-                     WHEN 'UNDER_REVIEW' THEN 2 
-                     WHEN 'PAY_AT_PICKUP' THEN 3 
-                     WHEN 'UNPAID' THEN 4 
-                     WHEN 'PAID_VERIFIED' THEN 5 
-                     WHEN 'PAID_AT_PICKUP' THEN 6 
-                     ELSE 7 END, 
+        $sql .= " ORDER BY CASE
+                     WHEN p.payment_status IN (" . self::inList(self::FILTER_GROUPS['manual_review']) . ") THEN 1
+                     WHEN p.payment_status IN (" . self::inList(self::FILTER_GROUPS['awaiting']) . ") THEN 2
+                     ELSE 3 END,
                   p.created_at DESC";
 
         try {
@@ -764,137 +796,8 @@ class DocumentPayment
         }
     }
 
-    /**
-     * Store PayPal Order ID on payment record.
-     */
-    public static function setPaypalOrder(int $paymentId, string $orderId, ?string $raw = null): bool
-    {
-        try {
-            $pdo = db();
-            $stmt = $pdo->prepare(
-                'UPDATE document_payments 
-                    SET paypal_order_id = ?, 
-                        provider = \'paypal\',
-                        payment_status = ?,
-                        paypal_raw_response = COALESCE(?, paypal_raw_response),
-                        updated_at = NOW() 
-                  WHERE id = ?'
-            );
-            return $stmt->execute([$orderId, self::STATUS_PAYMENT_PENDING, $raw, $paymentId]);
-        } catch (\Throwable $e) {
-            error_log('[DocumentPayment::setPaypalOrder] ' . $e->getMessage());
-            return false;
-        }
-    }
+    // ── Webhook idempotency ──────────────────────────────────────────────
 
-    /**
-     * Find payment record by PayPal Order ID.
-     */
-    public static function findByPaypalOrderId(string $orderId): ?array
-    {
-        try {
-            $stmt = db()->prepare(
-                'SELECT p.*, r.reference_no AS request_ref, r.status AS document_status, r.delivery_method,
-                        u.full_name, u.email, u.phone, u.zone
-                   FROM document_payments p
-                   JOIN document_requests r ON r.id = p.request_id
-                   JOIN users u ON u.id = p.user_id
-                  WHERE p.paypal_order_id = ? LIMIT 1'
-            );
-            $stmt->execute([$orderId]);
-            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-        } catch (\Throwable $e) {
-            return null;
-        }
-    }
-
-    /**
-     * Record verified PayPal capture and automatically activate document request.
-     */
-    public static function recordPaypalCapture(
-        int $paymentId,
-        string $captureId,
-        float $amount,
-        string $currency = 'PHP',
-        ?string $payerId = null,
-        ?string $payerEmail = null,
-        ?string $raw = null
-    ): bool {
-        $payment = self::find($paymentId);
-        if (!$payment) {
-            return false;
-        }
-
-        $oldStatus = (string) $payment['payment_status'];
-        $newStatus = self::STATUS_PAID_VERIFIED;
-
-        $pdo = db();
-        $pdo->beginTransaction();
-        try {
-            $stmt = $pdo->prepare(
-                'UPDATE document_payments 
-                    SET payment_status = ?,
-                        amount_reported = ?,
-                        currency = ?,
-                        paypal_capture_id = ?,
-                        paypal_payer_id = COALESCE(?, paypal_payer_id),
-                        paypal_payer_email = COALESCE(?, paypal_payer_email),
-                        paypal_raw_response = COALESCE(?, paypal_raw_response),
-                        verified_at = NOW(),
-                        updated_at = NOW()
-                  WHERE id = ?'
-            );
-            $stmt->execute([
-                $newStatus,
-                $amount,
-                $currency,
-                $captureId,
-                $payerId,
-                $payerEmail,
-                $raw,
-                $paymentId,
-            ]);
-
-            // Activate document request from awaiting_payment to pending (WAITING for processing)
-            $pdo->prepare(
-                'UPDATE document_requests 
-                    SET payment_status = ?, 
-                        status = CASE WHEN status = \'awaiting_payment\' THEN \'pending\' ELSE status END,
-                        updated_at = NOW() 
-                  WHERE id = ?'
-            )->execute([$newStatus, (int) $payment['request_id']]);
-
-            $details = sprintf(
-                'PayPal payment captured: Capture ID %s, Amount %s %.2f, Payer: %s (%s)',
-                $captureId,
-                $currency,
-                $amount,
-                $payerEmail ?: 'n/a',
-                $payerId ?: 'n/a'
-            );
-
-            self::logAudit(
-                (int) $payment['request_id'],
-                $paymentId,
-                (int) $payment['user_id'],
-                'paypal_capture_completed',
-                $oldStatus,
-                $newStatus,
-                $details
-            );
-
-            $pdo->commit();
-            return true;
-        } catch (\Throwable $e) {
-            $pdo->rollBack();
-            error_log('[DocumentPayment::recordPaypalCapture] ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Check if webhook event was already processed (idempotency).
-     */
     public static function isWebhookProcessed(string $eventId): bool
     {
         try {
@@ -906,83 +809,60 @@ class DocumentPayment
         }
     }
 
-    /**
-     * Record processed webhook event.
-     */
-    public static function recordWebhookEvent(string $eventId, string $eventType, ?string $resourceId, ?string $payload, string $provider = 'paypal'): bool
+    /** The payload is not stored — it adds nothing the payment row lacks. */
+    public static function recordWebhookEvent(string $eventId, string $eventType, ?string $resourceId, string $provider = 'paymongo'): bool
     {
         try {
-            $stmt = db()->prepare(
+            return db()->prepare(
                 'INSERT INTO payment_webhook_events (event_id, event_type, provider, resource_id, payload, created_at)
-                 VALUES (?, ?, ?, ?, ?, NOW())'
-            );
-            return $stmt->execute([$eventId, $eventType, $provider, $resourceId, $payload]);
+                 VALUES (?, ?, ?, ?, NULL, NOW())'
+            )->execute([$eventId, $eventType, $provider, $resourceId]);
         } catch (\Throwable $e) {
-            return false;
+            return false; // a duplicate event id is exactly the idempotent case
         }
     }
 
-    // ── PayMongo Methods ─────────────────────────────────────────────────
+    // ── PayMongo ─────────────────────────────────────────────────────────
 
-    /**
-     * Store PayMongo Checkout Session ID on payment record.
-     */
-    public static function setPaymongoCheckout(int $paymentId, string $checkoutId, ?string $raw = null): bool
+    /** Remember the hosted checkout so a refresh or double click reuses it. */
+    public static function setPaymongoCheckout(int $paymentId, string $checkoutId, string $checkoutUrl): bool
     {
         try {
-            $pdo = db();
-            $stmt = $pdo->prepare(
-                'UPDATE document_payments 
-                    SET paymongo_checkout_id = ?, 
-                        provider = \'paymongo\',
-                        payment_status = ?,
-                        paymongo_raw_response = COALESCE(?, paymongo_raw_response),
-                        updated_at = NOW() 
-                  WHERE id = ?'
-            );
-            return $stmt->execute([$checkoutId, self::STATUS_PENDING, $raw, $paymentId]);
+            return db()->prepare(
+                'UPDATE document_payments
+                    SET paymongo_checkout_id = ?, checkout_url = ?, checkout_created_at = NOW(),
+                        provider = \'paymongo\', payment_method = \'gcash\', payment_status = ?,
+                        failure_reason = NULL, updated_at = NOW()
+                  WHERE id = ? AND payment_status NOT IN (' . self::inList(self::PAID_STATES) . ')'
+            )->execute([$checkoutId, $checkoutUrl, self::STATUS_PENDING, $paymentId]);
         } catch (\Throwable $e) {
             error_log('[DocumentPayment::setPaymongoCheckout] ' . $e->getMessage());
             return false;
         }
     }
 
-    /**
-     * Find payment record by PayMongo Checkout Session ID.
-     */
     public static function findByPaymongoCheckoutId(string $checkoutId): ?array
     {
-        try {
-            $stmt = db()->prepare(
-                'SELECT p.*, r.reference_no AS request_ref, r.status AS document_status, r.delivery_method,
-                        u.full_name, u.email, u.phone, u.zone
-                   FROM document_payments p
-                   JOIN document_requests r ON r.id = p.request_id
-                   JOIN users u ON u.id = p.user_id
-                  WHERE p.paymongo_checkout_id = ? LIMIT 1'
-            );
-            $stmt->execute([$checkoutId]);
-            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-        } catch (\Throwable $e) {
-            return null;
-        }
+        return self::findOneWhere('p.paymongo_checkout_id = ?', [$checkoutId]);
     }
 
-    /**
-     * Find payment record by PayMongo Payment Intent ID.
-     */
     public static function findByPaymongoPaymentIntentId(string $intentId): ?array
+    {
+        return self::findOneWhere('p.paymongo_payment_intent_id = ?', [$intentId]);
+    }
+
+    private static function findOneWhere(string $where, array $params): ?array
     {
         try {
             $stmt = db()->prepare(
-                'SELECT p.*, r.reference_no AS request_ref, r.status AS document_status, r.delivery_method,
+                "SELECT p.*, r.reference_no AS request_ref, r.status AS document_status, r.delivery_method,
                         u.full_name, u.email, u.phone, u.zone
                    FROM document_payments p
                    JOIN document_requests r ON r.id = p.request_id
                    JOIN users u ON u.id = p.user_id
-                  WHERE p.paymongo_payment_intent_id = ? LIMIT 1'
+                  WHERE $where LIMIT 1"
             );
-            $stmt->execute([$intentId]);
+            $stmt->execute($params);
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         } catch (\Throwable $e) {
             return null;
@@ -990,95 +870,109 @@ class DocumentPayment
     }
 
     /**
-     * Record verified PayMongo payment and automatically move document request to PENDING_REVIEW.
+     * Mark a payment PAID from a PayMongo-confirmed payment. Atomic and
+     * idempotent: the UPDATE only matches a row that is not already settled,
+     * so a duplicate webhook, a racing return page and a staff "Check status"
+     * click cannot all apply it. Returns true only for the call that changed it.
      *
-     * Called from:
-     * 1. Webhook handler (checkout_session.payment.paid / payment.paid)
-     * 2. Return URL handler (retrieves checkout session to verify status)
+     * The caller (PaymentConfirmation) has already checked status, amount and
+     * currency against the official fee.
      */
-    public static function recordPaymongoPayment(
+    public static function markPaymongoPaid(
         int $paymentId,
-        ?string $paymongoPaymentId,
+        string $paymongoPaymentId,
         ?string $paymentIntentId,
-        float $amount,
-        string $currency = 'PHP',
-        ?string $sourceType = null,
-        ?string $raw = null
+        float $amountPesos,
+        string $sourceType,
+        ?string $eventId,
+        ?string $checkoutId
     ): bool {
         $payment = self::find($paymentId);
         if (!$payment) {
             return false;
         }
 
-        // Idempotency: already verified
-        if (in_array($payment['payment_status'], [self::STATUS_PAID, self::STATUS_PAID_VERIFIED], true)) {
-            return true;
-        }
-
-        $oldStatus = (string) $payment['payment_status'];
-        $newStatus = self::STATUS_PAID;
-
         $pdo = db();
         $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare(
-                'UPDATE document_payments 
-                    SET payment_status = ?,
-                        amount_reported = ?,
-                        currency = ?,
-                        paymongo_payment_id = COALESCE(?, paymongo_payment_id),
+                'UPDATE document_payments
+                    SET payment_status = ?, verification_type = \'paymongo\', provider = \'paymongo\',
+                        payment_method = \'gcash\', amount_reported = ?, currency = \'PHP\',
+                        paymongo_payment_id = ?,
                         paymongo_payment_intent_id = COALESCE(?, paymongo_payment_intent_id),
-                        paymongo_source_type = COALESCE(?, paymongo_source_type),
-                        paymongo_raw_response = COALESCE(?, paymongo_raw_response),
-                        verified_at = NOW(),
+                        paymongo_checkout_id = COALESCE(paymongo_checkout_id, ?),
+                        paymongo_source_type = ?, paymongo_event_id = COALESCE(?, paymongo_event_id),
+                        failure_reason = NULL, paid_at = NOW(), verified_at = NOW(), verified_by = NULL,
                         updated_at = NOW()
-                  WHERE id = ?'
+                  WHERE id = ? AND payment_status NOT IN (' . self::inList(self::SETTLED_STATES) . ')'
             );
             $stmt->execute([
-                $newStatus,
-                $amount,
-                $currency,
-                $paymongoPaymentId,
-                $paymentIntentId,
-                $sourceType,
-                $raw,
-                $paymentId,
+                self::STATUS_PAID, $amountPesos, $paymongoPaymentId, $paymentIntentId,
+                $checkoutId, $sourceType, $eventId, $paymentId,
             ]);
 
-            // Requirement 16 & 21: Move document request from awaiting_payment to pending_review
-            $pdo->prepare(
-                'UPDATE document_requests 
-                    SET payment_status = ?, 
-                        status = CASE WHEN status = \'awaiting_payment\' THEN \'pending_review\' ELSE status END,
-                        updated_at = NOW() 
-                  WHERE id = ?'
-            )->execute([$newStatus, (int) $payment['request_id']]);
+            if ($stmt->rowCount() !== 1) {
+                $pdo->rollBack();
+                return false; // already settled by another caller
+            }
 
-            $details = sprintf(
-                'PayMongo payment verified: Payment ID %s, Intent %s, Amount %s %.2f, Source: %s',
-                $paymongoPaymentId ?: 'n/a',
-                $paymentIntentId ?: 'n/a',
-                $currency,
-                $amount,
-                $sourceType ?: 'n/a'
-            );
+            // Paid requests leave "awaiting payment" and join the processing queue.
+            $pdo->prepare(
+                "UPDATE document_requests
+                    SET payment_status = ?, payment_method = 'gcash',
+                        status = CASE WHEN status = 'awaiting_payment' THEN 'pending_review' ELSE status END,
+                        updated_at = NOW()
+                  WHERE id = ?"
+            )->execute([self::STATUS_PAID, (int) $payment['request_id']]);
 
             self::logAudit(
-                (int) $payment['request_id'],
-                $paymentId,
-                (int) $payment['user_id'],
-                'paymongo_payment_completed',
-                $oldStatus,
-                $newStatus,
-                $details
+                (int) $payment['request_id'], $paymentId, null, 'PAYMENT_CONFIRMED',
+                (string) $payment['payment_status'], self::STATUS_PAID,
+                sprintf('PayMongo %s payment %s (₱%.2f PHP) confirmed%s.', strtoupper($sourceType ?: 'gcash'),
+                    $paymongoPaymentId, $amountPesos, $eventId ? ' by webhook ' . $eventId : ' by API check')
             );
 
             $pdo->commit();
             return true;
         } catch (\Throwable $e) {
             $pdo->rollBack();
-            error_log('[DocumentPayment::recordPaymongoPayment] ' . $e->getMessage());
+            // A unique-index violation means this PayMongo payment already
+            // settled a different record — never apply it twice.
+            error_log('[DocumentPayment::markPaymongoPaid] ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Move an unsettled payment to another non-paid state (FAILED, EXPIRED,
+     * CANCELLED, UNDER_REVIEW). Atomic; returns true only if it changed.
+     */
+    public static function transitionUnsettled(int $paymentId, string $toStatus, string $action, ?int $actorId, string $reason): bool
+    {
+        if (in_array($toStatus, self::SETTLED_STATES, true)) {
+            return false; // paid states only come from the confirmation path
+        }
+        $payment = self::find($paymentId);
+        if (!$payment || (string) $payment['payment_status'] === $toStatus) {
+            return false;
+        }
+
+        $stmt = db()->prepare(
+            'UPDATE document_payments SET payment_status = ?, failure_reason = ?, updated_at = NOW()
+              WHERE id = ? AND payment_status NOT IN (' . self::inList(self::SETTLED_STATES) . ')'
+        );
+        $stmt->execute([$toStatus, mb_substr($reason, 0, 255), $paymentId]);
+        if ($stmt->rowCount() !== 1) {
+            return false;
+        }
+
+        db()->prepare('UPDATE document_requests SET payment_status = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$toStatus, (int) $payment['request_id']]);
+
+        self::logAudit((int) $payment['request_id'], $paymentId, $actorId, $action,
+            (string) $payment['payment_status'], $toStatus, $reason);
+
+        return true;
     }
 }

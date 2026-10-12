@@ -3,534 +3,367 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\Setting;
-use Throwable;
-
 /**
- * PayMongo REST API Service for BarangGabay.
+ * PayMongo REST client for BarangGabay document payments.
  *
- * Handles:
- * - Checkout Sessions API v2 (creates hosted checkout for GCash, card, QR PH)
- * - Retrieve Checkout Session status
- * - Webhook Signature Verification (HMAC-SHA256)
- * - Webhook Idempotency
+ * - Hosted Checkout Sessions (v2, falling back to v1 if v2 is unavailable)
+ * - Checkout Session retrieval for reconciliation
+ * - Webhook signature verification (fails CLOSED when no secret is set)
  *
- * PayMongo processes GCash, card, and other e-wallet payments through its
- * hosted checkout page, keeping BarangGabay PCI-compliant without handling
- * card data directly.
+ * Credentials come ONLY from environment variables (Render → Environment):
+ *   PAYMONGO_SECRET_KEY      sk_test_… / sk_live_…   server-side only
+ *   PAYMONGO_PUBLIC_KEY      pk_test_… / pk_live_…   not needed by hosted checkout
+ *   PAYMONGO_WEBHOOK_SECRET  whsk_…                  signing secret of the webhook
+ *   PAYMONGO_PAYMENT_METHODS optional, comma list (default "gcash")
+ * Test vs live is decided by the key itself, so switching to live mode is an
+ * environment change only. Nothing here ever echoes, logs or returns a key.
  *
- * Amounts are in CENTAVOS (PHP 50.00 = 5000).
+ * Amounts are integers in CENTAVOS (₱100.00 = 10000).
  */
 class PayMongoService
 {
     private const API_BASE_URL = 'https://api.paymongo.com';
 
-    /**
-     * Supported payment method types offered to residents.
-     * Requirement: GCash through PayMongo ONLY.
-     */
-    private const PAYMENT_METHOD_TYPES = ['gcash'];
+    /** PayMongo's minimum charge for e-wallets is ₱20.00. */
+    public const MIN_AMOUNT_CENTAVOS = 2000;
+
+    /** Methods that may be enabled through PAYMONGO_PAYMENT_METHODS. */
+    private const ALLOWED_METHODS = ['gcash', 'qrph', 'paymaya', 'grab_pay', 'card', 'dob', 'billease'];
 
     // ── Configuration ────────────────────────────────────────────────────
 
-    /**
-     * Get Secret Key (from env or system_settings).
-     * Used for server-side API calls (Authorization header).
-     */
+    private static function envValue(string $key): string
+    {
+        $value = $_ENV[$key] ?? getenv($key);
+        return is_string($value) ? trim($value) : '';
+    }
+
     public static function getSecretKey(): string
     {
-        return trim((string) (env('PAYMONGO_SECRET_KEY') ?: Setting::get('paymongo_secret_key', '')));
+        return self::envValue('PAYMONGO_SECRET_KEY');
     }
 
-    /**
-     * Get Public Key (from env or system_settings).
-     * Used client-side if needed (currently unused — hosted checkout handles everything).
-     */
     public static function getPublicKey(): string
     {
-        return trim((string) (env('PAYMONGO_PUBLIC_KEY') ?: Setting::get('paymongo_public_key', '')));
+        return self::envValue('PAYMONGO_PUBLIC_KEY');
     }
 
-    /**
-     * Get Webhook Secret Key for signature verification.
-     */
     public static function getWebhookSecret(): string
     {
-        return trim((string) (env('PAYMONGO_WEBHOOK_SECRET') ?: Setting::get('paymongo_webhook_secret', '')));
+        return self::envValue('PAYMONGO_WEBHOOK_SECRET');
     }
 
-    /**
-     * Check if PayMongo is configured with credentials.
-     */
     public static function isConfigured(): bool
     {
-        return self::getSecretKey() !== '';
+        return str_starts_with(self::getSecretKey(), 'sk_');
     }
 
-    /**
-     * Get the active mode: 'test' or 'live'.
-     * Determined by whether the secret key starts with sk_test_ or sk_live_,
-     * or via PAYMONGO_MODE environment variable.
-     */
+    public static function isWebhookConfigured(): bool
+    {
+        return self::getWebhookSecret() !== '';
+    }
+
+    /** 'live' only when the secret key itself is a live key. */
     public static function getMode(): string
     {
-        $explicit = strtolower(trim((string) env('PAYMONGO_MODE', '')));
-        if ($explicit === 'live' || $explicit === 'test') {
-            return $explicit;
-        }
-
-        $sk = self::getSecretKey();
-        if (str_starts_with($sk, 'sk_live_')) {
-            return 'live';
-        }
-        return 'test';
+        return str_starts_with(self::getSecretKey(), 'sk_live_') ? 'live' : 'test';
     }
 
-    // ── Checkout Sessions API ────────────────────────────────────────────
+    /** @return list<string> */
+    public static function paymentMethodTypes(): array
+    {
+        $raw = self::envValue('PAYMONGO_PAYMENT_METHODS');
+        if ($raw === '') {
+            return ['gcash'];
+        }
+        $methods = array_values(array_intersect(
+            self::ALLOWED_METHODS,
+            array_map('trim', explode(',', strtolower($raw)))
+        ));
+        return $methods ?: ['gcash'];
+    }
+
+    /** Pesos (as stored in DECIMAL columns) → integer centavos, without float drift. */
+    public static function toCentavos(float|int|string $pesos): int
+    {
+        return (int) round(((float) $pesos) * 100);
+    }
+
+    // ── Checkout Sessions ────────────────────────────────────────────────
 
     /**
-     * Create a PayMongo Checkout Session.
+     * Create a hosted Checkout Session. The amount must already be the
+     * official server-side fee, in centavos — never a client value.
      *
-     * Processes GCash payment directly through PayMongo's secure hosted page.
-     *
-     * @param int    $requestId    Document request ID
-     * @param string $paymentRef   Payment reference (e.g. PAY-2026-A1B2C3)
-     * @param float  $amount       Amount in PHP (e.g. 50.00)
-     * @param string $docLabel     Document type label
-     * @param string $reqRef       Document request reference number
-     * @param string $successUrl   URL to redirect after successful payment
-     * @param string $cancelUrl    URL to redirect if payment is cancelled
+     * @param array{
+     *   amount_centavos:int, item_name:string, description:string,
+     *   reference_number:string, success_url:string, cancel_url:string,
+     *   metadata:array<string,string>
+     * } $args
      * @return array{success:bool, checkout_id:?string, checkout_url:?string, error:?string, raw:?array}
      */
-    public static function createCheckoutSession(
-        int $requestId,
-        string $paymentRef,
-        float $amount,
-        string $docLabel = 'Barangay Document',
-        string $reqRef = '',
-        string $successUrl = '',
-        string $cancelUrl = ''
-    ): array {
-        $secretKey = self::getSecretKey();
-
-        // Production rule: Never simulate or mock payment success
-        if ($secretKey === '') {
-            return [
-                'success'      => false,
-                'checkout_id'  => null,
-                'checkout_url' => null,
-                'error'        => 'PayMongo Secret Key is not configured. Please set PAYMONGO_SECRET_KEY in Render environment variables.',
-                'raw'          => null,
-            ];
-        }
-
-        // PayMongo amounts are in centavos
-        $amountCentavos = (int) round($amount * 100);
-        if ($amountCentavos < 2000) {
-            // PayMongo minimum is PHP 20.00 (2000 centavos) for most methods
-            // For free documents, this should never be called
-            $amountCentavos = max($amountCentavos, 2000);
-        }
-
-        $description = sprintf('Barangay %s Fee (%s)', mb_substr($docLabel, 0, 80), $reqRef ?: ('Req #' . $requestId));
-        $description = mb_substr($description, 0, 255);
-
-        $payload = [
-            'data' => [
-                'attributes' => [
-                    'line_items' => [
-                        [
-                            'name'        => mb_substr('Barangay ' . $docLabel, 0, 255),
-                            'amount'      => $amountCentavos,
-                            'currency'    => 'PHP',
-                            'quantity'    => 1,
-                            'description' => 'Opisyal na bayarin sa dokumento ng Barangay',
-                        ],
-                    ],
-                    'payment_method_types' => self::PAYMENT_METHOD_TYPES,
-                    'description'          => $description,
-                    'reference_number'     => $paymentRef,
-                    'success_url'          => $successUrl,
-                    'cancel_url'           => $cancelUrl,
-                    'send_email_receipt'   => true,
-                    'show_description'     => true,
-                    'show_line_items'      => true,
-                    'metadata' => [
-                        'request_id'   => (string) $requestId,
-                        'payment_ref'  => $paymentRef,
-                        'request_ref'  => $reqRef,
-                        'doc_type'     => $docLabel,
-                        'system'       => 'BarangGabay',
-                    ],
-                ],
-            ],
+    public static function createCheckoutSession(array $args): array
+    {
+        $fail = static fn (string $error, ?array $raw = null): array => [
+            'success' => false, 'checkout_id' => null, 'checkout_url' => null, 'error' => $error, 'raw' => $raw,
         ];
 
-        $url = self::API_BASE_URL . '/v1/checkout_sessions';
-        $response = self::apiRequest('POST', $url, $payload, $secretKey);
-
-        if (!$response['success']) {
-            return [
-                'success'      => false,
-                'checkout_id'  => null,
-                'checkout_url' => null,
-                'error'        => $response['error'],
-                'raw'          => $response['raw'],
-            ];
+        $secretKey = self::getSecretKey();
+        if (!self::isConfigured()) {
+            return $fail('Online payment is not set up yet (PAYMONGO_SECRET_KEY is missing).');
         }
 
-        $data = $response['raw']['data'] ?? [];
+        $amount = (int) $args['amount_centavos'];
+        if ($amount < self::MIN_AMOUNT_CENTAVOS) {
+            // Never round a fee UP to the gateway minimum — that would charge
+            // the resident more than the official fee.
+            return $fail('This fee is below PayMongo\'s ₱20.00 minimum for GCash. Please pay at the Barangay Hall.');
+        }
+
+        $payload = ['data' => ['attributes' => [
+            'line_items' => [[
+                'name'     => mb_substr($args['item_name'], 0, 255),
+                'amount'   => $amount,
+                'currency' => 'PHP',
+                'quantity' => 1,
+            ]],
+            'payment_method_types' => self::paymentMethodTypes(),
+            'description'          => mb_substr($args['description'], 0, 255),
+            'reference_number'     => $args['reference_number'],
+            'success_url'          => $args['success_url'],
+            'cancel_url'           => $args['cancel_url'],
+            'send_email_receipt'   => true,
+            'show_description'     => true,
+            'show_line_items'      => true,
+            'metadata'             => array_map('strval', $args['metadata']),
+        ]]];
+
+        $response = self::apiRequest('POST', '/v2/checkout_sessions', $payload, $secretKey);
+        if (!$response['success'] && $response['http'] === 404) {
+            $response = self::apiRequest('POST', '/v1/checkout_sessions', $payload, $secretKey);
+        }
+        if (!$response['success']) {
+            return $fail((string) $response['error'], $response['raw']);
+        }
+
+        $data        = $response['raw']['data'] ?? [];
         $checkoutId  = (string) ($data['id'] ?? '');
         $checkoutUrl = (string) ($data['attributes']['checkout_url'] ?? '');
-
-        if ($checkoutId === '' || $checkoutUrl === '') {
-            return [
-                'success'      => false,
-                'checkout_id'  => null,
-                'checkout_url' => null,
-                'error'        => 'PayMongo returned an incomplete checkout session response.',
-                'raw'          => $response['raw'],
-            ];
+        if ($checkoutId === '' || !str_starts_with($checkoutUrl, 'https://')) {
+            return $fail('PayMongo returned an incomplete checkout session.', $response['raw']);
         }
 
-        return [
-            'success'      => true,
-            'checkout_id'  => $checkoutId,
-            'checkout_url' => $checkoutUrl,
-            'error'        => null,
-            'mock'         => false,
-            'raw'          => $response['raw'],
-        ];
+        return ['success' => true, 'checkout_id' => $checkoutId, 'checkout_url' => $checkoutUrl, 'error' => null, 'raw' => $response['raw']];
     }
 
     /**
-     * Retrieve a PayMongo Checkout Session by ID.
+     * Retrieve a Checkout Session and its payments, normalised.
      *
-     * Used to check the payment status after a resident returns from the
-     * hosted checkout page, and as a fallback verification if webhooks fail.
-     *
-     * @param string $checkoutId  The cs_* checkout session ID
-     * @return array{success:bool, status:?string, payment_intent_id:?string, payments:array, error:?string, raw:?array}
+     * @return array{success:bool, status:?string, checkout_url:?string, payment_intent_id:?string,
+     *               payments:list<array>, metadata:array, livemode:?bool, error:?string, raw:?array}
      */
     public static function retrieveCheckoutSession(string $checkoutId): array
     {
+        $empty = ['success' => false, 'status' => null, 'checkout_url' => null, 'payment_intent_id' => null,
+                  'payments' => [], 'metadata' => [], 'livemode' => null, 'error' => null, 'raw' => null];
+
+        if (!self::isConfigured()) {
+            return ['error' => 'PayMongo is not configured.'] + $empty;
+        }
+        if (!preg_match('/^cs_[A-Za-z0-9]+$/', $checkoutId)) {
+            return ['error' => 'Invalid checkout session id.'] + $empty;
+        }
+
         $secretKey = self::getSecretKey();
-        if ($secretKey === '') {
-            return [
-                'success'            => false,
-                'status'             => null,
-                'payment_intent_id'  => null,
-                'payments'           => [],
-                'error'              => 'PayMongo is not configured.',
-                'raw'                => null,
-            ];
+        $response  = self::apiRequest('GET', '/v2/checkout_sessions/' . $checkoutId, null, $secretKey);
+        if (!$response['success'] && $response['http'] === 404) {
+            $response = self::apiRequest('GET', '/v1/checkout_sessions/' . $checkoutId, null, $secretKey);
         }
-
-        $url = self::API_BASE_URL . '/v1/checkout_sessions/' . urlencode($checkoutId);
-        $response = self::apiRequest('GET', $url, null, $secretKey);
-
         if (!$response['success']) {
-            return [
-                'success'            => false,
-                'status'             => null,
-                'payment_intent_id'  => null,
-                'payments'           => [],
-                'error'              => $response['error'],
-                'raw'                => $response['raw'],
-            ];
+            return ['error' => $response['error'], 'raw' => $response['raw']] + $empty;
         }
 
-        $data = $response['raw']['data']['attributes'] ?? [];
-        $status          = (string) ($data['status'] ?? 'unknown');
-        $paymentIntentId = (string) ($data['payment_intent']['id'] ?? ($data['payment_intent_id'] ?? ''));
-        $payments        = $data['payments'] ?? [];
+        $attrs    = $response['raw']['data']['attributes'] ?? [];
+        $intent   = $attrs['payment_intent'] ?? null;
+        $payments = array_values(array_filter(array_map(
+            [self::class, 'normalizePayment'],
+            is_array($attrs['payments'] ?? null) ? $attrs['payments'] : []
+        )));
 
         return [
-            'success'            => true,
-            'status'             => $status,
-            'payment_intent_id'  => $paymentIntentId ?: null,
-            'payments'           => $payments,
-            'error'              => null,
-            'raw'                => $response['raw'],
+            'success'           => true,
+            'status'            => (string) ($attrs['status'] ?? 'unknown'),
+            'checkout_url'      => isset($attrs['checkout_url']) ? (string) $attrs['checkout_url'] : null,
+            'payment_intent_id' => is_array($intent) ? (string) ($intent['id'] ?? '') ?: null : null,
+            'payments'          => $payments,
+            'metadata'          => is_array($attrs['metadata'] ?? null) ? $attrs['metadata'] : [],
+            'livemode'          => isset($attrs['livemode']) ? (bool) $attrs['livemode'] : null,
+            'error'             => null,
+            'raw'               => $response['raw'],
         ];
     }
 
     /**
-     * Retrieve a PayMongo Payment by ID.
+     * A PayMongo Payment resource → the fields confirmation needs.
      *
-     * @param string $paymentId  The pay_* payment ID
-     * @return array{success:bool, status:?string, amount:?float, source_type:?string, error:?string, raw:?array}
+     * @return array{id:string, status:string, amount:int, currency:string, source_type:string, payment_intent_id:?string}|null
      */
-    public static function retrievePayment(string $paymentId): array
+    public static function normalizePayment(mixed $resource): ?array
     {
-        $secretKey = self::getSecretKey();
-        if ($secretKey === '') {
-            return [
-                'success'     => false,
-                'status'      => null,
-                'amount'      => null,
-                'source_type' => null,
-                'error'       => 'PayMongo is not configured.',
-                'raw'         => null,
-            ];
+        if (!is_array($resource) || empty($resource['id'])) {
+            return null;
         }
-
-        $url = self::API_BASE_URL . '/v1/payments/' . urlencode($paymentId);
-        $response = self::apiRequest('GET', $url, null, $secretKey);
-
-        if (!$response['success']) {
-            return [
-                'success'     => false,
-                'status'      => null,
-                'amount'      => null,
-                'source_type' => null,
-                'error'       => $response['error'],
-                'raw'         => $response['raw'],
-            ];
-        }
-
-        $attrs = $response['raw']['data']['attributes'] ?? [];
-        $amountCentavos = (int) ($attrs['amount'] ?? 0);
-
+        $a = $resource['attributes'] ?? [];
         return [
-            'success'     => true,
-            'status'      => (string) ($attrs['status'] ?? 'unknown'),
-            'amount'      => $amountCentavos / 100.0,
-            'source_type' => (string) ($attrs['source']['type'] ?? ($attrs['payment_method_type'] ?? 'unknown')),
-            'error'       => null,
-            'raw'         => $response['raw'],
+            'id'                => (string) $resource['id'],
+            'status'            => strtolower((string) ($a['status'] ?? '')),
+            'amount'            => (int) ($a['amount'] ?? 0),
+            'currency'          => strtoupper((string) ($a['currency'] ?? '')),
+            'source_type'       => strtolower((string) ($a['source']['type'] ?? ($a['payment_method_type'] ?? ''))),
+            'payment_intent_id' => isset($a['payment_intent_id']) ? (string) $a['payment_intent_id'] : null,
         ];
     }
 
-    // ── Webhook Verification ─────────────────────────────────────────────
+    // ── Webhooks ─────────────────────────────────────────────────────────
 
     /**
-     * Verify PayMongo webhook signature (HMAC-SHA256).
+     * Verify the Paymongo-Signature header: "t=<ts>,te=<test sig>,li=<live sig>".
+     * The signature is HMAC-SHA256 of "<ts>.<raw body>" keyed with the webhook
+     * secret. Test events are checked against `te`, live events against `li`
+     * (taken from the event's own livemode flag).
      *
-     * PayMongo sends a `Paymongo-Signature` header with the format:
-     *   t=<timestamp>,te=<test_signature>,li=<live_signature>
-     *
-     * We verify by:
-     *   1. Extracting the timestamp and the relevant signature (te for test, li for live)
-     *   2. Computing HMAC-SHA256 of "<timestamp>.<raw_payload>" with the webhook secret
-     *   3. Comparing with timing-safe hash_equals
-     *
-     * @param array  $headers     Request headers
-     * @param string $rawPayload  Raw JSON body
-     * @return bool
+     * Fails CLOSED: with no secret configured nothing is accepted.
      */
     public static function verifyWebhookSignature(array $headers, string $rawPayload, ?string $webhookSecret = null): bool
     {
-        $webhookSecret = $webhookSecret !== null ? trim($webhookSecret) : self::getWebhookSecret();
-        if ($webhookSecret === '') {
-            // If no webhook secret configured, skip verification in development
-            error_log('[PayMongoService] No webhook secret configured — skipping signature verification.');
-            return true;
-        }
-
-        // Normalize header keys to lowercase
-        $normalizedHeaders = [];
-        foreach ($headers as $key => $value) {
-            $normalizedHeaders[strtolower($key)] = $value;
-        }
-
-        $signatureHeader = (string) ($normalizedHeaders['paymongo-signature'] ?? '');
-        if ($signatureHeader === '') {
-            error_log('[PayMongoService] Missing Paymongo-Signature header.');
+        $secret = trim($webhookSecret ?? self::getWebhookSecret());
+        if ($secret === '') {
             return false;
         }
 
-        // Parse the signature header: t=<timestamp>,te=<test_sig>,li=<live_sig>
+        $header = '';
+        foreach ($headers as $name => $value) {
+            if (strtolower((string) $name) === 'paymongo-signature') {
+                $header = is_array($value) ? (string) reset($value) : (string) $value;
+            }
+        }
+        if ($header === '') {
+            return false;
+        }
+
         $parts = [];
-        foreach (explode(',', $signatureHeader) as $part) {
+        foreach (explode(',', $header) as $part) {
             $kv = explode('=', $part, 2);
             if (count($kv) === 2) {
                 $parts[trim($kv[0])] = trim($kv[1]);
             }
         }
-
         $timestamp = $parts['t'] ?? '';
-        if ($timestamp === '') {
-            error_log('[PayMongoService] Missing timestamp in signature header.');
+        if ($timestamp === '' || !ctype_digit($timestamp)) {
             return false;
         }
 
-        // Pick the correct signature based on mode
-        $mode = self::getMode();
-        $receivedSig = ($mode === 'live')
-            ? ($parts['li'] ?? '')
-            : ($parts['te'] ?? '');
-
-        if ($receivedSig === '') {
-            error_log('[PayMongoService] Missing ' . ($mode === 'live' ? 'li' : 'te') . ' signature component.');
+        $decoded  = json_decode($rawPayload, true);
+        $livemode = (bool) ($decoded['data']['attributes']['livemode'] ?? false);
+        $received = $livemode ? ($parts['li'] ?? '') : ($parts['te'] ?? '');
+        if ($received === '') {
             return false;
         }
 
-        // Compute expected signature: HMAC-SHA256 of "timestamp.payload" with webhook secret
-        $signedPayload = $timestamp . '.' . $rawPayload;
-        $expectedSig = hash_hmac('sha256', $signedPayload, $webhookSecret);
-
-        return hash_equals($expectedSig, $receivedSig);
+        $expected = hash_hmac('sha256', $timestamp . '.' . $rawPayload, $secret);
+        return hash_equals($expected, $received);
     }
 
     /**
-     * Extract payment details from a webhook event payload.
+     * Normalise a webhook event.
      *
-     * @param array $eventData  Decoded webhook event JSON
-     * @return array{
-     *   event_type: string,
-     *   event_id: string,
-     *   payment_id: ?string,
-     *   payment_intent_id: ?string,
-     *   checkout_session_id: ?string,
-     *   amount: ?float,
-     *   currency: ?string,
-     *   status: ?string,
-     *   source_type: ?string,
-     *   metadata: array,
-     *   raw_resource: array
-     * }
+     * @return array{event_id:string, event_type:string, livemode:bool, checkout_session_id:?string,
+     *               payments:list<array>, metadata:array}
      */
-    public static function parseWebhookEvent(array $eventData): array
+    public static function parseWebhookEvent(array $event): array
     {
-        $eventType = (string) ($eventData['data']['attributes']['type'] ?? '');
-        $eventId   = (string) ($eventData['data']['id'] ?? '');
+        $attrs    = $event['data']['attributes'] ?? [];
+        $resource = is_array($attrs['data'] ?? null) ? $attrs['data'] : [];
+        $type     = (string) ($attrs['type'] ?? '');
+        $resId    = (string) ($resource['id'] ?? '');
+        $resAttrs = $resource['attributes'] ?? [];
 
-        $resource  = $eventData['data']['attributes']['data'] ?? [];
-        $attrs     = $resource['attributes'] ?? [];
-
-        $paymentId        = null;
-        $paymentIntentId  = null;
+        $payments          = [];
         $checkoutSessionId = null;
-        $amount           = null;
-        $currency         = null;
-        $status           = null;
-        $sourceType       = null;
-        $metadata         = [];
-
-        // For payment.paid and payment.failed events, resource is a Payment object
-        if (str_starts_with($eventType, 'payment.')) {
-            $paymentId       = (string) ($resource['id'] ?? '');
-            $amountCentavos  = (int) ($attrs['amount'] ?? 0);
-            $amount          = $amountCentavos > 0 ? $amountCentavos / 100.0 : null;
-            $currency        = (string) ($attrs['currency'] ?? 'PHP');
-            $status          = (string) ($attrs['status'] ?? '');
-            $sourceType      = (string) ($attrs['source']['type'] ?? ($attrs['payment_method_type'] ?? ''));
-            $metadata        = $attrs['metadata'] ?? [];
-
-            // Try to extract payment_intent_id
-            $paymentIntentId = (string) ($attrs['payment_intent_id'] ?? '');
-        }
-
-        // For checkout_session.payment.paid events
-        if (str_starts_with($eventType, 'checkout_session.')) {
-            $checkoutSessionId = (string) ($resource['id'] ?? '');
-            $payments          = $attrs['payments'] ?? [];
-            $metadata          = $attrs['metadata'] ?? [];
-
-            if (!empty($payments)) {
-                $firstPayment    = $payments[0] ?? [];
-                $firstPayAttrs   = $firstPayment['attributes'] ?? [];
-                $paymentId       = (string) ($firstPayment['id'] ?? '');
-                $amountCentavos  = (int) ($firstPayAttrs['amount'] ?? 0);
-                $amount          = $amountCentavos > 0 ? $amountCentavos / 100.0 : null;
-                $currency        = (string) ($firstPayAttrs['currency'] ?? 'PHP');
-                $status          = (string) ($firstPayAttrs['status'] ?? '');
-                $sourceType      = (string) ($firstPayAttrs['source']['type'] ?? ($firstPayAttrs['payment_method_type'] ?? ''));
+        if (str_starts_with($type, 'checkout_session.')) {
+            $checkoutSessionId = $resId !== '' ? $resId : null;
+            foreach (is_array($resAttrs['payments'] ?? null) ? $resAttrs['payments'] : [] as $p) {
+                if ($n = self::normalizePayment($p)) {
+                    $payments[] = $n;
+                }
+            }
+        } elseif (str_starts_with($type, 'payment.')) {
+            if ($n = self::normalizePayment($resource)) {
+                $payments[] = $n;
             }
         }
 
         return [
-            'event_type'          => $eventType,
-            'event_id'            => $eventId,
-            'payment_id'          => $paymentId ?: null,
-            'payment_intent_id'   => $paymentIntentId ?: null,
-            'checkout_session_id' => $checkoutSessionId ?: null,
-            'amount'              => $amount,
-            'currency'            => $currency ?: 'PHP',
-            'status'              => $status ?: null,
-            'source_type'         => $sourceType ?: null,
-            'metadata'            => is_array($metadata) ? $metadata : [],
-            'raw_resource'        => $resource,
+            'event_id'            => (string) ($event['data']['id'] ?? ''),
+            'event_type'          => $type,
+            'livemode'            => (bool) ($attrs['livemode'] ?? false),
+            'checkout_session_id' => $checkoutSessionId,
+            'payments'            => $payments,
+            'metadata'            => is_array($resAttrs['metadata'] ?? null) ? $resAttrs['metadata'] : [],
         ];
     }
 
-    // ── Internal HTTP helper ─────────────────────────────────────────────
+    // ── HTTP ─────────────────────────────────────────────────────────────
 
     /**
-     * Make an authenticated API request to PayMongo.
+     * Authenticated request (HTTP Basic: secret key as username, empty password).
+     * Errors are logged by status and PayMongo error code only — never the key.
      *
-     * PayMongo uses HTTP Basic Auth with the secret key as username
-     * and an empty password.
-     *
-     * @param string      $method     HTTP method (GET, POST)
-     * @param string      $url        Full URL
-     * @param array|null  $payload    JSON payload for POST requests
-     * @param string      $secretKey  API secret key
-     * @return array{success:bool, error:?string, raw:?array}
+     * @return array{success:bool, http:int, error:?string, raw:?array}
      */
-    private static function apiRequest(string $method, string $url, ?array $payload, string $secretKey): array
+    private static function apiRequest(string $method, string $path, ?array $payload, string $secretKey): array
     {
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-
-        $headers = [
-            'Accept: application/json',
-            'Content-Type: application/json',
-            'Authorization: Basic ' . base64_encode($secretKey . ':'),
-        ];
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        if ($method === 'POST' && $payload !== null) {
+        $ch = curl_init(self::API_BASE_URL . $path);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_HTTPHEADER     => [
+                'Accept: application/json',
+                'Content-Type: application/json',
+                'Authorization: Basic ' . base64_encode($secretKey . ':'),
+            ],
+        ]);
+        if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload ?? []));
         }
 
-        $rawResponse = curl_exec($ch);
-        $httpCode    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError   = curl_error($ch);
+        $body     = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr  = curl_error($ch);
         curl_close($ch);
 
-        if ($curlError) {
-            error_log('[PayMongoService::apiRequest] cURL error: ' . $curlError);
-            return [
-                'success' => false,
-                'error'   => 'Network error: ' . $curlError,
-                'raw'     => null,
-            ];
+        if ($curlErr !== '') {
+            error_log('[PayMongo] network error on ' . $method . ' ' . $path . ': ' . $curlErr);
+            return ['success' => false, 'http' => 0, 'error' => 'Could not reach PayMongo. Please try again.', 'raw' => null];
         }
 
-        $parsed = json_decode((string) $rawResponse, true);
-
-        if ($httpCode >= 400 || !is_array($parsed)) {
-            $errMsg = 'PayMongo API error (HTTP ' . $httpCode . ')';
-            $errCode = (string) ($parsed['errors'][0]['code'] ?? '');
-            if (isset($parsed['errors'][0]['detail'])) {
-                $errMsg = (string) $parsed['errors'][0]['detail'];
-            } elseif (isset($parsed['errors'][0]['message'])) {
-                $errMsg = (string) $parsed['errors'][0]['message'];
-            }
-
-            // Requirement 12: Check if GCash is active on merchant account
-            if (str_contains(strtolower($errMsg), 'gcash') || str_contains(strtolower($errCode), 'payment_method_not_allowed') || str_contains(strtolower($errCode), 'payment_method_unavailable')) {
-                $errMsg = 'GCash is not yet active on the PayMongo merchant account. Please activate GCash in PayMongo Dashboard → Settings → Payment Methods.';
-            }
-
-            error_log('[PayMongoService::apiRequest] HTTP ' . $httpCode . ' ' . $method . ' ' . $url . ' → ' . substr((string) $rawResponse, 0, 500));
-            return [
-                'success' => false,
-                'error'   => $errMsg,
-                'raw'     => $parsed,
-            ];
+        $parsed = json_decode((string) $body, true);
+        if ($httpCode >= 200 && $httpCode < 300 && is_array($parsed)) {
+            return ['success' => true, 'http' => $httpCode, 'error' => null, 'raw' => $parsed];
         }
 
-        return [
-            'success' => true,
-            'error'   => null,
-            'raw'     => $parsed,
-        ];
+        $code   = (string) ($parsed['errors'][0]['code'] ?? '');
+        $detail = (string) ($parsed['errors'][0]['detail'] ?? 'PayMongo request failed (HTTP ' . $httpCode . ').');
+        if (str_contains($code, 'payment_method_not_allowed') || str_contains($code, 'payment_method_unavailable')) {
+            $detail = 'GCash is not yet activated on the PayMongo account (Dashboard → Settings → Payment Methods).';
+        } elseif ($httpCode === 401) {
+            $detail = 'PayMongo rejected the API key. Check PAYMONGO_SECRET_KEY on the server.';
+        }
+        error_log(sprintf('[PayMongo] HTTP %d on %s %s (%s)', $httpCode, $method, $path, $code ?: 'no code'));
+
+        return ['success' => false, 'http' => $httpCode, 'error' => $detail, 'raw' => is_array($parsed) ? $parsed : null];
     }
 }

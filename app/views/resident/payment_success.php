@@ -47,9 +47,9 @@ ob_start();
                 <i class="bi bi-wallet2 text-2xl text-blue-600 dark:text-blue-400"></i>
             </div>
 
-            <h2 class="text-xl font-black text-slate-900 dark:text-white mb-2">VERIFYING PAYMENT...</h2>
+            <h2 class="text-xl font-black text-slate-900 dark:text-white mb-2">Payment verification in progress</h2>
             <p class="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-4">
-                Kinukumpirma ang inyong transaksyon sa PayMongo at GCash server. Mangyaring maghintay ng ilang sandali...
+                Hinihintay namin ang kumpirmasyon mula mismo sa PayMongo. Hindi pa ito "bayad na" hangga't hindi kinukumpirma ng PayMongo.
             </p>
 
             <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
@@ -77,7 +77,7 @@ ob_start();
             </p>
 
             <!-- Clean Transaction Summary -->
-            <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-left text-xs space-y-3 dark:border-slate-800 dark:bg-slate-800/40 mb-6">
+            <div class="rounded-2xl border p-5 text-left text-xs space-y-3 mb-6" style="background:var(--surface-muted);border-color:var(--border);">
                 <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
                     <span class="text-slate-500 dark:text-slate-400">Halaga (Amount):</span>
                     <span class="text-base font-black text-emerald-600 dark:text-emerald-400" id="resAmount">
@@ -111,6 +111,11 @@ ob_start();
                     <span class="font-bold text-slate-900 dark:text-white">
                         <?= e($receiving) ?>
                     </span>
+                </div>
+
+                <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
+                    <span class="text-slate-500 dark:text-slate-400">Verification:</span>
+                    <span class="font-bold text-slate-900 dark:text-white">Automatically verified through PayMongo</span>
                 </div>
 
                 <div class="flex items-center justify-between pt-1">
@@ -171,7 +176,7 @@ ob_start();
 
     var pollInterval = null;
     var pollCount = 0;
-    var maxPolls = 30; // Poll for up to 60 seconds (every 2 seconds)
+    var maxPolls = 36; // up to 3 minutes; the server asks PayMongo at most every 5 s
 
     function checkPaymentStatus() {
         pollCount++;
@@ -199,11 +204,24 @@ ob_start();
             }
 
             var st = (data.payment_status || '').toUpperCase();
-            if (st === 'FAILED' || st === 'CANCELLED') {
+            if (st === 'UNDER_REVIEW' || st === 'PAYMENT_PROOF_SUBMITTED') {
+                clearInterval(pollInterval);
+                document.getElementById('verifyingState').innerHTML = '<div class="text-center py-4"><i class="bi bi-person-check text-4xl text-amber-500 mb-3 block"></i>'
+                    + '<h3 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Manual review</h3>'
+                    + '<p class="text-xs text-slate-500 mb-5">Susuriin ng barangay staff ang inyong bayad. Makakatanggap kayo ng abiso.</p>'
+                    + '<a href=' + JSON.stringify(<?= json_encode(route('documents?tab=requests')) ?>) + ' class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white">Aking Mga Kahilingan</a></div>';
+                return;
+            }
+
+            if (st === 'FAILED' || st === 'CANCELLED' || st === 'EXPIRED') {
                 clearInterval(pollInterval);
                 document.getElementById('verifyingState').classList.add('hidden');
                 document.getElementById('successState').classList.add('hidden');
                 document.getElementById('failedState').classList.remove('hidden');
+                if (st === 'EXPIRED') {
+                    document.getElementById('failTitle').innerText = 'CHECKOUT EXPIRED';
+                    document.getElementById('failDesc').innerText = 'Nag-expire ang checkout nang walang bayad. Walang nabawas — maaari kayong magbayad muli.';
+                }
                 if (st === 'CANCELLED') {
                     document.getElementById('failTitle').innerText = 'PAYMENT CANCELLED';
                     document.getElementById('failDesc').innerText = 'Kinansela mo ang online payment. Naka-save pa rin ang inyong kahilingan.';
@@ -234,7 +252,7 @@ ob_start();
     }
 
     // Start short polling every 2 seconds
-    pollInterval = setInterval(checkPaymentStatus, 2000);
+    pollInterval = setInterval(checkPaymentStatus, 5000);
     // Immediate first check
     checkPaymentStatus();
 })();

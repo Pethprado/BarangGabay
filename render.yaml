@@ -1,4 +1,4 @@
-﻿services:
+services:
   - type: web
     name: baranggabay
     runtime: docker
@@ -80,3 +80,13 @@
         value: https://api.semaphore.co/api/v4
       - key: SEMAPHORE_TEST_MODE
         value: "true"
+      # PayMongo — set the values in the Render dashboard only (sync: false
+      # keeps them out of this file). See docs/PAYMONGO_SETUP.md.
+      - key: PAYMONGO_SECRET_KEY
+        sync: false
+      - key: PAYMONGO_PUBLIC_KEY
+        sync: false
+      - key: PAYMONGO_WEBHOOK_SECRET
+        sync: false
+      - key: PAYMONGO_PAYMENT_METHODS
+        value: gcash

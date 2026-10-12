@@ -529,23 +529,11 @@ function seed_comprehensive_demo(?PDO $pdo = null, string $driver = 'mysql'): ar
         ],
     ];
 
+    // Demo document requests are no longer seeded: a "released" clearance with
+    // no payment behind it misrepresented the payment workflow. Requests must
+    // come from real residents through /documents. ($docsData kept for reference.)
+    unset($docsData);
     $seededDocs = 0;
-    foreach ($docsData as $d) {
-        $stmt = $pdo->prepare("SELECT id FROM document_requests WHERE reference_no = ? LIMIT 1");
-        $stmt->execute([$d['reference_no']]);
-        $existingId = $stmt->fetchColumn();
-
-        if ($existingId) {
-            $pdo->prepare("UPDATE document_requests SET user_id = ?, document_type = ?, purpose = ?, notes = ?, status = ?, staff_note = ?, handled_by = ? WHERE id = ?")
-                ->execute([$d['user_id'], $d['document_type'], $d['purpose'], $d['notes'], $d['status'], $d['staff_note'], $d['handled_by'], $existingId]);
-            echo "  [Updated] Document Request: {$d['reference_no']} ({$d['document_type']} - {$d['status']})\n";
-        } else {
-            $pdo->prepare("INSERT INTO document_requests (reference_no, user_id, document_type, purpose, notes, status, staff_note, handled_by, requested_at, ready_at, released_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW(), NOW())")
-                ->execute([$d['reference_no'], $d['user_id'], $d['document_type'], $d['purpose'], $d['notes'], $d['status'], $d['staff_note'], $d['handled_by']]);
-            echo "  [Created] Document Request: {$d['reference_no']} ({$d['document_type']} - {$d['status']})\n";
-        }
-        $seededDocs++;
-    }
     $results['document_requests'] = $seededDocs;
 
     // ── 7. FEEDBACK & MESSAGES ──────────────────────────────────────────────
