@@ -32,6 +32,13 @@ class Setting
         'date_format'         => 'M j, Y',
         'time_format'         => 'g:i A',
         'maintenance_mode'    => false,
+        // Direct GCash payments — where residents send document fees.
+        'gcash_receive_name'       => 'Mary Jane Prado',
+        'gcash_receive_number'     => '09542968658',
+        'gcash_receive_qr'         => '',      // base64 image of the GCash QR, uploaded by an admin
+        'gcash_receive_qr_mime'    => '',
+        // Optional PayMongo hosted checkout, offered next to direct GCash when on.
+        'paymongo_checkout_enabled' => false,
         'maintenance_message' => 'The system is temporarily unavailable for maintenance. Please try again shortly.',
         'login_max_attempts'  => 5,
         'login_lockout_min'   => 15,

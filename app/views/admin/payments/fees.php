@@ -30,6 +30,45 @@ ob_start();
     </div>
 </div>
 
+<?php
+$__gcName   = (string) \App\Models\Setting::get('gcash_receive_name', '');
+$__gcNumber = (string) \App\Models\Setting::get('gcash_receive_number', '');
+$__gcHasQr  = (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '';
+$__pmOn     = (bool) \App\Models\Setting::get('paymongo_checkout_enabled', false);
+?>
+<form method="post" action="<?= e(route('admin/payments/gcash-account')) ?>" enctype="multipart/form-data" class="fee-card" id="gcash-account" style="border-color:#007dfe;">
+    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+    <h3><i class="bi bi-wallet2 me-1" style="color:#007dfe;" aria-hidden="true"></i>GCash Receiving Account</h3>
+    <p class="fee-meta mb-3">Residents send document fees here, then upload their GCash receipt for you to verify in Payment Management.</p>
+    <div class="row g-3 align-items-start">
+        <div class="col-12 col-md-4">
+            <label class="form-label small fw-semibold" for="gcName">GCash account name</label>
+            <input class="form-control form-control-sm" id="gcName" name="gcash_name" required maxlength="100" value="<?= e($__gcName) ?>">
+        </div>
+        <div class="col-12 col-md-4">
+            <label class="form-label small fw-semibold" for="gcNumber">GCash mobile number</label>
+            <input class="form-control form-control-sm" id="gcNumber" name="gcash_number" required inputmode="numeric" pattern="0?9[0-9\s]{9,12}" value="<?= e($__gcNumber) ?>">
+        </div>
+        <div class="col-12 col-md-4">
+            <label class="form-label small fw-semibold" for="gcQr">GCash QR code image</label>
+            <input class="form-control form-control-sm" id="gcQr" name="gcash_qr" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="gcQrHelp">
+            <div class="fee-meta mt-1" id="gcQrHelp">In GCash tap <strong>QR → Receive money / My QR → Save</strong>, then upload that image here.</div>
+            <?php if ($__gcHasQr): ?>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                    <img src="<?= e(route('payments/gcash-qr')) ?>" alt="Current GCash QR" style="width:72px;height:72px;object-fit:contain;border:1px solid var(--border);border-radius:8px;background:#fff;">
+                    <label class="small"><input type="checkbox" name="remove_qr" value="1"> Remove QR</label>
+                </div>
+            <?php else: ?>
+                <div class="fee-meta mt-1" style="color:var(--status-warning);">No QR uploaded yet — residents will see the number only.</div>
+            <?php endif; ?>
+        </div>
+        <div class="col-12">
+            <label class="small"><input type="checkbox" name="paymongo_checkout_enabled" value="1" <?= $__pmOn ? 'checked' : '' ?>> Also offer PayMongo online checkout (needs PayMongo keys in System Settings)</label>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-save me-1" aria-hidden="true"></i>Save GCash account</button>
+</form>
+
 <form method="post" action="<?= e(route('admin/payments/fees')) ?>">
     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
 
@@ -54,7 +93,7 @@ ob_start();
             <div>
                 <label class="form-label small fw-semibold" for="<?= $id ?>_req">Payment required?</label>
                 <select class="form-select form-select-sm mb-2" id="<?= $id ?>_req" name="fees[<?= e($type) ?>][payment_required]" data-fee-toggle="<?= $id ?>_amount">
-                    <option value="1" <?= $paid ? 'selected' : '' ?>>Yes — pay online with GCash</option>
+                    <option value="1" <?= $paid ? 'selected' : '' ?>>Yes — pay with GCash</option>
                     <option value="0" <?= $paid ? '' : 'selected' ?>>No — free document</option>
                 </select>
                 <label class="form-label small fw-semibold" for="<?= $id ?>_amount">Processing fee</label>
@@ -64,7 +103,7 @@ ob_start();
                            name="fees[<?= e($type) ?>][amount]" value="<?= number_format((float) $f['amount'], 2, '.', '') ?>"
                            aria-describedby="<?= $id ?>_hint" <?= $paid ? '' : 'disabled' ?>>
                 </div>
-                <div class="fee-meta mt-1" id="<?= $id ?>_hint">GCash via PayMongo needs at least ₱<?= number_format($minPesos, 2) ?>.</div>
+                <div class="fee-meta mt-1" id="<?= $id ?>_hint">Online payment needs at least ₱<?= number_format($minPesos, 2) ?>.</div>
             </div>
             <div>
                 <label class="form-label small fw-semibold" for="<?= $id ?>_desc">Description shown to residents</label>

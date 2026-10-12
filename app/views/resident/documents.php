@@ -54,7 +54,7 @@ ob_start();
         </div>
         <div class="flex items-center gap-2">
             <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-100 dark:border-blue-900">
-                <i class="bi bi-wallet2"></i> GCash via PayMongo
+                <i class="bi bi-wallet2"></i> GCash
             </span>
             <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 <i class="bi bi-folder2"></i> <?= count($requests) ?> <?= count($requests) === 1 ? 'Kahilingan' : 'Mga Kahilingan' ?>
@@ -422,7 +422,7 @@ ob_start();
                         <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">HAKBANG 4 SA 4</span>
                         <h2 class="text-xl font-black text-slate-900 dark:text-white">Kumpirmasyon at Pagbabayad</h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Suriin ang kabuuang detalye at magbayad gamit ang GCash via PayMongo.
+                            Review the details, then pay with GCash. You will send the fee to the barangay GCash and upload your receipt.
                         </p>
                     </div>
 
@@ -457,7 +457,7 @@ ob_start();
                         <div id="summaryPaymentMethodBox" class="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-700 flex items-center justify-between">
                             <span class="text-xs text-slate-500 dark:text-slate-400">Paraan ng Pagbabayad:</span>
                             <span class="inline-flex items-center gap-1.5 font-bold text-xs text-blue-700 dark:text-blue-300">
-                                <i class="bi bi-check-circle-fill text-blue-600"></i> GCash via PayMongo
+                                <i class="bi bi-check-circle-fill text-blue-600"></i> GCash (send + upload receipt)
                             </span>
                         </div>
                     </div>
@@ -477,7 +477,7 @@ ob_start();
                         <button type="submit" id="wizardSubmitBtn"
                                 class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] transition">
                             <i class="bi bi-lock-fill"></i>
-                            <span id="wizardSubmitBtnText">BAYARAN ANG ₱50.00 GAMIT ANG GCASH</span>
+                            <span id="wizardSubmitBtnText">PAY ₱50.00 WITH GCASH</span>
                         </button>
                     </div>
                 </div>
@@ -691,7 +691,7 @@ ob_start();
                 </div>
                 <div class="flex justify-between">
                     <span class="text-slate-500">Paraan ng Bayad:</span>
-                    <strong class="text-slate-900 dark:text-white" id="modalPaymentMethod">GCash via PayMongo</strong>
+                    <strong class="text-slate-900 dark:text-white" id="modalPaymentMethod">GCash</strong>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-slate-500">Estado ng Bayad:</span>
@@ -782,7 +782,7 @@ function onDocumentTypeChange() {
     var descEl = document.getElementById('step1DescDisplay');
     descEl.textContent = desc;
     descEl.classList.toggle('hidden', desc === '');
-    document.getElementById('step1PayReq').textContent = isFree ? 'No payment required' : 'Payment required — GCash via PayMongo';
+    document.getElementById('step1PayReq').textContent = isFree ? 'No payment required' : 'Payment required — pay with GCash';
     document.getElementById('step1FeeDisplay').innerText = feeText;
     document.getElementById('summaryDocFee').innerText = feeText;
     document.getElementById('summaryTotal').innerText = isFree ? '₱0.00' : '₱' + amt.toFixed(2);
@@ -791,10 +791,10 @@ function onDocumentTypeChange() {
     var submitBtnText = document.getElementById('wizardSubmitBtnText');
     var paymentBox = document.getElementById('summaryPaymentMethodBox');
     if (isFree) {
-        submitBtnText.innerText = 'ISUMITE ANG KAHILINGAN (LIBRE)';
+        submitBtnText.innerText = 'SUBMIT REQUEST (FREE)';
         paymentBox.classList.add('hidden');
     } else {
-        submitBtnText.innerText = 'BAYARAN ANG ₱' + amt.toFixed(2) + ' GAMIT ANG GCASH';
+        submitBtnText.innerText = 'PAY ₱' + amt.toFixed(2) + ' WITH GCASH';
         paymentBox.classList.remove('hidden');
     }
 }
@@ -891,7 +891,7 @@ function submitWizardForm() {
         }
         if (!data || !data.success) {
             btn.disabled = false;
-            btnText.innerText = isSelectedFree ? 'ISUMITE ANG KAHILINGAN (LIBRE)' : 'BAYARAN ANG ₱' + selectedFee.toFixed(2) + ' GAMIT ANG GCASH';
+            btnText.innerText = isSelectedFree ? 'SUBMIT REQUEST (FREE)' : 'PAY ₱' + selectedFee.toFixed(2) + ' WITH GCASH';
             alertBox.className = "mb-4 rounded-xl p-3.5 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-900";
             alertBox.innerText = data.error || 'Nabigong likhain ang kahilingan.';
             alertBox.classList.remove('hidden');
@@ -901,6 +901,13 @@ function submitWizardForm() {
         // If free document, redirect to requests list
         if (data.is_free) {
             window.location.href = data.redirect_url || '<?= e(route('documents?tab=requests')) ?>';
+            return;
+        }
+
+        // Direct GCash: open the payment page (GCash details, QR, proof upload).
+        if (data.redirect_url && !data.checkout_url) {
+            btnText.innerText = 'OPENING GCASH PAYMENT...';
+            window.location.href = data.redirect_url;
             return;
         }
 
@@ -919,7 +926,7 @@ function submitWizardForm() {
     .catch(function(err) {
         console.error('Submission error:', err);
         btn.disabled = false;
-        btnText.innerText = isSelectedFree ? 'ISUMITE ANG KAHILINGAN (LIBRE)' : 'BAYARAN ANG ₱' + selectedFee.toFixed(2) + ' GAMIT ANG GCASH';
+        btnText.innerText = isSelectedFree ? 'SUBMIT REQUEST (FREE)' : 'PAY ₱' + selectedFee.toFixed(2) + ' WITH GCASH';
         alertBox.className = "mb-4 rounded-xl p-3.5 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200";
         alertBox.innerText = 'May naganap na aberya sa koneksyon. Pakisubukan muli.';
         alertBox.classList.remove('hidden');

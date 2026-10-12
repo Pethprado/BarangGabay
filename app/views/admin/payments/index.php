@@ -41,10 +41,10 @@ $returnTo = '/admin/payments' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERV
 $verificationText = static function (array $t): string {
     return match ((string) ($t['verification_type'] ?? '')) {
         'paymongo' => 'Automatically verified through PayMongo',
-        'manual'   => 'Manually verified' . (!empty($t['verified_by_name']) ? ' by ' . $t['verified_by_name'] : ''),
+        'manual'   => 'Verified from GCash proof' . (!empty($t['verified_by_name']) ? ' by ' . $t['verified_by_name'] : ''),
         'counter'  => 'Cash at Barangay Hall' . (!empty($t['verified_by_name']) ? ' — received by ' . $t['verified_by_name'] : ''),
         'waiver'   => 'Fee waived' . (!empty($t['verified_by_name']) ? ' by ' . $t['verified_by_name'] : ''),
-        default    => in_array((string) $t['payment_status'], DocumentPayment::FILTER_GROUPS['manual_review'], true) ? 'Waiting for staff review' : '—',
+        default    => in_array((string) $t['payment_status'], DocumentPayment::FILTER_GROUPS['manual_review'], true) ? 'Proof sent — verify it' : '—',
     };
 };
 
@@ -84,7 +84,7 @@ ob_start();
 <div class="pm-head">
     <div>
         <h2>Payment Management</h2>
-        <p>Document payments from residents. Online GCash payments are confirmed by PayMongo, never by hand.</p>
+        <p>Residents send GCash and upload their receipt. Verify each one against the barangay GCash before the document is processed.</p>
     </div>
     <?php if ($isAdmin): ?>
     <div class="d-flex flex-wrap gap-2">
@@ -95,6 +95,13 @@ ob_start();
 </div>
 
 <?php if ($isAdmin): ?>
+<div class="pm-gw" role="status">
+    <strong style="color:var(--text-primary);"><i class="bi bi-wallet2 me-1" aria-hidden="true"></i>GCash</strong>
+    <span>Residents pay to <strong><?= e((string) \App\Models\Setting::get('gcash_receive_name', '')) ?></strong> · <?= e((string) \App\Models\Setting::get('gcash_receive_number', '')) ?></span>
+    <span class="pm-pill <?= (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '' ? 'pm-pill--ok' : 'pm-pill--warn' ?>"><?= (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '' ? 'QR uploaded' : 'No QR yet' ?></span>
+    <a href="<?= e(route('admin/payments/fees') . '#gcash-account') ?>" style="color:var(--brand-primary);font-weight:600;">Change</a>
+</div>
+<?php if ((bool) \App\Models\Setting::get('paymongo_checkout_enabled', false)): ?>
 <div class="pm-gw" role="status">
     <strong style="color:var(--text-primary);"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>PayMongo</strong>
     <?php if (PayMongoService::isConfigured()): ?>
@@ -110,6 +117,7 @@ ob_start();
     <?php endif; ?>
     <span>Webhook URL: <code><?= e(route('api/webhooks/paymongo')) ?></code> · event <code>checkout_session.payment.paid</code></span>
 </div>
+<?php endif; ?>
 <?php endif; ?>
 
 <div class="pm-stats">
@@ -177,8 +185,9 @@ ob_start();
                 $settled  = in_array($pst, DocumentPayment::SETTLED_STATES, true);
                 $inReview = in_array($pst, DocumentPayment::FILTER_GROUPS['manual_review'], true);
                 $isOnline = !empty($t['paymongo_checkout_id']);
-                $method   = $isOnline || in_array((string) $t['payment_method'], ['gcash', 'paymongo'], true) ? 'GCash (PayMongo)'
-                          : ((string) $t['payment_method'] === 'pickup' ? 'Cash at hall' : ucfirst((string) $t['payment_method']));
+                $method   = $isOnline ? 'GCash (PayMongo)'
+                          : (in_array((string) $t['payment_method'], ['gcash', 'gcash_direct', 'paymongo'], true) ? 'GCash (direct)'
+                          : ((string) $t['payment_method'] === 'pickup' ? 'Cash at hall' : ucfirst((string) $t['payment_method'])));
                 $details  = [
                     'id'           => $pId,
                     'payment_ref'  => (string) $t['payment_ref'],
@@ -295,10 +304,11 @@ ob_start();
             <input type="hidden" name="return_to" value="<?= e($returnTo) ?>">
             <div class="modal-header"><h5 class="modal-title" id="pmVerifyTitle">Verify manual payment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
             <div class="modal-body">
-                <p class="small">Only verify after you have confirmed the money arrived — for a GCash payment, find it in the PayMongo dashboard first. The uploaded screenshot alone is not proof.</p>
+                <p class="small">Open the barangay GCash (<strong><?= e((string) \App\Models\Setting::get('gcash_receive_name', '')) ?></strong>, <?= e((string) \App\Models\Setting::get('gcash_receive_number', '')) ?>) → Transactions, and confirm you received the exact amount with the same Ref. No. A screenshot alone can be edited, so always check GCash itself.</p>
+                <a id="pmVerifyProof" class="btn btn-outline-secondary btn-sm mb-3 d-none" target="_blank" rel="noopener"><i class="bi bi-image" aria-hidden="true"></i> Open the resident's screenshot</a>
                 <dl class="pm-dl mb-3" id="pmVerifyDl"></dl>
                 <label class="form-label small fw-semibold" for="pmVerifyNote">How you confirmed it</label>
-                <input id="pmVerifyNote" name="note" class="form-control form-control-sm" required maxlength="255" placeholder="e.g. Found pay_… in PayMongo dashboard, ₱50.00 paid">
+                <input id="pmVerifyNote" name="note" class="form-control form-control-sm" required maxlength="255" placeholder="e.g. Received ₱50.00 in GCash, Ref. No. matches">
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success btn-sm">Mark as manually verified</button></div>
         </form>
@@ -316,7 +326,7 @@ ob_start();
                 <label class="form-label small fw-semibold" for="pmRejectReason">Reason (the resident sees this)</label>
                 <select id="pmRejectReason" name="rejection_reason" class="form-select form-select-sm mb-2" required>
                     <option value="">Choose a reason</option>
-                    <option>No matching payment found in PayMongo</option>
+                    <option>No matching payment found in the barangay GCash</option>
                     <option>Amount does not match the fee</option>
                     <option>Screenshot is unreadable</option>
                     <option>Reference number is invalid or already used</option>
@@ -401,7 +411,9 @@ ob_start();
             open('pmDetails');
         } else if (btn.dataset.pmVerify) {
             d = JSON.parse(btn.dataset.pmVerify);
-            fill(document.getElementById('pmVerifyDl'), summary(d).concat([['Amount reported', d.reported], ['Proof reference', d.proof_ref]]));
+            fill(document.getElementById('pmVerifyDl'), summary(d).concat([['GCash Ref. No.', d.proof_ref]]));
+            var vp = document.getElementById('pmVerifyProof');
+            vp.classList.toggle('d-none', !d.proof_url); vp.href = d.proof_url || '#';
             document.getElementById('pmVerifyForm').action = base + d.id + '/verify';
             open('pmVerify');
         } else if (btn.dataset.pmReject) {

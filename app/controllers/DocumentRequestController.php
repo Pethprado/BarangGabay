@@ -237,7 +237,22 @@ class DocumentRequestController
                 return;
             }
 
-            // Start the PayMongo checkout from the server-side fee (shared service).
+            // Direct GCash (default): go to the payment page — GCash details, QR,
+            // "Open GCash" and the proof upload.
+            $usePaymongo = (bool) \App\Models\Setting::get('paymongo_checkout_enabled', false)
+                && \App\Services\PayMongoService::isConfigured();
+            if (!$usePaymongo) {
+                echo json_encode([
+                    'success'      => true,
+                    'is_free'      => false,
+                    'request_id'   => $newId,
+                    'reference'    => $reference,
+                    'redirect_url' => route('documents/' . $newId . '/payment'),
+                ]);
+                return;
+            }
+
+            // Optional PayMongo hosted checkout (server-side fee, shared service).
             $payment = \App\Models\DocumentPayment::findByRequest($newId);
             $pmRes   = $payment && $paymentMethod === 'gcash'
                 ? \App\Services\PaymongoCheckout::start((int) $payment['id'], $userId)

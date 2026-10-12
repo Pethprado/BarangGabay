@@ -229,6 +229,8 @@ return [
     ['POST', '/admin/payments/{id}/check-status', 'PaymentController@checkStatus',      ['auth', 'role:admin,staff']],
     ['GET',  '/admin/payments/{id}/history',      'PaymentController@auditHistory',     ['auth', 'role:admin,staff']],
     ['GET',  '/admin/payments/fees',              'PaymentController@feesIndex',        ['auth', 'role:admin']],
+    ['POST', '/admin/payments/gcash-account',     'PaymentController@gcashAccountUpdate', ['auth', 'role:admin']],
+    ['GET',  '/payments/gcash-qr',                'PaymentController@gcashQr',          ['auth']],
     ['POST', '/admin/payments/fees',              'PaymentController@feesUpdate',       ['auth', 'role:admin']],
     ['GET',  '/admin/payments/export',            'PaymentController@exportCsv',        ['auth', 'role:admin']],
 

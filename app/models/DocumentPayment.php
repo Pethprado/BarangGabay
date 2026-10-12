@@ -247,8 +247,9 @@ class DocumentPayment
                         payment_status = ?,
                         rejection_reason = NULL,
                         rejection_note = NULL,
+                        payment_method = CASE WHEN paymongo_checkout_id IS NULL THEN \'gcash_direct\' ELSE payment_method END,
                         updated_at = NOW()
-                  WHERE id = ?'
+                  WHERE id = ? AND payment_status NOT IN (' . self::inList(self::SETTLED_STATES) . ')'
             );
             $stmt->execute([
                 $reportedAmount,
@@ -262,6 +263,10 @@ class DocumentPayment
                 $newStatus,
                 $paymentId,
             ]);
+            if ($stmt->rowCount() !== 1) {
+                $pdo->rollBack();
+                return false; // already paid — no proof needed
+            }
 
             // Update request row
             $pdo->prepare(

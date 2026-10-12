@@ -420,7 +420,8 @@ class PaymentController
             $isActive = !empty($data['is_active']);
 
             // A paid fee under PayMongo's minimum could never be paid online.
-            if (!$isFree && PayMongoService::toCentavos($amount) < PayMongoService::MIN_AMOUNT_CENTAVOS) {
+            if (!$isFree && (bool) \App\Models\Setting::get('paymongo_checkout_enabled', false)
+                && PayMongoService::toCentavos($amount) < PayMongoService::MIN_AMOUNT_CENTAVOS) {
                 flash('error', sprintf('%s: a fee that requires payment must be at least ₱%.2f (PayMongo minimum). Not saved.',
                     DocumentRequest::label($type), PayMongoService::MIN_AMOUNT_CENTAVOS / 100));
                 continue;
@@ -504,6 +505,86 @@ class PaymentController
     {
         $to = (string) ($_POST['return_to'] ?? '');
         return preg_match('#^/admin(/[A-Za-z0-9/_\-]*)?(\?[A-Za-z0-9=&_\-%]*)?$#', $to) ? $to : $fallback;
+    }
+
+    /**
+     * POST /admin/payments/gcash-account — the barangay GCash that residents
+     * send document fees to (admin only): name, number, QR image, and whether
+     * PayMongo checkout is also offered.
+     */
+    public function gcashAccountUpdate(): void
+    {
+        check_csrf();
+        $staffId = (int) ($_SESSION['user_id'] ?? 0);
+        $name    = trim((string) ($_POST['gcash_name'] ?? ''));
+        $number  = preg_replace('/\D/', '', (string) ($_POST['gcash_number'] ?? ''));
+        if (str_starts_with($number, '63') && strlen($number) === 12) {
+            $number = '0' . substr($number, 2);
+        }
+
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 100) {
+            flash('error', 'Enter the GCash account name (as shown in GCash).');
+            redirect('/admin/payments/fees#gcash-account');
+        }
+        if (!preg_match('/^09\d{9}$/', $number)) {
+            flash('error', 'Enter a valid 11-digit GCash mobile number, e.g. 09171234567.');
+            redirect('/admin/payments/fees#gcash-account');
+        }
+
+        $values = [
+            'gcash_receive_name'        => $name,
+            'gcash_receive_number'      => $number,
+            'paymongo_checkout_enabled' => !empty($_POST['paymongo_checkout_enabled']),
+        ];
+
+        if (!empty($_POST['remove_qr'])) {
+            $values['gcash_receive_qr']      = '';
+            $values['gcash_receive_qr_mime'] = '';
+        } elseif (isset($_FILES['gcash_qr']) && ($_FILES['gcash_qr']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $file = $_FILES['gcash_qr'];
+            if ($file['error'] !== UPLOAD_ERR_OK || (int) $file['size'] > 3 * 1024 * 1024) {
+                flash('error', 'The QR image could not be uploaded (max 3 MB).');
+                redirect('/admin/payments/fees#gcash-account');
+            }
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime  = (string) finfo_file($finfo, (string) $file['tmp_name']);
+            finfo_close($finfo);
+            if (!in_array($mime, ['image/png', 'image/jpeg', 'image/webp'], true)) {
+                flash('error', 'The QR must be a PNG, JPG or WEBP image.');
+                redirect('/admin/payments/fees#gcash-account');
+            }
+            $values['gcash_receive_qr']      = base64_encode((string) file_get_contents((string) $file['tmp_name']));
+            $values['gcash_receive_qr_mime'] = $mime;
+        }
+
+        \App\Models\Setting::setMany($values, $staffId);
+        AuditLog::record($staffId, 'payment.gcash_account', sprintf('GCash receiving account set to %s (%s)%s',
+            $name, $number, isset($values['gcash_receive_qr']) ? ($values['gcash_receive_qr'] === '' ? ', QR removed' : ', QR updated') : ''));
+        flash('success', 'GCash receiving account saved.');
+        redirect('/admin/payments/fees#gcash-account');
+    }
+
+    /**
+     * GET /payments/gcash-qr — the barangay GCash QR image, for signed-in users.
+     */
+    public function gcashQr(): void
+    {
+        $data = (string) \App\Models\Setting::get('gcash_receive_qr', '');
+        $mime = (string) \App\Models\Setting::get('gcash_receive_qr_mime', '');
+        $raw  = $data !== '' ? base64_decode($data, true) : false;
+        if ($raw === false || !in_array($mime, ['image/png', 'image/jpeg', 'image/webp'], true)) {
+            http_response_code(404);
+            exit('No GCash QR has been uploaded.');
+        }
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . strlen($raw));
+        header('Cache-Control: private, max-age=300');
+        header('X-Content-Type-Options: nosniff');
+        if (isset($_GET['download'])) {
+            header('Content-Disposition: attachment; filename="barangay-gcash-qr.' . ($mime === 'image/png' ? 'png' : ($mime === 'image/webp' ? 'webp' : 'jpg')) . '"');
+        }
+        echo $raw;
+        exit;
     }
 
     /**
@@ -603,13 +684,20 @@ class PaymentController
             $request = DocumentRequest::find($id);
         }
 
-        $isPaymongoConfigured = PayMongoService::isConfigured();
+        $paymongoEnabled = (bool) \App\Models\Setting::get('paymongo_checkout_enabled', false) && PayMongoService::isConfigured();
+        $gcash = [
+            'name'   => (string) \App\Models\Setting::get('gcash_receive_name', ''),
+            'number' => (string) \App\Models\Setting::get('gcash_receive_number', ''),
+            'has_qr' => (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '',
+        ];
         $pageTitle = 'Pay with GCash — BarangGabay';
-        view('resident/payment_checkout', compact('request', 'payment', 'pageTitle', 'isPaymongoConfigured'));
+        view('resident/payment_checkout', compact('request', 'payment', 'pageTitle', 'paymongoEnabled', 'gcash'));
     }
 
     /**
-     * POST /documents/{id}/payment — Resident uploads proof of payment
+     * POST /documents/{id}/payment — the resident submits proof of a GCash
+     * payment (reference number + screenshot). The payment goes to Manual
+     * Review; it becomes PAID only when staff verify it.
      */
     public function residentUploadProof(array $params): void
     {
@@ -617,101 +705,93 @@ class PaymentController
 
         $requestId = (int) ($params['id'] ?? 0);
         $userId    = (int) ($_SESSION['user_id'] ?? 0);
+        $back      = '/documents/' . $requestId . '/payment';
 
         $request = DocumentRequest::find($requestId);
         if (!$request || (int) $request['user_id'] !== $userId) {
             flash('error', t('flash.not_found'));
             redirect('/documents');
         }
-
         $payment = DocumentPayment::findByRequest($requestId);
         if (!$payment) {
-            flash('error', 'Walang natagpuang talaan ng pagbabayad para sa kahilingang ito.');
+            flash('error', 'No payment record was found for this request.');
+            redirect('/documents');
+        }
+        if (in_array((string) $payment['payment_status'], DocumentPayment::SETTLED_STATES, true)) {
+            flash('info', 'This request is already paid — no proof is needed.');
+            redirect($back);
+        }
+        if (in_array((string) $request['status'], ['rejected', 'cancelled'], true)) {
+            flash('error', 'This request was ' . $request['status'] . ' and can no longer be paid.');
             redirect('/documents');
         }
 
-        if (in_array((string) $payment['payment_status'], DocumentPayment::SETTLED_STATES, true)) {
-            flash('info', 'Bayad na ang kahilingang ito — hindi na kailangan ng patunay.');
-            redirect('/documents/' . $requestId . '/payment');
+        // GCash reference numbers are 13 digits; accept spaces/dashes as typed.
+        $gcashRef = preg_replace('/[\s\-]/', '', (string) ($_POST['gcash_reference_no'] ?? ''));
+        if (!preg_match('/^\d{8,20}$/', $gcashRef)) {
+            flash('error', 'Enter the GCash reference number (the 13-digit "Ref. No." on your GCash receipt).');
+            redirect($back);
         }
 
-        $reportedAmount = (float) ($_POST['amount_reported'] ?? $payment['amount_due']);
-        $gcashRef       = trim($_POST['gcash_reference_no'] ?? '');
-        $note           = trim($_POST['notes'] ?? '');
-
-        if ($gcashRef === '') {
-            flash('error', 'Kailangan ilagay ang GCash Reference Number.');
-            redirect('/documents/' . $requestId . '/payment');
+        $file = $_FILES['receipt_file'] ?? null;
+        if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            flash('error', 'Attach a screenshot of your GCash receipt.');
+            redirect($back);
+        }
+        if ((int) $file['size'] > 10 * 1024 * 1024) {
+            flash('error', 'The screenshot must be 10 MB or smaller.');
+            redirect($back);
+        }
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime  = (string) finfo_file($finfo, (string) $file['tmp_name']);
+        finfo_close($finfo);
+        if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], true)) {
+            flash('error', 'Upload a JPG, PNG, WEBP or PDF file.');
+            redirect($back);
         }
 
-        // Validate receipt file
-        if (!isset($_FILES['receipt_file']) || $_FILES['receipt_file']['error'] !== UPLOAD_ERR_OK) {
-            flash('error', 'Kailangan mag-upload ng larawan o PDF ng inyong resibo.');
-            redirect('/documents/' . $requestId . '/payment');
-        }
-
-        $file     = $_FILES['receipt_file'];
-        $maxBytes = 10485760; // 10MB
-        if ((int) $file['size'] > $maxBytes) {
-            flash('error', 'Ang sukat ng resibo ay dapat hindi hihigit sa 10MB.');
-            redirect('/documents/' . $requestId . '/payment');
-        }
-
-        $tmpPath = (string) $file['tmp_name'];
-        $finfo   = finfo_open(FILEINFO_MIME_TYPE);
-        $mime    = $finfo ? (string) finfo_file($finfo, $tmpPath) : '';
-        if ($finfo) finfo_close($finfo);
-
-        $allowedMimes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-        if (!in_array($mime, $allowedMimes, true)) {
-            flash('error', 'Tanging JPG, PNG, o PDF lamang ang tinatanggap para sa resibo.');
-            redirect('/documents/' . $requestId . '/payment');
-        }
-
-        $rawBytes = file_get_contents($tmpPath);
-        if ($rawBytes === false) {
-            flash('error', 'Hindi mabasa ang na-upload na resibo.');
-            redirect('/documents/' . $requestId . '/payment');
-        }
-
-        $fileHash = hash('sha256', $rawBytes);
-        $origName = basename((string) $file['name']);
-        $cleanName = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $origName);
-
+        $rawBytes = (string) file_get_contents((string) $file['tmp_name']);
         $fileMeta = [
-            'name'        => $cleanName,
+            'name'        => preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', basename((string) $file['name'])) ?: 'gcash-receipt',
             'mime'        => $mime,
             'size'        => (int) $file['size'],
-            'hash'        => $fileHash,
+            'hash'        => hash('sha256', $rawBytes),
             'data_base64' => base64_encode($rawBytes),
         ];
 
-        // Check if duplicate reference exists (log warning)
-        $isDuplicateRef = DocumentPayment::checkDuplicateGcashRef($gcashRef, (int) $payment['id']);
-        if ($isDuplicateRef) {
-            $note .= ($note ? ' ' : '') . '[Babala sa Admin: Posibleng duplicate reference number]';
+        $note = mb_substr(trim((string) ($_POST['notes'] ?? '')), 0, 500);
+        $warnings = [];
+        if (DocumentPayment::checkDuplicateGcashRef($gcashRef, (int) $payment['id'])) {
+            $warnings[] = 'reference number already used on another payment';
+        }
+        if (DocumentPayment::checkDuplicateHash($fileMeta['hash'], (int) $payment['id'])) {
+            $warnings[] = 'same screenshot already used on another payment';
+        }
+        if ($warnings) {
+            $note = trim($note . ' [Staff warning: ' . implode('; ', $warnings) . ']');
         }
 
-        if (DocumentPayment::submitProof((int) $payment['id'], $reportedAmount, $gcashRef, $fileMeta, $note)) {
-            // Notify staff of payment submission
-            try {
-                (new NotificationService())->notifyBackOffice(
-                    'notify_content',
-                    'system',
-                    'May Bagong Patunay ng Bayad (' . (string) $request['reference_no'] . ')',
-                    sprintf('Nagsumite si %s ng patunay ng bayad (Ref: %s, Halaga: ₱%.2f) para sa %s.', (string) $request['full_name'], $gcashRef, $reportedAmount, (string) $request['reference_no']),
-                    0,
-                    'document_payment',
-                    $userId
-                );
-            } catch (\Throwable $e) {
-                error_log('[PaymentController::residentUploadProof] notify error: ' . $e->getMessage());
-            }
-
-            flash('success', 'Naisumite ang inyong patunay. Ito ay nasa Manual Review — susuriin ito ng barangay staff, kasama ang PayMongo records.');
+        // The amount owed is the official fee; the resident does not type it.
+        if (!DocumentPayment::submitProof((int) $payment['id'], (float) $payment['amount_due'], $gcashRef, $fileMeta, $note ?: null)) {
+            flash('error', 'Your proof could not be saved. Please try again.');
+            redirect($back);
         }
 
-        redirect('/documents/' . $requestId . '/payment');
+        try {
+            (new NotificationService())->notifyBackOffice(
+                'notify_content', 'system',
+                'GCash payment to verify — ' . $request['reference_no'],
+                sprintf('%s sent GCash proof for %s (₱%.2f, Ref. No. %s).%s',
+                    (string) $request['full_name'], DocumentRequest::label((string) $request['document_type']),
+                    (float) $payment['amount_due'], $gcashRef, $warnings ? ' Warning: ' . implode('; ', $warnings) . '.' : ''),
+                0, 'document_payment', $userId
+            );
+        } catch (\Throwable $e) {
+            error_log('[PaymentController::residentUploadProof] notify: ' . $e->getMessage());
+        }
+
+        flash('success', 'Proof sent. The barangay will verify your GCash payment — this page updates automatically.');
+        redirect($back);
     }
 
     /**
@@ -762,6 +842,12 @@ class PaymentController
         if ($userId <= 0 || !hash_equals(csrf_token(), $token)) {
             http_response_code($userId <= 0 ? 401 : 403);
             echo json_encode(['success' => false, 'error' => 'Your session expired. Please reload the page.']);
+            return;
+        }
+
+        if (!(bool) \App\Models\Setting::get('paymongo_checkout_enabled', false)) {
+            http_response_code(409);
+            echo json_encode(['success' => false, 'error' => 'Online checkout is turned off. Please pay by sending GCash and uploading your proof.']);
             return;
         }
 
