@@ -53,6 +53,8 @@ ob_start();
 .gc-input { width:100%; border:1px solid var(--border-strong); border-radius:12px; padding:.75rem .9rem; font-size:1rem; background:var(--surface-input); color:var(--text-primary); }
 .gc-input:focus { outline:none; border-color:#007dfe; box-shadow:0 0 0 4px rgba(0,125,254,.18); }
 .gc-muted { color:var(--text-muted); font-size:.85rem; }
+/* The floating AI button covered the GCash steps on phones; not needed while paying. */
+.aic-root { display:none !important; }
 .gc-qr { width:220px; max-width:100%; border-radius:14px; border:1px solid var(--border); background:#fff; padding:8px; }
 </style>
 
