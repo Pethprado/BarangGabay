@@ -417,6 +417,7 @@ ob_start();
     });
 })();
 </script>
+<?php require __DIR__ . '/../../shared/_live-refresh.php'; ?>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../../layouts/admin.php';

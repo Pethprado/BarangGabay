@@ -8,3 +8,6 @@ storage/backups/*.sql.gz
 storage/logs/*.log
 .phpunit.result.cache
 composer.phar
+
+# Local debugging scripts — they have held cookies and credentials. Never commit.
+scratch/

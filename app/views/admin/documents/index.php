@@ -337,6 +337,12 @@ ob_start();
                                 <div class="mb-1"><span class="text-muted">Status:</span> <span id="revPayStatus" class="fw-bold"></span></div>
                                 <div class="mb-1"><span class="text-muted">Reference:</span> <span class="font-monospace fw-bold" id="revPayRef"></span></div>
                                 <div class="mb-1"><span class="text-muted">Paid On:</span> <span id="revPayDate" class="text-muted"></span></div>
+                                <div class="mb-1"><span class="text-muted">Verification:</span> <strong id="revPayVerify" class="text-dark"></strong></div>
+                                <div class="mb-1" id="revPmRow"><span class="text-muted">PayMongo receipt:</span> <span class="font-monospace" id="revPmId"></span></div>
+                                <div class="mt-2 d-flex flex-wrap gap-1">
+                                    <a id="revReceiptLink" class="btn btn-sm btn-outline-success d-none" target="_blank" rel="noopener"><i class="bi bi-receipt me-1"></i>View receipt</a>
+                                    <a id="revProofLink" class="btn btn-sm btn-outline-secondary d-none" target="_blank" rel="noopener"><i class="bi bi-image me-1"></i>Resident's screenshot</a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -482,7 +488,18 @@ function openReviewModal(r) {
 
     document.getElementById('revAmount').innerText = fee > 0 ? '₱' + fee.toFixed(2) : 'LIBRE';
     document.getElementById('revPayRef').innerText = r.payment_ref || (r.reference_no ? 'PAY-' + r.reference_no : 'N/A');
-    document.getElementById('revPayDate').innerText = r.payment_created_at || (r.requested_at ? new Date(r.requested_at).toLocaleDateString() : 'N/A');
+    document.getElementById('revPayDate').innerText = r.paid_at ? new Date(String(r.paid_at).replace(' ', 'T')).toLocaleString() : '—';
+    var verify = { paymongo: 'Automatically verified through PayMongo', manual: 'Manually verified by staff', counter: 'Cash received at the hall', waiver: 'Fee waived' }[r.verification_type || ''];
+    if (!verify) { verify = (pst === 'UNDER_REVIEW' || pst === 'PAYMENT_PROOF_SUBMITTED') ? 'Manual review needed — see Payment Management' : (fee > 0 ? 'Not paid yet' : 'No payment needed'); }
+    document.getElementById('revPayVerify').innerText = verify;
+    document.getElementById('revPmId').innerText = r.paymongo_payment_id || '';
+    document.getElementById('revPmRow').classList.toggle('d-none', !r.paymongo_payment_id);
+    var receiptLink = document.getElementById('revReceiptLink');
+    receiptLink.classList.toggle('d-none', !(r.paid_at && fee > 0));
+    receiptLink.href = <?= json_encode(route('documents/')) ?> + r.id + '/acknowledgement';
+    var proofLink = document.getElementById('revProofLink');
+    proofLink.classList.toggle('d-none', !(r.receipt_file_name && r.pay_id));
+    proofLink.href = <?= json_encode(route('admin/payments/')) ?> + r.pay_id + '/receipt';
 
     var pstEl = document.getElementById('revPayStatus');
     if (isPaid) {
@@ -547,6 +564,7 @@ function openReviewModal(r) {
 }
 </script>
 
+<?php require __DIR__ . '/../../shared/_live-refresh.php'; ?>
 <?php
 $content   = ob_get_clean();
 $pageTitle = $pageTitle ?? t('admin_documents.title');

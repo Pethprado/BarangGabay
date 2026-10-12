@@ -363,6 +363,55 @@ ob_start();
     <p class="form-text mt-2 mb-0" style="font-size:.74rem;"><?= e(t('superadmin.set_logo_limits')) ?></p>
 </div>
 
+<!-- ── Payment gateway (separate form — write-only secrets) ─────────────── -->
+<?php
+use App\Services\PayMongoService as __PM;
+$__pmFields = [
+    'PAYMONGO_SECRET_KEY'     => ['Secret key', 'sk_test_… or sk_live_…'],
+    'PAYMONGO_PUBLIC_KEY'     => ['Public key', 'pk_test_… or pk_live_…'],
+    'PAYMONGO_WEBHOOK_SECRET' => ['Webhook signing secret', 'whsk_…'],
+];
+?>
+<div class="admin-card" id="payment-gateway">
+    <p class="set-legend"><i class="bi bi-wallet2 me-1" style="color:var(--brand-primary);"></i>Payment Gateway — PayMongo GCash</p>
+    <p class="set-help">
+        Keys are encrypted before they are stored and are never shown again. Render environment
+        variables, if set, take precedence. Mode now: <strong><?= __PM::getMode() === 'live' ? 'LIVE (real money)' : 'TEST (no real money)' ?></strong>.
+        Webhook URL for PayMongo: <code><?= e(route('api/webhooks/paymongo')) ?></code>
+    </p>
+    <form method="POST" action="<?= e(route('superadmin/settings/paymongo')) ?>" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <div class="row g-3">
+            <?php foreach ($__pmFields as $__name => [$__label, $__ph]): $__src = __PM::credentialSource($__name); ?>
+            <div class="col-12 col-lg-4">
+                <label class="form-label" for="pm_<?= e($__name) ?>" style="font-size:.78rem;font-weight:600;"><?= e($__label) ?></label>
+                <input type="password" class="form-control" id="pm_<?= e($__name) ?>" name="<?= e($__name) ?>"
+                       placeholder="<?= e($__src !== '' ? 'Saved — leave blank to keep' : $__ph) ?>" autocomplete="new-password" spellcheck="false">
+                <div class="form-text" style="font-size:.74rem;">
+                    <?= $__src === 'env' ? '✓ Set in the server environment' : ($__src === 'stored' ? '✓ Saved (encrypted)' : '✗ Not set') ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <button type="submit" class="btn btn-barangay mt-3" style="border-radius:8px;font-weight:600;"><i class="bi bi-shield-lock me-1"></i>Save payment keys</button>
+    </form>
+</div>
+
+<!-- ── Danger zone ─────────────────────────────────────────────────────── -->
+<div class="admin-card" id="danger-zone" style="border:1px solid var(--status-danger);">
+    <p class="set-legend" style="color:var(--status-danger);"><i class="bi bi-exclamation-octagon me-1"></i>Danger zone — clear all document requests</p>
+    <p class="set-help">Deletes every document request with its payments, uploaded files, logs and notifications — for clearing test data. Document fees, residents and other modules are not touched. This cannot be undone.</p>
+    <form method="POST" action="<?= e(route('superadmin/settings/clear-document-requests')) ?>" class="d-flex flex-wrap gap-2 align-items-end"
+          onsubmit="return confirm('Delete ALL document requests and payments? This cannot be undone.');">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <div style="flex:1 1 260px;">
+            <label class="form-label" for="clearPhrase" style="font-size:.78rem;font-weight:600;">Type <code>DELETE ALL REQUESTS</code> to confirm</label>
+            <input class="form-control" id="clearPhrase" name="confirm_phrase" autocomplete="off" required>
+        </div>
+        <button type="submit" class="btn btn-outline-danger" style="border-radius:8px;font-weight:600;"><i class="bi bi-trash me-1"></i>Clear all requests</button>
+    </form>
+</div>
+
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../../layouts/admin.php';

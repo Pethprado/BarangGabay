@@ -883,6 +883,12 @@ function submitWizardForm() {
         return res.json();
     })
     .then(function(data) {
+        // The request was saved but checkout could not start: go to its payment page,
+        // which explains why and lets the resident retry (re-submitting would be a duplicate).
+        if (data && !data.success && data.fallback_url) {
+            window.location.href = data.fallback_url;
+            return;
+        }
         if (!data || !data.success) {
             btn.disabled = false;
             btnText.innerText = isSelectedFree ? 'ISUMITE ANG KAHILINGAN (LIBRE)' : 'BAYARAN ANG ₱' + selectedFee.toFixed(2) + ' GAMIT ANG GCASH';
@@ -1028,6 +1034,7 @@ function closeDetailsModal() {
 onDocumentTypeChange();
 </script>
 
+<?php require __DIR__ . '/../shared/_live-refresh.php'; ?>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layouts/main.php';

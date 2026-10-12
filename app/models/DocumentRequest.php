@@ -523,12 +523,11 @@ class DocumentRequest
         $sql = "SELECT r.*, u.full_name, u.phone, u.zone,
                        su.full_name AS uploaded_by_name,
                        p.payment_ref, p.amount_reported, p.gcash_reference_no, p.receipt_file_name, p.rejection_reason,
-                       g.account_name AS gcash_account_name
+                       p.id AS pay_id, p.paymongo_payment_id, p.paid_at, p.verification_type, p.paymongo_source_type
                   FROM document_requests r
                   JOIN users u ON u.id = r.user_id
              LEFT JOIN users su ON su.id = r.document_uploaded_by
              LEFT JOIN document_payments p ON p.id = r.payment_id
-             LEFT JOIN gcash_accounts g ON g.id = p.gcash_account_id
                  WHERE 1=1";
         $params = [];
 

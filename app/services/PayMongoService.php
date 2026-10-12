@@ -32,10 +32,75 @@ class PayMongoService
 
     // ── Configuration ────────────────────────────────────────────────────
 
+    /** Settings keys holding the encrypted fallback (see saveStoredCredentials()). */
+    public const STORED_KEYS = [
+        'PAYMONGO_SECRET_KEY'     => 'paymongo_secret_key_enc',
+        'PAYMONGO_PUBLIC_KEY'     => 'paymongo_public_key_enc',
+        'PAYMONGO_WEBHOOK_SECRET' => 'paymongo_webhook_secret_enc',
+    ];
+
+    /**
+     * Environment variable first (Render → Environment). If unset, the value a
+     * superadmin saved on System Settings → Payment Gateway, stored encrypted
+     * with SecretBox. Never logged, never sent to a browser.
+     */
     private static function envValue(string $key): string
     {
         $value = $_ENV[$key] ?? getenv($key);
-        return is_string($value) ? trim($value) : '';
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+        if (isset(self::STORED_KEYS[$key])) {
+            try {
+                $stored = (string) \App\Models\Setting::get(self::STORED_KEYS[$key], '');
+                return $stored !== '' ? trim(SecretBox::decrypt($stored)) : '';
+            } catch (\Throwable) {
+                return '';
+            }
+        }
+        return '';
+    }
+
+    /** Where each credential comes from: 'env', 'stored' or '' (missing). */
+    public static function credentialSource(string $key): string
+    {
+        $value = $_ENV[$key] ?? getenv($key);
+        if (is_string($value) && trim($value) !== '') {
+            return 'env';
+        }
+        return self::envValue($key) !== '' ? 'stored' : '';
+    }
+
+    /**
+     * Save credentials entered by a superadmin, encrypted. Empty values leave
+     * the existing one untouched. Returns a list of problems (empty = saved).
+     *
+     * @param array<string,string> $values keyed by PAYMONGO_* names
+     * @return list<string>
+     */
+    public static function saveStoredCredentials(array $values, int $updatedBy): array
+    {
+        if (!SecretBox::available()) {
+            return ['The server has no JWT_SECRET / database secret to encrypt with.'];
+        }
+        $rules = [
+            'PAYMONGO_SECRET_KEY'     => '/^sk_(test|live)_[A-Za-z0-9]{10,}$/',
+            'PAYMONGO_PUBLIC_KEY'     => '/^pk_(test|live)_[A-Za-z0-9]{10,}$/',
+            'PAYMONGO_WEBHOOK_SECRET' => '/^whsk_[A-Za-z0-9]{10,}$/',
+        ];
+        $errors = [];
+        foreach ($rules as $name => $pattern) {
+            $v = trim((string) ($values[$name] ?? ''));
+            if ($v === '') {
+                continue;
+            }
+            if (!preg_match($pattern, $v)) {
+                $errors[] = $name . ' does not look right.';
+                continue;
+            }
+            \App\Models\Setting::set(self::STORED_KEYS[$name], SecretBox::encrypt($v), $updatedBy);
+        }
+        return $errors;
     }
 
     public static function getSecretKey(): string

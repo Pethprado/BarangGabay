@@ -311,6 +311,83 @@ class SuperAdminController
         redirect('/superadmin/settings');
     }
 
+    /**
+     * POST /superadmin/settings/paymongo — save PayMongo keys (encrypted).
+     * Write-only: blank fields keep the saved value; nothing is echoed back.
+     */
+    public function savePaymongoKeys(): void
+    {
+        check_csrf();
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        $values = [];
+        foreach (array_keys(\App\Services\PayMongoService::STORED_KEYS) as $name) {
+            $values[$name] = (string) ($_POST[$name] ?? '');
+        }
+        $errors = \App\Services\PayMongoService::saveStoredCredentials($values, $userId);
+        AuditLog::record($userId, 'settings.paymongo_keys', 'Updated PayMongo credentials ('
+            . implode(', ', array_keys(array_filter($values, static fn ($v) => trim($v) !== ''))) . ')');
+
+        flash($errors ? 'error' : 'success', $errors ? implode(' ', $errors) : 'PayMongo keys saved (encrypted).');
+        redirect('/superadmin/settings#payment-gateway');
+    }
+
+    /**
+     * POST /superadmin/settings/clear-document-requests — wipe every document
+     * request with its payments, files, logs and notifications (test data).
+     * Superadmin only, needs the typed phrase, one transaction, audit-logged.
+     * Document fees and certificate numbering are kept.
+     */
+    public function clearDocumentRequests(): void
+    {
+        check_csrf();
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        if (trim((string) ($_POST['confirm_phrase'] ?? '')) !== 'DELETE ALL REQUESTS') {
+            flash('error', 'Not cleared: type DELETE ALL REQUESTS exactly to confirm.');
+            redirect('/superadmin/settings#danger-zone');
+        }
+
+        $tables = [
+            'payment_audit_logs'     => '1=1',
+            'payment_webhook_events' => '1=1',
+            'document_payments'      => '1=1',
+            'document_request_files' => '1=1',
+            'document_request_logs'  => '1=1',
+            'notifications'          => "related_type IN ('document_payment', 'document_request')",
+            'document_requests'      => '1=1',
+        ];
+        $pdo = db();
+        // Probe tables BEFORE the transaction: on PostgreSQL a failed query
+        // inside a transaction aborts the whole transaction.
+        foreach (array_keys($tables) as $table) {
+            try {
+                $pdo->query("SELECT 1 FROM $table WHERE 1=0");
+            } catch (\Throwable) {
+                unset($tables[$table]);
+            }
+        }
+
+        $removed = 0;
+        try {
+            $removed = (int) $pdo->query('SELECT COUNT(*) FROM document_requests')->fetchColumn();
+            $pdo->beginTransaction();
+            foreach ($tables as $table => $where) {
+                $pdo->exec("DELETE FROM $table WHERE $where");
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('[SuperAdmin::clearDocumentRequests] ' . $e->getMessage());
+            flash('error', 'Nothing was deleted — the clean-up failed and was rolled back.');
+            redirect('/superadmin/settings#danger-zone');
+        }
+
+        AuditLog::record($userId, 'documents.cleared_all', sprintf('Deleted all %d document request(s) with their payments and logs.', $removed));
+        flash('success', sprintf('Cleared %d document request(s) and their payments. Fees and settings were kept.', $removed));
+        redirect('/superadmin/settings#danger-zone');
+    }
+
     /** POST /superadmin/settings/logo — replace the system logo. */
     public function uploadLogo(): void
     {

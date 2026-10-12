@@ -36,6 +36,35 @@ class DocumentRequestController
         view('resident/documents', compact('user', 'requests', 'types', 'docFees', 'deliveryEnabled', 'deliveryFee'));
     }
 
+    /**
+     * GET /api/documents/changes — a fingerprint of the requests and payments
+     * this user can see. Pages poll it and refresh when it changes, so new
+     * requests, payments and status updates appear without reloading by hand.
+     * Staff see everything; a resident sees only their own.
+     */
+    public function changes(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
+        $userId  = (int) ($_SESSION['user_id'] ?? 0);
+        $isStaff = in_array($_SESSION['role'] ?? '', ['staff', 'admin', 'superadmin'], true);
+
+        $where  = $isStaff ? '' : ' WHERE r.user_id = ?';
+        $params = $isStaff ? [] : [$userId];
+        try {
+            $stmt = db()->prepare(
+                "SELECT COUNT(*) AS n, MAX(r.updated_at) AS r_at, MAX(p.updated_at) AS p_at
+                   FROM document_requests r
+              LEFT JOIN document_payments p ON p.request_id = r.id" . $where
+            );
+            $stmt->execute($params);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable) {
+            $row = [];
+        }
+        echo json_encode(['sig' => md5(json_encode($row))]);
+    }
+
     /** POST /documents — file a new request. */
     public function store(): void
     {

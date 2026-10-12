@@ -92,11 +92,12 @@ $isPaid    = in_array($payStatus, ['PAID_VERIFIED', 'PAID_AT_PICKUP'], true);
 
         <div class="col-6">
             <span class="text-muted text-uppercase" style="font-size:.7rem;">Paraan ng Pagbayad:</span>
-            <div class="fw-bold text-dark"><?= strtoupper((string) $payment['payment_method']) ?></div>
+            <div class="fw-bold text-dark"><?= !empty($payment['paymongo_checkout_id']) ? 'GCASH (PAYMONGO)' : strtoupper((string) $payment['payment_method']) ?></div>
         </div>
         <div class="col-6 text-end">
-            <span class="text-muted text-uppercase" style="font-size:.7rem;">GCash Reference:</span>
-            <div class="fw-bold font-monospace text-dark"><?= e((string) ($payment['gcash_reference_no'] ?: 'N/A (Counter)')) ?></div>
+            <span class="text-muted text-uppercase" style="font-size:.7rem;"><?= !empty($payment['paymongo_payment_id']) ? 'PayMongo Payment ID' : 'GCash Reference' ?>:</span>
+            <div class="fw-bold font-monospace text-dark"><?= e((string) ($payment['paymongo_payment_id'] ?: ($payment['gcash_reference_no'] ?: 'N/A (Counter)'))) ?></div>
+            <?php if (($payment['verification_type'] ?? '') === 'paymongo'): ?><div style="font-size:.7rem;" class="text-success">Automatically verified through PayMongo</div><?php endif; ?>
         </div>
 
         <div class="col-6">

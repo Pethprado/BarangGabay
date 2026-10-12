@@ -237,6 +237,7 @@ return [
     ['GET',  '/payments/paymongo/return',                   'PaymentController@paymongoReturn',         ['auth']],
     ['GET',  '/documents/payment/success',                  'PaymentController@paymentSuccess',         ['auth', 'verified']],
     ['GET',  '/documents/payment/cancel',                   'PaymentController@paymentCancel',          ['auth', 'verified']],
+    ['GET',  '/api/documents/changes',                      'DocumentRequestController@changes',        ['auth']],
     ['GET',  '/api/payments/status/{id}',                   'PaymentController@apiPaymentStatus',       ['auth', 'verified']],
     // PayMongo webhook — public on purpose (no auth, no CSRF): the HMAC
     // Paymongo-Signature header is the authentication. Register the first URL.
@@ -274,6 +275,8 @@ return [
     ['POST', '/superadmin/backups/delete',       'SuperAdminController@deleteBackup',   ['auth', 'role:superadmin']],
     ['GET',  '/superadmin/settings',             'SuperAdminController@settings',       ['auth', 'role:superadmin']],
     ['POST', '/superadmin/settings',             'SuperAdminController@updateSettings', ['auth', 'role:superadmin']],
+    ['POST', '/superadmin/settings/paymongo',    'SuperAdminController@savePaymongoKeys', ['auth', 'role:superadmin']],
+    ['POST', '/superadmin/settings/clear-document-requests', 'SuperAdminController@clearDocumentRequests', ['auth', 'role:superadmin']],
     ['POST', '/superadmin/settings/logo',        'SuperAdminController@uploadLogo',     ['auth', 'role:superadmin']],
     ['POST', '/superadmin/settings/logo/reset',  'SuperAdminController@resetLogo',      ['auth', 'role:superadmin']],
     ['GET',  '/superadmin/ai-accuracy',          'SuperAdminController@aiAccuracy',     ['auth', 'role:superadmin']],
