@@ -5,15 +5,16 @@ namespace App\Services;
 
 /**
  * Adapter maintaining backward compatibility for legacy call sites,
- * delegating all SMS requests to the primary OneWaySmsService.
+ * delegating all SMS requests to the active provider (SmsGateway::make():
+ * MoceanAPI when configured, otherwise OneWaySMS).
  */
 class SemaphoreSmsService
 {
-    private OneWaySmsService $oneWay;
+    private SmsSender $oneWay;
 
     public function __construct()
     {
-        $this->oneWay = new OneWaySmsService();
+        $this->oneWay = SmsGateway::make();
     }
 
     public function isTestMode(): bool

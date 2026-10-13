@@ -7,7 +7,8 @@ use App\Models\SmsLog;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\PostSms;
-use App\Services\OneWaySmsService;
+use App\Services\SmsGateway;
+use App\Services\SmsSender;
 
 /**
  * Admin SMS management — send, broadcast, view logs, check balance.
@@ -16,11 +17,11 @@ use App\Services\OneWaySmsService;
  */
 class SmsController
 {
-    private OneWaySmsService $sms;
+    private SmsSender $sms;
 
     public function __construct()
     {
-        $this->sms = new OneWaySmsService();
+        $this->sms = SmsGateway::make();
     }
 
     // ── Pages ─────────────────────────────────────────────────────────────
@@ -84,6 +85,7 @@ class SmsController
             'filterType'     => $type,
             'filterStatus'   => $status,
             'smsConfigured'  => $this->sms->isConfigured(),
+            'smsProvider'    => $this->sms->providerName(),
             'testMode'       => $this->sms->isTestMode(),
             'purokReach'     => $purokReach,
             'preselectType'  => $preType,

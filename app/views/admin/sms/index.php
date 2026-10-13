@@ -9,6 +9,7 @@ $filterType     = $filterType     ?? '';
 $filterStatus   = $filterStatus   ?? '';
 $smsConfigured  = $smsConfigured  ?? false;
 $testMode       = $testMode       ?? false;
+$smsProvider    = $smsProvider    ?? 'SMS';
 $totalPages     = $perPage > 0 ? (int) ceil($total / $perPage) : 1;
 
 $typeMeta = [
@@ -62,6 +63,7 @@ ob_start();
         </p>
         <p style="margin:0;color:#7f1d1d;font-size:.82rem;">
             <?= e(t('admin_sms.api_key_missing_body')) ?>
+            To use MoceanAPI, set <code>MOCEAN_API_TOKEN</code> (and optionally <code>MOCEAN_SENDER_ID</code>) in the server environment (Render → Environment).
         </p>
     </div>
 </div>
@@ -70,6 +72,7 @@ ob_start();
     <i class="bi bi-check-circle-fill" style="color:#059669;font-size:1rem;"></i>
     <p style="margin:0;color:#065f46;font-size:.85rem;font-weight:600;">
         <?= e(t('admin_sms.live_mode_notice')) ?>
+        <span style="font-weight:500;">· Provider: <?= e($smsProvider) ?></span>
     </p>
 </div>
 <?php endif; ?>

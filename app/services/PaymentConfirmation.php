@@ -171,7 +171,7 @@ final class PaymentConfirmation
         $phone = trim((string) ($payment['phone'] ?? ''));
         if ($phone !== '') {
             try {
-                (new OneWaySmsService())->send($phone,
+                (SmsGateway::make())->send($phone,
                     sprintf('BARANGGABAY: Natanggap ang bayad para sa %s. Ipoproseso na ang inyong dokumento.', $ref),
                     'payment_verified', (int) $payment['id']);
             } catch (\Throwable $e) {

@@ -14,7 +14,7 @@ use GuzzleHttp\Exception\GuzzleException;
  * Credentials are read exclusively from server environment variables.
  * Fails gracefully without throwing uncaught exceptions to callers.
  */
-class OneWaySmsService
+class OneWaySmsService implements SmsSender
 {
     private Client $client;
     private string $apiUsername;
@@ -32,6 +32,11 @@ class OneWaySmsService
         $this->testMode    = filter_var($_ENV['ONEWAYSMS_TEST_MODE'] ?? $_ENV['SEMAPHORE_TEST_MODE'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
 
         $this->client = new Client(['timeout' => 15]);
+    }
+
+    public function providerName(): string
+    {
+        return 'OneWaySMS';
     }
 
     public function isConfigured(): bool

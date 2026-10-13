@@ -106,7 +106,7 @@ class PaymentController
             if ($phone !== '') {
                 try {
                     $smsMsg = sprintf('BARANGGABAY: Payment for request %s has been verified. Your document is now being processed.', $reqRef);
-                    (new OneWaySmsService())->send($phone, $smsMsg, 'payment_verified', $id);
+                    (\App\Services\SmsGateway::make())->send($phone, $smsMsg, 'payment_verified', $id);
                 } catch (\Throwable $e) {
                     error_log('[PaymentController::verify] SMS error: ' . $e->getMessage());
                 }
@@ -173,7 +173,7 @@ class PaymentController
             if ($phone !== '') {
                 try {
                     $smsMsg = sprintf('BARANGGABAY: Payment proof for request %s needs review. Please log in to BarangGabay to check the reason and submit a new receipt.', $reqRef);
-                    (new OneWaySmsService())->send($phone, $smsMsg, 'payment_rejected', $id);
+                    (\App\Services\SmsGateway::make())->send($phone, $smsMsg, 'payment_rejected', $id);
                 } catch (\Throwable $e) {
                     error_log('[PaymentController::reject] SMS error: ' . $e->getMessage());
                 }

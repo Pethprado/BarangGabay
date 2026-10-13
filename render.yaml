@@ -82,6 +82,11 @@ services:
         value: "true"
       # PayMongo — set the values in the Render dashboard only (sync: false
       # keeps them out of this file). See docs/PAYMONGO_SETUP.md.
+      # MoceanAPI SMS — paste the API token in the Render dashboard (never in Git).
+      - key: MOCEAN_API_TOKEN
+        sync: false
+      - key: MOCEAN_SENDER_ID
+        value: BarangGabay
       - key: PAYMONGO_SECRET_KEY
         sync: false
       - key: PAYMONGO_PUBLIC_KEY
