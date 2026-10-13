@@ -44,10 +44,10 @@ ob_start();
         </p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-        <form method="POST" action="<?= e(route('admin/manobo/regenerate-posts')) ?>" class="d-inline" onsubmit="return confirm('Sigurado ka bang gusto mong i-regenerate ang lahat ng MN post gamit ang pinakabagong diksyunaryo?');">
+        <form method="POST" action="<?= e(route('admin/manobo/regenerate-posts')) ?>" class="d-inline" onsubmit="return confirm(<?= e(json_encode(__('Sigurado ka bang gusto mong i-regenerate ang lahat ng MN post gamit ang pinakabagong diksyunaryo?'))) ?>);">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
             <button type="submit" class="btn btn-outline-primary btn-sm" style="border-radius:8px;font-weight:600;">
-                <i class="bi bi-arrow-repeat me-1"></i>Regenerate MN Posts
+                <i class="bi bi-arrow-repeat me-1"></i><?= e(__('Regenerate MN Posts')) ?>
             </button>
         </form>
         <a href="<?= e(route('admin/bisaya')) ?>" class="btn btn-outline-secondary btn-sm"
@@ -184,8 +184,8 @@ ob_start();
                         <input type="text" name="tagalog" class="form-control" required style="border-radius:8px;">
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label" style="font-size:.78rem;font-weight:600;">Bisaya</label>
-                        <input type="text" name="bisaya" class="form-control" style="border-radius:8px;" placeholder="Katumbas sa Bisaya">
+                        <label class="form-label" style="font-size:.78rem;font-weight:600;"><?= e(__('Bisaya')) ?></label>
+                        <input type="text" name="bisaya" class="form-control" style="border-radius:8px;" placeholder="<?= e(__('Katumbas sa Bisaya')) ?>">
                     </div>
                     <div class="col-12">
                         <p class="form-text mb-0" style="font-size:.74rem;"><?= e(t('admin_manobo.hint_manobo')) ?></p>
@@ -237,11 +237,11 @@ ob_start();
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label" style="font-size:.78rem;font-weight:600;">Status</label>
+                <label class="form-label" style="font-size:.78rem;font-weight:600;"><?= e(__('Status')) ?></label>
                 <select x-model="statusFilter" @change="onSearchChange()" class="form-select" style="border-radius:8px;">
-                    <option value="">Lahat ng Status</option>
-                    <option value="approved">Approved</option>
-                    <option value="pending_review">Pending Review</option>
+                    <option value=""><?= e(__('Lahat ng Status')) ?></option>
+                    <option value="approved"><?= e(__('Approved')) ?></option>
+                    <option value="pending_review"><?= e(__('Pending Review')) ?></option>
                 </select>
             </div>
             <div class="col-md-2 d-flex gap-2">
@@ -263,16 +263,16 @@ ob_start();
                     :disabled="isPrevLetterDisabled"
                     :class="isPrevLetterDisabled ? 'btn-outline-secondary opacity-50' : 'btn-outline-primary'"
                     class="btn btn-sm" style="border-radius:8px;font-weight:600;">
-                <i class="bi bi-chevron-left me-1"></i>Nakalipas na Letra
+                <i class="bi bi-chevron-left me-1"></i><?= e(__('Nakalipas na Letra')) ?>
             </button>
 
             <div class="text-center">
                 <span style="font-size:.8rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);">
                     <template x-if="selectedLetter !== 'ALL'">
-                        <span>Mga Salita sa Letrang <strong style="font-size:1.05rem;color:var(--brand-primary);" x-text="selectedLetter"></strong></span>
+                        <span><?= e(__('Mga Salita sa Letrang')) ?> <strong style="font-size:1.05rem;color:var(--brand-primary);" x-text="selectedLetter"></strong></span>
                     </template>
                     <template x-if="selectedLetter === 'ALL'">
-                        <span>Lahat ng Letra</span>
+                        <span><?= e(__('Lahat ng Letra')) ?></span>
                     </template>
                 </span>
             </div>
@@ -281,7 +281,7 @@ ob_start();
                     :disabled="isNextLetterDisabled"
                     :class="isNextLetterDisabled ? 'btn-outline-secondary opacity-50' : 'btn-outline-primary'"
                     class="btn btn-sm" style="border-radius:8px;font-weight:600;">
-                Susunod na Letra<i class="bi bi-chevron-right ms-1"></i>
+                <?= e(__('Susunod na Letra')) ?><i class="bi bi-chevron-right ms-1"></i>
             </button>
         </div>
 
@@ -292,7 +292,7 @@ ob_start();
                     :aria-pressed="selectedLetter === 'ALL' ? 'true' : 'false'"
                     :class="selectedLetter === 'ALL' ? 'btn-primary' : 'btn-light'"
                     class="btn btn-sm" style="border-radius:6px;font-weight:700;padding:2px 10px;font-size:.78rem;">
-                Lahat
+                <?= e(__('Lahat')) ?>
             </button>
 
             <template x-for="l in alphabet" :key="l">
@@ -322,9 +322,9 @@ ob_start();
                         <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_manobo')) ?></th>
                         <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_english')) ?></th>
                         <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_tagalog')) ?></th>
-                        <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Bisaya</th>
+                        <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(__('Bisaya')) ?></th>
                         <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_category')) ?></th>
-                        <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Review Status</th>
+                        <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(__('Review Status')) ?></th>
                         <th style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_notes')) ?></th>
                         <th class="text-end" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><?= e(t('admin_manobo.col_actions')) ?></th>
                     </tr>
@@ -333,8 +333,8 @@ ob_start();
                     <template x-if="paginatedEntries.length === 0">
                         <tr>
                             <td colspan="8" class="text-center text-muted py-4" style="font-size:.85rem;">
-                                <span x-show="selectedLetter !== 'ALL'">Walang nahanap na salitang Manobo sa letrang <strong class="text-primary" x-text="selectedLetter"></strong>.</span>
-                                <span x-show="selectedLetter === 'ALL'">Walang nahanap na salitang tumutugma sa mga ibinigay na filter.</span>
+                                <span x-show="selectedLetter !== 'ALL'"><?= e(__('Walang nahanap na salitang Manobo sa letrang')) ?> <strong class="text-primary" x-text="selectedLetter"></strong>.</span>
+                                <span x-show="selectedLetter === 'ALL'"><?= e(__('Walang nahanap na salitang tumutugma sa mga ibinigay na filter.')) ?></span>
                             </td>
                         </tr>
                     </template>
@@ -356,10 +356,10 @@ ob_start();
                             </td>
                             <td>
                                 <template x-if="entry.review_status === 'approved' && !entry.needs_review">
-                                    <span class="badge bg-success" style="font-size:.68rem;">Approved</span>
+                                    <span class="badge bg-success" style="font-size:.68rem;"><?= e(__('Approved')) ?></span>
                                 </template>
                                 <template x-if="entry.review_status !== 'approved' || entry.needs_review">
-                                    <span class="badge bg-warning text-dark" style="font-size:.68rem;">Pending Review</span>
+                                    <span class="badge bg-warning text-dark" style="font-size:.68rem;"><?= e(__('Pending Review')) ?></span>
                                 </template>
                             </td>
                             <td style="max-width:240px;color:var(--text-muted);font-size:.78rem;line-height:1.5;" x-text="entry.notes || ''"></td>
@@ -369,7 +369,7 @@ ob_start();
                                 </button>
                                 <?php if ($canDelete): ?>
                                 <form method="POST" action="<?= e(route('admin/manobo/delete')) ?>" class="d-inline"
-                                      onsubmit="return confirm('Sigurado ka bang gusto mong idelete ang salitang ito?');">
+                                      onsubmit="return confirm(<?= e(json_encode(__('Sigurado ka bang gusto mong idelete ang salitang ito?'))) ?>);">
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="manobo" :value="entry.manobo">
                                     <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius:6px;">
@@ -386,14 +386,14 @@ ob_start();
 
         <div class="d-flex align-items-center justify-between p-3 border-top" style="border-color:var(--border);">
             <div style="font-size:.78rem;color:var(--text-muted);">
-                Ipinapakita: <strong x-text="filteredEntries.length"></strong> kabuuang nahanap na entri
-                <span x-show="selectedLetter !== 'ALL'">(Letra <strong x-text="selectedLetter"></strong>)</span>
+                <?= e(__('Ipinapakita:')) ?> <strong x-text="filteredEntries.length"></strong> <?= e(__('kabuuang nahanap na entri')) ?>
+                <span x-show="selectedLetter !== 'ALL'"><?= e(__('(Letra')) ?> <strong x-text="selectedLetter"></strong>)</span>
             </div>
 
             <div x-show="totalPages > 1" class="d-flex align-items-center gap-2">
                 <button type="button" @click="prevPage()" :disabled="currentPage === 1"
                         class="btn btn-sm btn-outline-secondary" style="border-radius:6px;">
-                    <i class="bi bi-chevron-left me-1"></i>Nakaraan
+                    <i class="bi bi-chevron-left me-1"></i><?= e(__('Nakaraan')) ?>
                 </button>
 
                 <span style="font-size:.78rem;font-weight:600;">
@@ -402,7 +402,7 @@ ob_start();
 
                 <button type="button" @click="nextPage()" :disabled="currentPage >= totalPages"
                         class="btn btn-sm btn-outline-secondary" style="border-radius:6px;">
-                    Susunod<i class="bi bi-chevron-right ms-1"></i>
+                    <?= e(__('Susunod')) ?><i class="bi bi-chevron-right ms-1"></i>
                 </button>
             </div>
         </div>
@@ -644,34 +644,34 @@ ob_start();
         <div>
             <h2 class="admin-card-title mb-0" style="font-size:1rem;">
                 <i class="bi bi-journal-text me-2" style="color:var(--brand-primary);"></i>
-                Mga Konseptong Wala Pa sa Manobo (Missing Concepts)
+                <?= e(__('Mga Konseptong Wala Pa sa Manobo (Missing Concepts)')) ?>
                 <span class="ms-1" style="font-weight:700;color:var(--text-muted);">(<?= count($missingConcepts ?? []) ?>)</span>
             </h2>
             <p class="text-muted mb-0 mt-1" style="font-size:.78rem;">
-                Awtomatikong natutukoy ang mga salita/parirala mula sa mga anunsyo at ordinansa na pansamantalang ginamitan ng Bisaya fallback.
+                <?= e(__('Awtomatikong natutukoy ang mga salita/parirala mula sa mga anunsyo at ordinansa na pansamantalang ginamitan ng Bisaya fallback.')) ?>
             </p>
         </div>
         <div>
             <span class="badge bg-secondary" style="font-size:.75rem;">
-                Dictionary v<?= e($dictionaryVersion ?? 1) ?>
+                <?= e(__('Dictionary v')) ?><?= e($dictionaryVersion ?? 1) ?>
             </span>
         </div>
     </div>
     <?php if (empty($missingConcepts)): ?>
     <div class="admin-card-body text-center text-muted py-4" style="font-size:.85rem;">
-        Walang naitalang nawawalang konsepto sa kasalukuyan.
+        <?= e(__('Walang naitalang nawawalang konsepto sa kasalukuyan.')) ?>
     </div>
     <?php else: ?>
     <div class="table-responsive">
         <table class="table align-middle mb-0" style="font-size:.85rem;">
             <thead>
                 <tr style="border-bottom:2px solid var(--border);">
-                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Konsepto (Concept)</th>
-                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Source Language</th>
-                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Bisaya Fallback</th>
-                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);text-align:center;">Dalas (Usage)</th>
-                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Huling Nakita</th>
-                    <th class="text-end" style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Aksyon</th>
+                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);"><?= e(__('Konsepto (Concept)')) ?></th>
+                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);"><?= e(__('Source Language')) ?></th>
+                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);"><?= e(__('Bisaya Fallback')) ?></th>
+                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);text-align:center;"><?= e(__('Dalas (Usage)')) ?></th>
+                    <th style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);"><?= e(__('Huling Nakita')) ?></th>
+                    <th class="text-end" style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);"><?= e(__('Aksyon')) ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -685,7 +685,7 @@ ob_start();
                     <td class="text-end">
                         <button type="button" class="btn btn-sm btn-outline-primary" style="border-radius:6px;"
                                 onclick="document.querySelector('#manobo-add-form [name=\'english\']').value = <?= e(json_encode($mc['concept'])) ?>; document.querySelector('#manobo-add-form [name=\'bisaya\']').value = <?= e(json_encode($mc['bisaya_fallback'] ?? '')) ?>; document.getElementById('manobo-add-form').scrollIntoView({behavior:'smooth'});">
-                            <i class="bi bi-plus-circle me-1"></i> Idagdag sa Manobo
+                            <i class="bi bi-plus-circle me-1"></i> <?= e(__('Idagdag sa Manobo')) ?>
                         </button>
                     </td>
                 </tr>

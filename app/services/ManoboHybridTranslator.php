@@ -99,7 +99,9 @@ class ManoboHybridTranslator
      */
     public function translate(string $text, string $sourceLang = 'auto', array $options = []): array
     {
-        $raw = trim($text);
+        // Styled Unicode ("𝐀𝐏𝐏𝐑𝐄𝐂𝐈𝐀𝐓𝐈𝐎𝐍 𝐏𝐎𝐒𝐓") is folded to plain letters
+        // first: no dictionary matches it, and the machine read it as Arabic.
+        $raw = trim(SocialText::unstyleUnicode($text));
         if ($raw === '') {
             return [
                 'success'         => true,
@@ -146,17 +148,24 @@ class ManoboHybridTranslator
             $provenance[] = $item;
         }
 
-        // 5. Store in translation_cache
-        $this->storeCachedTranslation(
-            $sourceHash,
-            $sourceLang,
-            'mn',
-            $dictVersion,
-            $finalTranslation,
-            $provenance,
-            $result['manoboMatches'],
-            $result['bisayaFallbacks']
-        );
+        // 5. Store in translation_cache — only a COMPLETE translation.
+        // A result with words still in Tagalog/English means the Bisaya
+        // service was out (quota, timeout, time budget). Caching it made that
+        // gap permanent: every later request got the cached half-Tagalog text
+        // and never asked again. Uncached, the next request retries.
+        $unresolved = self::countUnresolved($provenance);
+        if ($unresolved === 0) {
+            $this->storeCachedTranslation(
+                $sourceHash,
+                $sourceLang,
+                'mn',
+                $dictVersion,
+                $finalTranslation,
+                $provenance,
+                $result['manoboMatches'],
+                $result['bisayaFallbacks']
+            );
+        }
 
         return [
             'success'         => true,
@@ -165,7 +174,7 @@ class ManoboHybridTranslator
             'source_lang'     => $sourceLang,
             'manoboMatches'   => $result['manoboMatches'],
             'bisayaFallbacks' => $result['bisayaFallbacks'],
-            'unresolved'      => self::countUnresolved($provenance),
+            'unresolved'      => $unresolved,
             'provenance'      => $provenance,
             'cached'          => false,
         ];
@@ -212,6 +221,14 @@ class ManoboHybridTranslator
             // Official entity & facility names
             '/\bBarangay\s+[A-Z][a-z0-9]+(?:\s+[A-Z][a-z0-9]+)*\b/u',
             '/\b(?:Barangay\s+Hall|Rural\s+Health\s+Unit|RHU|DSWD|DOH|PNP|BFP|NDRRMC|MDRRMO|LGU|Sangguniang\s+Barangay)\b/iu',
+            // Every agency and place name the free translator protects too.
+            // Case-sensitive on purpose: "PAGASA" is the weather agency and
+            // became "ANDE" (the dataset's word for pag-asa, hope); a
+            // lower-case "pag-asa" in a sentence still translates.
+            '/(?<![\p{L}\p{N}])(?:' . implode('|', array_map(
+                static fn (string $t): string => preg_quote($t, '/'),
+                FreeTranslationService::protectedTerms()
+            )) . ')(?![\p{L}\p{N}])/u',
             // Dates (e.g. September 30, 2026 or Sept 30, 2026 or September 30)
             '/\b(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\b/iu',
             '/\b(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/iu',
@@ -841,7 +858,9 @@ class ManoboHybridTranslator
     }
 
     /**
-     * Query MyMemory for Cebuano (Bisaya) translation.
+     * Machine Bisaya (Cebuano) for a run of words: MyMemory first, Google's
+     * free endpoint when MyMemory refuses (its daily quota is shared by every
+     * app on the server's IP). Same sanity guards for both.
      */
     private function queryMyMemoryBisaya(string $text, string $sourceCode): ?string
     {
@@ -852,12 +871,54 @@ class ManoboHybridTranslator
             return null;   // time budget spent: local dictionaries only
         }
 
+        $out = $this->queryMyMemoryBisayaOnly($text, $sourceCode);
+        if ($out !== null && !self::looksForeign($out)) {
+            return $out;
+        }
+        if (self::$machineDeadline !== null && microtime(true) > self::$machineDeadline) {
+            return null;
+        }
+
+        $backup = GoogleFreeTranslate::translate($text, $sourceCode === 'en' ? 'en' : 'tl', 'ceb');
+        if ($backup === null
+            || self::looksForeign($backup)
+            || mb_strlen($backup) > (mb_strlen($text) * 4 + 20)) {
+            return null;
+        }
+
+        return $backup;
+    }
+
+    /**
+     * Machine output that cannot be Bisaya: other scripts, or the accented
+     * transliteration letters (Ḩ, Ā, Ī…) an engine produces when it reads
+     * styled Unicode as Arabic — "SAPALIBOTSAABRAQALḨABĀRĪ" was stored as
+     * the Manobo of an "APPRECIATION POST" heading.
+     */
+    public static function looksForeign(string $text): bool
+    {
+        return (bool) preg_match('/[\p{Cyrillic}\p{Arabic}\p{Han}\p{Devanagari}\x{0100}-\x{017F}\x{1E00}-\x{1EFF}]/u', $text);
+    }
+
+    /** MyMemory alone. */
+    private function queryMyMemoryBisayaOnly(string $text, string $sourceCode): ?string
+    {
+
         $langPair = ($sourceCode === 'en' ? 'en' : 'tl') . '|ceb';
+
+        // MyMemory regularly takes 2–5 s, and a flat 2 s cut it off on most
+        // segments of a post, leaving them in Tagalog. A page waiting on this
+        // (a time budget is set) still gets only what is left of its budget;
+        // translating a saved post may wait up to 8 s per segment.
+        $timeout = 8.0;
+        if (self::$machineDeadline !== null) {
+            $timeout = max(1.0, min($timeout, self::$machineDeadline - microtime(true)));
+        }
 
         try {
             $client = new \GuzzleHttp\Client([
-                'timeout'         => 2,
-                'connect_timeout' => 2,
+                'timeout'         => $timeout,
+                'connect_timeout' => min(3.0, $timeout),
                 'http_errors'     => false,
                 'headers'         => ['User-Agent' => 'BarangGabay/1.0 (LGU Hybrid Translator)'],
             ]);

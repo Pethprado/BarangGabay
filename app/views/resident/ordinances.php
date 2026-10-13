@@ -9,9 +9,9 @@ $search     = $search     ?? '';
 $category   = $category   ?? '';
 
 $statusMeta = [
-    'active'   => ['cls' => 'bg-blue-100 text-blue-700', 'label' => 'Aktibo'],
-    'repealed' => ['cls' => 'bg-red-100 text-red-600',         'label' => 'Na-repeal'],
-    'draft'    => ['cls' => 'bg-amber-100 text-amber-700',     'label' => 'Draft'],
+    'active'   => ['cls' => 'bg-blue-100 text-blue-700', 'label' => __('Aktibo')],
+    'repealed' => ['cls' => 'bg-red-100 text-red-600',         'label' => __('Na-repeal')],
+    'draft'    => ['cls' => 'bg-amber-100 text-amber-700',     'label' => __('Draft')],
 ];
 
 ob_start();
@@ -57,7 +57,7 @@ ob_start();
                 <option value=""><?= e(t('res_ordinances.all_categories')) ?></option>
                 <?php foreach ($categories as $cat): ?>
                 <option value="<?= e($cat) ?>" <?= $category === $cat ? 'selected' : '' ?>>
-                    <?= e($cat) ?>
+                    <?= e(__($cat)) ?>
                 </option>
                 <?php endforeach; ?>
             </select>
@@ -67,14 +67,14 @@ ob_start();
         <!-- Search button -->
         <button type="submit"
                 class="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-300">
-            <i class="bi bi-search"></i> Hanapin
+            <i class="bi bi-search"></i> <?= e(__('Hanapin')) ?>
         </button>
 
         <!-- Clear filter -->
         <?php if ($search || $category): ?>
         <a href="<?= e(route('ordinances')) ?>"
            class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-500 shadow-sm transition hover:bg-slate-50">
-            <i class="bi bi-x-circle"></i> I-clear
+            <i class="bi bi-x-circle"></i> <?= e(__('I-clear')) ?>
         </a>
         <?php endif; ?>
 
@@ -140,7 +140,7 @@ ob_start();
             <?php if ($hasSumm): ?>
             <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold text-blue-600"
                   title="<?= e(t('res_ordinances.has_ai_summary')) ?>">
-                ✦ AI Buod
+                <?= e(__('✦ AI Buod')) ?>
             </span>
             <?php endif; ?>
         </div>
@@ -181,7 +181,7 @@ ob_start();
                     <?php if (!empty($ord['category'])): ?>
                     <span class="inline-flex items-center gap-1 text-xs text-slate-500">
                         <i class="bi bi-tag" style="font-size:.65rem;"></i>
-                        <?= e($ord['category']) ?>
+                        <?= e(__($ord['category'])) ?>
                     </span>
                     <?php endif; ?>
                     <?php if (!empty($ord['enacted_date'])): ?>
@@ -209,7 +209,7 @@ ob_start();
 
                     <?php if (!empty($ord['file_url'])): ?>
                     <a href="<?= e(asset((string) $ord['file_url'])) ?>" download
-                       class="ds-chip" aria-label="Download <?= e((string) ($ord['title'] ?? '')) ?>">
+                       class="ds-chip" aria-label="<?= e(__('Download :title', ['title' => localised_text($ord, 'title')])) ?>">
                         <i class="bi bi-download me-1"></i> PDF
                     </a>
                     <?php endif; ?>
@@ -250,7 +250,7 @@ ob_start();
         <!-- Modal header -->
         <div class="flex items-start justify-between border-b border-slate-100 px-6 py-4">
             <div>
-                <h3 class="text-base font-bold text-slate-900">Simpleng Paliwanag:</h3>
+                <h3 class="text-base font-bold text-slate-900"><?= e(__('Simpleng Paliwanag:')) ?></h3>
                 <p class="mt-0.5 text-xs text-slate-500 line-clamp-1" x-text="ordinanceTitle"></p>
             </div>
             <button @click="closeModal()"

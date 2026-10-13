@@ -52,9 +52,9 @@ ob_start();
         </span>
     </div>
     <p class="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500"><?= e(t('res_manobo.subtitle')) ?></p>
-    <nav class="ds-chips mt-3" aria-label="Dictionary language">
-        <a href="<?= e(route('dictionary')) ?>" class="ds-chip<?= $lang === 'msm' ? ' is-active' : '' ?>" aria-current="<?= $lang === 'msm' ? 'true' : 'false' ?>">Manobo</a>
-        <a href="<?= e(route('dictionary') . '?lang=ceb') ?>" class="ds-chip<?= $lang === 'ceb' ? ' is-active' : '' ?>" aria-current="<?= $lang === 'ceb' ? 'true' : 'false' ?>">Bisaya</a>
+    <nav class="ds-chips mt-3" aria-label="<?= e(__('Dictionary language')) ?>">
+        <a href="<?= e(route('dictionary')) ?>" class="ds-chip<?= $lang === 'msm' ? ' is-active' : '' ?>" aria-current="<?= $lang === 'msm' ? 'true' : 'false' ?>"><?= e(__('Manobo')) ?></a>
+        <a href="<?= e(route('dictionary') . '?lang=ceb') ?>" class="ds-chip<?= $lang === 'ceb' ? ' is-active' : '' ?>" aria-current="<?= $lang === 'ceb' ? 'true' : 'false' ?>"><?= e(__('Bisaya')) ?></a>
     </nav>
 </div>
 
@@ -113,16 +113,16 @@ ob_start();
 
         <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
             <div>
-                <span><?= e(t('admin_manobo.total_label') ?? 'Kabuuan:') ?> <strong><?= $totalWords ?></strong> <?= e(t('admin_manobo.words_label') ?? 'mga salita') ?></span>
+                <span><?= e(t('admin_manobo.total_label') ?? __('Kabuuan:')) ?> <strong><?= $totalWords ?></strong> <?= e(t('admin_manobo.words_label') ?? 'mga salita') ?></span>
                 <span x-show="selectedLetter !== 'ALL'" class="ms-2">
-                    &middot; Letra <strong class="text-blue-700" x-text="selectedLetter"></strong>: <span class="font-bold text-slate-800" x-text="filteredEntries.length"></span> entri
+                    &middot; Letra <strong class="text-blue-700" x-text="selectedLetter"></strong>: <span class="font-bold text-slate-800" x-text="filteredEntries.length"></span> <?= e(__('entri')) ?>
                 </span>
                 <span x-show="selectedLetter === 'ALL'" class="ms-2">
-                    &middot; Na-filter: <span class="font-bold text-slate-800" x-text="filteredEntries.length"></span> entri
+                    &middot; Na-filter: <span class="font-bold text-slate-800" x-text="filteredEntries.length"></span> <?= e(__('entri')) ?>
                 </span>
             </div>
             <div x-show="totalPages > 1" class="font-semibold text-slate-600">
-                Pahina <span x-text="currentPage"></span> sa <span x-text="totalPages"></span>
+                <?= e(__('Pahina')) ?> <span x-text="currentPage"></span> <?= e(__('sa')) ?> <span x-text="totalPages"></span>
             </div>
         </div>
     </div>
@@ -135,14 +135,14 @@ ob_start();
                     :class="isPrevLetterDisabled ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'"
                     class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
                 <i class="bi bi-chevron-left"></i>
-                <span class="hidden sm:inline">Nakalipas na Letra</span>
-                <span class="sm:hidden">Nakaraan</span>
+                <span class="hidden sm:inline"><?= e(__('Nakalipas na Letra')) ?></span>
+                <span class="sm:hidden"><?= e(__('Nakaraan')) ?></span>
             </button>
 
             <div class="text-center">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-600">
-                    <span x-show="selectedLetter !== 'ALL'">Mga Salitang Nagsisimula sa <span class="text-base font-black text-blue-700" x-text="selectedLetter"></span></span>
-                    <span x-show="selectedLetter === 'ALL'">Lahat ng Letra</span>
+                    <span x-show="selectedLetter !== 'ALL'"><?= e(__('Mga Salitang Nagsisimula sa')) ?> <span class="text-base font-black text-blue-700" x-text="selectedLetter"></span></span>
+                    <span x-show="selectedLetter === 'ALL'"><?= e(__('Lahat ng Letra')) ?></span>
                 </span>
             </div>
 
@@ -150,8 +150,8 @@ ob_start();
                     :disabled="isNextLetterDisabled"
                     :class="isNextLetterDisabled ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'"
                     class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
-                <span class="hidden sm:inline">Susunod na Letra</span>
-                <span class="sm:hidden">Susunod</span>
+                <span class="hidden sm:inline"><?= e(__('Susunod na Letra')) ?></span>
+                <span class="sm:hidden"><?= e(__('Susunod')) ?></span>
                 <i class="bi bi-chevron-right"></i>
             </button>
         </div>
@@ -163,7 +163,7 @@ ob_start();
                     :aria-pressed="selectedLetter === 'ALL' ? 'true' : 'false'"
                     :class="selectedLetter === 'ALL' ? 'bg-blue-700 text-white font-black shadow-sm ring-2 ring-blue-300' : 'bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-700'"
                     class="flex h-8 px-2.5 items-center justify-center rounded-lg text-xs font-bold transition">
-                Lahat
+                <?= e(__('Lahat')) ?>
             </button>
 
             <template x-for="l in alphabet" :key="l">
@@ -196,7 +196,7 @@ ob_start();
                             <button type="button" x-show="entry.audio" x-cloak
                                     @click.stop="(window.__dictAudio = window.__dictAudio || new Audio()).src = entry.audio; window.__dictAudio.play()"
                                     class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700"
-                                    :aria-label="'Play recording of ' + entry.manobo" title="Approved recording">
+                                    :aria-label="'Play recording of ' + entry.manobo" title="<?= e(__('Approved recording')) ?>">
                                 <i class="bi bi-volume-up-fill" aria-hidden="true"></i>
                             </button>
                         </p>
@@ -223,7 +223,7 @@ ob_start();
                         </div>
                         <div class="flex gap-2" x-show="entry.bisaya">
                             <dt class="w-16 flex-shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                                Bisaya
+                                <?= e(__('Bisaya')) ?>
                             </dt>
                             <dd class="text-sm font-semibold text-slate-700" x-text="entry.bisaya || '—'"></dd>
                         </div>
@@ -242,14 +242,14 @@ ob_start();
         <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center">
             <i class="bi bi-search text-3xl text-slate-300"></i>
             <p class="mt-3 text-base font-bold text-slate-700">
-                <span x-show="selectedLetter !== 'ALL'">Walang nahanap na salitang Manobo para sa letrang <span class="text-blue-700" x-text="selectedLetter"></span>.</span>
-                <span x-show="selectedLetter === 'ALL'">Walang nahanap na salitang tumutugma sa iyong paghahanap.</span>
+                <span x-show="selectedLetter !== 'ALL'"><?= e(__('Walang nahanap na salitang Manobo para sa letrang')) ?> <span class="text-blue-700" x-text="selectedLetter"></span>.</span>
+                <span x-show="selectedLetter === 'ALL'"><?= e(__('Walang nahanap na salitang tumutugma sa iyong paghahanap.')) ?></span>
             </p>
             <p class="mx-auto mt-1 max-w-sm text-sm text-slate-500">
-                Subukang pumili ng ibang letra o palitan ang iyong ginamit na keyword.
+                <?= e(__('Subukang pumili ng ibang letra o palitan ang iyong ginamit na keyword.')) ?>
             </p>
             <button type="button" @click="resetFilters()" class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-blue-800">
-                <i class="bi bi-arrow-counterclockwise"></i>I-reset ang mga Filter
+                <i class="bi bi-arrow-counterclockwise"></i><?= e(__('I-reset ang mga Filter')) ?>
             </button>
         </div>
     </template>
@@ -259,17 +259,17 @@ ob_start();
         <button type="button" @click="prevPage()" :disabled="currentPage === 1"
                 :class="currentPage === 1 ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-700'"
                 class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
-            <i class="bi bi-arrow-left me-1"></i>Nakalipas na Pahina
+            <i class="bi bi-arrow-left me-1"></i><?= e(__('Nakalipas na Pahina')) ?>
         </button>
 
         <span class="text-xs font-semibold text-slate-600">
-            Pahina <strong x-text="currentPage"></strong> sa <strong x-text="totalPages"></strong>
+            <?= e(__('Pahina')) ?> <strong x-text="currentPage"></strong> <?= e(__('sa')) ?> <strong x-text="totalPages"></strong>
         </span>
 
         <button type="button" @click="nextPage()" :disabled="currentPage >= totalPages"
                 :class="currentPage >= totalPages ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-700'"
                 class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition">
-            Susunod na Pahina<i class="bi bi-arrow-right ms-1"></i>
+            <?= e(__('Susunod na Pahina')) ?><i class="bi bi-arrow-right ms-1"></i>
         </button>
     </div>
 
@@ -300,7 +300,7 @@ ob_start();
                             <dd class="text-base font-semibold text-slate-800" x-text="activeEntry.tagalog || '—'"></dd>
                         </div>
                         <div x-show="activeEntry.bisaya">
-                            <dt class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Bisaya</dt>
+                            <dt class="text-[11px] font-bold uppercase tracking-wide text-slate-500"><?= e(__('Bisaya')) ?></dt>
                             <dd class="text-base font-semibold text-slate-800" x-text="activeEntry.bisaya || '—'"></dd>
                         </div>
                     </dl>

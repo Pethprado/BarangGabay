@@ -26,7 +26,7 @@ if (!in_array($activeTab, ['new', 'requests'], true)) {
     $activeTab = 'new';
 }
 
-$pageTitle = 'Mga Dokumento at Kahilingan — BarangGabay';
+$pageTitle = __('Mga Dokumento at Kahilingan — BarangGabay');
 ob_start();
 ?>
 <style>
@@ -47,9 +47,9 @@ ob_start();
     <!-- Page Header -->
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Mga Kahilingan ng Dokumento</h1>
+            <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white"><?= e(__('Mga Kahilingan ng Dokumento')) ?></h1>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Opisyal na serbisyo sa paghiling at pagbabayad ng mga clearance at sertipiko ng Barangay Bayogo.
+                <?= e(__('Opisyal na serbisyo sa paghiling at pagbabayad ng mga clearance at sertipiko ng Barangay Bayogo.')) ?>
             </p>
         </div>
         <div class="flex items-center gap-2">
@@ -57,7 +57,7 @@ ob_start();
                 <i class="bi bi-wallet2"></i> GCash
             </span>
             <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                <i class="bi bi-folder2"></i> <?= count($requests) ?> <?= count($requests) === 1 ? 'Kahilingan' : 'Mga Kahilingan' ?>
+                <i class="bi bi-folder2"></i> <?= count($requests) ?> <?= count($requests) === 1 ? __('Kahilingan') : __('Mga Kahilingan') ?>
             </span>
         </div>
     </div>
@@ -71,18 +71,18 @@ ob_start();
             </div>
             <div class="flex-1">
                 <div class="flex flex-wrap items-center justify-between gap-2">
-                    <h3 class="text-sm font-bold text-amber-950 dark:text-amber-200">Kailangan ng Beripikasyon ng Residente (Account Verification Required)</h3>
+                    <h3 class="text-sm font-bold text-amber-950 dark:text-amber-200"><?= e(__('Kailangan ng Beripikasyon ng Residente (Account Verification Required)')) ?></h3>
                     <span class="rounded-full bg-amber-200 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900">
-                        Estado: <?= e(strtoupper($user['status'] ?? 'UNVERIFIED')) ?>
+                        <?= e(__('Estado:')) ?> <?= e(strtoupper($user['status'] ?? 'UNVERIFIED')) ?>
                     </span>
                 </div>
                 <p class="text-xs text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
-                    Ang mga ganap na <strong>beripikadong residente</strong> lamang ang pinahihintulutang humiling ng mga opisyal na sertipiko at clearance. Mangyaring kumpletuhin ang inyong impormasyon sa inyong profile.
+                    <?= e(__('Ang mga ganap na')) ?> <strong><?= e(__('beripikadong residente')) ?></strong> <?= e(__('lamang ang pinahihintulutang humiling ng mga opisyal na sertipiko at clearance. Mangyaring kumpletuhin ang inyong impormasyon sa inyong profile.')) ?>
                 </p>
                 <div class="mt-3">
                     <a href="<?= e(route('profile')) ?>"
                        class="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-700 transition">
-                        <i class="bi bi-person-badge-fill"></i> Pumunta sa Profile & Magsumite ng Valid ID
+                        <i class="bi bi-person-badge-fill"></i> <?= e(__('Pumunta sa Profile & Magsumite ng Valid ID')) ?>
                     </a>
                 </div>
             </div>
@@ -95,12 +95,12 @@ ob_start();
         <button type="button" id="tabBtnNew" onclick="switchMainTab('new')"
                 class="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all <?= $activeTab === 'new' ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' ?>">
             <i class="bi bi-file-earmark-plus text-base"></i>
-            <span>HUMILING NG DOKUMENTO (NEW REQUEST)</span>
+            <span><?= e(__('HUMILING NG DOKUMENTO (NEW REQUEST)')) ?></span>
         </button>
         <button type="button" id="tabBtnRequests" onclick="switchMainTab('requests')"
                 class="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all <?= $activeTab === 'requests' ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' ?>">
             <i class="bi bi-clock-history text-base"></i>
-            <span>AKING MGA KAHILINGAN (MY REQUESTS)</span>
+            <span><?= e(__('AKING MGA KAHILINGAN (MY REQUESTS)')) ?></span>
             <?php if (!empty($requests)): ?>
             <span class="rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-xs font-black dark:bg-blue-950 dark:text-blue-300">
                 <?= count($requests) ?>
@@ -117,12 +117,12 @@ ob_start();
         <?php if (!$isVerifiedResident): ?>
         <div class="rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900">
             <i class="bi bi-shield-lock text-4xl text-slate-400 mb-2 block"></i>
-            <h3 class="text-base font-bold text-slate-800 dark:text-white">Naka-lock ang Paghiling ng Dokumento</h3>
+            <h3 class="text-base font-bold text-slate-800 dark:text-white"><?= e(__('Naka-lock ang Paghiling ng Dokumento')) ?></h3>
             <p class="text-xs text-slate-500 mt-1 mb-4 max-w-md mx-auto">
-                Kailangan munang beripikahin ng kawani ng barangay ang inyong resident profile bago magsimulang humiling.
+                <?= e(__('Kailangan munang beripikahin ng kawani ng barangay ang inyong resident profile bago magsimulang humiling.')) ?>
             </p>
             <a href="<?= e(route('profile')) ?>" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700">
-                Kumpletuhin ang Beripikasyon
+                <?= e(__('Kumpletuhin ang Beripikasyon')) ?>
             </a>
         </div>
         <?php else: ?>
@@ -134,29 +134,29 @@ ob_start();
                     <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white font-black text-xs shadow-sm mb-1">
                         1
                     </div>
-                    <span class="hidden sm:inline">Piliin ang Dokumento</span>
-                    <span class="sm:hidden text-[11px]">Dokumento</span>
+                    <span class="hidden sm:inline"><?= e(__('Piliin ang Dokumento')) ?></span>
+                    <span class="sm:hidden text-[11px]"><?= e(__('Dokumento')) ?></span>
                 </div>
                 <div id="stepIndicator2" class="flex flex-col items-center text-slate-400">
                     <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400">
                         2
                     </div>
-                    <span class="hidden sm:inline">Impormasyon ng Residente</span>
-                    <span class="sm:hidden text-[11px]">Profile</span>
+                    <span class="hidden sm:inline"><?= e(__('Impormasyon ng Residente')) ?></span>
+                    <span class="sm:hidden text-[11px]"><?= e(__('Profile')) ?></span>
                 </div>
                 <div id="stepIndicator3" class="flex flex-col items-center text-slate-400">
                     <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400">
                         3
                     </div>
-                    <span class="hidden sm:inline">Layunin & Pagtanggap</span>
-                    <span class="sm:hidden text-[11px]">Layunin</span>
+                    <span class="hidden sm:inline"><?= e(__('Layunin & Pagtanggap')) ?></span>
+                    <span class="sm:hidden text-[11px]"><?= e(__('Layunin')) ?></span>
                 </div>
                 <div id="stepIndicator4" class="flex flex-col items-center text-slate-400">
                     <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400">
                         4
                     </div>
-                    <span class="hidden sm:inline">Bayaran gamit ang GCash</span>
-                    <span class="sm:hidden text-[11px]">Bayad</span>
+                    <span class="hidden sm:inline"><?= e(__('Bayaran gamit ang GCash')) ?></span>
+                    <span class="sm:hidden text-[11px]"><?= e(__('Bayad')) ?></span>
                 </div>
             </div>
         </div>
@@ -171,17 +171,17 @@ ob_start();
                 <!-- ── STEP 1: CHOOSE DOCUMENT ──────────────────────────── -->
                 <div id="wizardStep1" class="wizard-step">
                     <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">HAKBANG 1 SA 4</span>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white">Piliin ang Dokumento (Choose Document)</h2>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1"><?= e(__('HAKBANG 1 SA 4')) ?></span>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white"><?= e(__('Piliin ang Dokumento (Choose Document)')) ?></h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Pumili ng opisyal na sertipiko o clearance na nais hilingin sa Barangay Bayogo.
+                            <?= e(__('Pumili ng opisyal na sertipiko o clearance na nais hilingin sa Barangay Bayogo.')) ?>
                         </p>
                     </div>
 
                     <div class="space-y-4">
                         <div>
                             <label for="wizard_document_type" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                                Uri ng Dokumento <span class="text-rose-500">*</span>
+                                <?= e(__('Uri ng Dokumento')) ?> <span class="text-rose-500">*</span>
                             </label>
                             <select id="wizard_document_type" name="document_type" onchange="onDocumentTypeChange()"
                                     class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
@@ -208,17 +208,17 @@ ob_start();
                             <p class="mb-3 text-sm text-slate-700 dark:text-slate-300 hidden" id="step1DescDisplay"></p>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                                 <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
-                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Bayad sa Dokumento</span>
+                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5"><?= e(__('Bayad sa Dokumento')) ?></span>
                                     <span class="text-lg font-black text-blue-600 dark:text-blue-400" id="step1FeeDisplay">₱50.00</span>
                                 </div>
                                 <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
-                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Mga Kinakailangan</span>
-                                    <ul class="font-bold text-slate-800 dark:text-slate-200 list-disc ps-4" id="step1ReqsDisplay"><li>Valid Government ID</li></ul>
+                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5"><?= e(__('Mga Kinakailangan')) ?></span>
+                                    <ul class="font-bold text-slate-800 dark:text-slate-200 list-disc ps-4" id="step1ReqsDisplay"><li><?= e(__('Valid Government ID')) ?></li></ul>
                                     <span class="mt-1 block text-[11px] font-semibold text-slate-500" id="step1PayReq"></span>
                                 </div>
                                 <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
-                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Processing Time</span>
-                                    <span class="font-bold text-emerald-600 dark:text-emerald-400" id="step1TimeDisplay">1–2 business days</span>
+                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5"><?= e(__('Processing Time')) ?></span>
+                                    <span class="font-bold text-emerald-600 dark:text-emerald-400" id="step1TimeDisplay"><?= e(__('1–2 business days')) ?></span>
                                 </div>
                             </div>
                         </div>
@@ -226,7 +226,7 @@ ob_start();
                         <div class="pt-4 flex justify-end">
                             <button type="button" onclick="goToStep(2)"
                                     class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition">
-                                <span>Magpatuloy (Continue)</span>
+                                <span><?= e(__('Magpatuloy (Continue)')) ?></span>
                                 <i class="bi bi-arrow-right"></i>
                             </button>
                         </div>
@@ -236,17 +236,17 @@ ob_start();
                 <!-- ── STEP 2: RESIDENT INFORMATION ─────────────────────── -->
                 <div id="wizardStep2" class="wizard-step hidden">
                     <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">HAKBANG 2 SA 4</span>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white">Impormasyon ng Residente (Resident Information)</h2>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1"><?= e(__('HAKBANG 2 SA 4')) ?></span>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white"><?= e(__('Impormasyon ng Residente (Resident Information)')) ?></h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Awtomatikong kinuha mula sa inyong opisyal na rehistradong profile sa database.
+                            <?= e(__('Awtomatikong kinuha mula sa inyong opisyal na rehistradong profile sa database.')) ?>
                         </p>
                     </div>
 
                     <!-- Read-only verified profile summary (Requirement 4) -->
                     <?php 
                         $userArr = is_array($user) ? $user : [];
-                        $userFullName = !empty($userArr) ? User::formatFullName($userArr) : ($user['name'] ?? 'Residente');
+                        $userFullName = !empty($userArr) ? User::formatFullName($userArr) : ($user['name'] ?? __('Residente'));
                         $userAddress  = !empty($userArr) ? User::formatAddress($userArr) : 'Barangay Bayogo';
                     ?>
                     <div class="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5 dark:border-emerald-900 dark:bg-emerald-950/20">
@@ -258,46 +258,46 @@ ob_start();
                                 </span>
                             </div>
                             <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-                                <i class="bi bi-check-circle-fill"></i> Verified ✓
+                                <i class="bi bi-check-circle-fill"></i> <?= e(__('Verified ✓')) ?>
                             </span>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                             <div>
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Buong Pangalan:</span>
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Buong Pangalan:')) ?></span>
                                 <strong class="text-slate-800 dark:text-slate-200"><?= e($userFullName) ?></strong>
                             </div>
                             <div>
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Kaarawan & Edad:</span>
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Kaarawan & Edad:')) ?></span>
                                 <strong class="text-slate-800 dark:text-slate-200">
                                     <?= !empty($user['date_of_birth']) ? date('F d, Y', strtotime($user['date_of_birth'])) : 'N/A' ?>
                                     (<?= User::getAge($user['date_of_birth'] ?? null) !== null ? User::getAge($user['date_of_birth']) . ' anyos' : 'N/A' ?>)
                                 </strong>
                             </div>
                             <div>
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Katayuang Sibil / Kasarian:</span>
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Katayuang Sibil / Kasarian:')) ?></span>
                                 <strong class="text-slate-800 dark:text-slate-200">
                                     <?= e(ucfirst($user['civil_status'] ?? 'Single')) ?> &bull; <?= e(ucfirst($user['sex'] ?? 'N/A')) ?>
                                 </strong>
                             </div>
                             <div>
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Contact Number:</span>
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Contact Number:')) ?></span>
                                 <strong class="text-slate-800 dark:text-slate-200"><?= e($user['phone'] ?? 'N/A') ?></strong>
                             </div>
                             <div class="sm:col-span-2">
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Tirahan (Address):</span>
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Tirahan (Address):')) ?></span>
                                 <strong class="text-slate-800 dark:text-slate-200"><?= e($userAddress) ?></strong>
                             </div>
                             <?php if (!empty($user['household_no'])): ?>
                             <div class="sm:col-span-2">
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase">Household Number:</span>
+                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Household Number:')) ?></span>
                                 <strong class="font-mono text-indigo-700 dark:text-indigo-400"><?= e($user['household_no']) ?></strong>
                             </div>
                             <?php endif; ?>
                         </div>
 
                         <div class="mt-4 border-t border-emerald-200/60 pt-2 text-[11px] text-emerald-800 dark:text-emerald-300">
-                            * Ang mga impormasyong ito ay awtomatikong ilalagay sa opisyal na sertipiko. Hindi mo na kailangang mag-type muli.
+                            <?= e(__('* Ang mga impormasyong ito ay awtomatikong ilalagay sa opisyal na sertipiko. Hindi mo na kailangang mag-type muli.')) ?>
                         </div>
                     </div>
 
@@ -305,11 +305,11 @@ ob_start();
                         <button type="button" onclick="goToStep(1)"
                                 class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                             <i class="bi bi-arrow-left"></i>
-                            <span>Bumalik</span>
+                            <span><?= e(__('Bumalik')) ?></span>
                         </button>
                         <button type="button" onclick="goToStep(3)"
                                 class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition">
-                            <span>Magpatuloy (Continue)</span>
+                            <span><?= e(__('Magpatuloy (Continue)')) ?></span>
                             <i class="bi bi-arrow-right"></i>
                         </button>
                     </div>
@@ -318,10 +318,10 @@ ob_start();
                 <!-- ── STEP 3: PURPOSE & RECEIVING METHOD ───────────────── -->
                 <div id="wizardStep3" class="wizard-step hidden">
                     <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">HAKBANG 3 SA 4</span>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white">Layunin at Paraan ng Pagtanggap</h2>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1"><?= e(__('HAKBANG 3 SA 4')) ?></span>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white"><?= e(__('Layunin at Paraan ng Pagtanggap')) ?></h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Piliin kung para saan ang dokumento at kung paano mo ito nais matanggap.
+                            <?= e(__('Piliin kung para saan ang dokumento at kung paano mo ito nais matanggap.')) ?>
                         </p>
                     </div>
 
@@ -329,26 +329,26 @@ ob_start();
                         <!-- Purpose (Requirement 5) -->
                         <div>
                             <label for="wizard_purpose" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                                Layunin (Purpose) <span class="text-rose-500">*</span>
+                                <?= e(__('Layunin (Purpose)')) ?> <span class="text-rose-500">*</span>
                             </label>
                             <select id="wizard_purpose" name="purpose" required onchange="onPurposeChange(this.value)"
                                     class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                                <option value="Employment">Employment (Paghahanapbuhay / Trabaho)</option>
-                                <option value="School">School (Eskwela / Scholarship / Enrollment)</option>
-                                <option value="Business">Business (Negosyo / Permit)</option>
-                                <option value="Government Requirement">Government Requirement (SSS, PhilHealth, Pag-IBIG, ID)</option>
-                                <option value="Bank Requirement">Bank Requirement (Pagbubukas ng Account / Loan)</option>
-                                <option value="Travel">Travel (Lokal o Pang-ibayong Dagat)</option>
-                                <option value="Other">Other (Iba pang layunin...)</option>
+                                <option value="Employment"><?= e(__('Employment (Paghahanapbuhay / Trabaho)')) ?></option>
+                                <option value="School"><?= e(__('School (Eskwela / Scholarship / Enrollment)')) ?></option>
+                                <option value="Business"><?= e(__('Business (Negosyo / Permit)')) ?></option>
+                                <option value="Government Requirement"><?= e(__('Government Requirement (SSS, PhilHealth, Pag-IBIG, ID)')) ?></option>
+                                <option value="Bank Requirement"><?= e(__('Bank Requirement (Pagbubukas ng Account / Loan)')) ?></option>
+                                <option value="Travel"><?= e(__('Travel (Lokal o Pang-ibayong Dagat)')) ?></option>
+                                <option value="Other"><?= e(__('Other (Iba pang layunin...)')) ?></option>
                             </select>
 
                             <!-- Other Purpose Text Field -->
                             <div id="otherPurposeWrapper" class="mt-2.5 hidden">
                                 <label for="wizard_purpose_other" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                    Tukuyin ang ibang layunin: <span class="text-rose-500">*</span>
+                                    <?= e(__('Tukuyin ang ibang layunin:')) ?> <span class="text-rose-500">*</span>
                                 </label>
                                 <input type="text" id="wizard_purpose_other" name="purpose_other" maxlength="150"
-                                       placeholder="Halimbawa: Police clearance requirement, scholarship application, atbp."
+                                       placeholder="<?= e(__('Halimbawa: Police clearance requirement, scholarship application, atbp.')) ?>"
                                        class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                             </div>
                         </div>
@@ -356,7 +356,7 @@ ob_start();
                         <!-- Receiving Method (Requirement 5 & 6: Digital Copy vs Pickup at Barangay Hall ONLY) -->
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
-                                Paano mo nais matanggap ang dokumento? <span class="text-rose-500">*</span>
+                                <?= e(__('Paano mo nais matanggap ang dokumento?')) ?> <span class="text-rose-500">*</span>
                             </label>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <!-- Digital Option -->
@@ -365,11 +365,11 @@ ob_start();
                                            class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-1.5">
-                                            <span class="text-sm font-bold text-slate-900 dark:text-white">DIGITAL COPY</span>
-                                            <span class="rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">PDF Soft Copy</span>
+                                            <span class="text-sm font-bold text-slate-900 dark:text-white"><?= e(__('DIGITAL COPY')) ?></span>
+                                            <span class="rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300"><?= e(__('PDF Soft Copy')) ?></span>
                                         </div>
                                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                            Awtomatikong mai-download ang opisyal na PDF na may QR Code verification kapag naaprubahan.
+                                            <?= e(__('Awtomatikong mai-download ang opisyal na PDF na may QR Code verification kapag naaprubahan.')) ?>
                                         </p>
                                     </div>
                                 </label>
@@ -380,11 +380,11 @@ ob_start();
                                            class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-1.5">
-                                            <span class="text-sm font-bold text-slate-900 dark:text-white">PICKUP AT BARANGAY HALL</span>
-                                            <span class="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-300">Counter</span>
+                                            <span class="text-sm font-bold text-slate-900 dark:text-white"><?= e(__('PICKUP AT BARANGAY HALL')) ?></span>
+                                            <span class="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-300"><?= e(__('Counter')) ?></span>
                                         </div>
                                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                            Kukunin ang pisikal na orihinal na dokumento sa Barangay Hall kapag handa na.
+                                            <?= e(__('Kukunin ang pisikal na orihinal na dokumento sa Barangay Hall kapag handa na.')) ?>
                                         </p>
                                     </div>
                                 </label>
@@ -394,10 +394,10 @@ ob_start();
                         <!-- Notes (Optional) -->
                         <div>
                             <label for="wizard_notes" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                Karagdagang Paalala (Opsyonal):
+                                <?= e(__('Karagdagang Paalala (Opsyonal):')) ?>
                             </label>
                             <textarea id="wizard_notes" name="notes" rows="2" maxlength="300"
-                                      placeholder="Maaaring maglagay ng karagdagang impormasyon para sa kawani ng barangay..."
+                                      placeholder="<?= e(__('Maaaring maglagay ng karagdagang impormasyon para sa kawani ng barangay...')) ?>"
                                       class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"></textarea>
                         </div>
                     </div>
@@ -406,11 +406,11 @@ ob_start();
                         <button type="button" onclick="goToStep(2)"
                                 class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                             <i class="bi bi-arrow-left"></i>
-                            <span>Bumalik</span>
+                            <span><?= e(__('Bumalik')) ?></span>
                         </button>
                         <button type="button" onclick="goToStep(4)"
                                 class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition">
-                            <span>Suriin ang Bayad (Review Fee)</span>
+                            <span><?= e(__('Suriin ang Bayad (Review Fee)')) ?></span>
                             <i class="bi bi-arrow-right"></i>
                         </button>
                     </div>
@@ -419,45 +419,45 @@ ob_start();
                 <!-- ── STEP 4: ORDER SUMMARY & PAY WITH GCASH ───────────── -->
                 <div id="wizardStep4" class="wizard-step hidden">
                     <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">HAKBANG 4 SA 4</span>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white">Kumpirmasyon at Pagbabayad</h2>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1"><?= e(__('HAKBANG 4 SA 4')) ?></span>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white"><?= e(__('Kumpirmasyon at Pagbabayad')) ?></h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Review the details, then pay with GCash. You will send the fee to the barangay GCash and upload your receipt.
+                            <?= e(__('Review the details, then pay with GCash. You will send the fee to the barangay GCash and upload your receipt.')) ?>
                         </p>
                     </div>
 
                     <!-- Clean Request Summary (Requirement 24) -->
                     <div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/40 mb-5">
-                        <div class="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">REQUEST SUMMARY</div>
+                        <div class="text-xs font-black uppercase tracking-wider text-slate-400 mb-3"><?= e(__('REQUEST SUMMARY')) ?></div>
 
                         <div class="space-y-3 text-xs">
                             <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
-                                <span class="text-slate-500 dark:text-slate-400">Dokumento (Document):</span>
-                                <strong class="text-slate-900 dark:text-white" id="summaryDocName">Barangay Clearance</strong>
+                                <span class="text-slate-500 dark:text-slate-400"><?= e(__('Dokumento (Document):')) ?></span>
+                                <strong class="text-slate-900 dark:text-white" id="summaryDocName"><?= e(__('Barangay Clearance')) ?></strong>
                             </div>
                             <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
-                                <span class="text-slate-500 dark:text-slate-400">Paraan ng Pagtanggap:</span>
-                                <strong class="text-slate-900 dark:text-white" id="summaryReceiving">Digital Copy</strong>
+                                <span class="text-slate-500 dark:text-slate-400"><?= e(__('Paraan ng Pagtanggap:')) ?></span>
+                                <strong class="text-slate-900 dark:text-white" id="summaryReceiving"><?= e(__('Digital Copy')) ?></strong>
                             </div>
                             <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
-                                <span class="text-slate-500 dark:text-slate-400">Layunin (Purpose):</span>
-                                <strong class="text-slate-900 dark:text-white" id="summaryPurpose">Employment</strong>
+                                <span class="text-slate-500 dark:text-slate-400"><?= e(__('Layunin (Purpose):')) ?></span>
+                                <strong class="text-slate-900 dark:text-white" id="summaryPurpose"><?= e(__('Employment')) ?></strong>
                             </div>
                             <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
-                                <span class="text-slate-500 dark:text-slate-400">Bayad sa Dokumento:</span>
+                                <span class="text-slate-500 dark:text-slate-400"><?= e(__('Bayad sa Dokumento:')) ?></span>
                                 <span class="font-bold text-slate-900 dark:text-white" id="summaryDocFee">₱50.00</span>
                             </div>
                             <div class="flex items-center justify-between pt-1">
-                                <span class="text-sm font-black text-slate-900 dark:text-white">KABUUAN (TOTAL):</span>
+                                <span class="text-sm font-black text-slate-900 dark:text-white"><?= e(__('KABUUAN (TOTAL):')) ?></span>
                                 <span class="text-xl font-black text-blue-600 dark:text-blue-400" id="summaryTotal">₱50.00</span>
                             </div>
                         </div>
 
                         <!-- Payment Method Box (Requirement 7: GCash via PayMongo Only) -->
                         <div id="summaryPaymentMethodBox" class="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-700 flex items-center justify-between">
-                            <span class="text-xs text-slate-500 dark:text-slate-400">Paraan ng Pagbabayad:</span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400"><?= e(__('Paraan ng Pagbabayad:')) ?></span>
                             <span class="inline-flex items-center gap-1.5 font-bold text-xs text-blue-700 dark:text-blue-300">
-                                <i class="bi bi-check-circle-fill text-blue-600"></i> GCash (send + upload receipt)
+                                <i class="bi bi-check-circle-fill text-blue-600"></i> <?= e(__('GCash (send + upload receipt)')) ?>
                             </span>
                         </div>
                     </div>
@@ -470,14 +470,14 @@ ob_start();
                         <button type="button" onclick="goToStep(3)"
                                 class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                             <i class="bi bi-arrow-left"></i>
-                            <span>Bumalik</span>
+                            <span><?= e(__('Bumalik')) ?></span>
                         </button>
 
                         <!-- Pay Button with double click protection (Requirement 38) -->
                         <button type="submit" id="wizardSubmitBtn"
                                 class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] transition">
                             <i class="bi bi-lock-fill"></i>
-                            <span id="wizardSubmitBtnText">PAY ₱50.00 WITH GCASH</span>
+                            <span id="wizardSubmitBtnText"><?= e(__('PAY ₱:amount WITH GCASH', ['amount' => '50.00'])) ?></span>
                         </button>
                     </div>
                 </div>
@@ -498,13 +498,13 @@ ob_start();
             <div class="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
                 <i class="bi bi-folder2 text-3xl"></i>
             </div>
-            <h3 class="text-base font-bold text-slate-900 dark:text-white">Wala pang nakatalang kahilingan</h3>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white"><?= e(__('Wala pang nakatalang kahilingan')) ?></h3>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-5 max-w-sm mx-auto">
-                Wala ka pang isinusumiteng kahilingan ng dokumento sa Barangay Bayogo.
+                <?= e(__('Wala ka pang isinusumiteng kahilingan ng dokumento sa Barangay Bayogo.')) ?>
             </p>
             <button type="button" onclick="switchMainTab('new')"
                     class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition">
-                <i class="bi bi-plus-lg"></i> Gumawa ng Bagong Kahilingan
+                <i class="bi bi-plus-lg"></i> <?= e(__('Gumawa ng Bagong Kahilingan')) ?>
             </button>
         </div>
         <?php else: ?>
@@ -526,30 +526,30 @@ ob_start();
                 // Status Labels
                 $statusDisplay = DocumentRequest::statusLabel($statusKey);
                 if ($isDigital && $statusKey === 'ready') {
-                    $statusDisplay = 'Available for Download';
+                    $statusDisplay = __('Available for Download');
                 } elseif (!$isDigital && $statusKey === 'ready') {
-                    $statusDisplay = 'Ready for Pickup';
+                    $statusDisplay = __('Ready for Pickup');
                 }
 
                 // Payment Status Label
-                $payDisplay = 'Awaiting Payment';
+                $payDisplay = __('Awaiting Payment');
                 $payBadgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
                 if ($fee <= 0.0 || $payStatus === DocumentPayment::STATUS_FREE || $payStatus === DocumentPayment::STATUS_NOT_REQUIRED) {
-                    $payDisplay = 'Not Required';
+                    $payDisplay = __('Not Required');
                     $payBadgeClass = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
                 } elseif ($isPaid) {
-                    $payDisplay = 'Paid ✓';
+                    $payDisplay = __('Paid ✓');
                     $payBadgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
                 } elseif (in_array($payStatus, ['FAILED', 'PAYMENT_REJECTED'], true)) {
-                    $payDisplay = 'Failed';
+                    $payDisplay = __('Failed');
                     $payBadgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300';
                 } elseif (in_array($payStatus, ['CANCELLED', 'EXPIRED'], true)) {
-                    $payDisplay = $payStatus === 'EXPIRED' ? 'Checkout expired' : 'Not completed';
+                    $payDisplay = $payStatus === 'EXPIRED' ? __('Checkout expired') : __('Not completed');
                     $payBadgeClass = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
                 } elseif (in_array($payStatus, ['PAYMENT_PROOF_SUBMITTED', 'UNDER_REVIEW'], true)) {
-                    $payDisplay = 'Payment verification';
+                    $payDisplay = __('Payment verification');
                 } elseif ($payStatus === DocumentPayment::STATUS_PAY_AT_PICKUP) {
-                    $payDisplay = 'Pay at the hall';
+                    $payDisplay = __('Pay at the hall');
                 }
                 $canPayOnline = !$isPaid && $fee > 0
                     && !in_array($payStatus, ['PAYMENT_PROOF_SUBMITTED', 'UNDER_REVIEW', DocumentPayment::STATUS_PAY_AT_PICKUP], true)
@@ -573,7 +573,7 @@ ob_start();
                             <span><i class="bi bi-calendar3 me-1"></i><?= date('M d, Y', strtotime($r['requested_at'])) ?></span>
                             <span>&bull;</span>
                             <span>
-                                <i class="bi bi-box-seam me-1"></i><?= $isDigital ? 'Digital Copy' : 'Pickup at Hall' ?>
+                                <i class="bi bi-box-seam me-1"></i><?= $isDigital ? __('Digital Copy') : __('Pickup at Hall') ?>
                             </span>
                             <?php if ($fee > 0): ?>
                             <span>&bull;</span>
@@ -595,13 +595,13 @@ ob_start();
                             <?php if ($canPayOnline): ?>
                             <a href="<?= e(route('documents/' . $reqId . '/payment')) ?>"
                                class="inline-flex items-center gap-1 rounded-xl bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition">
-                                <i class="bi bi-wallet2" aria-hidden="true"></i> Pay with GCash
+                                <i class="bi bi-wallet2" aria-hidden="true"></i> <?= e(__('Pay with GCash')) ?>
                             </a>
                             <?php endif; ?>
 
                             <button type="button" onclick="openDetailsModal(<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>)"
                                     class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                <i class="bi bi-eye"></i> View Details
+                                <i class="bi bi-eye"></i> <?= e(__('View Details')) ?>
                             </button>
                         </div>
                     </div>
@@ -617,12 +617,12 @@ ob_start();
                     default                                               => 0,
                 };
                 if ($__stage < 2 && $isPaid && $fee > 0) { $__stage = max($__stage, 2); }
-                $__steps = ['Submitted', 'Payment', 'Processing', $isDigital ? 'Ready to download' : 'Ready for pickup', 'Completed'];
+                $__steps = [__('Submitted'), __('Payment'), __('Processing'), $isDigital ? __('Ready to download') : __('Ready for pickup'), __('Completed')];
                 if ($fee <= 0) { unset($__steps[1]); }
                 $__closed = in_array(strtolower($statusKey), ['rejected', 'cancelled'], true);
                 ?>
                 <?php if (!$__closed): ?>
-                <ol class="doc-timeline mt-3" aria-label="Request progress">
+                <ol class="doc-timeline mt-3" aria-label="<?= e(__('Request progress')) ?>">
                     <?php foreach ($__steps as $__i => $__label):
                         $__state = $__i < $__stage ? 'done' : ($__i === $__stage ? 'current' : 'todo'); ?>
                         <li class="doc-timeline__step is-<?= $__state ?>"<?= $__state === 'current' ? ' aria-current="step"' : '' ?>>
@@ -650,7 +650,7 @@ ob_start();
         <!-- Modal Header -->
         <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 dark:border-slate-800">
             <div>
-                <h3 class="text-base font-black text-slate-900 dark:text-white" id="modalDocTitle">REQUEST DETAILS</h3>
+                <h3 class="text-base font-black text-slate-900 dark:text-white" id="modalDocTitle"><?= e(__('REQUEST DETAILS')) ?></h3>
                 <span class="font-mono text-xs font-bold text-blue-600 dark:text-blue-400" id="modalRefNo"></span>
             </div>
             <button type="button" onclick="closeDetailsModal()" class="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800">
@@ -663,61 +663,61 @@ ob_start();
 
             <!-- Request Details Box -->
             <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-800/40">
-                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">DETALYE NG KAHILINGAN</div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400"><?= e(__('DETALYE NG KAHILINGAN')) ?></div>
                 <div class="flex justify-between">
-                    <span class="text-slate-500">Dokumento:</span>
+                    <span class="text-slate-500"><?= e(__('Dokumento:')) ?></span>
                     <strong class="text-slate-900 dark:text-white" id="modalDocName"></strong>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-slate-500">Layunin (Purpose):</span>
+                    <span class="text-slate-500"><?= e(__('Layunin (Purpose):')) ?></span>
                     <strong class="text-slate-900 dark:text-white" id="modalPurpose"></strong>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-slate-500">Petsa ng Paghiling:</span>
+                    <span class="text-slate-500"><?= e(__('Petsa ng Paghiling:')) ?></span>
                     <strong class="text-slate-900 dark:text-white" id="modalDate"></strong>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-slate-500">Paraan ng Pagtanggap:</span>
+                    <span class="text-slate-500"><?= e(__('Paraan ng Pagtanggap:')) ?></span>
                     <strong class="text-slate-900 dark:text-white" id="modalReceiving"></strong>
                 </div>
             </div>
 
             <!-- Payment Details Box -->
             <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-800/40">
-                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">PAGBABAYAD (PAYMENT)</div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400"><?= e(__('PAGBABAYAD (PAYMENT)')) ?></div>
                 <div class="flex justify-between">
-                    <span class="text-slate-500">Halaga:</span>
+                    <span class="text-slate-500"><?= e(__('Halaga:')) ?></span>
                     <strong class="text-slate-900 dark:text-white" id="modalAmount"></strong>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-slate-500">Paraan ng Bayad:</span>
+                    <span class="text-slate-500"><?= e(__('Paraan ng Bayad:')) ?></span>
                     <strong class="text-slate-900 dark:text-white" id="modalPaymentMethod">GCash</strong>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-slate-500">Estado ng Bayad:</span>
+                    <span class="text-slate-500"><?= e(__('Estado ng Bayad:')) ?></span>
                     <span id="modalPaymentStatus" class="font-bold"></span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-slate-500">Payment Reference:</span>
+                    <span class="text-slate-500"><?= e(__('Payment Reference:')) ?></span>
                     <span class="font-mono font-bold text-slate-900 dark:text-white" id="modalPayRef"></span>
                 </div>
                 <div class="flex justify-between" id="modalPaidRow">
-                    <span class="text-slate-500">Paid on:</span>
+                    <span class="text-slate-500"><?= e(__('Paid on:')) ?></span>
                     <strong class="text-slate-900 dark:text-white" id="modalPaidAt"></strong>
                 </div>
                 <div class="flex justify-between gap-3" id="modalVerifyRow">
-                    <span class="text-slate-500">Verification:</span>
+                    <span class="text-slate-500"><?= e(__('Verification:')) ?></span>
                     <strong class="text-right text-slate-900 dark:text-white" id="modalVerification"></strong>
                 </div>
                 <div class="flex justify-between" id="modalPmRow">
-                    <span class="text-slate-500">PayMongo ref.:</span>
+                    <span class="text-slate-500"><?= e(__('PayMongo ref.:')) ?></span>
                     <span class="font-mono text-slate-900 dark:text-white" id="modalPmRef"></span>
                 </div>
             </div>
 
             <!-- Process Timeline Tracker (Requirement 26) -->
             <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-800/40">
-                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">PROSESO (TIMELINE)</div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5"><?= e(__('PROSESO (TIMELINE)')) ?></div>
                 <div class="space-y-2 text-xs" id="modalTimeline">
                     <!-- Populated dynamically via JS -->
                 </div>
@@ -770,11 +770,11 @@ function onDocumentTypeChange() {
     selectedFee = amt;
     isSelectedFree = isFree;
 
-    var feeText = isFree ? 'LIBRE (₱0.00)' : '₱' + amt.toFixed(2);
+    var feeText = isFree ? <?= json_encode(__('LIBRE (₱0.00)')) ?> : '₱' + amt.toFixed(2);
 
     // Description + requirements come from the admin's Document Fees page.
     var reqs = (opt.getAttribute('data-requirements') || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
-    if (!reqs.length) { reqs = ['Valid Government ID']; }
+    if (!reqs.length) { reqs = [<?= json_encode(__('Valid Government ID')) ?>]; }
     var reqList = document.getElementById('step1ReqsDisplay');
     reqList.textContent = '';
     reqs.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; reqList.appendChild(li); });
@@ -782,7 +782,7 @@ function onDocumentTypeChange() {
     var descEl = document.getElementById('step1DescDisplay');
     descEl.textContent = desc;
     descEl.classList.toggle('hidden', desc === '');
-    document.getElementById('step1PayReq').textContent = isFree ? 'No payment required' : 'Payment required — pay with GCash';
+    document.getElementById('step1PayReq').textContent = isFree ? <?= json_encode(__('No payment required')) ?> : <?= json_encode(__('Payment required — pay with GCash')) ?>;
     document.getElementById('step1FeeDisplay').innerText = feeText;
     document.getElementById('summaryDocFee').innerText = feeText;
     document.getElementById('summaryTotal').innerText = isFree ? '₱0.00' : '₱' + amt.toFixed(2);
@@ -791,10 +791,10 @@ function onDocumentTypeChange() {
     var submitBtnText = document.getElementById('wizardSubmitBtnText');
     var paymentBox = document.getElementById('summaryPaymentMethodBox');
     if (isFree) {
-        submitBtnText.innerText = 'SUBMIT REQUEST (FREE)';
+        submitBtnText.innerText = <?= json_encode(__('SUBMIT REQUEST (FREE)')) ?>;
         paymentBox.classList.add('hidden');
     } else {
-        submitBtnText.innerText = 'PAY ₱' + amt.toFixed(2) + ' WITH GCASH';
+        submitBtnText.innerText = <?= json_encode(__('PAY ₱:amount WITH GCASH')) ?>.replace(':amount', amt.toFixed(2));
         paymentBox.classList.remove('hidden');
     }
 }
@@ -802,7 +802,7 @@ function onDocumentTypeChange() {
 function onPurposeChange(val) {
     var otherWrap = document.getElementById('otherPurposeWrapper');
     var otherInput = document.getElementById('wizard_purpose_other');
-    if (val === 'Other') {
+    if (val === <?= json_encode(__('Other')) ?>) {
         otherWrap.classList.remove('hidden');
         otherInput.required = true;
         otherInput.focus();
@@ -813,17 +813,17 @@ function onPurposeChange(val) {
 }
 
 function updateReceivingMethod(method) {
-    document.getElementById('summaryReceiving').innerText = (method === 'digital') ? 'Digital Copy (Online)' : 'Pickup at Barangay Hall';
+    document.getElementById('summaryReceiving').innerText = (method === 'digital') ? <?= json_encode(__('Digital Copy (Online)')) ?> : <?= json_encode(__('Pickup at Barangay Hall')) ?>;
 }
 
 function goToStep(step) {
     // Validate step transition
     if (step === 4) {
         var pur = document.getElementById('wizard_purpose').value;
-        if (pur === 'Other') {
+        if (pur === <?= json_encode(__('Other')) ?>) {
             var oth = document.getElementById('wizard_purpose_other').value.trim();
             if (oth.length < 3) {
-                alert('Mangyaring ilagay ang layunin sa text field.');
+                alert(<?= json_encode(__('Mangyaring ilagay ang layunin sa text field.')) ?>);
                 document.getElementById('wizard_purpose_other').focus();
                 return;
             }
@@ -866,7 +866,7 @@ function submitWizardForm() {
 
     // Requirement 38: Prevent double click
     btn.disabled = true;
-    btnText.innerText = 'CREATING SECURE PAYMENT...';
+    btnText.innerText = <?= json_encode(__('CREATING SECURE PAYMENT...')) ?>;
 
     var form = document.getElementById('wizardDocForm');
     var formData = new FormData(form);
@@ -891,9 +891,9 @@ function submitWizardForm() {
         }
         if (!data || !data.success) {
             btn.disabled = false;
-            btnText.innerText = isSelectedFree ? 'SUBMIT REQUEST (FREE)' : 'PAY ₱' + selectedFee.toFixed(2) + ' WITH GCASH';
+            btnText.innerText = isSelectedFree ? <?= json_encode(__('SUBMIT REQUEST (FREE)')) ?> : <?= json_encode(__('PAY ₱:amount WITH GCASH')) ?>.replace(':amount', selectedFee.toFixed(2));
             alertBox.className = "mb-4 rounded-xl p-3.5 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-900";
-            alertBox.innerText = data.error || 'Nabigong likhain ang kahilingan.';
+            alertBox.innerText = data.error || <?= json_encode(__('Nabigong likhain ang kahilingan.')) ?>;
             alertBox.classList.remove('hidden');
             return;
         }
@@ -906,14 +906,14 @@ function submitWizardForm() {
 
         // Direct GCash: open the payment page (GCash details, QR, proof upload).
         if (data.redirect_url && !data.checkout_url) {
-            btnText.innerText = 'OPENING GCASH PAYMENT...';
+            btnText.innerText = <?= json_encode(__('OPENING GCASH PAYMENT...')) ?>;
             window.location.href = data.redirect_url;
             return;
         }
 
         // If paid document with PayMongo checkout URL, redirect immediately
         if (data.checkout_url) {
-            btnText.innerText = 'REDIRECTING TO GCASH VIA PAYMONGO...';
+            btnText.innerText = <?= json_encode(__('REDIRECTING TO GCASH VIA PAYMONGO...')) ?>;
             window.location.href = data.checkout_url;
             return;
         }
@@ -926,9 +926,9 @@ function submitWizardForm() {
     .catch(function(err) {
         console.error('Submission error:', err);
         btn.disabled = false;
-        btnText.innerText = isSelectedFree ? 'SUBMIT REQUEST (FREE)' : 'PAY ₱' + selectedFee.toFixed(2) + ' WITH GCASH';
+        btnText.innerText = isSelectedFree ? <?= json_encode(__('SUBMIT REQUEST (FREE)')) ?> : <?= json_encode(__('PAY ₱:amount WITH GCASH')) ?>.replace(':amount', selectedFee.toFixed(2));
         alertBox.className = "mb-4 rounded-xl p-3.5 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200";
-        alertBox.innerText = 'May naganap na aberya sa koneksyon. Pakisubukan muli.';
+        alertBox.innerText = <?= json_encode(__('May naganap na aberya sa koneksyon. Pakisubukan muli.')) ?>;
         alertBox.classList.remove('hidden');
     });
 }
@@ -938,14 +938,14 @@ function openDetailsModal(r) {
     document.getElementById('modalDocName').innerText = r.document_type || '';
     document.getElementById('modalPurpose').innerText = r.purpose || '';
     document.getElementById('modalDate').innerText = r.requested_at ? new Date(r.requested_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
-    document.getElementById('modalReceiving').innerText = (r.delivery_method === 'digital') ? 'Digital Copy' : 'Pickup at Barangay Hall';
+    document.getElementById('modalReceiving').innerText = (r.delivery_method === 'digital') ? <?= json_encode(__('Digital Copy')) ?> : <?= json_encode(__('Pickup at Barangay Hall')) ?>;
 
     var fee = parseFloat(r.fee_amount || 0);
     document.getElementById('modalAmount').innerText = fee > 0 ? '₱' + fee.toFixed(2) : 'LIBRE';
     document.getElementById('modalPayRef').innerText = r.payment_ref || (r.reference_no ? 'PAY-' + r.reference_no : 'N/A');
 
     var pst = (r.payment_status || 'UNPAID').toUpperCase();
-    var verification = { paymongo: 'Automatically verified through PayMongo', manual: 'Manually verified by the barangay', counter: 'Paid in cash at the Barangay Hall', waiver: 'Fee waived by the barangay' }[r.verification_type || ''] || '';
+    var verification = { paymongo: <?= json_encode(__('Automatically verified through PayMongo')) ?>, manual: <?= json_encode(__('Manually verified by the barangay')) ?>, counter: <?= json_encode(__('Paid in cash at the Barangay Hall')) ?>, waiver: <?= json_encode(__('Fee waived by the barangay')) ?> }[r.verification_type || ''] || '';
     document.getElementById('modalPaidAt').innerText = r.paid_at ? new Date(String(r.paid_at).replace(' ', 'T')).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
     document.getElementById('modalVerification').innerText = verification;
     document.getElementById('modalPmRef').innerText = r.paymongo_payment_id || '';
@@ -956,7 +956,7 @@ function openDetailsModal(r) {
     var pstEl = document.getElementById('modalPaymentStatus');
     if (isPaid) {
         pstEl.className = "font-bold text-emerald-600 dark:text-emerald-400";
-        pstEl.innerText = "PAID ✓";
+        pstEl.innerText = <?= json_encode(__('PAID ✓')) ?>;
     } else {
         pstEl.className = "font-bold text-amber-600 dark:text-amber-400";
         pstEl.innerText = pst;

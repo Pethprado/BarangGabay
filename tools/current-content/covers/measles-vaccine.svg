@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f766e"/><stop offset="1" stop-color="#2dd4bf"/></linearGradient></defs><rect width="1600" height="900" fill="url(#s)"/>
+     <g fill="#fff" fill-opacity="0.1"><circle cx="1400" cy="760" r="300"/><circle cx="160" cy="160" r="200"/></g>
+     <path d="M800 150 L1050 240 V470 C1050 640 930 740 800 790 C670 740 550 640 550 470 V240z" fill="#f0fdfa"/>
+     <path d="M800 200 L1000 272 V470 C1000 612 905 694 800 736 C695 694 600 612 600 470 V272z" fill="#14b8a6"/>
+     <rect x="760" y="360" width="80" height="250" rx="16" fill="#fff"/><rect x="675" y="445" width="250" height="80" rx="16" fill="#fff"/>
+     <g transform="translate(1180 520) rotate(-35)"><rect x="-30" y="-150" width="60" height="230" rx="14" fill="#e0f2fe" stroke="#0c4a6e" stroke-width="8"/><rect x="-30" y="-60" width="60" height="90" fill="#38bdf8"/><rect x="-55" y="-170" width="110" height="26" rx="8" fill="#0c4a6e"/><rect x="-10" y="-230" width="20" height="62" fill="#0c4a6e"/><path d="M-4 80 h8 l-4 90z" fill="#64748b"/></g>
+     <g transform="translate(360 560)" fill="#fef2f2"><path d="M0 60 C -90 0 -80 -80 0 -40 C 80 -80 90 0 0 60z" fill="#fb7185"/></g>
+  <g transform="translate(56 52)">
+    <rect width="190" height="54" rx="27" fill="#ffffff" fill-opacity="0.92"/>
+    <circle cx="30" cy="27" r="9" fill="#d97706"/>
+    <text x="50" y="36" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="800" letter-spacing="3" fill="#7c2d12">SAMPLE</text>
+  </g></svg>

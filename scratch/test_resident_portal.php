@@ -1,54 +1,106 @@
 <?php
-$cookieFile = __DIR__ . '/resident_cookie.txt';
-if (file_exists($cookieFile)) unlink($cookieFile);
+$baseUrl = 'https://baranggabay.onrender.com';
+$adminCookie = __DIR__ . '/admin_live_cookie.txt';
+$residentCookie = __DIR__ . '/resident_live_cookie.txt';
 
-// 1. Visit /login
-$ch = curl_init('https://baranggabay.onrender.com/login');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieFile);
-curl_setopt($ch, CURLOPT_COOKIEFILE, $cookieFile);
-$html = curl_exec($ch);
-preg_match('/name="csrf_token"\s+value="([^"]+)"/', $html, $m);
-$csrf = $m[1] ?? '';
-
-// 2. Submit Resident Login
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
-    'csrf_token' => $csrf,
-    'email' => 'michelle@baranggabay.ph',
-    'password' => 'Resident@1234'
-]));
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-$res = curl_exec($ch);
-$info = curl_getinfo($ch);
-
-echo "Resident Login HTTP Code: " . $info['http_code'] . "\n";
-echo "Effective URL: " . $info['url'] . "\n";
-
-// 3. Check notifications page
-curl_setopt($ch, CURLOPT_POST, false);
-curl_setopt($ch, CURLOPT_URL, 'https://baranggabay.onrender.com/notifications');
-$notifHtml = curl_exec($ch);
-echo "Notifications page title: ";
-if (preg_match('/<title>(.*?)<\/title>/', $notifHtml, $t)) echo $t[1] . "\n";
-
-// Check unread count or notification titles
-preg_match_all('/<h[3-6][^>]*>(.*?)<\/h[3-6]>/is', $notifHtml, $notifHeadings);
-foreach (array_slice($notifHeadings[1], 0, 4) as $h) {
-    echo "  Notice: " . trim(strip_tags($h)) . "\n";
+function req($url, $post = null, $cookieFile = null, $follow = true) {
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    if ($post !== null) {
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, is_array($post) ? http_build_query($post) : $post);
+    }
+    if ($cookieFile) {
+        curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieFile);
+        curl_setopt($ch, CURLOPT_COOKIEFILE, $cookieFile);
+    }
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, $follow);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    $response = curl_exec($ch);
+    $info = curl_getinfo($ch);
+    curl_close($ch);
+    return ['body' => $response, 'info' => $info];
 }
 
-// 4. Check documents page
-curl_setopt($ch, CURLOPT_URL, 'https://baranggabay.onrender.com/documents');
-$docHtml = curl_exec($ch);
-echo "\nDocuments page title: ";
-if (preg_match('/<title>(.*?)<\/title>/', $docHtml, $t)) echo $t[1] . "\n";
-preg_match_all('/BRGY-2026-\d+/', $docHtml, $docs);
-echo "  Found document references: " . implode(', ', array_unique($docs[0])) . "\n";
+// 1. Fetch admin residents page
+$resPage = req($baseUrl . '/admin/residents?status=verified', null, $adminCookie);
 
-// 5. Check evacuation page
-curl_setopt($ch, CURLOPT_URL, 'https://baranggabay.onrender.com/evacuation');
-$evacHtml = curl_exec($ch);
-echo "\nEvacuation centers found: ";
-preg_match_all('/Bayogo[^<]+/i', $evacHtml, $evacs);
-echo implode(', ', array_slice(array_unique($evacs[0]), 0, 3)) . "\n";
+// Parse email and ID of first verified resident
+preg_match_all('/href="[^"]*\/admin\/residents\/(\d+)"[^>]*>.*?<\/a>/s', $resPage['body'], $m);
+preg_match_all('/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/', $resPage['body'], $emails);
+
+echo "Found resident IDs: " . implode(', ', array_slice($m[1] ?? [], 0, 5)) . "\n";
+echo "Found emails: " . implode(', ', array_slice($emails[1] ?? [], 0, 5)) . "\n";
+
+$targetId = $m[1][0] ?? null;
+$targetEmail = null;
+
+foreach ($emails[1] as $em) {
+    if (!str_contains($em, 'admin') && !str_contains($em, 'staff')) {
+        $targetEmail = $em;
+        break;
+    }
+}
+
+if ($targetId && $targetEmail) {
+    echo "Resetting password for resident ID $targetId ($targetEmail)...\n";
+    // Get CSRF from admin page
+    preg_match('/name="csrf_token"\s+value="([^"]+)"/', $resPage['body'], $csrfM);
+    $csrf = $csrfM[1] ?? '';
+
+    $newPass = 'Resident123!';
+    $resetRes = req($baseUrl . "/admin/residents/{$targetId}/reset-password", [
+        'csrf_token' => $csrf,
+        'new_password' => $newPass,
+        'new_password_confirmation' => $newPass
+    ], $adminCookie);
+
+    echo "Reset HTTP Status: " . $resetRes['info']['http_code'] . "\n";
+
+    // 2. Now login as this verified resident!
+    if (file_exists($residentCookie)) unlink($residentCookie);
+    $resLoginPage = req($baseUrl . '/login', null, $residentCookie);
+    preg_match('/name="csrf_token"\s+value="([^"]+)"/', $resLoginPage['body'], $resCsrfM);
+    $resCsrf = $resCsrfM[1] ?? '';
+
+    echo "Logging in as resident $targetEmail ...\n";
+    $loginRes = req($baseUrl . '/login', [
+        'csrf_token' => $resCsrf,
+        'email' => $targetEmail,
+        'password' => $newPass
+    ], $residentCookie);
+
+    echo "Resident Login HTTP: " . $loginRes['info']['http_code'] . "\n";
+    echo "Resident Login Effective URL: " . $loginRes['info']['url'] . "\n";
+
+    // 3. GET /feedback as resident!
+    echo "\n================ GET /feedback AS VERIFIED RESIDENT ================\n";
+    $fbRes = req($baseUrl . '/feedback', null, $residentCookie);
+    echo "Feedback HTTP Code: " . $fbRes['info']['http_code'] . "\n";
+    echo "Feedback Effective URL: " . $fbRes['info']['url'] . "\n";
+
+    if (preg_match('/Error ID:\s*([A-Z0-9]+)/i', $fbRes['body'], $errMatch)) {
+        echo "\n>>> ERROR ID DETECTED: " . $errMatch[1] . " <<<\n";
+    } else {
+        echo "Feedback page loaded successfully!\n";
+        echo "Page Title / Header snippet: " . substr(strip_tags($fbRes['body']), 0, 400) . "\n";
+    }
+
+    // 4. Test submitting a feedback!
+    echo "\n================ TESTING POST /feedback ================\n";
+    preg_match('/name="csrf_token"\s+value="([^"]+)"/', $fbRes['body'], $fbCsrfM);
+    $fbCsrf = $fbCsrfM[1] ?? '';
+
+    $postRes = req($baseUrl . '/feedback', [
+        'csrf_token' => $fbCsrf,
+        'message' => 'Test feedback from automated verification runner ' . date('Y-m-d H:i:s')
+    ], $residentCookie);
+
+    echo "POST Feedback HTTP Code: " . $postRes['info']['http_code'] . "\n";
+    echo "POST Feedback Effective URL: " . $postRes['info']['url'] . "\n";
+    if (preg_match('/Error ID:\s*([A-Z0-9]+)/i', $postRes['body'], $errMatch2)) {
+        echo "\n>>> POST FEEDBACK ERROR ID: " . $errMatch2[1] . " <<<\n";
+    } else {
+        echo "POST Feedback snippet: " . substr(strip_tags($postRes['body']), 0, 300) . "\n";
+    }
+}

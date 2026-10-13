@@ -623,7 +623,7 @@ ob_start();
  * would reach the JS parser as "&quot;" and break the whole block.
  */
 /*
- * "Send a Post by SMS".
+ * <?= json_encode(__('Send a Post by SMS')) ?>.
  *
  * Everything that decides the outgoing message comes from the server: the
  * picker returns each post's real text, built by the same PostSms the
@@ -655,7 +655,7 @@ function postSms(cfg) {
 
         init() {
             this.search().then(() => {
-                // Arrived from a "Send by SMS" row action: select that post.
+                // Arrived from a <?= json_encode(__('Send by SMS')) ?> row action: select that post.
                 if (cfg.preId) {
                     const hit = this.results.find(p => p.id === cfg.preId);
                     if (hit) { this.choose(hit); }

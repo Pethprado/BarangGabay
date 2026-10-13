@@ -15,8 +15,13 @@ final class DocumentRequestDigitalTest extends TestCase
     {
         $this->assertArrayHasKey('pickup', DocumentRequest::DELIVERY_METHODS);
         $this->assertArrayHasKey('digital', DocumentRequest::DELIVERY_METHODS);
+        // Labels follow the reader's language (see __()); check the English one.
+        set_locale('en');
         $this->assertSame('Pickup at Barangay Hall', DocumentRequest::deliveryLabel('pickup'));
         $this->assertSame('Digital Copy (Online)', DocumentRequest::deliveryLabel('digital'));
+
+        set_locale('fil');
+        $this->assertSame('Kukunin sa Barangay Hall', DocumentRequest::deliveryLabel('pickup'));
     }
 
     public function testStatusTransitions(): void

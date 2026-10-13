@@ -89,7 +89,13 @@ class Announcement
             : "published_at >= DATE_SUB(NOW(), INTERVAL ? DAY)";
 
         $stmt = db()->prepare(
-            "SELECT id, title, title_manobo, title_en, slug, category, cover_image_url, published_at,
+            // Every column localised_content() reads. Without source_lang and
+            // en_review_state the banner skipped the urgent review gate and
+            // showed unchecked machine English on a storm warning, and its
+            // body was always the Filipino excerpt whatever the reader chose.
+            "SELECT id, title, title_manobo, title_en, title_fil, slug, category, cover_image_url, published_at,
+                    source_lang, en_is_auto, fil_is_auto, manobo_is_auto, en_review_state,
+                    body, body_en, body_fil, body_manobo,
                     LEFT(body, 400) AS excerpt
              FROM announcements
              WHERE " . self::visibleSql('') . "

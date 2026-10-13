@@ -80,10 +80,10 @@ class DocumentRequestController
             if ($isAjax) {
                 header('Content-Type: application/json; charset=utf-8');
                 http_response_code(403);
-                echo json_encode(['success' => false, 'error' => 'Kailangan munang maging beripikado ang inyong account bago makahiling ng dokumento.']);
+                echo json_encode(['success' => false, 'error' => __('Kailangan munang maging beripikado ang inyong account bago makahiling ng dokumento.')]);
                 return;
             }
-            flash('warning', 'Ang inyong resident account ay hindi pa ganap na beripikado. Ang mga beripikadong residente lamang ang maaaring humiling ng opisyal na dokumento ng barangay.');
+            flash('warning', __('Ang inyong resident account ay hindi pa ganap na beripikado. Ang mga beripikadong residente lamang ang maaaring humiling ng opisyal na dokumento ng barangay.'));
             redirect('/documents');
         }
 
@@ -120,7 +120,7 @@ class DocumentRequestController
             if ($isAjax) {
                 header('Content-Type: application/json; charset=utf-8');
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Mangyaring ilagay ang layunin (purpose) ng kahilingan.']);
+                echo json_encode(['success' => false, 'error' => __('Mangyaring ilagay ang layunin (purpose) ng kahilingan.')]);
                 return;
             }
             flash('error', t('documents.err_purpose'));
@@ -168,7 +168,7 @@ class DocumentRequestController
         if ($deliveryMethod === 'delivery') {
             $isDeliveryEnabled = (bool) \App\Models\Setting::get('doc_delivery_enabled', true);
             if (!$isDeliveryEnabled) {
-                flash('error', 'Kasalukuyang hindi available ang serbisyong delivery.');
+                flash('error', __('Kasalukuyang hindi available ang serbisyong delivery.'));
                 redirect('/documents');
             }
             $deliveryAddress = trim($_POST['delivery_address'] ?? '');
@@ -281,7 +281,7 @@ class DocumentRequestController
 
         // Standard non-AJAX submission
         if ($paymentMethod === 'gcash' && !$isFree) {
-            flash('info', 'Nalikha na ang inyong kahilingan (' . $reference . '). Kumpletuhin ang pagbabayad gamit ang online checkout.');
+            flash('info', __('Nalikha na ang inyong kahilingan (:ref). Kumpletuhin ang pagbabayad gamit ang online checkout.', ['ref' => $reference]));
             redirect('/documents/' . $newId . '/payment');
         }
 
@@ -312,7 +312,7 @@ class DocumentRequestController
         // SERVER-SIDE CHECK: For digital delivery with fee, payment must be verified before resident can download
         if (!$isStaff && $request['delivery_method'] === 'digital' && !DocumentRequest::isPaymentVerified($request)) {
             http_response_code(403);
-            flash('error', 'Kailangan munang maberipika ang inyong bayad bago ma-download ang dokumento.');
+            flash('error', __('Kailangan munang maberipika ang inyong bayad bago ma-download ang dokumento.'));
             redirect('/documents');
         }
 
@@ -320,7 +320,7 @@ class DocumentRequestController
         $file = $storageService->getFile($id);
 
         if ($file === null) {
-            flash('error', 'Wala pang kalakip na soft copy para sa request na ito.');
+            flash('error', __('Wala pang kalakip na soft copy para sa request na ito.'));
             redirect($isStaff ? '/admin/documents' : '/documents');
         }
 
@@ -353,7 +353,7 @@ class DocumentRequestController
         // SERVER-SIDE CHECK: For digital delivery with fee, payment must be verified before resident can preview
         if (!$isStaff && $request['delivery_method'] === 'digital' && !DocumentRequest::isPaymentVerified($request)) {
             http_response_code(403);
-            flash('error', 'Kailangan munang maberipika ang inyong bayad bago ma-preview ang dokumento.');
+            flash('error', __('Kailangan munang maberipika ang inyong bayad bago ma-preview ang dokumento.'));
             redirect('/documents');
         }
 
@@ -361,7 +361,7 @@ class DocumentRequestController
         $file = $storageService->getFile($id);
 
         if ($file === null) {
-            flash('error', 'Wala pang kalakip na soft copy para sa request na ito.');
+            flash('error', __('Wala pang kalakip na soft copy para sa request na ito.'));
             redirect($isStaff ? '/admin/documents' : '/documents');
         }
 
@@ -461,12 +461,12 @@ class DocumentRequestController
         // CRITICAL SERVER-SIDE PAYMENT CHECK BEFORE DIGITAL RELEASE
         if ($request['delivery_method'] === 'digital' && !DocumentRequest::isPaymentVerified($request)) {
             http_response_code(403);
-            flash('error', 'Hindi pa beripikado ang bayad ng residente. Kailangan munang beripikahin ang bayad bago ipadala o i-upload ang opisyal na digital na dokumento.');
+            flash('error', __('Hindi pa beripikado ang bayad ng residente. Kailangan munang beripikahin ang bayad bago ipadala o i-upload ang opisyal na digital na dokumento.'));
             redirect('/admin/documents');
         }
 
         if (!isset($_FILES['document_file'])) {
-            flash('error', 'Walang napiling file para i-upload.');
+            flash('error', __('Walang napiling file para i-upload.'));
             redirect('/admin/documents');
         }
 
@@ -514,7 +514,7 @@ class DocumentRequestController
             flash('success', t('admin_documents.upload_success', ['reference' => (string) $request['reference_no']]));
         } catch (\Throwable $e) {
             error_log('[DocumentRequestController] upload error: ' . $e->getMessage());
-            flash('error', 'Nagka-problema sa pag-upload: ' . $e->getMessage());
+            flash('error', __('Nagka-problema sa pag-upload: :error', ['error' => $e->getMessage()]));
         }
 
         $redirectQuery = $this->buildRedirectQuery();
@@ -576,7 +576,7 @@ class DocumentRequestController
         $file = $storageService->getFile($id);
 
         if ($file === null) {
-            flash('error', 'Wala pang kalakip na dokumento.');
+            flash('error', __('Wala pang kalakip na dokumento.'));
             redirect('/admin/documents');
         }
 
@@ -599,7 +599,7 @@ class DocumentRequestController
         $file = $storageService->getFile($id);
 
         if ($file === null) {
-            flash('error', 'Wala pang kalakip na dokumento.');
+            flash('error', __('Wala pang kalakip na dokumento.'));
             redirect('/admin/documents');
         }
 
@@ -615,7 +615,7 @@ class DocumentRequestController
         if ($request === null) {
             header('Content-Type: application/json');
             http_response_code(404);
-            echo json_encode(['error' => 'Not found']);
+            echo json_encode(['error' => __('Not found')]);
             exit;
         }
 
@@ -785,9 +785,9 @@ class DocumentRequestController
         if ($blocked !== null) {
             flash('error', $blocked . ' Record the payment first.');
         } elseif (DocumentRequest::markAsClaimed($id, $staffId, $note)) {
-            flash('success', 'Matagumpay na minarkahan bilang nakuha na (Claimed) sa Barangay Hall.');
+            flash('success', __('Matagumpay na minarkahan bilang nakuha na (Claimed) sa Barangay Hall.'));
         } else {
-            flash('error', 'Nabigong markahan bilang nakuha.');
+            flash('error', __('Nabigong markahan bilang nakuha.'));
         }
 
         $redirectQuery = $this->buildRedirectQuery();
@@ -810,7 +810,7 @@ class DocumentRequestController
         if (DocumentRequest::updateDelivery($id, $deliveryStatus, $deliveredBy, $staffId, $notes)) {
             flash('success', sprintf('Na-update ang estado ng delivery sa: %s.', $deliveryStatus));
         } else {
-            flash('error', 'Nabigong i-update ang delivery.');
+            flash('error', __('Nabigong i-update ang delivery.'));
         }
 
         $redirectQuery = $this->buildRedirectQuery();

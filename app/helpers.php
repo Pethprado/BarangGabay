@@ -1381,12 +1381,19 @@ function localised_content(array $row, string $baseField, ?string $locale = null
     // Filipino/English the post was NOT written in. One state column is enough
     // because a post only ever has one such language. Manobo is never gated —
     // it is glossed locally from the barangay's own dictionary.
+    //
+    // Decision of the barangay (2026-10-13): show it anyway, flagged
+    // 'unreviewed', so a resident who pressed EN reads English. The page
+    // then shows a red "not yet checked by staff" warning and the original
+    // one click away (_translation-notice.php), because the free translator
+    // does make dangerous mistakes here: "May bagyo, lumikas na" became "A
+    // hurricane has evacuated", "Bayogo Barangay Hall" became "Bay Barangay
+    // Hall". Staff still confirm or correct it in the Translation Hub.
     $gatedLocale = $sourceLang === 'fil' ? 'en' : 'fil';
     $gated       = false;
-    if ($locale === $gatedLocale && ($row['en_review_state'] ?? 'none') === 'pending') {
-        $translated = '';
-        $gated      = true;
-    }
+    $unreviewed  = $locale === $gatedLocale
+        && ($row['en_review_state'] ?? 'none') === 'pending'
+        && $translated !== '';
 
 
 
@@ -1419,10 +1426,15 @@ function localised_content(array $row, string $baseField, ?string $locale = null
         ? [
             'text'         => $translated,
             'translated'   => true,
-            'machine'      => (int) ($row[$autoFlag] ?? 1) === 1,
+            'machine'      => $unreviewed || (int) ($row[$autoFlag] ?? 1) === 1,
             'locale'       => $locale,
             'is_original'  => false,
             'shown_locale' => $locale,
+            // Urgent post, machine translation not yet checked by staff:
+            // shown with a warning and the original one click away.
+            'unreviewed'   => $unreviewed,
+            'original'     => $unreviewed ? $original : null,
+            'source_lang'  => $sourceLang,
         ]
         : [
             'text'         => $original,
@@ -1463,9 +1475,10 @@ function localised_text(array $row, string $baseField): string
  */
 function back_office_locale(): string
 {
-    $locale = $_SESSION['bo_locale'] ?? $_COOKIE['bg_bo_locale'] ?? 'en';
-
-    return is_string($locale) && array_key_exists($locale, available_locales()) ? $locale : 'en';
+    // The admin and staff back office is English only (the EN / FIL / MN
+    // switch was removed from its top bar). The language switch and the
+    // translator are for residents; see current_locale().
+    return 'en';
 }
 
 /** Persist the back-office interface language. See back_office_locale(). */
@@ -1558,73 +1571,204 @@ function t(string $key, array $replace = [], ?string $locale = null): string
     $value   = $lookup($cache[$locale], $key);
     $english = $lookup($cache['en'], $key);
 
-    // Manobo has no hand-written string file. Resolve each label through the
-    // curated dataset instead, so every word a speaker adds in /admin/manobo
-    // starts appearing here with no code change. Nothing here is invented —
-    // if the dataset genuinely has no entry, the label falls through to
-    // Filipino, then English, below (never a made-up Manobo word).
-    //
-    // Four passes, most confident first:
-    //   1. the whole English label as one dataset term
-    //   2. the whole Filipino label — the dataset indexes Tagalog too, so a
-    //      label the English side misses may still hit from the Filipino
-    //   3. word-by-word over the English label
-    //   4. word-by-word over the Filipino label
-    // Each returns null on a miss, so an uncovered label falls through to the
-    // Filipino/English fallback below instead.
-    $filipino = null;
-    if ($locale === 'msm') {
+    // Manobo has no hand-written string file (lang/msm.php stays empty). Each
+    // label is resolved by manobo_ui_text(): the Manobo dataset first, then
+    // Bisaya for whatever the dataset does not cover. See that function.
+    if ($locale === 'msm' && $value === null) {
         if (!isset($cache['fil'])) {
             $filFile      = __DIR__ . '/../lang/fil.php';
             $cache['fil'] = is_file($filFile) ? require $filFile : [];
         }
-        $filipino = $lookup($cache['fil'], $key);
+        if (!isset($cache['msm_auto'])) {
+            $autoFile          = __DIR__ . '/../lang/msm_auto.php';
+            $cache['msm_auto'] = is_file($autoFile) ? require $autoFile : [];
+        }
+        $value = manobo_ui_text(
+            $english ?? $key,
+            $lookup($cache['fil'], $key),
+            $cache['msm_auto'][$key] ?? null
+        );
+    }
 
-        if ($value === null) {
-            // 1. Whole label is a sourced Manobo word.
-            foreach ([$english, $filipino] as $source) {
-                if ($source !== null && $value === null) {
-                    $value = manobo_word($source);
-                }
-            }
+    $value = $value ?? $english ?? $key;
 
-            // 2. Hybrid Manobo-first + Bisaya Translator
-            // Prioritizes approved Manobo dataset terms first, connecting roots/linkers/affixes,
-            // before falling back to Bisaya, and refining Bisaya with Manobo.
-            if ($value === null) {
-                $sourceText = $filipino ?? $english;
-                if ($sourceText !== null && trim($sourceText) !== '') {
-                    try {
-                        static $uiHybridTranslator = null;
-                        if ($uiHybridTranslator === null) {
-                            $uiHybridTranslator = new \App\Services\ManoboHybridTranslator();
-                        }
-                        $srcLang = ($filipino !== null) ? 'fil' : 'en';
-                        $res = $uiHybridTranslator->translate($sourceText, $srcLang);
-                        if (!empty($res['translation']) && ($res['manoboMatches'] > 0 || str_starts_with($key, 'nav.'))) {
-                            $value = $res['translation'];
-                            $cache['msm'][$key] = $value;
-                        }
-                    } catch (\Throwable) {
-                        // Fallback
-                    }
-                }
-            }
+    foreach ($replace as $placeholder => $val) {
+        $value = str_replace(':' . $placeholder, (string) $val, $value);
+    }
 
-            // 3. Fallback word-by-word gloss
-            if ($value === null && $filipino !== null) {
-                $value = local_blend_gloss($filipino, 'tagalog', 14, 0.5);
+    return $value;
+}
+
+/**
+ * The Manobo (MN) form of one interface string.
+ *
+ * Residents of Barangay Bayogo speak Manobo mixed with Surigaonon/Bisaya, so
+ * the MN interface is Manobo wherever the barangay's dataset has the word and
+ * Bisaya everywhere else — never English or Tagalog left in place when a
+ * Bisaya form exists. In order:
+ *
+ *   1. the whole label is a Manobo dataset entry (live: a word added at
+ *      /admin/manobo shows up on the next page load)
+ *   2. the pre-generated form in lang/msm_auto.php or lang/phrases/msm.php
+ *      (tools/generate-manobo-ui.php: dataset Manobo first, machine Bisaya
+ *      for the rest, then every Bisaya word the dataset knows swapped back
+ *      to Manobo)
+ *   3. the hybrid translator at runtime, for a string added after the last
+ *      generation run. Its result is cached in translation_cache, and the
+ *      machine part is capped per request so a page never stalls on it.
+ *   4. a word-by-word Manobo/Bisaya blend of the Filipino (or English) text
+ *   5. Filipino, then English — only if every step above came up empty
+ *
+ * Nothing here invents a Manobo word: Manobo only ever comes from the dataset.
+ */
+function manobo_ui_text(string $english, ?string $filipino, ?string $generated): string
+{
+    foreach ([$english, $filipino] as $source) {
+        if ($source !== null && trim($source) !== '') {
+            $whole = manobo_word($source);
+            if ($whole !== null) {
+                return $whole;
             }
         }
     }
 
-    // For every other locale this is unchanged: English, then the raw key.
-    // For Manobo specifically, an uncovered word falls back to Filipino
-    // before English — Filipino (and, by extension, Bisaya/Surigaonon) is
-    // what residents here actually code-switch Manobo with, so it reads as
-    // far more natural — and more understandable — than dropping into
-    // English mid-sentence.
-    $value = $value ?? ($locale === 'msm' ? $filipino : null) ?? $english ?? $key;
+    if ($generated !== null && trim($generated) !== '') {
+        return $generated;
+    }
+
+    $runtime = manobo_ui_runtime($english);
+    if ($runtime !== null) {
+        return $runtime;
+    }
+
+    $blend = $filipino !== null
+        ? local_blend_gloss($filipino, 'tagalog', 40, 0.01)
+        : local_blend_gloss($english, 'english', 40, 0.01);
+
+    return $blend ?? $filipino ?? $english;
+}
+
+/**
+ * Hybrid-translate one English interface string to Manobo/Bisaya at request
+ * time. Only reached for strings the generator has not seen yet.
+ *
+ * At most a few strings per request may call the machine translator (each
+ * call is cached in translation_cache, so the next page load is instant);
+ * past that budget the local dictionaries alone are used. Placeholders such
+ * as ":name" are kept out of the translator and must all survive, or the
+ * result is discarded.
+ */
+function manobo_ui_runtime(string $english): ?string
+{
+    static $translator = null;
+    static $machineCalls = 0;
+
+    if (trim($english) === '' || !preg_match('/\p{L}{2,}/u', $english)) {
+        return null;
+    }
+
+    // No database (unit tests, CLI without .env): nothing to translate with.
+    // Checked once per request, not once per label.
+    static $dbReachable = null;
+    if ($dbReachable === null) {
+        try {
+            db();
+            $dbReachable = true;
+        } catch (\Throwable) {
+            $dbReachable = false;
+        }
+    }
+    if (!$dbReachable) {
+        return null;
+    }
+
+    preg_match_all('/:[a-z_]+/', $english, $found);
+    $placeholders = $found[0];
+
+    $previousDeadline = \App\Services\ManoboHybridTranslator::$machineDeadline;
+    // Three strings per request get up to ~2.5s of machine translation in
+    // total; everything after that uses the local dictionaries only.
+    \App\Services\ManoboHybridTranslator::$machineDeadline = $machineCalls < 3
+        ? microtime(true) + 2.5
+        : 0.0;
+    $machineCalls++;
+
+    try {
+        $translator ??= new \App\Services\ManoboHybridTranslator();
+        $result = $translator->translate($english, 'en');
+    } catch (\Throwable $e) {
+        error_log('[manobo_ui_runtime] ' . $e->getMessage());
+        return null;
+    } finally {
+        \App\Services\ManoboHybridTranslator::$machineDeadline = $previousDeadline;
+    }
+
+    $text = trim((string) ($result['translation'] ?? ''));
+    if ($text === '' || (int) ($result['unresolved'] ?? 1) > 0) {
+        return null;
+    }
+    foreach ($placeholders as $placeholder) {
+        if (!str_contains($text, $placeholder)) {
+            return null;
+        }
+    }
+
+    return $text;
+}
+
+/**
+ * The lookup key for a phrase in lang/phrases/*.php: the source text with its
+ * whitespace collapsed, so re-indenting a view never breaks a translation.
+ */
+function phrase_key(string $text): string
+{
+    return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+}
+
+/**
+ * Translate a literal interface phrase into the reader's language.
+ *
+ * The phrase-keyed sibling of t(). t() looks a string up by a dot key in
+ * lang/en.php / lang/fil.php; __() looks it up by the text itself in
+ * lang/phrases/en.php / fil.php / msm.php. Views and controllers that were
+ * written with the text inline ("Magpatuloy (Continue)", "Event not found.")
+ * use __() so each language button shows that language only:
+ *
+ *   EN  → lang/phrases/en.php, else the text as written
+ *   FIL → lang/phrases/fil.php, else the text as written
+ *   MN  → manobo_ui_text(): Manobo dataset first, Bisaya for the rest
+ *
+ * The source text may be in either language — the catalogs hold both an
+ * English and a Filipino form for every phrase, whichever it was written in.
+ *
+ * Same language rules as t(): back-office pages follow the admin top bar's
+ * switch, resident pages the resident one.
+ *
+ * @param array<string,string|int|float> $replace ':placeholder' => value
+ */
+function __(string $text, array $replace = []): string
+{
+    static $catalogs = [];
+
+    $locale = is_back_office_request() ? back_office_locale() : current_locale();
+    $key    = phrase_key($text);
+
+    foreach (['en', 'fil', $locale] as $lang) {
+        if (!isset($catalogs[$lang])) {
+            $file = __DIR__ . '/../lang/phrases/' . $lang . '.php';
+            $catalogs[$lang] = is_file($file) ? require $file : [];
+        }
+    }
+
+    $english  = $catalogs['en'][$key] ?? null;
+    $filipino = $catalogs['fil'][$key] ?? null;
+
+    $value = match ($locale) {
+        'en'    => $english ?? $key,
+        'fil'   => $filipino ?? $key,
+        'msm'   => manobo_ui_text($english ?? $key, $filipino, $catalogs['msm'][$key] ?? null),
+        default => $key,
+    };
 
     foreach ($replace as $placeholder => $val) {
         $value = str_replace(':' . $placeholder, (string) $val, $value);
@@ -1655,7 +1799,9 @@ function status_tone(string $status): string
  */
 function status_badge(string $status, ?string $label = null): string
 {
-    $label ??= ucwords(strtolower(str_replace('_', ' ', $status)));
+    // The fallback label is English ("Pending Review"); __() gives it in the
+    // reader's language like any other phrase.
+    $label ??= __(ucwords(strtolower(str_replace('_', ' ', $status))));
     return '<span class="ds-status ds-status--' . status_tone($status) . '">' . e($label) . '</span>';
 }
 
@@ -1673,4 +1819,209 @@ function post_placeholder_image(?string $category, ?string $urgency = null): str
         default                                                        => 'post-community.jpg',
     };
     return asset('assets/images/ui/' . $file);
+}
+
+/**
+ * Show a piece of system-written text in the reader's language.
+ *
+ * For text that has no per-language columns: notifications ("Naaprubahan ang
+ * Inyong Dokumento…") and cached AI ordinance summaries. Both are stored once,
+ * in whatever language they were written, so an EN reader used to get
+ * Filipino and an MN reader got Tagalog.
+ *
+ *   EN / FIL → the free translation service (MyMemory, Google fallback)
+ *   MN       → the Manobo hybrid translator: Manobo dataset first, Bisaya
+ *              where the dataset has no word (never Tagalog left in place)
+ *
+ * Every result is cached in translation_cache, so a text is translated once
+ * for everybody. Uncached work is capped per request; past the cap, or when a
+ * provider is down, the original text is shown rather than a slow page.
+ * Never throws.
+ *
+ * @param string      $text   Plain text (tags are stripped).
+ * @param string|null $target 'en' | 'fil' | 'msm'; defaults to the reader's language.
+ * @param bool        $onlyWhenSure Leave the text alone unless its language is
+ *                    clearly detected — for short names such as event venues.
+ */
+function translate_for_display(string $text, ?string $target = null, bool $onlyWhenSure = false): string
+{
+    static $memo = [];
+    static $deadline = null;
+
+    $plain = trim(strip_tags($text));
+    if ($plain === '' || !preg_match('/\p{L}{2,}/u', $plain)) {
+        return $text;
+    }
+
+    $target ??= is_back_office_request() ? back_office_locale() : current_locale();
+    if (!in_array($target, ['en', 'fil', 'msm'], true)) {
+        return $text;
+    }
+
+    $source = \App\Services\LanguageGuess::detectOrNull($plain);
+    if ($source === null && $onlyWhenSure) {
+        return $text;
+    }
+    $source ??= 'fil';
+    if ($source === $target) {
+        return $text;
+    }
+
+    $memoKey = $target . '|' . $plain;
+    if (isset($memo[$memoKey])) {
+        return $memo[$memoKey];
+    }
+
+    $hash = hash('sha256', $plain);
+
+    try {
+        // A complete EN/FIL translation, cached for good.
+        if ($target !== 'msm') {
+            $cached = display_translation_row($hash, $source, $target, false);
+            if ($cached !== null) {
+                return $memo[$memoKey] = $cached;
+            }
+        }
+
+        // A recent attempt that came back incomplete — the free services were
+        // throttled. Its best result is reused for an hour instead of making
+        // every page view wait on a provider that is refusing.
+        $recent = display_translation_row($hash, $source, $target . '~', true);
+        if ($recent !== null) {
+            return $memo[$memoKey] = $recent;
+        }
+
+        // Uncached translation gets ~2.5 seconds per request in total.
+        $deadline ??= microtime(true) + 2.5;
+        if (microtime(true) > $deadline) {
+            return $text;   // over budget: original now, translated on a later load
+        }
+
+        if ($target === 'msm') {
+            $previous = \App\Services\ManoboHybridTranslator::$machineDeadline;
+            \App\Services\ManoboHybridTranslator::$machineDeadline = $deadline;
+            try {
+                // Complete results are cached by the translator itself.
+                $result = (new \App\Services\ManoboHybridTranslator())->translate($plain, $source);
+            } finally {
+                \App\Services\ManoboHybridTranslator::$machineDeadline = $previous;
+            }
+            $out      = trim((string) ($result['translation'] ?? ''));
+            $complete = $out !== '' && (int) ($result['unresolved'] ?? 1) === 0;
+        } else {
+            $free = new \App\Services\FreeTranslationService(new \GuzzleHttp\Client([
+                'timeout'     => 4,
+                'http_errors' => false,
+                'headers'     => ['User-Agent' => 'BarangGabay/1.0 (barangay notice board)'],
+            ]));
+            $out      = trim((string) $free->translate($plain, $source, $target));
+            $complete = $out !== '';
+            if ($complete) {
+                display_translation_store($hash, $source, $target, $out);
+            }
+        }
+
+        $best = $out !== '' ? $out : $text;
+        if (!$complete) {
+            display_translation_store($hash, $source, $target . '~', $best);
+        }
+
+        return $memo[$memoKey] = $best;
+    } catch (\Throwable $e) {
+        error_log('[translate_for_display] ' . $e->getMessage());
+        return $text;
+    }
+}
+
+/**
+ * One translate_for_display() cache row (translation_cache, dictionary_version 0).
+ * A target ending in "~" is a recent incomplete attempt, valid for one hour.
+ */
+function display_translation_row(string $hash, string $source, string $target, bool $recentOnly): ?string
+{
+    $sql = 'SELECT translated_text FROM translation_cache
+             WHERE source_text_hash = ? AND source_lang = ? AND target_lang = ? AND dictionary_version = 0';
+    if ($recentOnly) {
+        $sql .= " AND updated_at > NOW() - INTERVAL '1' HOUR";
+    }
+    $stmt = db()->prepare($sql . ' LIMIT 1');
+    $stmt->execute([$hash, $source, $target]);
+    $text = $stmt->fetchColumn();
+
+    return is_string($text) && $text !== '' ? $text : null;
+}
+
+/** Save a translate_for_display() result (see display_translation_row()). */
+function display_translation_store(string $hash, string $source, string $target, string $text): void
+{
+    $pdo     = db();
+    $isPgsql = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql';
+    $pdo->prepare(
+        'INSERT INTO translation_cache (source_text_hash, source_lang, target_lang, dictionary_version, translated_text, updated_at)
+         VALUES (?, ?, ?, 0, ?, NOW()) '
+        . ($isPgsql
+            ? 'ON CONFLICT (source_text_hash, source_lang, target_lang, dictionary_version)
+               DO UPDATE SET translated_text = EXCLUDED.translated_text, updated_at = NOW()'
+            : 'ON DUPLICATE KEY UPDATE translated_text = VALUES(translated_text), updated_at = NOW()')
+    )->execute([$hash, $source, $target, $text]);
+}
+
+/**
+ * Notification rows with their title and message in the reader's language.
+ *
+ * @param list<array<string,mixed>> $rows
+ * @return list<array<string,mixed>>
+ */
+function localise_notifications(array $rows, ?string $target = null): array
+{
+    foreach ($rows as &$row) {
+        foreach (['title', 'message'] as $field) {
+            if (isset($row[$field]) && is_string($row[$field])) {
+                $row[$field] = translate_for_display($row[$field], $target);
+            }
+        }
+    }
+    unset($row);
+
+    return $rows;
+}
+
+/**
+ * Move an announcement, event or ordinance to the Trash (the one delete path
+ * for all three; see App\Models\PostTrash).
+ *
+ * Admins may trash any post; staff only the posts they wrote. Nothing is
+ * deleted for good here — the post can be restored from /admin/trash.
+ * Redirects; never returns.
+ */
+function trash_post(string $type, int $id, string $backTo): void
+{
+    [$table, $authorCol, $label] = \App\Models\PostTrash::TYPES[$type];
+    $me   = (int) ($_SESSION['user_id'] ?? 0);
+    $role = (string) ($_SESSION['role'] ?? '');
+
+    $stmt = db()->prepare("SELECT id, title, {$authorCol} AS author FROM {$table} WHERE id = ? LIMIT 1");
+    $stmt->execute([$id]);
+    $post = $stmt->fetch(\PDO::FETCH_ASSOC);
+    if (!$post) {
+        flash('error', $label . ' not found. It may already be in the Trash.');
+        redirect($backTo);
+    }
+
+    if (!in_array($role, ['admin', 'superadmin'], true) && (int) $post['author'] !== $me) {
+        flash('error', 'You can only delete ' . strtolower($label) . 's that you posted.');
+        redirect($backTo);
+    }
+
+    try {
+        \App\Models\PostTrash::moveToTrash($type, $id, $me);
+    } catch (\Throwable $e) {
+        error_log('[trash_post] ' . $e->getMessage());
+        flash('error', 'Could not move this ' . strtolower($label) . ' to the Trash. Please try again.');
+        redirect($backTo);
+    }
+
+    \App\Models\AuditLog::record($me, $type . '.trash', 'Moved to Trash: ' . $label . ' #' . $id . ' ' . $post['title']);
+    flash('success', '"' . $post['title'] . '" was moved to the Trash. You can restore it from Trash.');
+    redirect($backTo);
 }

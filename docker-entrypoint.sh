@@ -40,4 +40,13 @@ mkdir -p /var/www/html/public/uploads/announcements \
 chown -R www-data:www-data /var/www/html/public/uploads /var/www/html/storage
 chmod -R 775 /var/www/html/public/uploads /var/www/html/storage
 
+# Fill in any post, event or ordinance still missing its English, Filipino
+# or Manobo version (e.g. saved while the free translator's daily quota was
+# spent). Runs in the background once the server is up, so it never delays
+# the deploy; safe to repeat, and text a person typed is never overwritten.
+# Set BACKFILL_TRANSLATIONS_ON_START=false to skip it.
+if [ "${BACKFILL_TRANSLATIONS_ON_START:-true}" != "false" ]; then
+    ( sleep 45; php /var/www/html/tools/backfill-translations.php         >> /var/www/html/storage/logs/translation-backfill.log 2>&1 ) &
+fi
+
 exec "$@"

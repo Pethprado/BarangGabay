@@ -54,8 +54,8 @@ $__greet = t('admin_nav.' . ($__hour < 12 ? 'greet_morning' : ($__hour < 18 ? 'g
 $__first = explode(' ', trim((string) ($_SESSION['full_name'] ?? '')))[0] ?? '';
 $__role  = (string) ($_SESSION['role'] ?? '');
 $topbarGreeting = $__role === 'staff'
-    ? t('admin_nav.welcome_name', ['name' => $__first !== '' ? $__first : 'Staff'])
-    : t('admin_nav.greet_name', ['greeting' => $__greet, 'name' => trim((string) ($_SESSION['full_name'] ?? 'Admin'))]);
+    ? t('admin_nav.welcome_name', ['name' => $__first !== '' ? $__first : __('Staff')])
+    : t('admin_nav.greet_name', ['greeting' => $__greet, 'name' => trim((string) ($_SESSION['full_name'] ?? __('Admin')))]);
 $topbarSubtitle = t($__role === 'staff' ? 'admin_nav.dash_staff_sub' : 'admin_nav.dash_admin_sub');
 $topbarIcon     = $__role === 'staff' ? 'bi-person-workspace' : 'bi-person-gear';
 ?>
@@ -70,15 +70,15 @@ $__isAdmin     = in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true
 $staffKpi      = $staffKpi ?? ['announcements' => 0, 'events' => 0, 'feedback' => 0, 'approvals' => 0];
 $recentTasks   = $recentTasks ?? [];
 $__kpis = $__isStaffView ? [
-    ['My Announcements', (int) $staffKpi['announcements'], route('admin/announcements') . '?mine=1', 'bi-megaphone-fill', 'green'],
-    ['My Events', (int) $staffKpi['events'], route('admin/events') . '?mine=1', 'bi-calendar-event-fill', 'orange'],
-    ['Feedback', (int) $staffKpi['feedback'], route('admin/feedback'), 'bi-chat-square-text-fill', 'blue'],
-    ['Pending Approvals', (int) $staffKpi['approvals'], route('admin/documents') . '?status=pending', 'bi-shield-fill-exclamation', 'red'],
+    [__('My Announcements'), (int) $staffKpi['announcements'], route('admin/announcements') . '?mine=1', 'bi-megaphone-fill', 'green'],
+    [__('My Events'), (int) $staffKpi['events'], route('admin/events') . '?mine=1', 'bi-calendar-event-fill', 'orange'],
+    [__('Feedback'), (int) $staffKpi['feedback'], route('admin/feedback'), 'bi-chat-square-text-fill', 'blue'],
+    [__('Pending Approvals'), (int) $staffKpi['approvals'], route('admin/documents') . '?status=pending', 'bi-shield-fill-exclamation', 'red'],
 ] : [
-    ['Total Residents', (int) ($totalResidents ?? $verifiedCount), route('admin/residents'), 'bi-people-fill', 'green'],
-    ['Active Staff', (int) ($activeStaffCount ?? 0), $__isAdmin ? route('admin/staff') : route('admin'), 'bi-person-fill', 'blue'],
-    ['Total Announcements', (int) $publishedCount, route('admin/announcements') . '?status=published', 'bi-file-earmark-text-fill', 'orange'],
-    ['Active Events', (int) $upcomingCount, route('admin/events') . '?status=upcoming', 'bi-calendar2-week-fill', 'purple'],
+    [__('Total Residents'), (int) ($totalResidents ?? $verifiedCount), route('admin/residents'), 'bi-people-fill', 'green'],
+    [__('Active Staff'), (int) ($activeStaffCount ?? 0), $__isAdmin ? route('admin/staff') : route('admin'), 'bi-person-fill', 'blue'],
+    [__('Total Announcements'), (int) $publishedCount, route('admin/announcements') . '?status=published', 'bi-file-earmark-text-fill', 'orange'],
+    [__('Active Events'), (int) $upcomingCount, route('admin/events') . '?status=upcoming', 'bi-calendar2-week-fill', 'purple'],
 ];
 $__langName = ['msm' => 'Manobo', 'en' => 'English', 'fil' => 'Filipino', 'ceb' => 'Bisaya'];
 $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
@@ -152,9 +152,9 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
         <div class="admin-card dash-module">
             <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-soundwave"></i></div>
             <div>
-                <h2>Voice Training &amp; AI Dataset Hub</h2>
-                <p>Train native voice pronunciations and manage datasets for Manobo, Filipino, English and Bisaya. Residents hear only approved recordings.</p>
-                <a href="<?= e(route('admin/voice-training')) ?>" class="btn-barangay">Manage Voice Dataset <i class="bi bi-arrow-right ms-1"></i></a>
+                <h2><?= e(__('Voice Training & AI Dataset Hub')) ?></h2>
+                <p><?= e(__('Train native voice pronunciations and manage datasets for Manobo, Filipino, English and Bisaya. Residents hear only approved recordings.')) ?></p>
+                <a href="<?= e(route('admin/voice-training')) ?>" class="btn-barangay"><?= e(__('Manage Voice Dataset')) ?> <i class="bi bi-arrow-right ms-1"></i></a>
             </div>
         </div>
     </div>
@@ -163,9 +163,9 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
         <div class="admin-card dash-module">
             <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-translate"></i></div>
             <div>
-                <h2>Translation Management</h2>
-                <p>Manage translations for all content types. New posts are auto-translated; review failures and rebuild Manobo with the current dictionaries.</p>
-                <a href="<?= e(route('admin/translation-health')) ?>" class="btn-barangay">Manage Translations <i class="bi bi-arrow-right ms-1"></i></a>
+                <h2><?= e(__('Translation Management')) ?></h2>
+                <p><?= e(__('Manage translations for all content types. New posts are auto-translated; review failures and rebuild Manobo with the current dictionaries.')) ?></p>
+                <a href="<?= e(route('admin/translation-health')) ?>" class="btn-barangay"><?= e(__('Manage Translations')) ?> <i class="bi bi-arrow-right ms-1"></i></a>
             </div>
         </div>
     </div>
@@ -175,8 +175,8 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
     <div class="col-12 col-lg-7">
         <div class="admin-card h-100" style="padding:1.15rem 1.25rem;">
             <div class="d-flex justify-content-between align-items-center mb-1">
-                <h2 class="dash-h">System Activity</h2>
-                <a href="<?= e(route('admin/reports')) ?>" style="font-size:.78rem;font-weight:700;color:var(--brand-primary);">View all <i class="bi bi-arrow-right"></i></a>
+                <h2 class="dash-h"><?= e(__('System Activity')) ?></h2>
+                <a href="<?= e(route('admin/reports')) ?>" style="font-size:.78rem;font-weight:700;color:var(--brand-primary);"><?= e(__('View all')) ?> <i class="bi bi-arrow-right"></i></a>
             </div>
             <?php if (empty($recentActivity)): ?>
                 <p class="mb-0 mt-2" style="font-size:.85rem;color:var(--text-muted);"><?= e(t('dashboard.no_activity')) ?></p>
@@ -197,15 +197,15 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
     </div>
     <div class="col-12 col-lg-5">
         <div class="admin-card h-100" style="padding:1.15rem 1.25rem;">
-            <h2 class="dash-h mb-1">Language Dataset Coverage</h2>
-            <p class="mb-1" style="font-size:.76rem;color:var(--text-muted);">Words used in visible posts that have an approved recording.</p>
+            <h2 class="dash-h mb-1"><?= e(__('Language Dataset Coverage')) ?></h2>
+            <p class="mb-1" style="font-size:.76rem;color:var(--text-muted);"><?= e(__('Words used in visible posts that have an approved recording.')) ?></p>
             <?php foreach (($datasetCoverage ?? []) as $__lc => $__r):
                 $__pct = (float) ($__r['usage_coverage'] ?? 0); ?>
                 <div class="dash-cov-row">
                     <span class="dash-cov-flag" aria-hidden="true"><?= e($__langFlag[$__lc] ?? strtoupper($__lc)) ?></span>
                     <div style="flex:1;min-width:0;">
                         <div class="dash-cov-top">
-                            <span><strong><?= e($__langName[$__lc] ?? $__lc) ?> Words</strong><br><small><?= number_format((int) $__r['used_recorded']) ?> / <?= number_format((int) $__r['used_words']) ?></small></span>
+                            <span><strong><?= e($__langName[$__lc] ?? $__lc) ?> <?= e(__('Words')) ?></strong><br><small><?= number_format((int) $__r['used_recorded']) ?> / <?= number_format((int) $__r['used_words']) ?></small></span>
                             <strong><?= number_format($__pct, 0) ?>%</strong>
                         </div>
                         <div class="dash-cov-bar" role="progressbar" aria-label="<?= e($__langName[$__lc] ?? $__lc) ?> coverage" aria-valuenow="<?= $__pct ?>" aria-valuemin="0" aria-valuemax="100"><span class="<?= $__pct < 50 ? 'is-low' : '' ?>" style="width:<?= max(0, min(100, $__pct)) ?>%"></span></div>
@@ -213,17 +213,17 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
                 </div>
             <?php endforeach; ?>
             <?php if (!empty($manoboDictionary['total_dictionary_words'])): ?>
-                <p class="mb-0 mt-2" style="font-size:.76rem;color:var(--text-muted);">Manobo dictionary: <?= (int) $manoboDictionary['words_with_audio'] ?> of <?= (int) $manoboDictionary['total_dictionary_words'] ?> entries recorded.</p>
+                <p class="mb-0 mt-2" style="font-size:.76rem;color:var(--text-muted);"><?= e(__('Manobo dictionary:')) ?> <?= (int) $manoboDictionary['words_with_audio'] ?> <?= e(__('of')) ?> <?= (int) $manoboDictionary['total_dictionary_words'] ?> <?= e(__('entries recorded.')) ?></p>
             <?php endif; ?>
         </div>
     </div>
 </div>
 <?php else:
     $__taskPill = static function (string $st): array {
-        if ($st === 'pending') { return ['Pending', 'warning']; }
-        if (in_array($st, ['released', 'completed', 'claimed'], true)) { return ['Completed', 'success']; }
+        if ($st === 'pending') { return [__('Pending'), 'warning']; }
+        if (in_array($st, ['released', 'completed', 'claimed'], true)) { return [__('Completed'), 'success']; }
         if (in_array($st, ['rejected', 'cancelled'], true)) { return [ucfirst($st), 'neutral']; }
-        return ['In Progress', 'info'];
+        return [__('In Progress'), 'info'];
     };
     $__upcoming = array_slice(array_merge($todayEvents ?? [], $weekEvents ?? []), 0, 3);
 ?>
@@ -231,11 +231,11 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
     <div class="col-12 col-lg-8">
         <div class="admin-card h-100" id="tasks" style="padding:1.15rem 1.25rem;scroll-margin-top:90px;">
             <div class="d-flex justify-content-between align-items-center mb-1">
-                <h2 class="dash-h">Recent Tasks</h2>
-                <a href="<?= e(route('admin/documents')) ?>" style="font-size:.78rem;font-weight:700;color:var(--brand-primary);">View all <i class="bi bi-arrow-right"></i></a>
+                <h2 class="dash-h"><?= e(__('Recent Tasks')) ?></h2>
+                <a href="<?= e(route('admin/documents')) ?>" style="font-size:.78rem;font-weight:700;color:var(--brand-primary);"><?= e(__('View all')) ?> <i class="bi bi-arrow-right"></i></a>
             </div>
             <?php if (!$recentTasks): ?>
-                <p class="mb-0 mt-2" style="font-size:.85rem;color:var(--text-muted);">No document requests yet.</p>
+                <p class="mb-0 mt-2" style="font-size:.85rem;color:var(--text-muted);"><?= e(__('No document requests yet.')) ?></p>
             <?php else: foreach ($recentTasks as $__t): [$__pl, $__tone] = $__taskPill((string) $__t['status']); ?>
                 <a class="dash-task" href="<?= e(route('admin/documents') . '?search=' . rawurlencode((string) $__t['reference_no'])) ?>">
                     <span class="dash-ico dash-ico--blue" style="width:36px;height:36px;border-radius:999px;font-size:.9rem;" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
@@ -250,21 +250,21 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
     </div>
     <div class="col-12 col-lg-4 d-flex flex-column gap-3">
         <div class="admin-card" style="padding:1.15rem 1.25rem;">
-            <h2 class="dash-h mb-2">Quick Actions</h2>
+            <h2 class="dash-h mb-2"><?= e(__('Quick Actions')) ?></h2>
             <div class="dash-qa">
-                <a class="qa-green" href="<?= e(route('admin/announcements/create')) ?>"><i class="bi bi-megaphone-fill" aria-hidden="true"></i>Create Announcement</a>
-                <a class="qa-orange" href="<?= e(route('admin/events/create')) ?>"><i class="bi bi-calendar-plus-fill" aria-hidden="true"></i>Create Event</a>
-                <a class="qa-blue" href="<?= e(route('admin/residents')) ?>"><i class="bi bi-people-fill" aria-hidden="true"></i>Manage Residents</a>
-                <a class="qa-gold" href="<?= e(route('admin/translation-health')) ?>"><i class="bi bi-translate" aria-hidden="true"></i>Review Translations</a>
+                <a class="qa-green" href="<?= e(route('admin/announcements/create')) ?>"><i class="bi bi-megaphone-fill" aria-hidden="true"></i><?= e(__('Create Announcement')) ?></a>
+                <a class="qa-orange" href="<?= e(route('admin/events/create')) ?>"><i class="bi bi-calendar-plus-fill" aria-hidden="true"></i><?= e(__('Create Event')) ?></a>
+                <a class="qa-blue" href="<?= e(route('admin/residents')) ?>"><i class="bi bi-people-fill" aria-hidden="true"></i><?= e(__('Manage Residents')) ?></a>
+                <a class="qa-gold" href="<?= e(route('admin/translation-health')) ?>"><i class="bi bi-translate" aria-hidden="true"></i><?= e(__('Review Translations')) ?></a>
             </div>
         </div>
         <div class="admin-card" style="padding:1.15rem 1.25rem;">
             <div class="d-flex justify-content-between align-items-center mb-1">
-                <h2 class="dash-h">Upcoming Activities</h2>
-                <a href="<?= e(route('admin/events')) ?>" style="font-size:.78rem;font-weight:700;color:var(--brand-primary);">View all <i class="bi bi-arrow-right"></i></a>
+                <h2 class="dash-h"><?= e(__('Upcoming Activities')) ?></h2>
+                <a href="<?= e(route('admin/events')) ?>" style="font-size:.78rem;font-weight:700;color:var(--brand-primary);"><?= e(__('View all')) ?> <i class="bi bi-arrow-right"></i></a>
             </div>
             <?php if (!$__upcoming): ?>
-                <p class="mb-0 mt-2" style="font-size:.85rem;color:var(--text-muted);">Nothing scheduled this week.</p>
+                <p class="mb-0 mt-2" style="font-size:.85rem;color:var(--text-muted);"><?= e(__('Nothing scheduled this week.')) ?></p>
             <?php else: foreach ($__upcoming as $__ev): $__ts = strtotime((string) $__ev['event_date']); ?>
                 <a class="dash-ev" href="<?= e(route('admin/events/' . (int) $__ev['id'] . '/edit')) ?>">
                     <span class="dash-ev__date" aria-hidden="true"><span><?= strtoupper(date('M', $__ts)) ?></span><strong><?= date('j', $__ts) ?></strong></span>
@@ -646,16 +646,16 @@ $advisoryOn    = $advisoryText !== '';
 
                 <a href="<?= e(route('admin/system/seed-demo')) ?>"
                    class="quick-action-btn"
-                   onclick="return confirm('Nais mo bang itanim o i-refresh ang sample / demo data sa sistema?')">
+                   onclick="return confirm(<?= e(json_encode(__('Nais mo bang itanim o i-refresh ang sample / demo data sa sistema?'))) ?>)">
                     <span class="qa-icon" style="background:var(--brand-primary, #0d6efd);">
                         <i class="bi bi-database-fill-gear"></i>
                     </span>
                     <div>
                         <div style="font-weight:700;font-size:.875rem;line-height:1.2;">
-                            Itanim ang Sample Data
+                            <?= e(__('Itanim ang Sample Data')) ?>
                         </div>
                         <div style="font-size:.73rem;color:var(--text-muted);">
-                            I-populate ang demo announcements, events, atbp.
+                            <?= e(__('I-populate ang demo announcements, events, atbp.')) ?>
                         </div>
                     </div>
                 </a>

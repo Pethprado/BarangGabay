@@ -169,7 +169,7 @@ ob_start();
                     <?php if (!empty($ev['venue'])): ?>
                     <p class="mt-1.5 flex items-center gap-1 text-xs text-slate-400">
                         <i class="bi bi-geo-alt flex-shrink-0"></i>
-                        <span class="truncate"><?= e($ev['venue']) ?></span>
+                        <span class="truncate"><?= e(translate_for_display((string) $ev['venue'], null, true)) ?></span>
                     </p>
                     <?php endif; ?>
 

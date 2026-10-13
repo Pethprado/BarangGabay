@@ -30,7 +30,7 @@ $__pStamp = $__pStamp
     ?? ($__pRow['published_at'] ?? null)
     ?: ($__pRow['created_at'] ?? null);
 
-$__pName   = trim((string) ($__pRow['author_name'] ?? '')) ?: 'Barangay Staff';
+$__pName   = trim((string) ($__pRow['author_name'] ?? '')) ?: __('Barangay Staff');
 $__pAvatar = trim((string) ($__pRow['author_avatar'] ?? ''));
 $__pRole   = (string) ($__pRow['author_role'] ?? '');
 $__pDesig  = trim((string) ($__pRow['author_designation'] ?? ''));
@@ -89,9 +89,9 @@ $__pRelative = relative_time($__pStamp);
             $__pSaved = \App\Controllers\BookmarkController::isSaved((string) $__pType, (int) $__pId); ?>
         <button type="button" class="ds-chip" style="margin-left:auto;" data-bookmark-toggle
                 data-type="<?= e((string) $__pType) ?>" data-id="<?= (int) $__pId ?>"
-                aria-pressed="<?= $__pSaved ? 'true' : 'false' ?>" aria-label="Save to My Bookmarks">
+                aria-pressed="<?= $__pSaved ? 'true' : 'false' ?>" aria-label="<?= e(__('Save to My Bookmarks')) ?>">
             <i class="bi <?= $__pSaved ? 'bi-bookmark-fill' : 'bi-bookmark' ?>" aria-hidden="true"></i>
-            <span class="ms-1"><?= $__pSaved ? 'Saved' : 'Save' ?></span>
+            <span class="ms-1"><?= $__pSaved ? __('Saved') : __('Save') ?></span>
         </button>
         <?php endif; ?>
     </header>

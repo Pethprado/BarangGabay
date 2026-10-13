@@ -25,12 +25,12 @@ $role    = (string) ($_SESSION['role'] ?? 'staff');
 $isAdmin = in_array($role, ['admin', 'superadmin'], true);
 
 $tabs = [
-    ''              => 'All',
-    'awaiting'      => 'Awaiting Payment',
-    'paid'          => 'Paid',
-    'failed'        => 'Failed',
-    'expired'       => 'Expired / Cancelled',
-    'manual_review' => 'Manual Review',
+    ''              => __('All'),
+    'awaiting'      => __('Awaiting Payment'),
+    'paid'          => __('Paid'),
+    'failed'        => __('Failed'),
+    'expired'       => __('Expired / Cancelled'),
+    'manual_review' => __('Manual Review'),
 ];
 $tabUrl = static function (string $g) use ($search, $docType): string {
     $q = array_filter(['group' => $g, 'search' => $search, 'doc_type' => $docType], static fn ($v) => $v !== '');
@@ -40,11 +40,11 @@ $returnTo = '/admin/payments' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERV
 
 $verificationText = static function (array $t): string {
     return match ((string) ($t['verification_type'] ?? '')) {
-        'paymongo' => 'Automatically verified through PayMongo',
-        'manual'   => 'Verified from GCash proof' . (!empty($t['verified_by_name']) ? ' by ' . $t['verified_by_name'] : ''),
-        'counter'  => 'Cash at Barangay Hall' . (!empty($t['verified_by_name']) ? ' — received by ' . $t['verified_by_name'] : ''),
-        'waiver'   => 'Fee waived' . (!empty($t['verified_by_name']) ? ' by ' . $t['verified_by_name'] : ''),
-        default    => in_array((string) $t['payment_status'], DocumentPayment::FILTER_GROUPS['manual_review'], true) ? 'Proof sent — verify it' : '—',
+        'paymongo' => __('Automatically verified through PayMongo'),
+        'manual'   => __('Verified from GCash proof') . (!empty($t['verified_by_name']) ? ' by ' . $t['verified_by_name'] : ''),
+        'counter'  => __('Cash at Barangay Hall') . (!empty($t['verified_by_name']) ? ' — ' . __('received by :name', ['name' => $t['verified_by_name']]) : ''),
+        'waiver'   => __('Fee waived') . (!empty($t['verified_by_name']) ? ' by ' . $t['verified_by_name'] : ''),
+        default    => in_array((string) $t['payment_status'], DocumentPayment::FILTER_GROUPS['manual_review'], true) ? __('Proof sent — verify it') : '—',
     };
 };
 
@@ -83,13 +83,13 @@ ob_start();
 
 <div class="pm-head">
     <div>
-        <h2>Payment Management</h2>
-        <p>Residents send GCash and upload their receipt. Verify each one against the barangay GCash before the document is processed.</p>
+        <h2><?= e(__('Payment Management')) ?></h2>
+        <p><?= e(__('Residents send GCash and upload their receipt. Verify each one against the barangay GCash before the document is processed.')) ?></p>
     </div>
     <?php if ($isAdmin): ?>
     <div class="d-flex flex-wrap gap-2">
-        <a href="<?= e(route('admin/payments/fees')) ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-tags me-1" aria-hidden="true"></i>Document Fees</a>
-        <a href="<?= e(route('admin/payments/export') . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '')) ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1" aria-hidden="true"></i>Export CSV</a>
+        <a href="<?= e(route('admin/payments/fees')) ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-tags me-1" aria-hidden="true"></i><?= e(__('Document Fees')) ?></a>
+        <a href="<?= e(route('admin/payments/export') . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '')) ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1" aria-hidden="true"></i><?= e(__('Export CSV')) ?></a>
     </div>
     <?php endif; ?>
 </div>
@@ -97,37 +97,37 @@ ob_start();
 <?php if ($isAdmin): ?>
 <div class="pm-gw" role="status">
     <strong style="color:var(--text-primary);"><i class="bi bi-wallet2 me-1" aria-hidden="true"></i>GCash</strong>
-    <span>Residents pay to <strong><?= e((string) \App\Models\Setting::get('gcash_receive_name', '')) ?></strong> · <?= e((string) \App\Models\Setting::get('gcash_receive_number', '')) ?></span>
-    <span class="pm-pill <?= (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '' ? 'pm-pill--ok' : 'pm-pill--warn' ?>"><?= (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '' ? 'QR uploaded' : 'No QR yet' ?></span>
-    <a href="<?= e(route('admin/payments/fees') . '#gcash-account') ?>" style="color:var(--brand-primary);font-weight:600;">Change</a>
+    <span><?= e(__('Residents pay to')) ?> <strong><?= e((string) \App\Models\Setting::get('gcash_receive_name', '')) ?></strong> · <?= e((string) \App\Models\Setting::get('gcash_receive_number', '')) ?></span>
+    <span class="pm-pill <?= (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '' ? 'pm-pill--ok' : 'pm-pill--warn' ?>"><?= (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '' ? __('QR uploaded') : __('No QR yet') ?></span>
+    <a href="<?= e(route('admin/payments/fees') . '#gcash-account') ?>" style="color:var(--brand-primary);font-weight:600;"><?= e(__('Change')) ?></a>
 </div>
 <?php if ((bool) \App\Models\Setting::get('paymongo_checkout_enabled', false)): ?>
 <div class="pm-gw" role="status">
     <strong style="color:var(--text-primary);"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>PayMongo</strong>
     <?php if (PayMongoService::isConfigured()): ?>
-        <span class="pm-pill pm-pill--ok"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>API key set</span>
+        <span class="pm-pill pm-pill--ok"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><?= e(__('API key set')) ?></span>
     <?php else: ?>
-        <span class="pm-pill pm-pill--bad"><i class="bi bi-x-circle-fill" aria-hidden="true"></i>PAYMONGO_SECRET_KEY missing</span>
+        <span class="pm-pill pm-pill--bad"><i class="bi bi-x-circle-fill" aria-hidden="true"></i><?= e(__('PAYMONGO_SECRET_KEY missing')) ?></span>
     <?php endif; ?>
-    <span class="pm-pill <?= PayMongoService::getMode() === 'live' ? 'pm-pill--ok' : 'pm-pill--warn' ?>"><?= PayMongoService::getMode() === 'live' ? 'LIVE mode — real money' : 'TEST mode — no real money' ?></span>
+    <span class="pm-pill <?= PayMongoService::getMode() === 'live' ? 'pm-pill--ok' : 'pm-pill--warn' ?>"><?= PayMongoService::getMode() === 'live' ? __('LIVE mode — real money') : __('TEST mode — no real money') ?></span>
     <?php if (PayMongoService::isWebhookConfigured()): ?>
-        <span class="pm-pill pm-pill--ok"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Webhook secret set</span>
+        <span class="pm-pill pm-pill--ok"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><?= e(__('Webhook secret set')) ?></span>
     <?php else: ?>
-        <span class="pm-pill pm-pill--bad"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>PAYMONGO_WEBHOOK_SECRET missing — payments confirm only via "Check PayMongo Status"</span>
+        <span class="pm-pill pm-pill--bad"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><?= e(__('PAYMONGO_WEBHOOK_SECRET missing — payments confirm only via "Check PayMongo Status"')) ?></span>
     <?php endif; ?>
-    <span>Webhook URL: <code><?= e(route('api/webhooks/paymongo')) ?></code> · event <code>checkout_session.payment.paid</code></span>
+    <span><?= e(__('Webhook URL:')) ?> <code><?= e(route('api/webhooks/paymongo')) ?></code> · event <code>checkout_session.payment.paid</code></span>
 </div>
 <?php endif; ?>
 <?php endif; ?>
 
 <div class="pm-stats">
-    <a class="pm-stat" href="<?= e($tabUrl('paid')) ?>"><span>Collected</span><strong>₱<?= number_format((float) ($stats['total_collected'] ?? 0), 2) ?></strong><small>₱<?= number_format((float) ($stats['today_collected'] ?? 0), 2) ?> today</small></a>
-    <a class="pm-stat" href="<?= e($tabUrl('awaiting')) ?>"><span>Awaiting payment</span><strong><?= (int) ($stats['awaiting_count'] ?? 0) ?></strong><small>Checkout not finished</small></a>
-    <a class="pm-stat" href="<?= e($tabUrl('manual_review')) ?>"><span>Manual review</span><strong><?= (int) ($stats['review_count'] ?? 0) ?></strong><small>Needs a staff decision</small></a>
-    <a class="pm-stat" href="<?= e($tabUrl('failed')) ?>"><span>Failed</span><strong><?= (int) ($stats['failed_count'] ?? 0) ?></strong><small><?= (int) ($stats['paid_today_count'] ?? 0) ?> paid today</small></a>
+    <a class="pm-stat" href="<?= e($tabUrl('paid')) ?>"><span><?= e(__('Collected')) ?></span><strong>₱<?= number_format((float) ($stats['total_collected'] ?? 0), 2) ?></strong><small>₱<?= number_format((float) ($stats['today_collected'] ?? 0), 2) ?> <?= e(__('today')) ?></small></a>
+    <a class="pm-stat" href="<?= e($tabUrl('awaiting')) ?>"><span><?= e(__('Awaiting payment')) ?></span><strong><?= (int) ($stats['awaiting_count'] ?? 0) ?></strong><small><?= e(__('Checkout not finished')) ?></small></a>
+    <a class="pm-stat" href="<?= e($tabUrl('manual_review')) ?>"><span><?= e(__('Manual review')) ?></span><strong><?= (int) ($stats['review_count'] ?? 0) ?></strong><small><?= e(__('Needs a staff decision')) ?></small></a>
+    <a class="pm-stat" href="<?= e($tabUrl('failed')) ?>"><span><?= e(__('Failed')) ?></span><strong><?= (int) ($stats['failed_count'] ?? 0) ?></strong><small><?= (int) ($stats['paid_today_count'] ?? 0) ?> <?= e(__('paid today')) ?></small></a>
 </div>
 
-<nav class="pm-tabs" aria-label="Payment status filter">
+<nav class="pm-tabs" aria-label="<?= e(__('Payment status filter')) ?>">
     <?php foreach ($tabs as $g => $label): ?>
         <a href="<?= e($tabUrl($g)) ?>" class="<?= $group === $g ? 'is-active' : '' ?>"<?= $group === $g ? ' aria-current="page"' : '' ?>><?= e($label) ?></a>
     <?php endforeach; ?>
@@ -136,22 +136,22 @@ ob_start();
 <form method="get" action="<?= e(route('admin/payments')) ?>" class="row g-2 align-items-center mb-3" role="search">
     <input type="hidden" name="group" value="<?= e($group) ?>">
     <div class="col-12 col-md-6">
-        <label class="visually-hidden" for="pmSearch">Search payments</label>
+        <label class="visually-hidden" for="pmSearch"><?= e(__('Search payments')) ?></label>
         <input id="pmSearch" type="search" name="search" value="<?= e($search) ?>" class="form-control form-control-sm"
-               placeholder="Reference no., resident, document, or PayMongo ID (cs_…, pay_…)">
+               placeholder="<?= e(__('Reference no., resident, document, or PayMongo ID (cs_…, pay_…)')) ?>">
     </div>
     <div class="col-8 col-md-4">
-        <label class="visually-hidden" for="pmDoc">Document type</label>
+        <label class="visually-hidden" for="pmDoc"><?= e(__('Document type')) ?></label>
         <select id="pmDoc" name="doc_type" class="form-select form-select-sm">
-            <option value="">All documents</option>
+            <option value=""><?= e(__('All documents')) ?></option>
             <?php foreach (DocumentRequest::TYPES as $k => $lbl): ?>
                 <option value="<?= e($k) ?>" <?= $docType === $k ? 'selected' : '' ?>><?= e($lbl) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
     <div class="col-4 col-md-2 d-flex gap-1">
-        <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Search</span></button>
-        <a href="<?= e(route('admin/payments')) ?>" class="btn btn-outline-secondary btn-sm" title="Clear filters"><i class="bi bi-x-lg" aria-hidden="true"></i><span class="visually-hidden">Clear filters</span></a>
+        <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden"><?= e(__('Search')) ?></span></button>
+        <a href="<?= e(route('admin/payments')) ?>" class="btn btn-outline-secondary btn-sm" title="<?= e(__('Clear filters')) ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span class="visually-hidden"><?= e(__('Clear filters')) ?></span></a>
     </div>
 </form>
 
@@ -160,23 +160,23 @@ ob_start();
         <table class="table table-hover mb-0 pm-table" style="font-size:.84rem;">
             <thead>
                 <tr>
-                    <th>Reference</th>
-                    <th>Resident</th>
-                    <th>Document</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>PayMongo ID</th>
-                    <th>Payment</th>
-                    <th>Request</th>
-                    <th>Created / Paid</th>
-                    <th class="text-end">Actions</th>
+                    <th><?= e(__('Reference')) ?></th>
+                    <th><?= e(__('Resident')) ?></th>
+                    <th><?= e(__('Document')) ?></th>
+                    <th><?= e(__('Amount')) ?></th>
+                    <th><?= e(__('Method')) ?></th>
+                    <th><?= e(__('PayMongo ID')) ?></th>
+                    <th><?= e(__('Payment')) ?></th>
+                    <th><?= e(__('Request')) ?></th>
+                    <th><?= e(__('Created / Paid')) ?></th>
+                    <th class="text-end"><?= e(__('Actions')) ?></th>
                 </tr>
             </thead>
             <tbody>
             <?php if ($transactions === []): ?>
                 <tr><td colspan="10" class="text-center py-5 text-muted">
                     <i class="bi bi-wallet2 d-block mb-2" style="font-size:1.8rem;" aria-hidden="true"></i>
-                    No payments<?= $group !== '' || $search !== '' ? ' match these filters' : ' yet. They appear here as residents request paid documents' ?>.
+                    <?= e(__('No payments')) ?><?= $group !== '' || $search !== '' ? ' match these filters' : __(' yet. They appear here as residents request paid documents') ?>.
                 </td></tr>
             <?php endif; ?>
             <?php foreach ($transactions as $t):
@@ -185,9 +185,9 @@ ob_start();
                 $settled  = in_array($pst, DocumentPayment::SETTLED_STATES, true);
                 $inReview = in_array($pst, DocumentPayment::FILTER_GROUPS['manual_review'], true);
                 $isOnline = !empty($t['paymongo_checkout_id']);
-                $method   = $isOnline ? 'GCash (PayMongo)'
-                          : (in_array((string) $t['payment_method'], ['gcash', 'gcash_direct', 'paymongo'], true) ? 'GCash (direct)'
-                          : ((string) $t['payment_method'] === 'pickup' ? 'Cash at hall' : ucfirst((string) $t['payment_method'])));
+                $method   = $isOnline ? __('GCash (PayMongo)')
+                          : (in_array((string) $t['payment_method'], ['gcash', 'gcash_direct', 'paymongo'], true) ? __('GCash (direct)')
+                          : ((string) $t['payment_method'] === 'pickup' ? __('Cash at hall') : ucfirst((string) $t['payment_method'])));
                 $details  = [
                     'id'           => $pId,
                     'payment_ref'  => (string) $t['payment_ref'],
@@ -224,25 +224,25 @@ ob_start();
                     <td class="pm-mono"><?= e((string) ($t['paymongo_payment_id'] ?: ($t['paymongo_checkout_id'] ?? '')) ?: '—') ?></td>
                     <td><?= status_badge($inReview ? "payment_proof_submitted" : $pst, DocumentPayment::statusLabel($pst)) ?><div class="pm-sub"><?= e($verificationText($t)) ?></div></td>
                     <td><span class="pm-sub" style="color:var(--text-secondary);"><?= e(DocumentRequest::statusLabel((string) $t['document_status'])) ?></span></td>
-                    <td class="pm-sub"><?= e(format_datetime((string) $t['created_at'])) ?><?php if (!empty($t['paid_at'])): ?><br>Paid <?= e(format_datetime((string) $t['paid_at'])) ?><?php endif; ?></td>
+                    <td class="pm-sub"><?= e(format_datetime((string) $t['created_at'])) ?><?php if (!empty($t['paid_at'])): ?><br><?= e(__('Paid')) ?> <?= e(format_datetime((string) $t['paid_at'])) ?><?php endif; ?></td>
                     <td class="text-end">
                         <div class="d-inline-flex flex-wrap justify-content-end gap-1">
                             <button type="button" class="btn btn-outline-secondary btn-sm" data-pm-details="<?= e(json_encode($details)) ?>">
-                                <i class="bi bi-eye" aria-hidden="true"></i> View
+                                <i class="bi bi-eye" aria-hidden="true"></i> <?= e(__('View')) ?>
                             </button>
                             <?php if ($isOnline && !$settled): ?>
                             <form method="post" action="<?= e(route('admin/payments/' . $pId . '/check-status')) ?>" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                 <input type="hidden" name="return_to" value="<?= e($returnTo) ?>">
-                                <button type="submit" class="btn btn-outline-primary btn-sm" title="Ask PayMongo for the real status"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Check PayMongo</button>
+                                <button type="submit" class="btn btn-outline-primary btn-sm" title="<?= e(__('Ask PayMongo for the real status')) ?>"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> <?= e(__('Check PayMongo')) ?></button>
                             </form>
                             <?php endif; ?>
                             <?php if ($inReview): ?>
-                            <button type="button" class="btn btn-success btn-sm" data-pm-verify="<?= e(json_encode($details)) ?>"><i class="bi bi-check2" aria-hidden="true"></i> Verify</button>
-                            <button type="button" class="btn btn-outline-danger btn-sm" data-pm-reject="<?= e(json_encode($details)) ?>"><i class="bi bi-x" aria-hidden="true"></i> Reject</button>
+                            <button type="button" class="btn btn-success btn-sm" data-pm-verify="<?= e(json_encode($details)) ?>"><i class="bi bi-check2" aria-hidden="true"></i> <?= e(__('Verify')) ?></button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" data-pm-reject="<?= e(json_encode($details)) ?>"><i class="bi bi-x" aria-hidden="true"></i> <?= e(__('Reject')) ?></button>
                             <?php endif; ?>
                             <?php if ($pst === DocumentPayment::STATUS_PAY_AT_PICKUP): ?>
-                            <button type="button" class="btn btn-primary btn-sm" data-pm-cash="<?= e(json_encode($details)) ?>"><i class="bi bi-cash-stack" aria-hidden="true"></i> Cash received</button>
+                            <button type="button" class="btn btn-primary btn-sm" data-pm-cash="<?= e(json_encode($details)) ?>"><i class="bi bi-cash-stack" aria-hidden="true"></i> <?= e(__('Cash received')) ?></button>
                             <?php endif; ?>
                         </div>
                     </td>
@@ -258,35 +258,35 @@ ob_start();
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="pmDetailsTitle">Payment</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="pmDetailsTitle"><?= e(__('Payment')) ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= e(__('Close')) ?>"></button>
             </div>
             <div class="modal-body">
                 <dl class="pm-dl" id="pmDl"></dl>
                 <div class="mt-3 d-flex flex-wrap gap-2">
-                    <a id="pmRequestLink" class="btn btn-outline-secondary btn-sm" href="#"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> View document request</a>
-                    <a id="pmProofLink" class="btn btn-outline-secondary btn-sm d-none" href="#" target="_blank" rel="noopener"><i class="bi bi-receipt" aria-hidden="true"></i> View uploaded proof</a>
+                    <a id="pmRequestLink" class="btn btn-outline-secondary btn-sm" href="#"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> <?= e(__('View document request')) ?></a>
+                    <a id="pmProofLink" class="btn btn-outline-secondary btn-sm d-none" href="#" target="_blank" rel="noopener"><i class="bi bi-receipt" aria-hidden="true"></i> <?= e(__('View uploaded proof')) ?></a>
                 </div>
-                <h6 class="mt-4 mb-2 fw-bold">Audit history</h6>
-                <ul class="pm-audit" id="pmAudit"><li class="text-muted">Loading…</li></ul>
+                <h6 class="mt-4 mb-2 fw-bold"><?= e(__('Audit history')) ?></h6>
+                <ul class="pm-audit" id="pmAudit"><li class="text-muted"><?= e(__('Loading…')) ?></li></ul>
 
                 <?php if ($isAdmin): ?>
                 <div id="pmAdminActions" class="mt-4 pt-3 border-top">
                     <form id="pmWaiveForm" method="post" class="d-none mb-3">
                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                        <label class="form-label small fw-semibold" for="pmWaiveReason">Waive this fee (admin) — reason</label>
+                        <label class="form-label small fw-semibold" for="pmWaiveReason"><?= e(__('Waive this fee (admin) — reason')) ?></label>
                         <div class="input-group input-group-sm">
-                            <input id="pmWaiveReason" name="waiver_reason" class="form-control" required maxlength="255" placeholder="e.g. Indigent resident, approved by Punong Barangay">
-                            <button class="btn btn-outline-warning" type="submit">Waive fee</button>
+                            <input id="pmWaiveReason" name="waiver_reason" class="form-control" required maxlength="255" placeholder="<?= e(__('e.g. Indigent resident, approved by Punong Barangay')) ?>">
+                            <button class="btn btn-outline-warning" type="submit"><?= e(__('Waive fee')) ?></button>
                         </div>
                     </form>
                     <form id="pmRefundForm" method="post" class="d-none">
                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                        <label class="form-label small fw-semibold" for="pmRefundReason">Record a refund (admin) — refund first in the PayMongo dashboard, then record it here</label>
+                        <label class="form-label small fw-semibold" for="pmRefundReason"><?= e(__('Record a refund (admin) — refund first in the PayMongo dashboard, then record it here')) ?></label>
                         <div class="input-group input-group-sm">
-                            <input name="refund_amount" type="number" step="0.01" min="0.01" class="form-control" style="max-width:120px;" required aria-label="Refund amount">
-                            <input id="pmRefundReason" name="refund_reason" class="form-control" required maxlength="255" placeholder="Reason">
-                            <button class="btn btn-outline-danger" type="submit">Record refund</button>
+                            <input name="refund_amount" type="number" step="0.01" min="0.01" class="form-control" style="max-width:120px;" required aria-label="<?= e(__('Refund amount')) ?>">
+                            <input id="pmRefundReason" name="refund_reason" class="form-control" required maxlength="255" placeholder="<?= e(__('Reason')) ?>">
+                            <button class="btn btn-outline-danger" type="submit"><?= e(__('Record refund')) ?></button>
                         </div>
                     </form>
                 </div>
@@ -302,15 +302,15 @@ ob_start();
         <form method="post" id="pmVerifyForm">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
             <input type="hidden" name="return_to" value="<?= e($returnTo) ?>">
-            <div class="modal-header"><h5 class="modal-title" id="pmVerifyTitle">Verify manual payment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-header"><h5 class="modal-title" id="pmVerifyTitle"><?= e(__('Verify manual payment')) ?></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= e(__('Close')) ?>"></button></div>
             <div class="modal-body">
-                <p class="small">Open the barangay GCash (<strong><?= e((string) \App\Models\Setting::get('gcash_receive_name', '')) ?></strong>, <?= e((string) \App\Models\Setting::get('gcash_receive_number', '')) ?>) → Transactions, and confirm you received the exact amount with the same Ref. No. A screenshot alone can be edited, so always check GCash itself.</p>
-                <a id="pmVerifyProof" class="btn btn-outline-secondary btn-sm mb-3 d-none" target="_blank" rel="noopener"><i class="bi bi-image" aria-hidden="true"></i> Open the resident's screenshot</a>
+                <p class="small"><?= e(__('Open the barangay GCash (')) ?><strong><?= e((string) \App\Models\Setting::get('gcash_receive_name', '')) ?></strong>, <?= e((string) \App\Models\Setting::get('gcash_receive_number', '')) ?><?= e(__(') → Transactions, and confirm you received the exact amount with the same Ref. No. A screenshot alone can be edited, so always check GCash itself.')) ?></p>
+                <a id="pmVerifyProof" class="btn btn-outline-secondary btn-sm mb-3 d-none" target="_blank" rel="noopener"><i class="bi bi-image" aria-hidden="true"></i> <?= e(__('Open the resident\'s screenshot')) ?></a>
                 <dl class="pm-dl mb-3" id="pmVerifyDl"></dl>
-                <label class="form-label small fw-semibold" for="pmVerifyNote">How you confirmed it</label>
-                <input id="pmVerifyNote" name="note" class="form-control form-control-sm" required maxlength="255" placeholder="e.g. Received ₱50.00 in GCash, Ref. No. matches">
+                <label class="form-label small fw-semibold" for="pmVerifyNote"><?= e(__('How you confirmed it')) ?></label>
+                <input id="pmVerifyNote" name="note" class="form-control form-control-sm" required maxlength="255" placeholder="<?= e(__('e.g. Received ₱50.00 in GCash, Ref. No. matches')) ?>">
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success btn-sm">Mark as manually verified</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><?= e(__('Cancel')) ?></button><button type="submit" class="btn btn-success btn-sm"><?= e(__('Mark as manually verified')) ?></button></div>
         </form>
     </div></div>
 </div>
@@ -321,20 +321,20 @@ ob_start();
         <form method="post" id="pmRejectForm">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
             <input type="hidden" name="return_to" value="<?= e($returnTo) ?>">
-            <div class="modal-header"><h5 class="modal-title" id="pmRejectTitle">Reject proof of payment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-header"><h5 class="modal-title" id="pmRejectTitle"><?= e(__('Reject proof of payment')) ?></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= e(__('Close')) ?>"></button></div>
             <div class="modal-body">
-                <label class="form-label small fw-semibold" for="pmRejectReason">Reason (the resident sees this)</label>
+                <label class="form-label small fw-semibold" for="pmRejectReason"><?= e(__('Reason (the resident sees this)')) ?></label>
                 <select id="pmRejectReason" name="rejection_reason" class="form-select form-select-sm mb-2" required>
-                    <option value="">Choose a reason</option>
-                    <option>No matching payment found in the barangay GCash</option>
-                    <option>Amount does not match the fee</option>
-                    <option>Screenshot is unreadable</option>
-                    <option>Reference number is invalid or already used</option>
-                    <option>Other (explained below)</option>
+                    <option value=""><?= e(__('Choose a reason')) ?></option>
+                    <option><?= e(__('No matching payment found in the barangay GCash')) ?></option>
+                    <option><?= e(__('Amount does not match the fee')) ?></option>
+                    <option><?= e(__('Screenshot is unreadable')) ?></option>
+                    <option><?= e(__('Reference number is invalid or already used')) ?></option>
+                    <option><?= e(__('Other (explained below)')) ?></option>
                 </select>
-                <textarea name="rejection_note" class="form-control form-control-sm" rows="3" maxlength="500" placeholder="Details for the resident" aria-label="Details for the resident"></textarea>
+                <textarea name="rejection_note" class="form-control form-control-sm" rows="3" maxlength="500" placeholder="<?= e(__('Details for the resident')) ?>" aria-label="<?= e(__('Details for the resident')) ?>"></textarea>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger btn-sm">Reject proof</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><?= e(__('Cancel')) ?></button><button type="submit" class="btn btn-danger btn-sm"><?= e(__('Reject proof')) ?></button></div>
         </form>
     </div></div>
 </div>
@@ -345,14 +345,14 @@ ob_start();
         <form method="post" id="pmCashForm">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
             <input type="hidden" name="return_to" value="<?= e($returnTo) ?>">
-            <div class="modal-header"><h5 class="modal-title" id="pmCashTitle">Cash received at the hall</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-header"><h5 class="modal-title" id="pmCashTitle"><?= e(__('Cash received at the hall')) ?></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= e(__('Close')) ?>"></button></div>
             <div class="modal-body">
-                <p class="small">Record this only when you are holding the cash. If the resident also started a GCash checkout, PayMongo is checked first so nobody pays twice.</p>
+                <p class="small"><?= e(__('Record this only when you are holding the cash. If the resident also started a GCash checkout, PayMongo is checked first so nobody pays twice.')) ?></p>
                 <dl class="pm-dl mb-3" id="pmCashDl"></dl>
-                <label class="form-label small fw-semibold" for="pmCashNote">Official receipt no. / note</label>
+                <label class="form-label small fw-semibold" for="pmCashNote"><?= e(__('Official receipt no. / note')) ?></label>
                 <input id="pmCashNote" name="note" class="form-control form-control-sm" maxlength="255">
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary btn-sm">Record cash payment</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><?= e(__('Cancel')) ?></button><button type="submit" class="btn btn-primary btn-sm"><?= e(__('Record cash payment')) ?></button></div>
         </form>
     </div></div>
 </div>
@@ -370,7 +370,7 @@ ob_start();
         });
     }
     function open(id) { bootstrap.Modal.getOrCreateInstance(document.getElementById(id)).show(); }
-    function summary(d) { return [['Reference', d.payment_ref], ['Request', d.request_ref], ['Resident', d.resident], ['Document', d.document], ['Fee', d.amount]]; }
+    function summary(d) { return [[<?= json_encode(__('Reference')) ?>, d.payment_ref], [<?= json_encode(__('Request')) ?>, d.request_ref], [<?= json_encode(__('Resident')) ?>, d.resident], [<?= json_encode(__('Document')) ?>, d.document], ['Fee', d.amount]]; }
 
     document.addEventListener('click', function (ev) {
         var btn = ev.target.closest('[data-pm-details],[data-pm-verify],[data-pm-reject],[data-pm-cash]');
@@ -378,12 +378,12 @@ ob_start();
         var d;
         if (btn.dataset.pmDetails) {
             d = JSON.parse(btn.dataset.pmDetails);
-            document.getElementById('pmDetailsTitle').textContent = 'Payment ' + d.payment_ref;
+            document.getElementById('pmDetailsTitle').textContent = <?= json_encode(__('Payment ')) ?> + d.payment_ref;
             fill(document.getElementById('pmDl'), summary(d).concat([
-                ['Amount reported', d.reported], ['Payment source', d.source], ['Method', d.method], ['Payment status', d.status],
-                ['Verification', d.verification], ['Verified on', d.verified_at], ['Request status', d.request],
-                ['Created', d.created], ['Paid', d.paid], ['PayMongo checkout', d.checkout_id], ['PayMongo payment', d.pm_payment],
-                ['Proof reference', d.proof_ref], ['Note', d.failure]
+                [<?= json_encode(__('Amount reported')) ?>, d.reported], [<?= json_encode(__('Payment source')) ?>, d.source], [<?= json_encode(__('Method')) ?>, d.method], [<?= json_encode(__('Payment status')) ?>, d.status],
+                [<?= json_encode(__('Verification')) ?>, d.verification], [<?= json_encode(__('Verified on')) ?>, d.verified_at], [<?= json_encode(__('Request status')) ?>, d.request],
+                [<?= json_encode(__('Created')) ?>, d.created], [<?= json_encode(__('Paid')) ?>, d.paid], [<?= json_encode(__('PayMongo checkout')) ?>, d.checkout_id], [<?= json_encode(__('PayMongo payment')) ?>, d.pm_payment],
+                [<?= json_encode(__('Proof reference')) ?>, d.proof_ref], [<?= json_encode(__('Note')) ?>, d.failure]
             ]));
             document.getElementById('pmRequestLink').href = d.request_url;
             var proof = document.getElementById('pmProofLink');
@@ -411,7 +411,7 @@ ob_start();
             open('pmDetails');
         } else if (btn.dataset.pmVerify) {
             d = JSON.parse(btn.dataset.pmVerify);
-            fill(document.getElementById('pmVerifyDl'), summary(d).concat([['GCash Ref. No.', d.proof_ref]]));
+            fill(document.getElementById('pmVerifyDl'), summary(d).concat([[<?= json_encode(__('GCash Ref. No.')) ?>, d.proof_ref]]));
             var vp = document.getElementById('pmVerifyProof');
             vp.classList.toggle('d-none', !d.proof_url); vp.href = d.proof_url || '#';
             document.getElementById('pmVerifyForm').action = base + d.id + '/verify';

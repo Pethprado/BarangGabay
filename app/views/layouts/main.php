@@ -75,7 +75,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
 ?>
 <body class="text-slate-900 antialiased<?= $__rsShell ? ' has-rs-side' : '' ?><?= $__rsShell && !empty($bareContent) ? ' rs-bare' : '' ?>">
 <?php if ($__rsShell): ?>
-    <aside class="rs-side" aria-label="Resident menu">
+    <aside class="rs-side" aria-label="<?= e(__('Resident menu')) ?>">
         <div class="rs-side__brand"><?= baranggabay_logo('auto', ['size' => 'medium', 'href' => route('')]) ?></div>
         <nav class="rs-side__nav">
             <?php foreach ([
@@ -164,7 +164,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
                 <?php if (!empty($_SESSION['user_id'])): ?>
 
                 <!-- Global search -->
-                <a href="<?= e(route('search')) ?>" class="bell-btn rs-hide-lg" title="Search" aria-label="Search announcements, events, ordinances">
+                <a href="<?= e(route('search')) ?>" class="bell-btn rs-hide-lg" title="<?= e(__('Search')) ?>" aria-label="<?= e(__('Search announcements, events, ordinances')) ?>">
                     <i class="bi bi-search" aria-hidden="true"></i>
                 </a>
 
@@ -248,7 +248,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
                             <?= e(strtoupper(mb_substr($_SESSION['full_name'] ?? 'U', 0, 1, 'UTF-8'))) ?>
                         </div>
                         <span class="hidden sm:block text-sm font-semibold text-gray-700 max-w-[100px] truncate">
-                            <?= e(explode(' ', $_SESSION['full_name'] ?? 'User')[0]) ?>
+                            <?= e(explode(' ', $_SESSION['full_name'] ?? __('User'))[0]) ?>
                         </span>
                         <span class="text-gray-400 text-xs">▾</span>
                     </button>
@@ -311,7 +311,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
                     <a href="<?= e(route('evacuation')) ?>"    class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">🏫 <?= e(t('nav.evacuation')) ?></a>
                     <a href="<?= e(route('manobo')) ?>"        class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">📖 <?= e(t('nav.dictionary')) ?></a>
                     <a href="<?= e(route('feedback')) ?>"      class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">💬 <?= e(t('nav.feedback')) ?></a>
-                    <a href="<?= e(route('search')) ?>"        class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">🔎 Search</a>
+                    <a href="<?= e(route('search')) ?>"        class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"><?= e(__('🔎 Search')) ?></a>
                     <a href="<?= e(route('notifications')) ?>" class="block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                         🔔 <?= e(t('nav.notifications')) ?> <span id="notif-badge-mobile" class="font-bold text-red-600"></span>
                     </a>
@@ -667,11 +667,12 @@ document.addEventListener('click', function (ev) {
             if (!d.success) { return; }
             btn.setAttribute('aria-pressed', d.saved ? 'true' : 'false');
             var i = btn.querySelector('i'); if (i) { i.className = 'bi ' + (d.saved ? 'bi-bookmark-fill' : 'bi-bookmark'); }
-            var label = btn.querySelector('span'); if (label) { label.textContent = d.saved ? 'Saved' : 'Save'; }
+            var label = btn.querySelector('span'); if (label) { label.textContent = d.saved ? <?= json_encode(__('Saved')) ?> : <?= json_encode(__('Save')) ?>; }
             if (!d.saved && btn.closest('li') && location.pathname.indexOf('/bookmarks') !== -1) { btn.closest('li').remove(); }
         })
         .finally(function () { btn.disabled = false; });
 });
 </script>
+<?php require __DIR__ . '/../shared/_background-sweep.php'; ?>
 </body>
 </html>

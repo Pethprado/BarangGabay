@@ -200,6 +200,12 @@ class FreeTranslationService
         // method is changed; the post keeps whatever staff stored.
         $text = SocialText::unstyleUnicode($text);
 
+        // Agency names are not words to translate: "Ang PAGASA ay nagtaas na
+        // ng signal" came back as "Hope has raised the signal" (pag-asa =
+        // hope) on a storm warning. They travel as ZQX0, ZQX1… — tested to
+        // pass through the engine untouched — and are put back afterwards.
+        [$text, $protected] = self::protectAcronyms($text);
+
         $chunks = $this->chunk($text);
         if ($chunks === []) {
             return $this->fail(TranslationOutcome::NO_SOURCE_TEXT, 'Nothing to translate');
@@ -239,7 +245,73 @@ class FreeTranslationService
             return $this->fail(TranslationOutcome::PROVIDER_ERROR, 'Provider returned empty text');
         }
 
-        return $joined;
+        return self::restoreAcronyms($joined, $protected);
+    }
+
+    /** Philippine agencies and offices that appear in barangay notices. */
+    private const ACRONYMS = [
+        'PAGASA', 'PHIVOLCS', 'DOST', 'NDRRMC', 'RDRRMC', 'PDRRMO', 'MDRRMO', 'BDRRMC', 'DRRM', 'OCD',
+        'DSWD', 'MSWDO', 'CSWDO', 'DOH', 'RHU', 'BHW', 'BHERT', 'PNP', 'BFP', 'AFP', 'NBI', 'DILG',
+        'DENR', 'CENRO', 'MENRO', 'DA', 'DTI', 'DPWH', 'DOLE', 'TESDA', 'CHED', 'DepEd', 'COMELEC',
+        'PSA', 'SSS', 'GSIS', 'PhilHealth', 'LGU', 'SK', 'BPSO', 'BPAT', 'IP', 'IPMR', 'NCIP',
+        'NFA', 'NIA', 'LTO', 'BIR', 'PWD', 'OSCA', '4Ps',
+    ];
+
+    /** Local place names that must reach the reader exactly as written. */
+    private const PLACE_NAMES = [
+        'Barangay Bayogo', 'Bayogo', 'Madrid', 'Surigao del Sur', 'Surigao', 'Caraga', 'Mindanao',
+    ];
+
+    /**
+     * Every agency acronym and local place name that must never be translated.
+     * Shared with ManoboHybridTranslator, where "PAGASA" became "ANDE"
+     * (the dataset's word for pag-asa, hope).
+     *
+     * @return list<string>
+     */
+    public static function protectedTerms(): array
+    {
+        return array_merge(self::PLACE_NAMES, self::ACRONYMS);
+    }
+
+    /**
+     * Swap agency acronyms and local place names for ZQX0, ZQX1… placeholders.
+     *
+     * @return array{0:string, 1:array<string,string>} masked text, placeholder => original
+     */
+    public static function protectAcronyms(string $text): array
+    {
+        $map = [];
+        // Place names too: "Bayogo Barangay Hall" came back as "Bay Barangay
+        // Hall" — the wrong evacuation centre on a storm warning.
+        $names = self::PLACE_NAMES;
+        usort($names, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+        $pattern = '/(?<![\p{L}\p{N}])(Purok\s+\d+[A-Z]?|' . implode('|', array_map(
+            static fn (string $a): string => preg_quote($a, '/'),
+            array_merge($names, self::ACRONYMS)
+        )) . ')(?![\p{L}\p{N}])/u';
+
+        $masked = preg_replace_callback($pattern, static function (array $m) use (&$map): string {
+            $token = 'ZQX' . count($map);
+            $map[$token] = $m[1];
+            return $token;
+        }, $text);
+
+        return [$masked ?? $text, $map];
+    }
+
+    /** Put back what protectAcronyms() took out (case-insensitive, highest index first). */
+    public static function restoreAcronyms(string $text, array $map): string
+    {
+        if ($map === []) {
+            return $text;
+        }
+        krsort($map, SORT_NATURAL);   // ZQX10 before ZQX1
+        foreach ($map as $token => $original) {
+            $text = preg_replace('/' . preg_quote($token, '/') . '(?![0-9])/i', $original, $text) ?? $text;
+        }
+
+        return $text;
     }
 
     /**
@@ -262,6 +334,17 @@ class FreeTranslationService
         if ($result === null) {
             usleep(self::RETRY_PAUSE_US);
             $result = $this->requestChunk($chunk, $langPair);
+        }
+
+        // MyMemory refused twice (usually its daily quota): ask the backup
+        // provider before giving up, held to the same output checks.
+        if ($result === null) {
+            [$from, $to] = explode('|', $langPair) + [1 => 'en'];
+            $backup = GoogleFreeTranslate::translate($chunk, $from, $to);
+            if ($backup !== null && !self::looksLikeMarkup($backup) && self::looksLikeLanguage($backup)) {
+                $this->lastFailure = null;
+                $result = $backup;
+            }
         }
 
         return $result;

@@ -10,7 +10,7 @@
 use App\Models\DocumentRequest;
 use App\Models\DocumentPayment;
 
-$pageTitle = $pageTitle ?? 'Katayuan ng Pagbabayad — BarangGabay';
+$pageTitle = $pageTitle ?? __('Katayuan ng Pagbabayad — BarangGabay');
 $request   = $request ?? [];
 $payment   = $payment ?? [];
 
@@ -20,7 +20,7 @@ $docLabel  = DocumentRequest::label($docType);
 $reqRef    = (string) ($request['reference_no'] ?? '');
 $payRef    = (string) ($payment['payment_ref'] ?? ('PAY-' . date('Y') . '-' . sprintf('%06d', $reqId)));
 $fee       = (float) ($payment['amount_due'] ?? ($request['fee_amount'] ?? 0));
-$receiving = (string) ($request['delivery_method'] ?? 'digital') === 'digital' ? 'Digital Copy' : 'Pickup at Barangay Hall';
+$receiving = (string) ($request['delivery_method'] ?? 'digital') === 'digital' ? __('Digital Copy') : __('Pickup at Barangay Hall');
 
 $isInitialPaid = in_array($payment['payment_status'] ?? '', [
     DocumentPayment::STATUS_PAID,
@@ -47,9 +47,9 @@ ob_start();
                 <i class="bi bi-wallet2 text-2xl text-blue-600 dark:text-blue-400"></i>
             </div>
 
-            <h2 class="text-xl font-black text-slate-900 dark:text-white mb-2">Payment verification in progress</h2>
+            <h2 class="text-xl font-black text-slate-900 dark:text-white mb-2"><?= e(__('Payment verification in progress')) ?></h2>
             <p class="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-4">
-                Hinihintay namin ang kumpirmasyon mula mismo sa PayMongo. Hindi pa ito "bayad na" hangga't hindi kinukumpirma ng PayMongo.
+                <?= e(__('Hinihintay namin ang kumpirmasyon mula mismo sa PayMongo. Hindi pa ito "bayad na" hangga\'t hindi kinukumpirma ng PayMongo.')) ?>
             </p>
 
             <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
@@ -57,11 +57,11 @@ ob_start();
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
                 </span>
-                <span>PAYMENT IS BEING CONFIRMED</span>
+                <span><?= e(__('PAYMENT IS BEING CONFIRMED')) ?></span>
             </div>
 
             <div class="mt-6 border-t border-slate-100 pt-5 text-xs text-slate-400 dark:border-slate-800">
-                Hindi kailangang i-refresh ang page; awtomatikong mag-a-update ito sa sandaling matanggap ang kumpirmasyon.
+                <?= e(__('Hindi kailangang i-refresh ang page; awtomatikong mag-a-update ito sa sandaling matanggap ang kumpirmasyon.')) ?>
             </div>
         </div>
 
@@ -71,69 +71,69 @@ ob_start();
                 <i class="bi bi-check-circle-fill text-4xl"></i>
             </div>
 
-            <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-1">PAYMENT SUCCESSFUL ✓</h2>
+            <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-1"><?= e(__('PAYMENT SUCCESSFUL ✓')) ?></h2>
             <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">
-                Matagumpay na natanggap at naberipika ang inyong bayad.
+                <?= e(__('Matagumpay na natanggap at naberipika ang inyong bayad.')) ?>
             </p>
 
             <!-- Clean Transaction Summary -->
             <div class="rounded-2xl border p-5 text-left text-xs space-y-3 mb-6" style="background:var(--surface-muted);border-color:var(--border);">
                 <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                    <span class="text-slate-500 dark:text-slate-400">Halaga (Amount):</span>
+                    <span class="text-slate-500 dark:text-slate-400"><?= e(__('Halaga (Amount):')) ?></span>
                     <span class="text-base font-black text-emerald-600 dark:text-emerald-400" id="resAmount">
                         ₱<?= number_format($fee, 2) ?>
                     </span>
                 </div>
 
                 <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                    <span class="text-slate-500 dark:text-slate-400">Paraan ng Bayad (Method):</span>
+                    <span class="text-slate-500 dark:text-slate-400"><?= e(__('Paraan ng Bayad (Method):')) ?></span>
                     <span class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5" id="resMethod">
-                        <span class="rounded bg-blue-600 text-white px-1.5 py-0.2 text-[10px] font-black">G</span> GCash via PayMongo
+                        <span class="rounded bg-blue-600 text-white px-1.5 py-0.2 text-[10px] font-black">G</span> <?= e(__('GCash via PayMongo')) ?>
                     </span>
                 </div>
 
                 <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                    <span class="text-slate-500 dark:text-slate-400">Payment Reference:</span>
+                    <span class="text-slate-500 dark:text-slate-400"><?= e(__('Payment Reference:')) ?></span>
                     <span class="font-mono font-bold text-slate-900 dark:text-white" id="resPayRef">
                         <?= e($payRef) ?>
                     </span>
                 </div>
 
                 <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                    <span class="text-slate-500 dark:text-slate-400">Dokumento (Document):</span>
+                    <span class="text-slate-500 dark:text-slate-400"><?= e(__('Dokumento (Document):')) ?></span>
                     <span class="font-bold text-slate-900 dark:text-white" id="resDocLabel">
                         <?= e($docLabel) ?> (<?= e($reqRef) ?>)
                     </span>
                 </div>
 
                 <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                    <span class="text-slate-500 dark:text-slate-400">Paraan ng Pagtanggap:</span>
+                    <span class="text-slate-500 dark:text-slate-400"><?= e(__('Paraan ng Pagtanggap:')) ?></span>
                     <span class="font-bold text-slate-900 dark:text-white">
                         <?= e($receiving) ?>
                     </span>
                 </div>
 
                 <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 dark:border-slate-700">
-                    <span class="text-slate-500 dark:text-slate-400">Verification:</span>
-                    <span class="font-bold text-slate-900 dark:text-white">Automatically verified through PayMongo</span>
+                    <span class="text-slate-500 dark:text-slate-400"><?= e(__('Verification:')) ?></span>
+                    <span class="font-bold text-slate-900 dark:text-white"><?= e(__('Automatically verified through PayMongo')) ?></span>
                 </div>
 
                 <div class="flex items-center justify-between pt-1">
-                    <span class="text-slate-500 dark:text-slate-400">Estado ng Kahilingan:</span>
+                    <span class="text-slate-500 dark:text-slate-400"><?= e(__('Estado ng Kahilingan:')) ?></span>
                     <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-800 dark:bg-blue-900/60 dark:text-blue-300" id="resStatus">
-                        ● Pending Barangay Review
+                        <?= e(__('● Pending Barangay Review')) ?>
                     </span>
                 </div>
             </div>
 
             <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
-                Ang inyong kahilingan ay nasa ilalim na ng pagsusuri ng kawani ng Barangay. Makatatanggap kayo ng abiso sa sandaling maaprubahan at mai-release ang inyong dokumento.
+                <?= e(__('Ang inyong kahilingan ay nasa ilalim na ng pagsusuri ng kawani ng Barangay. Makatatanggap kayo ng abiso sa sandaling maaprubahan at mai-release ang inyong dokumento.')) ?>
             </p>
 
             <a href="<?= e(route('documents?tab=requests&ref=' . urlencode($reqRef))) ?>"
                class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition">
                 <i class="bi bi-folder2-open"></i>
-                <span>Tingnan ang Aking Kahilingan (VIEW MY REQUEST)</span>
+                <span><?= e(__('Tingnan ang Aking Kahilingan (VIEW MY REQUEST)')) ?></span>
             </a>
         </div>
 
@@ -143,20 +143,20 @@ ob_start();
                 <i class="bi bi-x-circle-fill text-4xl"></i>
             </div>
 
-            <h2 class="text-2xl font-black text-rose-600 dark:text-rose-400 mb-1" id="failTitle">PAYMENT UNSUCCESSFUL</h2>
+            <h2 class="text-2xl font-black text-rose-600 dark:text-rose-400 mb-1" id="failTitle"><?= e(__('PAYMENT UNSUCCESSFUL')) ?></h2>
             <p class="text-xs text-slate-500 dark:text-slate-400 mb-6" id="failDesc">
-                Hindi natapos ang inyong online payment. Naka-save pa rin ang inyong kahilingan at maaari itong subukang muli.
+                <?= e(__('Hindi natapos ang inyong online payment. Naka-save pa rin ang inyong kahilingan at maaari itong subukang muli.')) ?>
             </p>
 
             <div class="flex flex-col sm:flex-row gap-3">
                 <a href="<?= e(route('documents/' . $reqId . '/payment')) ?>"
                    class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-xs font-bold text-white shadow-md hover:bg-blue-700 transition">
                     <i class="bi bi-arrow-repeat"></i>
-                    <span>Subukang Muli (TRY AGAIN)</span>
+                    <span><?= e(__('Subukang Muli (TRY AGAIN)')) ?></span>
                 </a>
                 <a href="<?= e(route('documents?tab=requests')) ?>"
                    class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                    <span>Aking Mga Kahilingan</span>
+                    <span><?= e(__('Aking Mga Kahilingan')) ?></span>
                 </a>
             </div>
         </div>
@@ -219,12 +219,12 @@ ob_start();
                 document.getElementById('successState').classList.add('hidden');
                 document.getElementById('failedState').classList.remove('hidden');
                 if (st === 'EXPIRED') {
-                    document.getElementById('failTitle').innerText = 'CHECKOUT EXPIRED';
-                    document.getElementById('failDesc').innerText = 'Nag-expire ang checkout nang walang bayad. Walang nabawas — maaari kayong magbayad muli.';
+                    document.getElementById('failTitle').innerText = <?= json_encode(__('CHECKOUT EXPIRED')) ?>;
+                    document.getElementById('failDesc').innerText = <?= json_encode(__('Nag-expire ang checkout nang walang bayad. Walang nabawas — maaari kayong magbayad muli.')) ?>;
                 }
                 if (st === 'CANCELLED') {
-                    document.getElementById('failTitle').innerText = 'PAYMENT CANCELLED';
-                    document.getElementById('failDesc').innerText = 'Kinansela mo ang online payment. Naka-save pa rin ang inyong kahilingan.';
+                    document.getElementById('failTitle').innerText = <?= json_encode(__('PAYMENT CANCELLED')) ?>;
+                    document.getElementById('failDesc').innerText = <?= json_encode(__('Kinansela mo ang online payment. Naka-save pa rin ang inyong kahilingan.')) ?>;
                 }
                 return;
             }

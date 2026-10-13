@@ -17,7 +17,7 @@ ob_start();
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
 <div class="d-flex align-items-center justify-content-between mb-4">
-    <nav aria-label="breadcrumb">
+    <nav aria-label="<?= e(__('breadcrumb')) ?>">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
                 <a href="<?= e(route('admin/events')) ?>"><?= e(t('admin_nav.events')) ?></a>
@@ -234,7 +234,7 @@ ob_start();
                             </div>
                         </template>
                         <template x-if="preview">
-                            <img :src="preview" alt="Preview"
+                            <img :src="preview" alt="<?= e(__('Preview')) ?>"
                                  class="rounded-2 w-100" style="max-height:120px;object-fit:cover;">
                         </template>
                         <input type="file"

@@ -199,7 +199,7 @@ class ManoboController
         }
 
         AuditLog::record((int) $_SESSION['user_id'], 'manobo.entry_approved', 'Approved Manobo entry id ' . $id);
-        flash('success', 'Naaprubahan ang salita sa opisyal na diksyunaryo.');
+        flash('success', __('Naaprubahan ang salita sa opisyal na diksyunaryo.'));
         redirect('/admin/manobo');
     }
 
@@ -217,7 +217,7 @@ class ManoboController
         }
 
         AuditLog::record((int) $_SESSION['user_id'], 'manobo.entry_archived', 'Archived Manobo entry id ' . $id);
-        flash('success', 'Na-archive ang salita sa diksyunaryo.');
+        flash('success', __('Na-archive ang salita sa diksyunaryo.'));
         redirect('/admin/manobo');
     }
 
@@ -228,14 +228,14 @@ class ManoboController
 
         $file = $_FILES['doc_file'] ?? null;
         if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            flash('error', 'Pumili ng .docx, .pdf, o .csv file na i-upload.');
+            flash('error', __('Pumili ng .docx, .pdf, o .csv file na i-upload.'));
             redirect('/admin/manobo');
         }
 
         $filename = basename($file['name']);
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         if (!in_array($ext, ['docx', 'pdf', 'csv', 'txt'], true)) {
-            flash('error', 'Ang format ng file ay dapat .docx, .pdf, .csv, o .txt.');
+            flash('error', __('Ang format ng file ay dapat .docx, .pdf, .csv, o .txt.'));
             redirect('/admin/manobo');
         }
 
@@ -244,7 +244,7 @@ class ManoboController
             $rawEntries = $parsed['entries'] ?? [];
 
             if (empty($rawEntries)) {
-                flash('error', 'Walang nabasang bokabularyo sa in-upload na dokumento: ' . ($parsed['error'] ?? 'Unreadable or empty document.'));
+                flash('error', __('Walang nabasang bokabularyo sa in-upload na dokumento: :error', ['error' => $parsed['error'] ?? __('Unreadable or empty document.')]));
                 redirect('/admin/manobo');
             }
 
@@ -303,7 +303,7 @@ class ManoboController
             redirect('/admin/manobo/import-preview');
         } catch (\Throwable $e) {
             error_log('[ManoboController::importDoc] Error: ' . $e->getMessage());
-            flash('error', 'Hindi ma-process ang dokumento: ' . $e->getMessage());
+            flash('error', __('Hindi ma-process ang dokumento: :error', ['error' => $e->getMessage()]));
             redirect('/admin/manobo');
         }
     }
@@ -313,7 +313,7 @@ class ManoboController
     {
         $previewData = $_SESSION['dictionary_import_preview'] ?? null;
         if (!$previewData) {
-            flash('error', 'Walang data ng import preview. Mangyaring mag-upload muli.');
+            flash('error', __('Walang data ng import preview. Mangyaring mag-upload muli.'));
             redirect('/admin/manobo');
         }
 
@@ -336,7 +336,7 @@ class ManoboController
         $postedEntries = $_POST['entries'] ?? [];
 
         if (!$previewData || empty($postedEntries) || !is_array($postedEntries)) {
-            flash('error', 'Walang napiling entri para i-import.');
+            flash('error', __('Walang napiling entri para i-import.'));
             redirect('/admin/manobo');
         }
 
@@ -366,7 +366,7 @@ class ManoboController
 
         if (empty($importItems)) {
             unset($_SESSION['dictionary_import_preview']);
-            flash('info', 'Lahat ng entri ay nilaktawan.');
+            flash('info', __('Lahat ng entri ay nilaktawan.'));
             redirect('/admin/manobo');
         }
 
@@ -396,13 +396,13 @@ class ManoboController
         check_csrf();
 
         if (!in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true)) {
-            flash('error', 'Tanging ang mga admin lamang ang makakapag-undo ng import.');
+            flash('error', __('Tanging ang mga admin lamang ang makakapag-undo ng import.'));
             redirect('/admin/manobo');
         }
 
         $batchId = trim($_POST['batch_id'] ?? '');
         if ($batchId === '') {
-            flash('error', 'Walang napiling import batch.');
+            flash('error', __('Walang napiling import batch.'));
             redirect('/admin/manobo');
         }
 
@@ -445,7 +445,7 @@ class ManoboController
             ));
         } catch (\Throwable $e) {
             error_log('[ManoboController::regeneratePosts] Error: ' . $e->getMessage());
-            flash('error', 'Nagkaroon ng error sa pag-regenerate ng mga post: ' . $e->getMessage());
+            flash('error', __('Nagkaroon ng error sa pag-regenerate ng mga post: :error', ['error' => $e->getMessage()]));
         }
 
         redirect('/admin/manobo');
@@ -483,7 +483,7 @@ class ManoboController
         }
 
         AuditLog::record((int) $_SESSION['user_id'], 'manobo.entry_restored', 'Restored Manobo word id ' . $id);
-        flash('success', 'Naibalik ang salita.');
+        flash('success', __('Naibalik ang salita.'));
         redirect('/admin/manobo');
     }
 
@@ -501,7 +501,7 @@ class ManoboController
         }
 
         AuditLog::record((int) $_SESSION['user_id'], 'manobo.entry_purged', 'Permanently deleted Manobo word id ' . $id);
-        flash('success', 'Tinanggal nang tuluyan.');
+        flash('success', __('Tinanggal nang tuluyan.'));
         redirect('/admin/manobo');
     }
 
@@ -512,7 +512,7 @@ class ManoboController
 
         $file = $_FILES['csv_file'] ?? null;
         if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            flash('error', 'Pumili ng CSV file na i-upload.');
+            flash('error', __('Pumili ng CSV file na i-upload.'));
             redirect('/admin/manobo');
         }
 
@@ -520,7 +520,7 @@ class ManoboController
         $mime  = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
         if (!in_array($mime, ['text/csv', 'text/plain', 'application/csv', 'text/x-csv'], true)) {
-            flash('error', 'Ang file ay dapat CSV.');
+            flash('error', __('Ang file ay dapat CSV.'));
             redirect('/admin/manobo');
         }
 
@@ -619,7 +619,7 @@ class ManoboController
             $hits = array_filter($hits, fn($t) => $t > $now - 60);
             if (count($hits) >= 60) {
                 http_response_code(429);
-                echo json_encode(['success' => false, 'error' => 'Too many translation requests. Please wait a moment.']);
+                echo json_encode(['success' => false, 'error' => __('Too many translation requests. Please wait a moment.')]);
                 return;
             }
             $hits[] = $now;
@@ -632,7 +632,7 @@ class ManoboController
         if ($text === '') {
             echo json_encode([
                 'success' => false,
-                'error'   => 'No text was provided for translation.',
+                'error'   => __('No text was provided for translation.'),
             ]);
             return;
         }
@@ -661,7 +661,7 @@ class ManoboController
             error_log('[ManoboController::apiTranslateManobo] ' . $e->getMessage());
             echo json_encode([
                 'success' => false,
-                'error'   => 'Translation failed: ' . $e->getMessage(),
+                'error'   => __('Translation failed: :error', ['error' => $e->getMessage()]),
             ]);
         }
     }
@@ -796,7 +796,7 @@ class ManoboController
             redirect('/admin/manobo');
         } catch (\Throwable $e) {
             error_log('[ManoboController::store] ' . $e->getMessage());
-            flash('error', 'Could not save the word. Check the database connection.');
+            flash('error', __('Could not save the word. Check the database connection.'));
             redirect('/admin/manobo');
         }
 
@@ -808,7 +808,7 @@ class ManoboController
             'Added Manobo word: ' . $headword
         );
 
-        flash('success', 'Added "' . $headword . '" to the dictionary.');
+        flash('success', __('Added ":word" to the dictionary.', ['word' => $headword]));
         redirect('/admin/manobo');
     }
 
@@ -827,7 +827,7 @@ class ManoboController
             redirect('/admin/manobo');
         } catch (\Throwable $e) {
             error_log('[ManoboController::update] ' . $e->getMessage());
-            flash('error', 'Could not update the word. Check the database connection.');
+            flash('error', __('Could not update the word. Check the database connection.'));
             redirect('/admin/manobo');
         }
 
@@ -837,7 +837,7 @@ class ManoboController
             'Updated Manobo word: ' . $original
         );
 
-        flash('success', 'Updated "' . $original . '".');
+        flash('success', __('Updated ":word".', ['word' => $original]));
         redirect('/admin/manobo');
     }
 
@@ -860,7 +860,7 @@ class ManoboController
             redirect('/admin/manobo');
         } catch (\Throwable $e) {
             error_log('[ManoboController::destroy] ' . $e->getMessage());
-            flash('error', 'Could not delete the word. Check the database connection.');
+            flash('error', __('Could not delete the word. Check the database connection.'));
             redirect('/admin/manobo');
         }
 
@@ -870,7 +870,7 @@ class ManoboController
             'Deleted Manobo word: ' . $headword
         );
 
-        flash('success', 'Deleted "' . $headword . '".');
+        flash('success', __('Deleted ":word".', ['word' => $headword]));
         redirect('/admin/manobo');
     }
 
@@ -948,13 +948,13 @@ class ManoboController
             redirect('/admin/bisaya');
         } catch (\Throwable $e) {
             error_log('[ManoboController::bisayaStore] ' . $e->getMessage());
-            flash('error', 'Could not save the word. Check the database connection.');
+            flash('error', __('Could not save the word. Check the database connection.'));
             redirect('/admin/bisaya');
         }
 
         $headword = trim($_POST['bisaya'] ?? '');
         AuditLog::record((int) $_SESSION['user_id'], 'bisaya.entry_added', 'Added Bisaya word: ' . $headword);
-        flash('success', 'Added "' . $headword . '" to the dictionary.');
+        flash('success', __('Added ":word" to the dictionary.', ['word' => $headword]));
         redirect('/admin/bisaya');
     }
 
@@ -973,12 +973,12 @@ class ManoboController
             redirect('/admin/bisaya');
         } catch (\Throwable $e) {
             error_log('[ManoboController::bisayaUpdate] ' . $e->getMessage());
-            flash('error', 'Could not update the word. Check the database connection.');
+            flash('error', __('Could not update the word. Check the database connection.'));
             redirect('/admin/bisaya');
         }
 
         AuditLog::record((int) $_SESSION['user_id'], 'bisaya.entry_updated', 'Updated Bisaya word: ' . $original);
-        flash('success', 'Updated "' . $original . '".');
+        flash('success', __('Updated ":word".', ['word' => $original]));
         redirect('/admin/bisaya');
     }
 
@@ -996,12 +996,12 @@ class ManoboController
             redirect('/admin/bisaya');
         } catch (\Throwable $e) {
             error_log('[ManoboController::bisayaDestroy] ' . $e->getMessage());
-            flash('error', 'Could not delete the word. Check the database connection.');
+            flash('error', __('Could not delete the word. Check the database connection.'));
             redirect('/admin/bisaya');
         }
 
         AuditLog::record((int) $_SESSION['user_id'], 'bisaya.entry_deleted', 'Deleted Bisaya word: ' . $headword);
-        flash('success', 'Deleted "' . $headword . '".');
+        flash('success', __('Deleted ":word".', ['word' => $headword]));
         redirect('/admin/bisaya');
     }
 
@@ -1020,7 +1020,7 @@ class ManoboController
         }
 
         AuditLog::record((int) $_SESSION['user_id'], 'bisaya.entry_restored', 'Restored Bisaya word id ' . $id);
-        flash('success', 'Naibalik ang salita.');
+        flash('success', __('Naibalik ang salita.'));
         redirect('/admin/bisaya');
     }
 
@@ -1038,7 +1038,7 @@ class ManoboController
         }
 
         AuditLog::record((int) $_SESSION['user_id'], 'bisaya.entry_purged', 'Permanently deleted Bisaya word id ' . $id);
-        flash('success', 'Tinanggal nang tuluyan.');
+        flash('success', __('Tinanggal nang tuluyan.'));
         redirect('/admin/bisaya');
     }
 
@@ -1049,7 +1049,7 @@ class ManoboController
 
         $file = $_FILES['csv_file'] ?? null;
         if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            flash('error', 'Pumili ng CSV file na i-upload.');
+            flash('error', __('Pumili ng CSV file na i-upload.'));
             redirect('/admin/bisaya');
         }
 
@@ -1057,7 +1057,7 @@ class ManoboController
         $mime  = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
         if (!in_array($mime, ['text/csv', 'text/plain', 'application/csv', 'text/x-csv'], true)) {
-            flash('error', 'Ang file ay dapat CSV.');
+            flash('error', __('Ang file ay dapat CSV.'));
             redirect('/admin/bisaya');
         }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BarangGabay — Barangay Bayogo, Madrid</title>
+    <title><?= e(__('BarangGabay — Barangay Bayogo, Madrid')) ?></title>
     <base href="<?= e(base_url()) ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -139,7 +139,7 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
 <header class="mk-nav">
     <div class="mk-wrap mk-nav__row">
         <?= baranggabay_logo('auto', ['size' => 'medium', 'href' => route('')]) ?>
-        <nav class="mk-nav__links" aria-label="Main">
+        <nav class="mk-nav__links" aria-label="<?= e(__('Main')) ?>">
             <a href="<?= e(route('')) ?>"><?= e(t('landing.nav_home')) ?></a>
             <a href="<?= e(route('announcements')) ?>"><?= e(t('landing.nav_announcements')) ?></a>
             <a href="<?= e(route('events')) ?>"><?= e(t('nav.events')) ?></a>
@@ -148,15 +148,15 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
             <a href="#about"><?= e(t('landing.nav_about')) ?></a>
         </nav>
         <div style="display:flex;align-items:center;gap:.5rem;">
-            <div class="mk-lang mk-hide-sm" role="group" aria-label="Language">
+            <div class="mk-lang mk-hide-sm" role="group" aria-label="<?= e(__('Language')) ?>">
                 <?php foreach ($__langs as $code => $label): ?>
                     <a href="<?= e(route('set-locale/' . $code)) ?>" aria-current="<?= $__locale === $code ? 'true' : 'false' ?>"><?= $label ?></a>
                 <?php endforeach; ?>
             </div>
-            <button type="button" class="mk-round" onclick="mkToggleTheme()" aria-label="Toggle dark mode"><i class="bi bi-moon-stars-fill" id="mkThemeIcon"></i></button>
+            <button type="button" class="mk-round" onclick="mkToggleTheme()" aria-label="<?= e(__('Toggle dark mode')) ?>"><i class="bi bi-moon-stars-fill" id="mkThemeIcon"></i></button>
             <a href="<?= e(route('login')) ?>" class="mk-btn mk-btn--solid mk-hide-sm" style="min-height:40px;padding:.5rem 1.2rem;"><?= e(t('landing.login')) ?></a>
             <details class="mk-mobile">
-                <summary class="mk-round" aria-label="Menu"><i class="bi bi-list"></i></summary>
+                <summary class="mk-round" aria-label="<?= e(__('Menu')) ?>"><i class="bi bi-list"></i></summary>
                 <div class="mk-mobile__panel">
                     <a href="<?= e(route('announcements')) ?>"><?= e(t('landing.nav_announcements')) ?></a>
                     <a href="<?= e(route('events')) ?>"><?= e(t('nav.events')) ?></a>
@@ -276,7 +276,7 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
         </div>
         <hr class="footer-divider">
         <p class="l-dedication"><?= e(t('landing.dedication')) ?></p>
-        <div class="text-center text-sm footer-copyright">&copy; <?= date('Y') ?> BarangGabay — <?= e($__location) ?></div>
+        <div class="text-center text-sm footer-copyright">&copy; <?= date('Y') ?> <?= e(__('BarangGabay —')) ?> <?= e($__location) ?></div>
     </div>
 </footer>
 </div>

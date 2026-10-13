@@ -20,37 +20,40 @@ $filterUrl = static function (string $want) use ($status, $mine): string {
 };
 
 $categoryMeta = [
-    'general'        => ['General',        'background:#e0f2fe;color:var(--status-info);'],
-    'health'         => ['Health',          'background:#ccfbf1;color:#065f46;'],
-    'safety'         => ['Safety',          'background:#fef9c3;color:#92400e;'],
-    'government'     => ['Government',      'background:#d4edda;color:#155724;'],
-    'infrastructure' => ['Infrastructure',  'background:#f3e8ff;color:#5b21b6;'],
-    'social'         => ['Social',          'background:#ffe4e6;color:#9f1239;'],
+    'general'        => [__('General'),        'background:#e0f2fe;color:var(--status-info);'],
+    'health'         => [__('Health'),          'background:#ccfbf1;color:#065f46;'],
+    'safety'         => [__('Safety'),          'background:#fef9c3;color:#92400e;'],
+    'government'     => [__('Government'),      'background:#d4edda;color:#155724;'],
+    'infrastructure' => [__('Infrastructure'),  'background:#f3e8ff;color:#5b21b6;'],
+    'social'         => [__('Social'),          'background:#ffe4e6;color:#9f1239;'],
 ];
 $urgencyMeta = [
-    'normal'    => ['Normal',    'background:#f1f5f9;color:#475569;'],
-    'important' => ['Important', 'background:#fff3cd;color:#856404;'],
-    'urgent'    => ['Urgent',    'background:#f8d7da;color:#721c24;'],
+    'normal'    => [__('Normal'),    'background:#f1f5f9;color:#475569;'],
+    'important' => [__('Important'), 'background:#fff3cd;color:#856404;'],
+    'urgent'    => [__('Urgent'),    'background:#f8d7da;color:#721c24;'],
 ];
 
 $userRole = $_SESSION['role'] ?? 'staff';
 $canDelete = in_array($userRole, ['admin', 'superadmin'], true);
 
 ob_start();
+$__msPath = 'admin/announcements'; $__msMine = (bool) ($mine ?? false);
+$__msMineLabel = 'My announcements'; $__msAllLabel = 'All announcements';
+require __DIR__ . '/../../shared/_mine-switch.php';
 ?>
 
 <!-- Page header -->
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
     <div>
-        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">CONTENT MANAGEMENT</p>
+        <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);"><?= e(__('CONTENT MANAGEMENT')) ?></p>
         <h1 class="mb-0 mt-1" style="font-size:1.65rem;font-weight:800;color:var(--text-primary);line-height:1.1;"><?= e(t('admin_announcements.title')) ?></h1>
         <p class="text-muted mt-1 mb-0" style="font-size:.85rem;">
-            Manage barangay announcements and public notices.
+            <?= e(__('Manage barangay announcements and public notices.')) ?>
         </p>
     </div>
     <div>
         <a href="<?= e(route('admin/announcements/create')) ?>" class="btn-barangay d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold" style="box-shadow: 0 4px 12px rgba(26,107,58,0.2);">
-            <i class="bi bi-plus-lg"></i> Create Announcement
+            <i class="bi bi-plus-lg"></i> <?= e(__('Create Announcement')) ?>
         </a>
     </div>
 </div>
@@ -127,18 +130,18 @@ ob_start();
                 <input type="text"
                        id="announcementSearchInput"
                        class="form-control border-start-0 ps-0"
-                       placeholder="Search announcements..."
+                       placeholder="<?= e(__('Search announcements...')) ?>"
                        style="border-radius: 0 .5rem .5rem 0; font-size:.875rem;"
                        onkeyup="filterAnnouncements()">
             </div>
         </div>
         <div class="col-md-6 col-lg-7 d-flex justify-content-md-end align-items-center gap-2">
-            <div class="btn-group" role="group" aria-label="View toggle">
+            <div class="btn-group" role="group" aria-label="<?= e(__('View toggle')) ?>">
                 <button type="button" class="btn btn-outline-secondary btn-sm active" id="btnViewTable" onclick="toggleView('table')">
-                    <i class="bi bi-list-ul me-1"></i> Table View
+                    <i class="bi bi-list-ul me-1"></i> <?= e(__('Table View')) ?>
                 </button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="btnViewCards" onclick="toggleView('cards')">
-                    <i class="bi bi-grid-fill me-1"></i> Cards View
+                    <i class="bi bi-grid-fill me-1"></i> <?= e(__('Cards View')) ?>
                 </button>
             </div>
         </div>
@@ -179,7 +182,7 @@ ob_start();
     <p class="fw-semibold text-dark mb-1" style="font-size:.9rem;"><?= e(t('admin_announcements.empty_title')) ?></p>
     <p class="text-muted mb-3" style="font-size:.82rem;"><?= e(t('admin_announcements.empty_desc')) ?></p>
     <a href="<?= e(route('admin/announcements/create')) ?>" class="btn-barangay">
-        <i class="bi bi-plus-lg"></i> Create Announcement
+        <i class="bi bi-plus-lg"></i> <?= e(__('Create Announcement')) ?>
     </a>
     <?php endif; ?>
 </div>
@@ -242,7 +245,7 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
                         <?= e($ann['title']) ?>
                     </a>
                     <span class="text-muted" style="font-size:.75rem;">
-                        ID #<?= (int) $ann['id'] ?> &middot; <?= e(date('M j, Y', strtotime($ann['created_at']))) ?>
+                        <?= e(__('ID #')) ?><?= (int) $ann['id'] ?> &middot; <?= e(date('M j, Y', strtotime($ann['created_at']))) ?>
                     </span>
                     <?php
                     $__mnState = manobo_text_state($ann, 'body');
@@ -255,7 +258,7 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
                     <span class="badge rounded-pill"
                           style="background:#e0f2fe;color:#075985;font-size:.65rem;font-weight:600;"
                           title="<?= e(t('admin_announcements.audio_badge')) ?>">
-                        🎙 Audio
+                        <?= e(__('🎙 Audio')) ?>
                     </span>
                     <?php endif; ?>
                     <?php if (isset($__approxManobo['announcement:' . $ann['id']])): ?>
@@ -330,7 +333,7 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
                         <a href="<?= e(route('announcements/' . $ann['slug'])) ?>"
                            target="_blank"
                            class="btn-action"
-                           title="View on site">
+                           title="<?= e(__('View on site')) ?>">
                             <i class="bi bi-eye-fill"></i>
                         </a>
                         <a href="<?= e(route('admin/announcements/' . (int) $ann['id'] . '/edit')) ?>"
@@ -397,10 +400,10 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
             <div class="p-3 d-flex flex-column flex-grow-1">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted" style="font-size: .75rem;">
-                        ID #<?= (int) $ann['id'] ?> &middot; <?= e(date('M j, Y', strtotime($ann['created_at']))) ?>
+                        <?= e(__('ID #')) ?><?= (int) $ann['id'] ?> &middot; <?= e(date('M j, Y', strtotime($ann['created_at']))) ?>
                     </span>
                     <?php if ($annScheduled): ?>
-                    <span class="status-badge" style="background:#e0e7ff;color:#3730a3;"><i class="bi bi-clock"></i> Scheduled</span>
+                    <span class="status-badge" style="background:#e0e7ff;color:#3730a3;"><i class="bi bi-clock"></i> <?= e(__('Scheduled')) ?></span>
                     <?php else: ?>
                     <span class="status-badge <?= $statusCls ?>"><?= ucfirst(e($ann['status'])) ?></span>
                     <?php endif; ?>
@@ -419,11 +422,11 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
                 <!-- Footer / Action Buttons -->
                 <div class="pt-2 border-top d-flex align-items-center justify-content-between mt-auto">
                     <a href="<?= e(route('announcements/' . $ann['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-eye"></i> View
+                        <i class="bi bi-eye"></i> <?= e(__('View')) ?>
                     </a>
                     <div class="d-flex gap-1">
                         <a href="<?= e(route('admin/announcements/' . (int) $ann['id'] . '/edit')) ?>" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-pencil"></i> Edit
+                            <i class="bi bi-pencil"></i> <?= e(__('Edit')) ?>
                         </a>
                         <?php if ($canDelete): ?>
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="openDeleteAnnouncementModal(<?= (int) $ann['id'] ?>, '<?= e(addslashes($ann['title'])) ?>')">
@@ -446,20 +449,20 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
         <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="deleteAnnouncementModalLabel">
-                    <i class="bi bi-exclamation-triangle-fill"></i> Delete Announcement?
+                    <i class="bi bi-exclamation-triangle-fill"></i> <?= e(__('Delete Announcement?')) ?>
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= e(__('Close')) ?>"></button>
             </div>
             <div class="modal-body py-3">
                 <p class="text-muted mb-0" style="font-size: .92rem;">
-                    Are you sure you want to delete <strong id="deleteTargetTitle" class="text-dark">this announcement</strong>? This action cannot be undone.
+                    <?= e(__('Are you sure you want to delete')) ?> <strong id="deleteTargetTitle" class="text-dark"><?= e(__('this announcement')) ?></strong><?= e(__('? It will be moved to the Trash, where it can be restored.')) ?>
                 </p>
             </div>
             <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light rounded-3 px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-light rounded-3 px-3" data-bs-dismiss="modal"><?= e(__('Cancel')) ?></button>
                 <form id="deleteAnnouncementForm" method="post" action="">
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                    <button type="submit" class="btn btn-danger rounded-3 px-4 fw-semibold">Delete Announcement</button>
+                    <button type="submit" class="btn btn-danger rounded-3 px-4 fw-semibold"><?= e(__('Delete Announcement')) ?></button>
                 </form>
             </div>
         </div>

@@ -7,7 +7,7 @@
  * and Dark Mode (WCAG AA compliant). Prevents text overflow via min-width: 0
  * and safe wrap rules.
  */
-$title = $title ?? 'Voice Training & AI Dataset Hub';
+$title = $title ?? __('Voice Training & AI Dataset Hub');
 ob_start();
 ?>
 
@@ -739,7 +739,7 @@ ob_start();
  *  @var array $usage @var array $health @var array $filters @var array $samples @var array $pagination
  *  @var array $missingPronunciations @var int $missingTotal @var array $dictionaryEntries
  *  @var array $recentPosts @var bool $isSuperadmin */
-$langLabels   = ['msm' => 'Manobo', 'en' => 'English', 'fil' => 'Filipino', 'ceb' => 'Bisaya'];
+$langLabels   = ['msm' => __('Manobo'), 'en' => __('English'), 'fil' => __('Filipino'), 'ceb' => __('Bisaya')];
 $langBadge    = ['msm' => 'vt-badge-gold', 'en' => 'vt-badge-neutral', 'fil' => 'vt-badge-blue', 'ceb' => 'vt-badge-green'];
 $statusBadge  = ['approved' => 'vt-badge-green', 'pending' => 'vt-badge-gold', 'draft' => 'vt-badge-gold', 'rejected' => 'vt-badge-red'];
 $totalAll     = array_sum(array_column($stats, 'total'));
@@ -778,101 +778,100 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div class="vt-wrap" style="max-width: 820px;">
             <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                <span class="vt-badge vt-badge-gold"><i class="bi bi-cpu-fill me-1"></i>Language AI & Voice</span>
-                <span class="vt-badge vt-badge-green"><i class="bi bi-circle-fill me-1" style="font-size: 7px;"></i><?= $approvedAll ?> approved recording<?= $approvedAll === 1 ? '' : 's' ?> live</span>
+                <span class="vt-badge vt-badge-gold"><i class="bi bi-cpu-fill me-1"></i><?= e(__('Language AI & Voice')) ?></span>
+                <span class="vt-badge vt-badge-green"><i class="bi bi-circle-fill me-1" style="font-size: 7px;"></i><?= $approvedAll ?> <?= e(__('approved recording')) ?><?= $approvedAll === 1 ? '' : 's' ?> <?= e(__('live')) ?></span>
             </div>
             <h1 class="h3 font-extrabold vt-text-primary mb-1 d-flex align-items-center gap-2 flex-wrap">
                 <i class="bi bi-mic-fill" style="color: #c8992e;"></i>
-                <span>Voice Training & AI Dataset Management</span>
+                <span><?= e(__('Voice Training & AI Dataset Management')) ?></span>
             </h1>
             <p class="vt-text-secondary mb-0 text-sm vt-wrap" style="line-height: 1.45;">
-                Record native pronunciations, approve them, and the Resident Voice Reader uses them automatically. Manobo first.
+                <?= e(__('Record native pronunciations, approve them, and the Resident Voice Reader uses them automatically. Manobo first.')) ?>
             </p>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <div class="dropdown">
                 <button class="btn-vt-outline dropdown-toggle font-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-download me-1"></i> Export Dataset
+                    <i class="bi bi-download me-1"></i> <?= e(__('Export Dataset')) ?>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-lg rounded-xl border-0 p-2">
-                    <li><a class="dropdown-item rounded-lg py-1.5 text-xs font-medium" href="<?= e(route('admin/voice-training/export?format=csv')) ?>"><i class="bi bi-filetype-csv me-2 text-success fs-6"></i>All samples — CSV</a></li>
-                    <li><a class="dropdown-item rounded-lg py-1.5 text-xs font-medium" href="<?= e(route('admin/voice-training/export?format=json')) ?>"><i class="bi bi-filetype-json me-2 text-info fs-6"></i>All samples — JSON</a></li>
+                    <li><a class="dropdown-item rounded-lg py-1.5 text-xs font-medium" href="<?= e(route('admin/voice-training/export?format=csv')) ?>"><i class="bi bi-filetype-csv me-2 text-success fs-6"></i><?= e(__('All samples — CSV')) ?></a></li>
+                    <li><a class="dropdown-item rounded-lg py-1.5 text-xs font-medium" href="<?= e(route('admin/voice-training/export?format=json')) ?>"><i class="bi bi-filetype-json me-2 text-info fs-6"></i><?= e(__('All samples — JSON')) ?></a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item rounded-lg py-1.5 text-xs font-medium" href="<?= e(route('admin/voice-training/export?format=csv&language=msm&status=approved')) ?>"><i class="bi bi-check2-circle me-2 text-success fs-6"></i>Approved Manobo — CSV</a></li>
+                    <li><a class="dropdown-item rounded-lg py-1.5 text-xs font-medium" href="<?= e(route('admin/voice-training/export?format=csv&language=msm&status=approved')) ?>"><i class="bi bi-check2-circle me-2 text-success fs-6"></i><?= e(__('Approved Manobo — CSV')) ?></a></li>
                 </ul>
             </div>
             <button type="button" class="btn-vt-primary" onclick="openRecorder({})">
-                <i class="bi bi-plus-circle-fill fs-6"></i> Add Voice Sample
+                <i class="bi bi-plus-circle-fill fs-6"></i> <?= e(__('Add Voice Sample')) ?>
             </button>
         </div>
     </div>
 
     <div id="vtPageAlert" class="alert d-none" role="status" aria-live="polite"></div>
 
-    <!-- ── 2. Summary cards (all from the database) ───────────────────────── -->
     <div class="vt-stats-grid">
         <div class="vt-stat-card">
             <div class="vt-stat-top">
-                <span class="vt-stat-title">Active Profiles</span>
+                <span class="vt-stat-title"><?= e(__('Active Profiles')) ?></span>
                 <div class="vt-stat-icon" style="background-color: rgba(200, 153, 46, 0.15); color: #c8992e;"><i class="bi bi-soundwave"></i></div>
             </div>
             <div class="vt-stat-value-row">
-                <span class="vt-stat-value"><?= (int) $activeProfileCount ?> of <?= count($langLabels) ?></span>
+                <span class="vt-stat-value"><?= (int) $activeProfileCount ?> <?= e(__('of')) ?> <?= count($langLabels) ?></span>
                 <?php if ($activeProfileCount === count($langLabels)): ?>
-                    <span class="vt-badge vt-badge-green"><i class="bi bi-check-circle-fill me-1"></i>Ready</span>
+                    <span class="vt-badge vt-badge-green"><i class="bi bi-check-circle-fill me-1"></i><?= e(__('Ready')) ?></span>
                 <?php else: ?>
-                    <span class="vt-badge vt-badge-red">Check profiles</span>
+                    <span class="vt-badge vt-badge-red"><?= e(__('Check profiles')) ?></span>
                 <?php endif; ?>
             </div>
-            <span class="vt-stat-sub">Manobo, English, Filipino, Bisaya</span>
+            <span class="vt-stat-sub"><?= e(__('Manobo, English, Filipino, Bisaya')) ?></span>
         </div>
 
         <div class="vt-stat-card">
             <div class="vt-stat-top">
-                <span class="vt-stat-title">Manobo Coverage</span>
+                <span class="vt-stat-title"><?= e(__('Manobo Coverage')) ?></span>
                 <div class="vt-stat-icon" style="background-color: rgba(22, 101, 52, 0.15); color: #166534;"><i class="bi bi-journal-check"></i></div>
             </div>
             <div class="vt-stat-value-row">
                 <span class="vt-stat-value"><?= number_format((float) $coverage['coverage_percentage'], 1) ?>%</span>
-                <span class="vt-stat-sub mb-0"><?= (int) $coverage['words_with_audio'] ?>/<?= (int) $coverage['total_dictionary_words'] ?> dictionary entries</span>
+                <span class="vt-stat-sub mb-0"><?= (int) $coverage['words_with_audio'] ?>/<?= (int) $coverage['total_dictionary_words'] ?> <?= e(__('dictionary entries')) ?></span>
             </div>
-            <div class="vt-progress-track mt-2" role="progressbar" aria-label="Manobo dictionary coverage" aria-valuenow="<?= (float) $coverage['coverage_percentage'] ?>" aria-valuemin="0" aria-valuemax="100">
+            <div class="vt-progress-track mt-2" role="progressbar" aria-label="<?= e(__('Manobo dictionary coverage')) ?>" aria-valuenow="<?= (float) $coverage['coverage_percentage'] ?>" aria-valuemin="0" aria-valuemax="100">
                 <div class="vt-progress-fill" style="width: <?= (float) $coverage['coverage_percentage'] ?>%;"></div>
             </div>
         </div>
 
         <div class="vt-stat-card">
             <div class="vt-stat-top">
-                <span class="vt-stat-title">Total Samples</span>
+                <span class="vt-stat-title"><?= e(__('Total Samples')) ?></span>
                 <div class="vt-stat-icon" style="background-color: rgba(30, 64, 175, 0.15); color: #1e40af;"><i class="bi bi-database-fill-check"></i></div>
             </div>
             <div class="vt-stat-value-row">
                 <span class="vt-stat-value"><?= (int) $totalAll ?></span>
-                <span class="vt-badge vt-badge-green"><?= (int) $approvedAll ?> Approved</span>
-                <?php if ($pendingAll > 0): ?><span class="vt-badge vt-badge-gold"><?= (int) $pendingAll ?> Pending</span><?php endif; ?>
+                <span class="vt-badge vt-badge-green"><?= (int) $approvedAll ?> <?= e(__('Approved')) ?></span>
+                <?php if ($pendingAll > 0): ?><span class="vt-badge vt-badge-gold"><?= (int) $pendingAll ?> <?= e(__('Pending')) ?></span><?php endif; ?>
             </div>
-            <span class="vt-stat-sub">Recordings in the dataset, all languages</span>
+            <span class="vt-stat-sub"><?= e(__('Recordings in the dataset, all languages')) ?></span>
         </div>
 
         <div class="vt-stat-card">
             <div class="vt-stat-top">
-                <span class="vt-stat-title">Missing Samples</span>
+                <span class="vt-stat-title"><?= e(__('Missing Samples')) ?></span>
                 <div class="vt-stat-icon" style="background-color: rgba(159, 18, 57, 0.15); color: #9f1239;"><i class="bi bi-mic-mute-fill"></i></div>
             </div>
             <div class="vt-stat-value-row">
                 <span class="vt-stat-value"><?= (int) $coverage['missing_audio'] ?></span>
-                <span class="vt-badge vt-badge-red">Dictionary entries</span>
+                <span class="vt-badge vt-badge-red"><?= e(__('Dictionary entries')) ?></span>
             </div>
-            <span class="vt-stat-sub"><?= (int) $usage['used_missing'] ?> of them<?= $usage['used_missing'] === 1 ? ' is' : ' are' ?> words used in posts residents can see</span>
+            <span class="vt-stat-sub"><?= (int) $usage['used_missing'] ?> <?= e(__('of them')) ?><?= $usage['used_missing'] === 1 ? ' is' : ' are' ?> <?= e(__('words used in posts residents can see')) ?></span>
         </div>
     </div>
 
     <!-- ── 3. Language profile cards ──────────────────────────────────────── -->
     <div class="vt-profiles-grid">
-        <?php foreach (['msm' => ['Manobo (MN)', 'PRIMARY LANGUAGE', 'vt-badge-gold', 'bi-mic-fill', 'manobo'],
-                        'fil' => ['Filipino (FIL)', 'NATIONAL', 'vt-badge-blue', 'bi-translate', 'filipino'],
-                        'en'  => ['English (EN)', 'INTERNATIONAL', 'vt-badge-neutral', 'bi-globe', 'english'],
-                        'ceb' => ['Bisaya (CEB)', 'REGIONAL', 'vt-badge-green', 'bi-chat-quote', 'filipino']] as $lk => [$lTitle, $lTag, $lTagClass, $lIcon, $lAccent]):
+        <?php foreach (['msm' => [__('Manobo (MN)'), __('PRIMARY LANGUAGE'), 'vt-badge-gold', 'bi-mic-fill', 'manobo'],
+                        'fil' => [__('Filipino (FIL)'), __('NATIONAL'), 'vt-badge-blue', 'bi-translate', 'filipino'],
+                        'en'  => [__('English (EN)'), __('INTERNATIONAL'), 'vt-badge-neutral', 'bi-globe', 'english'],
+                        'ceb' => [__('Bisaya (CEB)'), __('REGIONAL'), 'vt-badge-green', 'bi-chat-quote', 'filipino']] as $lk => [$lTitle, $lTag, $lTagClass, $lIcon, $lAccent]):
             $prof = $activeProfiles[$lk];
             $profActive = !empty($prof['id']) && (int) $prof['is_active'] === 1;
         ?>
@@ -883,9 +882,9 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                     <div class="d-flex align-items-center gap-1.5 mb-1.5 flex-wrap">
                         <span class="vt-badge <?= $lTagClass ?>"><?= $lTag ?></span>
                         <?php if ($profActive): ?>
-                            <span class="vt-badge vt-badge-green"><i class="bi bi-check-circle-fill me-1"></i>ACTIVE</span>
+                            <span class="vt-badge vt-badge-green"><i class="bi bi-check-circle-fill me-1"></i><?= e(__('ACTIVE')) ?></span>
                         <?php else: ?>
-                            <span class="vt-badge vt-badge-red">INACTIVE</span>
+                            <span class="vt-badge vt-badge-red"><?= e(__('INACTIVE')) ?></span>
                         <?php endif; ?>
                     </div>
                     <h2 class="vt-lang-title"><?= $lTitle ?></h2>
@@ -894,43 +893,43 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             </div>
 
             <div class="vt-active-box">
-                <span class="vt-active-label">Active Profile Name</span>
+                <span class="vt-active-label"><?= e(__('Active Profile Name')) ?></span>
                 <div class="vt-active-name">
                     <i class="bi bi-person-bounding-box" style="color: #c8992e; font-size: 1.1rem; flex-shrink: 0; margin-top: 2px;"></i>
                     <span class="vt-wrap"><?= e((string) ($prof['profile_name'] ?? $prof['name'] ?? '')) ?></span>
                 </div>
                 <span class="vt-active-provider">
-                    Plays: approved recordings<?= $fallbackMode === 'recorded_tts' ? ', device voice for unrecorded words' : ' only' ?><?= $lk === 'ceb' ? ' (Bisaya words inside Manobo text)' : '' ?>
+                    <?= e(__('Plays: approved recordings')) ?><?= $fallbackMode === 'recorded_tts' ? __(', device voice for unrecorded words') : ' only' ?><?= $lk === 'ceb' ? __(' (Bisaya words inside Manobo text)') : '' ?>
                     · rate <?= e((string) ($prof['speaking_rate'] ?? '0.95')) ?>x
                 </span>
             </div>
 
             <div class="vt-stat-pills">
-                <div class="vt-stat-pill"><span class="vt-stat-pill-label">Samples</span><span class="vt-stat-pill-val"><?= (int) $stats[$lk]['total'] ?></span></div>
-                <div class="vt-stat-pill"><span class="vt-stat-pill-label">Approved</span><span class="vt-stat-pill-val vt-stat-pill-val-success"><?= (int) $stats[$lk]['approved'] ?></span></div>
-                <div class="vt-stat-pill"><span class="vt-stat-pill-label">Pending</span><span class="vt-stat-pill-val vt-stat-pill-val-warning"><?= (int) $stats[$lk]['pending'] ?></span></div>
+                <div class="vt-stat-pill"><span class="vt-stat-pill-label"><?= e(__('Samples')) ?></span><span class="vt-stat-pill-val"><?= (int) $stats[$lk]['total'] ?></span></div>
+                <div class="vt-stat-pill"><span class="vt-stat-pill-label"><?= e(__('Approved')) ?></span><span class="vt-stat-pill-val vt-stat-pill-val-success"><?= (int) $stats[$lk]['approved'] ?></span></div>
+                <div class="vt-stat-pill"><span class="vt-stat-pill-label"><?= e(__('Pending')) ?></span><span class="vt-stat-pill-val vt-stat-pill-val-warning"><?= (int) $stats[$lk]['pending'] ?></span></div>
             </div>
 
             <?php if ($lk === 'msm'): ?>
             <div class="vt-coverage-block">
                 <div class="vt-coverage-top">
-                    <span>Used-in-posts coverage</span>
+                    <span><?= e(__('Used-in-posts coverage')) ?></span>
                     <span style="color: var(--status-warning);"><?= number_format((float) $usage['usage_coverage'], 1) ?>%</span>
                 </div>
                 <div class="vt-progress-track"><div class="vt-progress-fill" style="width: <?= (float) $usage['usage_coverage'] ?>%;"></div></div>
-                <span class="vt-coverage-sub"><?= (int) $usage['used_recorded'] ?> of <?= (int) $usage['used_words'] ?> Manobo words in visible posts have a recording</span>
+                <span class="vt-coverage-sub"><?= (int) $usage['used_recorded'] ?> <?= e(__('of')) ?> <?= (int) $usage['used_words'] ?> <?= e(__('Manobo words in visible posts have a recording')) ?></span>
             </div>
             <?php endif; ?>
 
             <div class="vt-card-actions">
                 <button type="button" class="btn-vt-secondary" data-bs-toggle="modal" data-bs-target="#profileModal_<?= $lk ?>" style="flex: 1 1 auto;">
-                    <i class="bi bi-gear-fill me-1"></i> Configure Profile
+                    <i class="bi bi-gear-fill me-1"></i> <?= e(__('Configure Profile')) ?>
                 </button>
                 <a class="btn-vt-action" href="<?= e($pageUrl(['language' => $lk, 'status' => '', 'page' => ''])) ?>#samples" style="flex: 0 1 auto;">
-                    <i class="bi bi-collection-play me-1"></i> Samples
+                    <i class="bi bi-collection-play me-1"></i> <?= e(__('Samples')) ?>
                 </a>
                 <button type="button" onclick="quickTestLanguage('<?= $lk ?>')" class="btn-vt-action" style="flex: 0 1 auto;">
-                    <i class="bi bi-volume-up-fill me-1"></i> Test
+                    <i class="bi bi-volume-up-fill me-1"></i> <?= e(__('Test')) ?>
                 </button>
             </div>
         </div>
@@ -942,15 +941,15 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         <div class="vt-card" id="testVoiceCard">
             <div class="d-flex align-items-center justify-content-between mb-1 gap-2 flex-wrap">
                 <h3 class="h5 font-extrabold vt-text-primary mb-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-play-circle-fill" style="color: #c8992e;"></i><span>Interactive Voice Tester</span>
+                    <i class="bi bi-play-circle-fill" style="color: #c8992e;"></i><span><?= e(__('Interactive Voice Tester')) ?></span>
                 </h3>
-                <span class="vt-badge vt-badge-gold">Same output residents hear</span>
+                <span class="vt-badge vt-badge-gold"><?= e(__('Same output residents hear')) ?></span>
             </div>
-            <p class="vt-text-muted text-xs mb-3">Uses the Resident Voice Reader pipeline: approved recordings (longest phrase first), device voice for the rest.</p>
+            <p class="vt-text-muted text-xs mb-3"><?= e(__('Uses the Resident Voice Reader pipeline: approved recordings (longest phrase first), device voice for the rest.')) ?></p>
 
             <form id="testVoiceForm" onsubmit="runVoiceTest(event)">
                 <fieldset class="mb-3">
-                    <legend class="form-label text-xs font-bold vt-text-primary mb-1.5" style="font-size:.75rem;">Select Language</legend>
+                    <legend class="form-label text-xs font-bold vt-text-primary mb-1.5" style="font-size:.75rem;"><?= e(__('Select Language')) ?></legend>
                     <div class="vt-lang-selector">
                         <?php foreach ($langLabels as $lk => $ll): ?>
                             <input type="radio" class="btn-check" name="test_language" id="lang_<?= $lk ?>" value="<?= $lk ?>" <?= $lk === 'msm' ? 'checked' : '' ?>>
@@ -961,21 +960,21 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
                 <div class="mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
-                        <label for="test_text" class="form-label text-xs font-bold vt-text-primary mb-0">Text to Speak</label>
+                        <label for="test_text" class="form-label text-xs font-bold vt-text-primary mb-0"><?= e(__('Text to Speak')) ?></label>
                         <div class="d-flex gap-1 flex-wrap">
                             <?php foreach ($chipPhrases as $chip): ?>
                                 <button type="button" class="vt-chip" title="<?= e($chip['translation']) ?>" onclick="setTestText('msm', <?= e(json_encode($chip['manobo'])) ?>)">+ <?= e($chip['manobo']) ?></button>
                             <?php endforeach; ?>
                         </div>
                     </div>
-                    <input type="text" id="test_text" class="vt-input" placeholder="Type a word, phrase, or sentence" maxlength="2000">
-                    <div id="testTextValidation" class="text-xs text-danger mt-1 d-none" role="alert">Type some text to preview.</div>
+                    <input type="text" id="test_text" class="vt-input" placeholder="<?= e(__('Type a word, phrase, or sentence')) ?>" maxlength="2000">
+                    <div id="testTextValidation" class="text-xs text-danger mt-1 d-none" role="alert"><?= e(__('Type some text to preview.')) ?></div>
                 </div>
 
                 <div class="d-flex align-items-center gap-2 mt-auto flex-wrap">
-                    <button type="submit" id="btnTestVoice" class="btn-vt-primary"><i class="bi bi-volume-up-fill fs-6"></i> Play Voice Preview</button>
-                    <button type="button" id="btnTestStop" class="btn-vt-outline d-none" onclick="stopVoiceTest()"><i class="bi bi-stop-fill"></i> Stop</button>
-                    <span id="testVoiceSpinner" class="spinner-border spinner-border-sm text-success d-none" role="status"><span class="visually-hidden">Loading</span></span>
+                    <button type="submit" id="btnTestVoice" class="btn-vt-primary"><i class="bi bi-volume-up-fill fs-6"></i> <?= e(__('Play Voice Preview')) ?></button>
+                    <button type="button" id="btnTestStop" class="btn-vt-outline d-none" onclick="stopVoiceTest()"><i class="bi bi-stop-fill"></i> <?= e(__('Stop')) ?></button>
+                    <span id="testVoiceSpinner" class="spinner-border spinner-border-sm text-success d-none" role="status"><span class="visually-hidden"><?= e(__('Loading')) ?></span></span>
                 </div>
             </form>
 
@@ -992,11 +991,11 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         <div class="vt-card" id="missingCard">
             <div class="d-flex align-items-center justify-content-between mb-1 gap-2 flex-wrap">
                 <h3 class="h5 font-extrabold vt-text-primary mb-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-mic-mute-fill" style="color: #9f1239;"></i><span>Missing Pronunciations</span>
+                    <i class="bi bi-mic-mute-fill" style="color: #9f1239;"></i><span><?= e(__('Missing Pronunciations')) ?></span>
                 </h3>
                 <span class="vt-badge vt-badge-red" id="missingCountBadge"></span>
             </div>
-            <div class="vt-lang-selector mb-2" role="tablist" aria-label="Missing pronunciations language">
+            <div class="vt-lang-selector mb-2" role="tablist" aria-label="<?= e(__('Missing pronunciations language')) ?>">
                 <?php foreach ($langLabels as $lk => $ll): ?>
                     <input type="radio" class="btn-check" name="missing_tab" id="mtab_<?= $lk ?>" value="<?= $lk ?>" <?= $lk === 'msm' ? 'checked' : '' ?> onchange="renderMissing()">
                     <label class="vt-lang-btn" for="mtab_<?= $lk ?>" role="tab"><?= $ll ?> <span class="vt-text-muted">(<?= count($queues[$lk]) ?>)</span></label>
@@ -1004,17 +1003,17 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             </div>
             <p class="vt-text-muted text-xs mb-2" id="missingHelp"></p>
             <p class="text-xs mb-2 d-none" id="gapHelp">
-                These are <strong>Manobo translation gaps</strong>: the translator used Bisaya because the Manobo dictionary has no entry.
-                <a href="<?= e(route('admin/dictionary')) ?>" class="font-bold" style="color:#b45309;">Add the Manobo word in the dictionary</a> and new translations will use it instead of Bisaya.
+                <?= e(__('These are')) ?> <strong><?= e(__('Manobo translation gaps')) ?></strong><?= e(__(': the translator used Bisaya because the Manobo dictionary has no entry.')) ?>
+                <a href="<?= e(route('admin/dictionary')) ?>" class="font-bold" style="color:#b45309;"><?= e(__('Add the Manobo word in the dictionary')) ?></a> <?= e(__('and new translations will use it instead of Bisaya.')) ?>
             </p>
             <div class="d-flex gap-2 mb-2 flex-wrap">
-                <label for="missingSearch" class="visually-hidden">Search missing words</label>
-                <input type="search" id="missingSearch" class="vt-input flex-fill" style="min-width:140px;" placeholder="Search…" oninput="renderMissing()">
-                <button type="button" class="btn-vt-primary" onclick="startBatch()" id="btnBatch"><i class="bi bi-collection-play me-1"></i> Batch Record</button>
+                <label for="missingSearch" class="visually-hidden"><?= e(__('Search missing words')) ?></label>
+                <input type="search" id="missingSearch" class="vt-input flex-fill" style="min-width:140px;" placeholder="<?= e(__('Search…')) ?>" oninput="renderMissing()">
+                <button type="button" class="btn-vt-primary" onclick="startBatch()" id="btnBatch"><i class="bi bi-collection-play me-1"></i> <?= e(__('Batch Record')) ?></button>
             </div>
             <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
                 <table class="vt-table">
-                    <thead><tr><th class="ps-2">Word / phrase</th><th>Meaning</th><th class="text-center" title="Uses in visible posts + times residents' reader needed it">Used</th><th class="text-end pe-2"><span class="visually-hidden">Action</span></th></tr></thead>
+                    <thead><tr><th class="ps-2"><?= e(__('Word / phrase')) ?></th><th><?= e(__('Meaning')) ?></th><th class="text-center" title="<?= e(__('Uses in visible posts + times residents\' reader needed it')) ?>"><?= e(__('Used')) ?></th><th class="text-end pe-2"><span class="visually-hidden"><?= e(__('Action')) ?></span></th></tr></thead>
                     <tbody id="missingRows"></tbody>
                 </table>
             </div>
@@ -1025,8 +1024,8 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
     <!-- ── 4b. Published-content coverage + resident fallback setting ─────── -->
     <div class="vt-split-grid mb-4">
         <div class="vt-card">
-            <h3 class="h6 font-extrabold vt-text-primary mb-1"><i class="bi bi-bar-chart-fill me-1" style="color:#c8992e;"></i>Published Content Voice Coverage</h3>
-            <p class="text-xs vt-text-muted mb-3">Unique words residents meet in visible posts that have an approved recording.</p>
+            <h3 class="h6 font-extrabold vt-text-primary mb-1"><i class="bi bi-bar-chart-fill me-1" style="color:#c8992e;"></i><?= e(__('Published Content Voice Coverage')) ?></h3>
+            <p class="text-xs vt-text-muted mb-3"><?= e(__('Unique words residents meet in visible posts that have an approved recording.')) ?></p>
             <?php foreach ($langLabels as $lk => $ll): $r = $reports[$lk]; ?>
                 <div class="mb-2">
                     <div class="d-flex justify-content-between text-xs font-bold vt-text-primary">
@@ -1036,22 +1035,22 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                     <div class="vt-progress-track" role="progressbar" aria-label="<?= $ll ?> content coverage" aria-valuenow="<?= (float) $r['usage_coverage'] ?>" aria-valuemin="0" aria-valuemax="100"><div class="vt-progress-fill" style="width: <?= (float) $r['usage_coverage'] ?>%;"></div></div>
                 </div>
             <?php endforeach; ?>
-            <p class="text-xs vt-text-muted mb-0 mt-2">Bisaya = Bisaya dictionary words that appear inside Manobo text (the translator's fallback).</p>
+            <p class="text-xs vt-text-muted mb-0 mt-2"><?= e(__('Bisaya = Bisaya dictionary words that appear inside Manobo text (the translator\'s fallback).')) ?></p>
         </div>
         <div class="vt-card">
-            <h3 class="h6 font-extrabold vt-text-primary mb-1"><i class="bi bi-sliders me-1" style="color:#c8992e;"></i>Voice Fallback for Residents</h3>
-            <p class="text-xs vt-text-muted mb-3">What the Resident Voice Reader does with words that have no approved recording.</p>
+            <h3 class="h6 font-extrabold vt-text-primary mb-1"><i class="bi bi-sliders me-1" style="color:#c8992e;"></i><?= e(__('Voice Fallback for Residents')) ?></h3>
+            <p class="text-xs vt-text-muted mb-3"><?= e(__('What the Resident Voice Reader does with words that have no approved recording.')) ?></p>
             <form method="post" action="<?= e(route('admin/voice-training/settings')) ?>" onsubmit="return ajaxForm(event, this)">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <div class="form-check mb-2">
                     <input class="form-check-input" type="radio" name="voice_fallback" id="fb_none" value="recorded_only" <?= $fallbackMode === 'recorded_only' ? 'checked' : '' ?>>
-                    <label class="form-check-label text-sm vt-text-primary" for="fb_none"><strong>Recorded voice only</strong> <span class="vt-text-muted text-xs d-block">Residents hear only your approved recordings. Unrecorded words are skipped (and counted in the missing lists). A post with no recordings at all cannot be played yet.</span></label>
+                    <label class="form-check-label text-sm vt-text-primary" for="fb_none"><strong><?= e(__('Recorded voice only')) ?></strong> <span class="vt-text-muted text-xs d-block"><?= e(__('Residents hear only your approved recordings. Unrecorded words are skipped (and counted in the missing lists). A post with no recordings at all cannot be played yet.')) ?></span></label>
                 </div>
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="radio" name="voice_fallback" id="fb_tts" value="recorded_tts" <?= $fallbackMode === 'recorded_tts' ? 'checked' : '' ?>>
-                    <label class="form-check-label text-sm vt-text-primary" for="fb_tts"><strong>Recorded voice + device voice fallback</strong> <span class="vt-text-muted text-xs d-block">Your recordings play first; the phone or computer's own voice reads the rest, labelled as an approximation.</span></label>
+                    <label class="form-check-label text-sm vt-text-primary" for="fb_tts"><strong><?= e(__('Recorded voice + device voice fallback')) ?></strong> <span class="vt-text-muted text-xs d-block"><?= e(__('Your recordings play first; the phone or computer\'s own voice reads the rest, labelled as an approximation.')) ?></span></label>
                 </div>
-                <button type="submit" class="btn-vt-primary">Save setting</button>
+                <button type="submit" class="btn-vt-primary"><?= e(__('Save setting')) ?></button>
             </form>
         </div>
     </div>
@@ -1062,32 +1061,32 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
                 <div>
                     <h3 class="h5 font-extrabold vt-text-primary mb-1 d-flex align-items-center gap-2">
-                        <i class="bi bi-broadcast" style="color:#c8992e;"></i><span>Missing Voice From Published Content</span>
+                        <i class="bi bi-broadcast" style="color:#c8992e;"></i><span><?= e(__('Missing Voice From Published Content')) ?></span>
                     </h3>
-                    <p class="text-xs vt-text-muted mb-0">Words in announcements, events and ordinances residents can see — in the text the Voice Reader reads for each language — plus words the reader met without a recording. Updated automatically whenever a post or translation is saved.</p>
+                    <p class="text-xs vt-text-muted mb-0"><?= e(__('Words in announcements, events and ordinances residents can see — in the text the Voice Reader reads for each language — plus words the reader met without a recording. Updated automatically whenever a post or translation is saved.')) ?></p>
                 </div>
                 <div class="d-flex gap-2 align-items-start flex-wrap">
                     <form method="post" action="<?= e(route('admin/voice-training/rescan')) ?>" onsubmit="return ajaxForm(event, this)" class="d-flex gap-1">
                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                        <label for="rescanLang" class="visually-hidden">Language to rescan</label>
+                        <label for="rescanLang" class="visually-hidden"><?= e(__('Language to rescan')) ?></label>
                         <select name="language" id="rescanLang" class="form-select form-select-sm vt-select" style="width:auto;">
-                            <option value="">Rescan all</option>
-                            <?php foreach ($langLabels as $lk => $ll): ?><option value="<?= $lk ?>">Rescan <?= $ll ?></option><?php endforeach; ?>
+                            <option value=""><?= e(__('Rescan all')) ?></option>
+                            <?php foreach ($langLabels as $lk => $ll): ?><option value="<?= $lk ?>"><?= e(__('Rescan')) ?> <?= $ll ?></option><?php endforeach; ?>
                         </select>
-                        <button type="submit" class="btn-vt-outline"><i class="bi bi-arrow-repeat me-1"></i> Rescan</button>
+                        <button type="submit" class="btn-vt-outline"><i class="bi bi-arrow-repeat me-1"></i> <?= e(__('Rescan')) ?></button>
                     </form>
                     <?php if ($isSuperadmin): ?>
-                        <button type="button" class="btn-vt-outline" onclick="runDiagnostics()"><i class="bi bi-clipboard2-pulse me-1"></i> Diagnostics</button>
+                        <button type="button" class="btn-vt-outline" onclick="runDiagnostics()"><i class="bi bi-clipboard2-pulse me-1"></i> <?= e(__('Diagnostics')) ?></button>
                     <?php endif; ?>
                 </div>
             </div>
 
             <div class="row g-2 mt-2">
                 <?php foreach ([
-                    ['Pending approval', $health['pending'], $health['pending'] ? 'text-warning' : ''],
-                    ['Rejected', $health['rejected'], ''],
-                    ['Broken audio', $health['broken'], $health['broken'] ? 'text-danger' : ''],
-                    ['Duplicate approved', $health['duplicates'], ''],
+                    [__('Pending approval'), $health['pending'], $health['pending'] ? 'text-warning' : ''],
+                    [__('Rejected'), $health['rejected'], ''],
+                    [__('Broken audio'), $health['broken'], $health['broken'] ? 'text-danger' : ''],
+                    [__('Duplicate approved'), $health['duplicates'], ''],
                 ] as [$hLabel, $hVal, $hClass]): ?>
                     <div class="col-6 col-md-3">
                         <div class="vt-stat-pill h-100">
@@ -1099,9 +1098,9 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             </div>
             <div id="diagnosticsBox" class="mt-3 d-none" aria-live="polite"></div>
 
-            <div class="vt-lang-selector mt-3" role="tablist" aria-label="Filter by language">
+            <div class="vt-lang-selector mt-3" role="tablist" aria-label="<?= e(__('Filter by language')) ?>">
                 <input type="radio" class="btn-check" name="usage_tab" id="utab_all" value="" checked onchange="filterUsage()">
-                <label class="vt-lang-btn" for="utab_all">All</label>
+                <label class="vt-lang-btn" for="utab_all"><?= e(__('All')) ?></label>
                 <?php foreach ($langLabels as $lk => $ll): ?>
                     <input type="radio" class="btn-check" name="usage_tab" id="utab_<?= $lk ?>" value="<?= $lk ?>" onchange="filterUsage()">
                     <label class="vt-lang-btn" for="utab_<?= $lk ?>"><?= $ll ?> <span class="vt-text-muted">(<?= (int) $reports[$lk]['used_missing'] ?>)</span></label>
@@ -1111,13 +1110,13 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
         <?php if (!$usageMissing): ?>
             <div class="text-center py-4 vt-text-muted text-xs">
-                <i class="bi bi-check-circle-fill text-success me-1"></i>Every word used in visible posts has an approved recording (or no posts have text yet — click <strong>Rescan</strong>).
+                <i class="bi bi-check-circle-fill text-success me-1"></i><?= e(__('Every word used in visible posts has an approved recording (or no posts have text yet — click')) ?> <strong><?= e(__('Rescan')) ?></strong>).
             </div>
         <?php else: ?>
             <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
                 <table class="vt-table">
                     <thead><tr>
-                        <th class="ps-4">Word</th><th>Language</th><th>Meaning</th><th class="text-center">In posts</th><th class="text-center" title="Times the Voice Reader needed this word">Reader</th><th>Used in</th><th>Last used</th><th class="pe-4 text-end"><span class="visually-hidden">Action</span></th>
+                        <th class="ps-4"><?= e(__('Word')) ?></th><th><?= e(__('Language')) ?></th><th><?= e(__('Meaning')) ?></th><th class="text-center"><?= e(__('In posts')) ?></th><th class="text-center" title="<?= e(__('Times the Voice Reader needed this word')) ?>"><?= e(__('Reader')) ?></th><th><?= e(__('Used in')) ?></th><th><?= e(__('Last used')) ?></th><th class="pe-4 text-end"><span class="visually-hidden"><?= e(__('Action')) ?></span></th>
                     </tr></thead>
                     <tbody id="usageRows">
                     <?php foreach ($usageMissing as $w): ?>
@@ -1131,13 +1130,13 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                                 <?php foreach (array_slice($w['sources'], 0, 2) as $src): ?>
                                     <span class="vt-badge vt-badge-blue d-inline-block mb-1" title="<?= e($src['title']) ?>"><?= e(ucfirst($src['type'])) ?>: <?= e(mb_strimwidth($src['title'], 0, 26, '…')) ?></span>
                                 <?php endforeach; ?>
-                                <?php if (count($w['sources']) > 2): ?><span class="vt-text-muted">+<?= count($w['sources']) - 2 ?> more</span><?php endif; ?>
-                                <?php if (!$w['sources']): ?><span class="vt-text-muted">Voice Reader only</span><?php endif; ?>
+                                <?php if (count($w['sources']) > 2): ?><span class="vt-text-muted">+<?= count($w['sources']) - 2 ?> <?= e(__('more')) ?></span><?php endif; ?>
+                                <?php if (!$w['sources']): ?><span class="vt-text-muted"><?= e(__('Voice Reader only')) ?></span><?php endif; ?>
                             </td>
                             <td class="text-xs vt-text-muted"><?= $w['last_seen_at'] ? e(date('M j, Y', strtotime((string) $w['last_seen_at']))) : '—' ?></td>
                             <td class="pe-4 text-end">
                                 <button type="button" class="btn-vt-gold" onclick='recordFromQueue(<?= e(json_encode($w['language'])) ?>, <?= e(json_encode($w['word'])) ?>)' aria-label="Record <?= e($w['word']) ?> now">
-                                    <i class="bi bi-mic-fill me-1"></i> Record Now
+                                    <i class="bi bi-mic-fill me-1"></i> <?= e(__('Record Now')) ?>
                                 </button>
                             </td>
                         </tr>
@@ -1145,7 +1144,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                     </tbody>
                 </table>
             </div>
-            <?php if ($usageTruncated): ?><p class="text-xs vt-text-muted p-3 mb-0">Showing the 25 most-used missing words per language. The full lists are in Missing Pronunciations above (search and Batch Record).</p><?php endif; ?>
+            <?php if ($usageTruncated): ?><p class="text-xs vt-text-muted p-3 mb-0"><?= e(__('Showing the 25 most-used missing words per language. The full lists are in Missing Pronunciations above (search and Batch Record).')) ?></p><?php endif; ?>
         <?php endif; ?>
     </div>
 
@@ -1155,41 +1154,41 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             <div class="row g-3 align-items-center">
                 <div class="col-12 col-lg-4">
                     <h3 class="h5 font-extrabold vt-text-primary mb-1 d-flex align-items-center gap-2">
-                        <i class="bi bi-collection-play-fill" style="color: #c8992e;"></i><span>Voice Dataset Samples</span>
+                        <i class="bi bi-collection-play-fill" style="color: #c8992e;"></i><span><?= e(__('Voice Dataset Samples')) ?></span>
                     </h3>
-                    <p class="text-xs vt-text-muted mb-0">Play, approve, reject, re-record, edit or delete. Only approved recordings reach residents.</p>
+                    <p class="text-xs vt-text-muted mb-0"><?= e(__('Play, approve, reject, re-record, edit or delete. Only approved recordings reach residents.')) ?></p>
                 </div>
                 <div class="col-12 col-lg-8">
                     <form method="get" action="<?= e(route('admin/voice-training')) ?>#samples" class="row g-2" role="search">
                         <div class="col-12 col-sm-4">
-                            <label class="visually-hidden" for="f_search">Search</label>
-                            <input id="f_search" type="search" name="search" class="form-control form-control-sm vt-input" placeholder="Search word, meaning, speaker…" value="<?= e($filters['search']) ?>">
+                            <label class="visually-hidden" for="f_search"><?= e(__('Search')) ?></label>
+                            <input id="f_search" type="search" name="search" class="form-control form-control-sm vt-input" placeholder="<?= e(__('Search word, meaning, speaker…')) ?>" value="<?= e($filters['search']) ?>">
                         </div>
                         <div class="col-6 col-sm-2">
-                            <label class="visually-hidden" for="f_lang">Language</label>
+                            <label class="visually-hidden" for="f_lang"><?= e(__('Language')) ?></label>
                             <select id="f_lang" name="language" class="form-select form-select-sm vt-select" onchange="this.form.submit()">
-                                <option value="">All languages</option>
+                                <option value=""><?= e(__('All languages')) ?></option>
                                 <?php foreach ($langLabels as $lk => $ll): ?><option value="<?= $lk ?>" <?= $filters['language'] === $lk ? 'selected' : '' ?>><?= $ll ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-6 col-sm-2">
-                            <label class="visually-hidden" for="f_status">Status</label>
+                            <label class="visually-hidden" for="f_status"><?= e(__('Status')) ?></label>
                             <select id="f_status" name="status" class="form-select form-select-sm vt-select" onchange="this.form.submit()">
-                                <option value="">All statuses</option>
-                                <?php foreach (['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $sk => $sl): ?><option value="<?= $sk ?>" <?= $filters['status'] === $sk ? 'selected' : '' ?>><?= $sl ?></option><?php endforeach; ?>
+                                <option value=""><?= e(__('All statuses')) ?></option>
+                                <?php foreach (['pending' => __('Pending'), 'approved' => __('Approved'), 'rejected' => __('Rejected')] as $sk => $sl): ?><option value="<?= $sk ?>" <?= $filters['status'] === $sk ? 'selected' : '' ?>><?= e($sl) ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-6 col-sm-2">
-                            <label class="visually-hidden" for="f_sort">Sort</label>
+                            <label class="visually-hidden" for="f_sort"><?= e(__('Sort')) ?></label>
                             <select id="f_sort" name="sort" class="form-select form-select-sm vt-select" onchange="this.form.submit()">
-                                <option value="newest" <?= $filters['sort'] === 'newest' ? 'selected' : '' ?>>Newest</option>
-                                <option value="oldest" <?= $filters['sort'] === 'oldest' ? 'selected' : '' ?>>Oldest</option>
+                                <option value="newest" <?= $filters['sort'] === 'newest' ? 'selected' : '' ?>><?= e(__('Newest')) ?></option>
+                                <option value="oldest" <?= $filters['sort'] === 'oldest' ? 'selected' : '' ?>><?= e(__('Oldest')) ?></option>
                                 <option value="text" <?= $filters['sort'] === 'text' ? 'selected' : '' ?>>A–Z</option>
                             </select>
                         </div>
                         <div class="col-6 col-sm-2 d-flex gap-1">
-                            <button type="submit" class="btn-vt-outline flex-fill justify-content-center" style="padding:6px;" title="Search"><i class="bi bi-search"></i><span class="visually-hidden">Search</span></button>
-                            <a href="<?= e(route('admin/voice-training')) ?>#samples" class="btn-vt-outline flex-fill justify-content-center" style="padding:6px;" title="Reset filters and refresh"><i class="bi bi-arrow-counterclockwise"></i><span class="visually-hidden">Reset</span></a>
+                            <button type="submit" class="btn-vt-outline flex-fill justify-content-center" style="padding:6px;" title="<?= e(__('Search')) ?>"><i class="bi bi-search"></i><span class="visually-hidden"><?= e(__('Search')) ?></span></button>
+                            <a href="<?= e(route('admin/voice-training')) ?>#samples" class="btn-vt-outline flex-fill justify-content-center" style="padding:6px;" title="<?= e(__('Reset filters and refresh')) ?>"><i class="bi bi-arrow-counterclockwise"></i><span class="visually-hidden"><?= e(__('Reset')) ?></span></a>
                         </div>
                     </form>
                 </div>
@@ -1199,14 +1198,14 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         <?php if (!$samples): ?>
             <div class="text-center py-5 vt-text-muted">
                 <i class="bi bi-mic-mute fs-1 d-block mb-2"></i>
-                <span class="font-bold vt-text-primary d-block">No voice samples match.</span>
-                <span class="text-xs">Record a word from the missing lists above to start the dataset.</span>
+                <span class="font-bold vt-text-primary d-block"><?= e(__('No voice samples match.')) ?></span>
+                <span class="text-xs"><?= e(__('Record a word from the missing lists above to start the dataset.')) ?></span>
             </div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="vt-table">
                     <thead><tr>
-                        <th class="ps-4">Text</th><th>Language</th><th class="d-none d-md-table-cell">Speaker</th><th>Audio</th><th class="d-none d-lg-table-cell">Linked</th><th>Status</th><th class="pe-4 text-end">Actions</th>
+                        <th class="ps-4"><?= e(__('Text')) ?></th><th><?= e(__('Language')) ?></th><th class="d-none d-md-table-cell"><?= e(__('Speaker')) ?></th><th><?= e(__('Audio')) ?></th><th class="d-none d-lg-table-cell"><?= e(__('Linked')) ?></th><th><?= e(__('Status')) ?></th><th class="pe-4 text-end"><?= e(__('Actions')) ?></th>
                     </tr></thead>
                     <tbody>
                     <?php foreach ($samples as $s):
@@ -1228,7 +1227,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                             </td>
                             <td><span class="vt-badge <?= $langBadge[$s['language']] ?? 'vt-badge-neutral' ?>"><?= e($langLabels[$s['language']] ?? $s['language']) ?></span></td>
                             <td class="vt-text-secondary text-xs d-none d-md-table-cell">
-                                <span class="font-semibold vt-text-primary d-block"><?= e((string) ($s['speaker_label'] ?: 'Community')) ?></span>
+                                <span class="font-semibold vt-text-primary d-block"><?= e((string) ($s['speaker_label'] ?: __('Community'))) ?></span>
                                 <span class="vt-text-muted text-uppercase font-mono" style="font-size:10px;"><?= e((string) $s['voice_type']) ?></span>
                             </td>
                             <td style="min-width: 170px;">
@@ -1237,33 +1236,33 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                                         <source src="<?= e($sPlay) ?>" type="<?= e((string) ($s['mime_type'] ?: 'audio/webm')) ?>">
                                     </audio>
                                 <?php else: ?>
-                                    <span class="vt-badge vt-badge-red" title="The audio file no longer exists (it was stored on the server disk before a restart). Re-record it.">BROKEN</span>
+                                    <span class="vt-badge vt-badge-red" title="<?= e(__('The audio file no longer exists (it was stored on the server disk before a restart). Re-record it.')) ?>"><?= e(__('BROKEN')) ?></span>
                                 <?php endif; ?>
                             </td>
                             <td class="text-xs d-none d-lg-table-cell">
-                                <?php if (!empty($s['manobo'])): ?><span class="vt-badge vt-badge-green d-inline-block mb-1" title="Dictionary entry"><i class="bi bi-book me-1"></i><?= e($s['manobo']) ?></span><?php endif; ?>
-                                <?php if (!empty($s['content_type']) && !empty($s['content_id'])): ?><span class="vt-badge vt-badge-blue d-inline-block" title="Full narration for this post"><i class="bi bi-broadcast me-1"></i><?= e(ucfirst((string) $s['content_type'])) ?> #<?= (int) $s['content_id'] ?></span><?php endif; ?>
+                                <?php if (!empty($s['manobo'])): ?><span class="vt-badge vt-badge-green d-inline-block mb-1" title="<?= e(__('Dictionary entry')) ?>"><i class="bi bi-book me-1"></i><?= e($s['manobo']) ?></span><?php endif; ?>
+                                <?php if (!empty($s['content_type']) && !empty($s['content_id'])): ?><span class="vt-badge vt-badge-blue d-inline-block" title="<?= e(__('Full narration for this post')) ?>"><i class="bi bi-broadcast me-1"></i><?= e(ucfirst((string) $s['content_type'])) ?> #<?= (int) $s['content_id'] ?></span><?php endif; ?>
                                 <?php if (empty($s['manobo']) && empty($s['content_type'])): ?><span class="vt-text-muted">—</span><?php endif; ?>
                             </td>
                             <td><span class="vt-badge <?= $statusBadge[$sStatus] ?? 'vt-badge-neutral' ?>"><?= e(ucfirst($sStatus)) ?></span></td>
                             <td class="pe-4 text-end">
                                 <div class="d-inline-flex gap-1 align-items-center flex-wrap justify-content-end">
                                     <?php if ($sStatus !== 'approved' && $sPlay): ?>
-                                        <button type="button" class="btn-vt-primary" style="padding: 4px 8px; font-size: 0.72rem; border-radius: 6px;" onclick="sampleAction(<?= (int) $s['id'] ?>, 'approve')"><i class="bi bi-check-lg me-1"></i>Approve</button>
+                                        <button type="button" class="btn-vt-primary" style="padding: 4px 8px; font-size: 0.72rem; border-radius: 6px;" onclick="sampleAction(<?= (int) $s['id'] ?>, 'approve')"><i class="bi bi-check-lg me-1"></i><?= e(__('Approve')) ?></button>
                                     <?php endif; ?>
                                     <?php if ($sStatus !== 'rejected'): ?>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-lg px-2 py-1" style="font-size:.72rem;" onclick="sampleAction(<?= (int) $s['id'] ?>, 'reject')">Reject</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-lg px-2 py-1" style="font-size:.72rem;" onclick="sampleAction(<?= (int) $s['id'] ?>, 'reject')"><?= e(__('Reject')) ?></button>
                                     <?php endif; ?>
                                     <div class="dropdown">
                                         <button class="btn btn-sm btn-outline-secondary rounded-lg px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions for <?= e($s['text']) ?>"><i class="bi bi-three-dots"></i></button>
                                         <ul class="dropdown-menu dropdown-menu-end text-xs">
-                                            <li><button class="dropdown-item" type="button" onclick='openRecorder(<?= e(json_encode($sEditPayload + ['rerecord' => true])) ?>)'><i class="bi bi-mic me-2"></i>Re-record</button></li>
-                                            <li><button class="dropdown-item" type="button" onclick='openEditSample(<?= e(json_encode($sEditPayload)) ?>)'><i class="bi bi-pencil me-2"></i>Edit details</button></li>
+                                            <li><button class="dropdown-item" type="button" onclick='openRecorder(<?= e(json_encode($sEditPayload + ['rerecord' => true])) ?>)'><i class="bi bi-mic me-2"></i><?= e(__('Re-record')) ?></button></li>
+                                            <li><button class="dropdown-item" type="button" onclick='openEditSample(<?= e(json_encode($sEditPayload)) ?>)'><i class="bi bi-pencil me-2"></i><?= e(__('Edit details')) ?></button></li>
                                             <?php if ($sStatus === 'approved' || $sStatus === 'rejected'): ?>
-                                                <li><button class="dropdown-item" type="button" onclick="sampleAction(<?= (int) $s['id'] ?>, 'pending')"><i class="bi bi-hourglass me-2"></i>Move to pending</button></li>
+                                                <li><button class="dropdown-item" type="button" onclick="sampleAction(<?= (int) $s['id'] ?>, 'pending')"><i class="bi bi-hourglass me-2"></i><?= e(__('Move to pending')) ?></button></li>
                                             <?php endif; ?>
                                             <li><hr class="dropdown-divider"></li>
-                                            <li><button class="dropdown-item text-danger" type="button" onclick="sampleAction(<?= (int) $s['id'] ?>, 'delete', <?= e(json_encode($s['text'])) ?>)"><i class="bi bi-trash me-2"></i>Delete</button></li>
+                                            <li><button class="dropdown-item text-danger" type="button" onclick="sampleAction(<?= (int) $s['id'] ?>, 'delete', <?= e(json_encode($s['text'])) ?>)"><i class="bi bi-trash me-2"></i><?= e(__('Delete')) ?></button></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -1275,9 +1274,9 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             </div>
 
             <div class="p-3 border-top d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 text-xs">
-                <span class="vt-text-muted font-medium">Showing <?= count($samples) ?> of <?= (int) $pagination['total'] ?> (page <?= (int) $pagination['page'] ?> of <?= (int) $pagination['total_pages'] ?>)</span>
+                <span class="vt-text-muted font-medium"><?= e(__('Showing')) ?> <?= count($samples) ?> <?= e(__('of')) ?> <?= (int) $pagination['total'] ?> <?= e(__('(page')) ?> <?= (int) $pagination['page'] ?> <?= e(__('of')) ?> <?= (int) $pagination['total_pages'] ?>)</span>
                 <?php if ($pagination['total_pages'] > 1): ?>
-                <nav aria-label="Samples pages" class="d-flex gap-1 flex-wrap">
+                <nav aria-label="<?= e(__('Samples pages')) ?>" class="d-flex gap-1 flex-wrap">
                     <?php for ($i = max(1, $pagination['page'] - 3); $i <= min($pagination['total_pages'], $pagination['page'] + 3); $i++): ?>
                         <a href="<?= e($pageUrl(['page' => $i > 1 ? $i : ''])) ?>#samples" class="<?= $i === $pagination['page'] ? 'btn-vt-primary' : 'btn-vt-outline' ?>" style="padding: 4px 10px; border-radius: 6px;" <?= $i === $pagination['page'] ? 'aria-current="page"' : '' ?>><?= $i ?></a>
                     <?php endfor; ?>
@@ -1286,6 +1285,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             </div>
         <?php endif; ?>
     </div>
+
 </div>
 
 <!-- ── Recorder modal (new sample and re-record) ───────────────────────── -->
@@ -1294,9 +1294,9 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         <div class="modal-content vt-modal-content">
             <div class="modal-header vt-modal-header">
                 <h4 class="modal-title font-extrabold vt-text-primary d-flex align-items-center gap-2 h5 mb-0" id="addSampleModalLabel">
-                    <i class="bi bi-mic-fill" style="color: #c8992e;"></i><span id="recModalTitle">Add Voice Sample</span>
+                    <i class="bi bi-mic-fill" style="color: #c8992e;"></i><span id="recModalTitle"><?= e(__('Add Voice Sample')) ?></span>
                 </h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= e(__('Close')) ?>"></button>
             </div>
             <form id="addVoiceSampleForm" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
@@ -1306,19 +1306,19 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                     <div id="queueInfo" class="d-none mb-3 p-2 rounded-xl text-xs vt-text-primary" style="background-color: var(--surface-muted, #f1e6d2); border: 1px solid var(--border, #e4d7c2);" aria-live="polite"></div>
                     <div class="row g-3">
                         <div class="col-12 col-md-4">
-                            <label for="sample_language" class="form-label text-xs font-bold vt-text-primary">Language <span class="text-danger">*</span></label>
+                            <label for="sample_language" class="form-label text-xs font-bold vt-text-primary"><?= e(__('Language')) ?> <span class="text-danger">*</span></label>
                             <select name="language" id="sample_language" class="form-select form-select-sm vt-select" onchange="onSampleLangChange()" required>
                                 <?php foreach ($langLabels as $lk => $ll): ?><option value="<?= $lk ?>"><?= $ll ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-12 col-md-8">
-                            <label for="sample_text" class="form-label text-xs font-bold vt-text-primary">Word or phrase spoken <span class="text-danger">*</span></label>
-                            <input type="text" name="text" id="sample_text" class="vt-input" maxlength="500" required placeholder="Exactly what the speaker says">
+                            <label for="sample_text" class="form-label text-xs font-bold vt-text-primary"><?= e(__('Word or phrase spoken')) ?> <span class="text-danger">*</span></label>
+                            <input type="text" name="text" id="sample_text" class="vt-input" maxlength="500" required placeholder="<?= e(__('Exactly what the speaker says')) ?>">
                         </div>
                         <div class="col-12 col-md-6" id="dictWrap">
-                            <label for="sample_dictionary_entry_id" class="form-label text-xs font-bold vt-text-primary">Manobo dictionary entry</label>
+                            <label for="sample_dictionary_entry_id" class="form-label text-xs font-bold vt-text-primary"><?= e(__('Manobo dictionary entry')) ?></label>
                             <select name="dictionary_entry_id" id="sample_dictionary_entry_id" class="form-select form-select-sm vt-select" onchange="onDictionaryPick(this)">
-                                <option value="">— Not linked (matched automatically by spelling) —</option>
+                                <option value=""><?= e(__('— Not linked (matched automatically by spelling) —')) ?></option>
                                 <optgroup label="Missing a recording">
                                     <?php foreach ($dictionaryEntries as $d): if ($d['recorded']) { continue; } ?>
                                         <option value="<?= (int) $d['id'] ?>" data-word="<?= e($d['manobo']) ?>" data-meaning="<?= e($d['translation']) ?>"><?= e($d['manobo']) ?> — <?= e($d['translation']) ?></option>
@@ -1332,23 +1332,23 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                             </select>
                         </div>
                         <div class="col-12 col-md-6">
-                            <label for="sample_translation" class="form-label text-xs font-bold vt-text-primary">Meaning / translation</label>
-                            <input type="text" name="translation" id="sample_translation" class="vt-input" maxlength="500" placeholder="e.g. Magandang umaga">
+                            <label for="sample_translation" class="form-label text-xs font-bold vt-text-primary"><?= e(__('Meaning / translation')) ?></label>
+                            <input type="text" name="translation" id="sample_translation" class="vt-input" maxlength="500" placeholder="<?= e(__('e.g. Magandang umaga')) ?>">
                         </div>
                         <div class="col-12 col-md-6">
-                            <label for="sample_speaker" class="form-label text-xs font-bold vt-text-primary">Speaker name / label</label>
-                            <input type="text" name="speaker_label" id="sample_speaker" class="vt-input" maxlength="100" placeholder="e.g. Native speaker, Purok 3">
+                            <label for="sample_speaker" class="form-label text-xs font-bold vt-text-primary"><?= e(__('Speaker name / label')) ?></label>
+                            <input type="text" name="speaker_label" id="sample_speaker" class="vt-input" maxlength="100" placeholder="<?= e(__('e.g. Native speaker, Purok 3')) ?>">
                         </div>
                         <div class="col-12 col-md-6">
-                            <label for="sample_voice_type" class="form-label text-xs font-bold vt-text-primary">Voice type</label>
+                            <label for="sample_voice_type" class="form-label text-xs font-bold vt-text-primary"><?= e(__('Voice type')) ?></label>
                             <select name="voice_type" id="sample_voice_type" class="form-select form-select-sm vt-select">
-                                <option value="community">Community voice</option><option value="male">Male</option><option value="female">Female</option><option value="neutral">Neutral</option>
+                                <option value="community"><?= e(__('Community voice')) ?></option><option value="male"><?= e(__('Male')) ?></option><option value="female"><?= e(__('Female')) ?></option><option value="neutral"><?= e(__('Neutral')) ?></option>
                             </select>
                         </div>
                         <div class="col-12" id="postLinkWrap">
-                            <label for="sample_post_link" class="form-label text-xs font-bold vt-text-primary">Full narration of a post? <span class="vt-text-muted font-normal">(only if this recording reads the whole post)</span></label>
+                            <label for="sample_post_link" class="form-label text-xs font-bold vt-text-primary"><?= e(__('Full narration of a post?')) ?> <span class="vt-text-muted font-normal"><?= e(__('(only if this recording reads the whole post)')) ?></span></label>
                             <select name="post_link" id="sample_post_link" class="form-select form-select-sm vt-select">
-                                <option value="">— No, this is a word or phrase —</option>
+                                <option value=""><?= e(__('— No, this is a word or phrase —')) ?></option>
                                 <?php foreach (['announcements' => 'announcement', 'events' => 'event', 'ordinances' => 'ordinance'] as $group => $ct): if (empty($recentPosts[$group])) { continue; } ?>
                                     <optgroup label="<?= e(ucfirst($group)) ?>">
                                         <?php foreach ($recentPosts[$group] as $p): ?>
@@ -1362,55 +1362,55 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                         <!-- Recorder -->
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                                <span class="form-label text-xs font-bold vt-text-primary mb-0">Audio <span class="text-danger">*</span></span>
-                                <div class="btn-group btn-group-sm" role="group" aria-label="Audio source">
+                                <span class="form-label text-xs font-bold vt-text-primary mb-0"><?= e(__('Audio')) ?> <span class="text-danger">*</span></span>
+                                <div class="btn-group btn-group-sm" role="group" aria-label="<?= e(__('Audio source')) ?>">
                                     <input type="radio" class="btn-check" name="audio_source" id="src_mic" value="mic" checked onchange="onAudioSourceChange()">
-                                    <label class="btn btn-outline-secondary" for="src_mic"><i class="bi bi-mic-fill me-1"></i>Record</label>
+                                    <label class="btn btn-outline-secondary" for="src_mic"><i class="bi bi-mic-fill me-1"></i><?= e(__('Record')) ?></label>
                                     <input type="radio" class="btn-check" name="audio_source" id="src_file" value="file" onchange="onAudioSourceChange()">
-                                    <label class="btn btn-outline-secondary" for="src_file"><i class="bi bi-upload me-1"></i>Upload file</label>
+                                    <label class="btn btn-outline-secondary" for="src_file"><i class="bi bi-upload me-1"></i><?= e(__('Upload file')) ?></label>
                                 </div>
                             </div>
                             <div id="micPanel" class="p-3 rounded-2xl text-center" style="background-color: var(--surface-muted, #f1e6d2); border: 1px solid var(--border, #e4d7c2);">
                                 <div class="d-flex justify-content-center align-items-center gap-2 flex-wrap">
-                                    <button type="button" id="btnStartRec" onclick="startMicRecording()" class="btn-vt-gold px-4 py-2"><i class="bi bi-record-fill me-1"></i> <span>Start Recording</span></button>
-                                    <button type="button" id="btnStopRec" onclick="stopMicRecording()" class="btn btn-dark rounded-xl font-bold px-4 py-2 d-none"><i class="bi bi-stop-fill me-1"></i> Stop</button>
+                                    <button type="button" id="btnStartRec" onclick="startMicRecording()" class="btn-vt-gold px-4 py-2"><i class="bi bi-record-fill me-1"></i> <span><?= e(__('Start Recording')) ?></span></button>
+                                    <button type="button" id="btnStopRec" onclick="stopMicRecording()" class="btn btn-dark rounded-xl font-bold px-4 py-2 d-none"><i class="bi bi-stop-fill me-1"></i> <?= e(__('Stop')) ?></button>
                                     <span id="recStatus" class="font-mono text-sm font-extrabold text-danger d-none" role="status" aria-live="polite"></span>
                                 </div>
                                 <div id="recLevelWrap" class="mt-2 d-none" aria-hidden="true">
                                     <div class="vt-progress-track"><div id="recLevel" class="vt-progress-fill" style="width:0%; transition: width .08s linear;"></div></div>
                                 </div>
                                 <div id="micPreview" class="mt-3 d-none">
-                                    <audio id="recAudioPlayer" controls class="w-100 rounded-lg mb-2" style="height: 38px;" aria-label="Preview of your recording"></audio>
+                                    <audio id="recAudioPlayer" controls class="w-100 rounded-lg mb-2" style="height: 38px;" aria-label="<?= e(__('Preview of your recording')) ?>"></audio>
                                     <div class="d-flex justify-content-center gap-2 flex-wrap">
-                                        <button type="button" onclick="resetMicRecording()" class="btn-vt-outline" style="padding: 4px 10px; font-size: 0.75rem;"><i class="bi bi-arrow-counterclockwise me-1"></i> Re-record</button>
+                                        <button type="button" onclick="resetMicRecording()" class="btn-vt-outline" style="padding: 4px 10px; font-size: 0.75rem;"><i class="bi bi-arrow-counterclockwise me-1"></i> <?= e(__('Re-record')) ?></button>
                                     </div>
                                     <p id="recWarning" class="text-xs text-warning-emphasis mt-2 mb-0 d-none"></p>
                                 </div>
                             </div>
                             <div id="filePanel" class="p-3 rounded-2xl d-none" style="background-color: var(--surface-muted, #f1e6d2); border: 1px solid var(--border, #e4d7c2);">
-                                <label for="audio_file_input" class="visually-hidden">Audio file</label>
+                                <label for="audio_file_input" class="visually-hidden"><?= e(__('Audio file')) ?></label>
                                 <input type="file" id="audio_file_input" class="form-control form-control-sm" accept="audio/*,.mp3,.wav,.m4a,.ogg,.webm" onchange="onFilePicked(this)">
-                                <span class="vt-text-muted mt-1 d-block" style="font-size:11px;">WebM, OGG, M4A/MP4, MP3 or WAV — up to 5 MB.</span>
+                                <span class="vt-text-muted mt-1 d-block" style="font-size:11px;"><?= e(__('WebM, OGG, M4A/MP4, MP3 or WAV — up to 5 MB.')) ?></span>
                             </div>
                         </div>
 
                         <div class="col-12">
-                            <label for="sample_notes" class="form-label text-xs font-bold vt-text-primary">Notes</label>
-                            <textarea name="notes" id="sample_notes" class="vt-input" rows="2" maxlength="2000" placeholder="Dialect, pronunciation or cultural notes (optional)"></textarea>
+                            <label for="sample_notes" class="form-label text-xs font-bold vt-text-primary"><?= e(__('Notes')) ?></label>
+                            <textarea name="notes" id="sample_notes" class="vt-input" rows="2" maxlength="2000" placeholder="<?= e(__('Dialect, pronunciation or cultural notes (optional)')) ?>"></textarea>
                         </div>
                         <div class="col-12">
                             <div class="form-check p-2 rounded-xl" style="background-color: var(--surface-muted, #f1e6d2); border: 1px solid var(--border, #e4d7c2);">
                                 <input class="form-check-input ms-0 me-2" type="checkbox" name="consent_confirmed" value="1" id="consent_confirmed">
-                                <label class="form-check-label text-xs font-medium vt-text-primary" for="consent_confirmed">The speaker agreed to this recording being used in the BarangGabay voice dataset.</label>
+                                <label class="form-check-label text-xs font-medium vt-text-primary" for="consent_confirmed"><?= e(__('The speaker agreed to this recording being used in the BarangGabay voice dataset.')) ?></label>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer vt-modal-footer">
-                    <button type="button" class="btn-vt-outline" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" id="btnSavePending" class="btn-vt-secondary" onclick="submitSample('pending')">Save as Pending</button>
-                    <button type="button" id="btnSaveApprove" class="btn-vt-primary" onclick="submitSample('approved')"><i class="bi bi-check-circle-fill me-1"></i> Save &amp; Approve</button>
-                    <button type="button" id="btnSaveNext" class="btn-vt-primary d-none" onclick="submitSample('approved', '', true)"><i class="bi bi-skip-forward-fill me-1"></i> Save &amp; Record Next</button>
+                    <button type="button" class="btn-vt-outline" data-bs-dismiss="modal"><?= e(__('Cancel')) ?></button>
+                    <button type="button" id="btnSavePending" class="btn-vt-secondary" onclick="submitSample('pending')"><?= e(__('Save as Pending')) ?></button>
+                    <button type="button" id="btnSaveApprove" class="btn-vt-primary" onclick="submitSample('approved')"><i class="bi bi-check-circle-fill me-1"></i> <?= e(__('Save & Approve')) ?></button>
+                    <button type="button" id="btnSaveNext" class="btn-vt-primary d-none" onclick="submitSample('approved', '', true)"><i class="bi bi-skip-forward-fill me-1"></i> <?= e(__('Save & Record Next')) ?></button>
                 </div>
             </form>
         </div>
@@ -1421,12 +1421,12 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 <div class="modal fade vt-modal" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content vt-modal-content">
-            <div class="modal-header vt-modal-header"><h4 class="modal-title h6 mb-0 font-extrabold" id="duplicateModalLabel">Already recorded</h4></div>
+            <div class="modal-header vt-modal-header"><h4 class="modal-title h6 mb-0 font-extrabold" id="duplicateModalLabel"><?= e(__('Already recorded')) ?></h4></div>
             <div class="modal-body vt-modal-body text-sm"><p id="duplicateText" class="mb-0"></p></div>
             <div class="modal-footer vt-modal-footer">
-                <button type="button" class="btn-vt-outline" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn-vt-secondary" onclick="resolveDuplicate('version')" title="Keep both; the newest approved recording is the one residents hear">Add New Version</button>
-                <button type="button" class="btn-vt-primary" onclick="resolveDuplicate('replace')" title="Approve this one and retire the old recording">Replace</button>
+                <button type="button" class="btn-vt-outline" data-bs-dismiss="modal"><?= e(__('Cancel')) ?></button>
+                <button type="button" class="btn-vt-secondary" onclick="resolveDuplicate('version')" title="<?= e(__('Keep both; the newest approved recording is the one residents hear')) ?>"><?= e(__('Add New Version')) ?></button>
+                <button type="button" class="btn-vt-primary" onclick="resolveDuplicate('replace')" title="<?= e(__('Approve this one and retire the old recording')) ?>"><?= e(__('Replace')) ?></button>
             </div>
         </div>
     </div>
@@ -1437,34 +1437,34 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content vt-modal-content">
             <div class="modal-header vt-modal-header">
-                <h4 class="modal-title h5 mb-0 font-extrabold vt-text-primary" id="editSampleModalLabel">Edit sample details</h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h4 class="modal-title h5 mb-0 font-extrabold vt-text-primary" id="editSampleModalLabel"><?= e(__('Edit sample details')) ?></h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= e(__('Close')) ?>"></button>
             </div>
             <form method="post" action="<?= e(route('admin/voice-training/update')) ?>" onsubmit="return ajaxForm(event, this)">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="id" id="edit_id">
                 <div class="modal-body vt-modal-body">
-                    <div class="mb-2"><label class="form-label text-xs font-bold" for="edit_text">Word or phrase</label><input class="vt-input" name="text" id="edit_text" maxlength="500" required></div>
-                    <div class="mb-2"><label class="form-label text-xs font-bold" for="edit_translation">Meaning / translation</label><input class="vt-input" name="translation" id="edit_translation" maxlength="500"></div>
+                    <div class="mb-2"><label class="form-label text-xs font-bold" for="edit_text"><?= e(__('Word or phrase')) ?></label><input class="vt-input" name="text" id="edit_text" maxlength="500" required></div>
+                    <div class="mb-2"><label class="form-label text-xs font-bold" for="edit_translation"><?= e(__('Meaning / translation')) ?></label><input class="vt-input" name="translation" id="edit_translation" maxlength="500"></div>
                     <div class="mb-2">
-                        <label class="form-label text-xs font-bold" for="edit_dict">Manobo dictionary entry</label>
+                        <label class="form-label text-xs font-bold" for="edit_dict"><?= e(__('Manobo dictionary entry')) ?></label>
                         <select class="form-select form-select-sm vt-select" name="dictionary_entry_id" id="edit_dict">
-                            <option value="">— Not linked —</option>
+                            <option value=""><?= e(__('— Not linked —')) ?></option>
                             <?php foreach ($dictionaryEntries as $d): ?><option value="<?= (int) $d['id'] ?>"><?= e($d['manobo']) ?> — <?= e($d['translation']) ?></option><?php endforeach; ?>
                         </select>
                     </div>
                     <div class="row g-2">
-                        <div class="col-6"><label class="form-label text-xs font-bold" for="edit_speaker">Speaker</label><input class="vt-input" name="speaker_label" id="edit_speaker" maxlength="100"></div>
-                        <div class="col-6"><label class="form-label text-xs font-bold" for="edit_voice_type">Voice type</label>
-                            <select class="form-select form-select-sm vt-select" name="voice_type" id="edit_voice_type"><option value="community">Community</option><option value="male">Male</option><option value="female">Female</option><option value="neutral">Neutral</option></select>
+                        <div class="col-6"><label class="form-label text-xs font-bold" for="edit_speaker"><?= e(__('Speaker')) ?></label><input class="vt-input" name="speaker_label" id="edit_speaker" maxlength="100"></div>
+                        <div class="col-6"><label class="form-label text-xs font-bold" for="edit_voice_type"><?= e(__('Voice type')) ?></label>
+                            <select class="form-select form-select-sm vt-select" name="voice_type" id="edit_voice_type"><option value="community"><?= e(__('Community')) ?></option><option value="male"><?= e(__('Male')) ?></option><option value="female"><?= e(__('Female')) ?></option><option value="neutral"><?= e(__('Neutral')) ?></option></select>
                         </div>
                     </div>
-                    <div class="mt-2"><label class="form-label text-xs font-bold" for="edit_notes">Notes</label><textarea class="vt-input" name="notes" id="edit_notes" rows="2" maxlength="2000"></textarea></div>
+                    <div class="mt-2"><label class="form-label text-xs font-bold" for="edit_notes"><?= e(__('Notes')) ?></label><textarea class="vt-input" name="notes" id="edit_notes" rows="2" maxlength="2000"></textarea></div>
                 </div>
                 <div class="modal-footer vt-modal-footer">
-                    <button type="button" class="btn-vt-outline" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn-vt-primary">Save changes</button>
+                    <button type="button" class="btn-vt-outline" data-bs-dismiss="modal"><?= e(__('Cancel')) ?></button>
+                    <button type="submit" class="btn-vt-primary"><?= e(__('Save changes')) ?></button>
                 </div>
             </form>
         </div>
@@ -1478,38 +1478,38 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         <div class="modal-content vt-modal-content">
             <div class="modal-header vt-modal-header">
                 <h4 class="modal-title font-extrabold vt-text-primary d-flex align-items-center gap-2 h5 mb-0" id="profileModalLabel_<?= $langKey ?>">
-                    <i class="bi bi-sliders" style="color: #c8992e;"></i><?= $langLabel ?> voice profile
+                    <i class="bi bi-sliders" style="color: #c8992e;"></i><?= $langLabel ?> <?= e(__('voice profile')) ?>
                 </h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= e(__('Close')) ?>"></button>
             </div>
             <form method="post" action="<?= e(route('admin/voice-training/profile')) ?>" onsubmit="return ajaxForm(event, this)">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <input type="hidden" name="action" value="save">
                 <input type="hidden" name="language" value="<?= $langKey ?>">
                 <div class="modal-body vt-modal-body">
-                    <p class="text-xs vt-text-muted">One profile per language. It sets the name shown to staff, the reading speed residents start at, and the fallback voice used for words with no recording.</p>
+                    <p class="text-xs vt-text-muted"><?= e(__('One profile per language. It sets the name shown to staff, the reading speed residents start at, and the fallback voice used for words with no recording.')) ?></p>
                     <div class="mb-3">
-                        <label class="form-label text-xs font-bold vt-text-primary" for="pname_<?= $langKey ?>">Profile name</label>
+                        <label class="form-label text-xs font-bold vt-text-primary" for="pname_<?= $langKey ?>"><?= e(__('Profile name')) ?></label>
                         <input type="text" name="profile_name" id="pname_<?= $langKey ?>" class="vt-input" maxlength="100" value="<?= e((string) ($p['profile_name'] ?? "{$langLabel} Default Voice")) ?>" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label text-xs font-bold vt-text-primary" for="pprov_<?= $langKey ?>">Fallback for unrecorded words</label>
+                        <label class="form-label text-xs font-bold vt-text-primary" for="pprov_<?= $langKey ?>"><?= e(__('Fallback for unrecorded words')) ?></label>
                         <select name="provider" id="pprov_<?= $langKey ?>" class="form-select form-select-sm vt-select">
-                            <option value="dataset_hybrid" <?= ($p['provider'] ?? '') === 'dataset_hybrid' ? 'selected' : '' ?>>Dataset recordings + device voice</option>
-                            <option value="system" <?= ($p['provider'] ?? '') === 'system' ? 'selected' : '' ?>>Device voice (browser speech)</option>
-                            <option value="google_tts" <?= ($p['provider'] ?? '') === 'google_tts' ? 'selected' : '' ?>>Server TTS narration when generated (TTS_PROVIDER)</option>
+                            <option value="dataset_hybrid" <?= ($p['provider'] ?? '') === 'dataset_hybrid' ? 'selected' : '' ?>><?= e(__('Dataset recordings + device voice')) ?></option>
+                            <option value="system" <?= ($p['provider'] ?? '') === 'system' ? 'selected' : '' ?>><?= e(__('Device voice (browser speech)')) ?></option>
+                            <option value="google_tts" <?= ($p['provider'] ?? '') === 'google_tts' ? 'selected' : '' ?>><?= e(__('Server TTS narration when generated (TTS_PROVIDER)')) ?></option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label text-xs font-bold vt-text-primary" for="pvoice_<?= $langKey ?>">Preferred device voice language tag</label>
-                        <input type="text" name="provider_voice_id" id="pvoice_<?= $langKey ?>" class="vt-input" maxlength="100" value="<?= e((string) ($p['provider_voice_id'] ?? '')) ?>" placeholder="e.g. fil-PH, en-PH">
+                        <label class="form-label text-xs font-bold vt-text-primary" for="pvoice_<?= $langKey ?>"><?= e(__('Preferred device voice language tag')) ?></label>
+                        <input type="text" name="provider_voice_id" id="pvoice_<?= $langKey ?>" class="vt-input" maxlength="100" value="<?= e((string) ($p['provider_voice_id'] ?? '')) ?>" placeholder="<?= e(__('e.g. fil-PH, en-PH')) ?>">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label text-xs font-bold vt-text-primary" for="pdesc_<?= $langKey ?>">Description</label>
+                        <label class="form-label text-xs font-bold vt-text-primary" for="pdesc_<?= $langKey ?>"><?= e(__('Description')) ?></label>
                         <textarea name="description" id="pdesc_<?= $langKey ?>" class="vt-input" rows="2" maxlength="1000"><?= e((string) ($p['description'] ?? '')) ?></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label text-xs font-bold vt-text-primary" for="rate_range_<?= $langKey ?>">Starting speaking rate</label>
+                        <label class="form-label text-xs font-bold vt-text-primary" for="rate_range_<?= $langKey ?>"><?= e(__('Starting speaking rate')) ?></label>
                         <div class="d-flex align-items-center gap-2">
                             <input type="range" name="speaking_rate" class="form-range" min="0.6" max="1.4" step="0.05" value="<?= e((string) ($p['speaking_rate'] ?? 0.95)) ?>" id="rate_range_<?= $langKey ?>" oninput="document.getElementById('rate_val_<?= $langKey ?>').textContent = this.value + 'x'">
                             <span class="text-xs font-mono font-bold vt-text-primary" id="rate_val_<?= $langKey ?>"><?= e((string) ($p['speaking_rate'] ?? 0.95)) ?>x</span>
@@ -1517,12 +1517,12 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                     </div>
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" name="is_active" value="1" id="pactive_<?= $langKey ?>" <?= !isset($p['is_active']) || (int) $p['is_active'] === 1 ? 'checked' : '' ?>>
-                        <label class="form-check-label text-xs font-medium vt-text-primary" for="pactive_<?= $langKey ?>">Active (used by the Resident Voice Reader)</label>
+                        <label class="form-check-label text-xs font-medium vt-text-primary" for="pactive_<?= $langKey ?>"><?= e(__('Active (used by the Resident Voice Reader)')) ?></label>
                     </div>
                 </div>
                 <div class="modal-footer vt-modal-footer">
-                    <button type="button" class="btn-vt-outline" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn-vt-primary">Save Profile</button>
+                    <button type="button" class="btn-vt-outline" data-bs-dismiss="modal"><?= e(__('Cancel')) ?></button>
+                    <button type="submit" class="btn-vt-primary"><?= e(__('Save Profile')) ?></button>
                 </div>
             </form>
         </div>
@@ -1564,13 +1564,13 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 var type = res.headers.get('Content-Type') || '';
                 if (type.indexOf('application/json') === -1) {
                     return { ok: false, status: res.status, data: { error: res.status === 403
-                        ? 'Your session expired or the security token is stale. Reload the page and try again.'
-                        : res.status === 413 ? 'The file is larger than the server accepts.'
+                        ? <?= json_encode(__('Your session expired or the security token is stale. Reload the page and try again.')) ?>
+                        : res.status === 413 ? <?= json_encode(__('The file is larger than the server accepts.')) ?>
                         : 'Unexpected server response (HTTP ' + res.status + ').' } };
                 }
                 return res.json().then(function (data) { return { ok: res.ok && data.success, status: res.status, data: data }; });
             })
-            .catch(function () { return { ok: false, status: 0, data: { error: 'Network error — check your connection and try again.' } }; });
+            .catch(function () { return { ok: false, status: 0, data: { error: <?= json_encode(__('Network error — check your connection and try again.')) ?> } }; });
     }
 
     function reloadWithMessage(message) {
@@ -1591,21 +1591,21 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         if (btn) { btn.disabled = true; }
         post(form.action, new FormData(form)).then(function (r) {
             if (btn) { btn.disabled = false; }
-            if (r.ok) { reloadWithMessage(r.data.message || 'Saved.'); return; }
-            alert(r.data.error || 'The request failed.');
+            if (r.ok) { reloadWithMessage(r.data.message || <?= json_encode(__('Saved.')) ?>); return; }
+            alert(r.data.error || <?= json_encode(__('The request failed.')) ?>);
         });
         return false;
     };
 
     /** Approve / reject / pending / delete one sample. */
     window.sampleAction = function (id, action, text) {
-        if (action === 'delete' && !confirm('Delete the recording "' + text + '"? This cannot be undone.')) { return; }
+        if (action === 'delete' && !confirm(<?= json_encode(__('Delete the recording ":text"? This cannot be undone.')) ?>.replace(':text', text))) { return; }
         var fd = new FormData();
         fd.set('id', id);
         fd.set('action', action);
         post(URLS.update, fd).then(function (r) {
             if (r.ok) { reloadWithMessage(r.data.message); return; }
-            showAlert($('vtPageAlert'), 'danger', r.data.error || 'The change failed.');
+            showAlert($('vtPageAlert'), 'danger', r.data.error || <?= json_encode(__('The change failed.')) ?>);
             $('vtPageAlert').scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
     };
@@ -1645,15 +1645,15 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
     }
 
     function micError(err) {
-        if (!window.isSecureContext) { return 'Recording needs a secure (https://) page. Open the site over HTTPS.'; }
+        if (!window.isSecureContext) { return <?= json_encode(__('Recording needs a secure (https://) page. Open the site over HTTPS.')) ?>; }
         switch (err && err.name) {
             case 'NotAllowedError':
             case 'SecurityError':   return 'Microphone permission was denied. Allow microphone access in your browser settings (the lock icon beside the address) and try again.';
             case 'NotFoundError':
-            case 'OverconstrainedError': return 'No microphone was found. Connect a microphone and try again.';
+            case 'OverconstrainedError': return <?= json_encode(__('No microphone was found. Connect a microphone and try again.')) ?>;
             case 'NotReadableError':
-            case 'AbortError':      return 'The microphone is being used by another app or tab. Close it and try again.';
-            default:                return 'Could not start the microphone' + (err && err.message ? ': ' + err.message : '.');
+            case 'AbortError':      return <?= json_encode(__('The microphone is being used by another app or tab. Close it and try again.')) ?>;
+            default:                return <?= json_encode(__('Could not start the microphone')) ?> + (err && err.message ? ': ' + err.message : '.');
         }
     }
 
@@ -1673,8 +1673,8 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
             showAlert(alertEl, 'warning', window.isSecureContext
-                ? 'This browser cannot record audio. Use a recent Chrome, Edge, Firefox or Safari — or switch to "Upload file".'
-                : 'Recording needs a secure (https://) page. Open the site over HTTPS.');
+                ? <?= json_encode(__('This browser cannot record audio. Use a recent Chrome, Edge, Firefox or Safari — or switch to "Upload file".')) ?>
+                : <?= json_encode(__('Recording needs a secure (https://) page. Open the site over HTTPS.')) ?>);
             return;
         }
 
@@ -1752,7 +1752,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         clearInterval(rec.timer);
         $('btnStopRec').classList.add('d-none');
         $('btnStartRec').classList.remove('d-none');
-        $('btnStartRec').querySelector('span').textContent = 'Record again';
+        $('btnStartRec').querySelector('span').textContent = <?= json_encode(__('Record again')) ?>;
     };
 
     function onRecordingStopped() {
@@ -1768,7 +1768,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             return;
         }
 
-        setRecStatus('Recorded ' + rec.duration.toFixed(1) + ' s');
+        setRecStatus(<?= json_encode(__('Recorded ')) ?> + rec.duration.toFixed(1) + ' s');
         var player = $('recAudioPlayer');
         if (player.dataset.url) { URL.revokeObjectURL(player.dataset.url); }
         player.dataset.url = URL.createObjectURL(rec.blob);
@@ -1777,8 +1777,8 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
         var warn = $('recWarning');
         var warnings = [];
-        if (rec.duration < 0.5) { warnings.push('Very short recording — make sure the whole word was captured.'); }
-        if (rec.metered && rec.peak < 4) { warnings.push('The recording sounds almost silent. Speak closer to the microphone.'); }
+        if (rec.duration < 0.5) { warnings.push(<?= json_encode(__('Very short recording — make sure the whole word was captured.')) ?>); }
+        if (rec.metered && rec.peak < 4) { warnings.push(<?= json_encode(__('The recording sounds almost silent. Speak closer to the microphone.')) ?>); }
         warn.textContent = warnings.join(' ');
         warn.classList.toggle('d-none', !warnings.length);
     }
@@ -1842,10 +1842,10 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
         $('missingCountBadge').textContent = items.length + ' missing';
         $('missingHelp').textContent = lang === 'msm'
-            ? 'Manobo dictionary entries with no approved recording, most-used first.'
+            ? <?= json_encode(__('Manobo dictionary entries with no approved recording, most-used first.')) ?>
             : (lang === 'ceb'
-                ? 'Bisaya words used inside Manobo posts (translator fallback) with no recording, most-used first.'
-                : LANG_NAMES[lang] + ' words in visible posts with no approved recording, most-used first.');
+                ? <?= json_encode(__('Bisaya words used inside Manobo posts (translator fallback) with no recording, most-used first.')) ?>
+                : LANG_NAMES[lang] + <?= json_encode(__(' words in visible posts with no approved recording, most-used first.')) ?>);
         $('btnBatch').disabled = !items.length;
         $('gapHelp').classList.toggle('d-none', lang !== 'ceb');
 
@@ -1862,18 +1862,18 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             var btn = document.createElement('button');
             btn.type = 'button'; btn.className = 'btn-vt-gold';
             btn.innerHTML = '<i class="bi bi-mic-fill me-1"></i> Record';
-            btn.setAttribute('aria-label', 'Record ' + it.text);
+            btn.setAttribute('aria-label', <?= json_encode(__('Record ')) ?> + it.text);
             btn.onclick = function () { window.recordFromQueue(lang, it.text); };
             td4.appendChild(btn);
             tr.append(td1, td2, td3, td4);
             body.appendChild(tr);
         });
         var empty = $('missingEmpty');
-        empty.textContent = items.length ? 'No match for "' + term + '".' : 'Nothing missing — every ' + LANG_NAMES[lang] + ' word residents meet has an approved recording.';
+        empty.textContent = items.length ? <?= json_encode(__('No match for "')) ?> + term + '".' : <?= json_encode(__('Nothing missing — every ')) ?> + LANG_NAMES[lang] + <?= json_encode(__(' word residents meet has an approved recording.')) ?>;
         empty.classList.toggle('d-none', shown.length > 0);
     };
 
-    /** Record one word, continuing through that language's list with "Save & Record Next". */
+    /** Record one word, continuing through that language's list with <?= json_encode(__('Save & Record Next')) ?>. */
     window.recordFromQueue = function (lang, text) {
         var items = QUEUES[lang] || [];
         var pos = items.findIndex(function (it) { return it.text === text; });
@@ -1907,7 +1907,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         queue.done++;
         if (queue.pos >= queue.items.length) { queue.pos = 0; }
         if (!queue.items.length) {
-            showAlert($('recAlert'), 'success', 'Done — every word in this ' + LANG_NAMES[queue.lang] + ' list now has a recording.');
+            showAlert($('recAlert'), 'success', <?= json_encode(__('Done — every word in this ')) ?> + LANG_NAMES[queue.lang] + <?= json_encode(__(' list now has a recording.')) ?>);
             $('queueInfo').classList.add('d-none');
             $('btnSaveNext').classList.add('d-none');
             return false;
@@ -1943,7 +1943,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         rec.rerecordId = preset.rerecord ? preset.id : null;
         $('recAlert').classList.add('d-none');
         $('micPreview').classList.add('d-none');
-        $('btnStartRec').querySelector('span').textContent = 'Start Recording';
+        $('btnStartRec').querySelector('span').textContent = <?= json_encode(__('Start Recording')) ?>;
         setRecStatus('');
         $('src_mic').checked = true;
         window.onAudioSourceChange();
@@ -1964,7 +1964,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
         var re = !!rec.rerecordId;
         $('rec_sample_id').value = re ? preset.id : '';
-        $('recModalTitle').textContent = re ? 'Re-record "' + preset.text + '"' : (preset.text ? 'Record "' + preset.text + '"' : 'Add Voice Sample');
+        $('recModalTitle').textContent = re ? <?= json_encode(__('Re-record "')) ?> + preset.text + '"' : (preset.text ? 'Record "' + preset.text + '"' : <?= json_encode(__('Add Voice Sample')) ?>);
         ['sample_language', 'sample_text', 'sample_translation', 'sample_dictionary_entry_id', 'sample_speaker', 'sample_voice_type', 'sample_post_link', 'sample_notes']
             .forEach(function (id) { $(id).disabled = re; });
 
@@ -1979,7 +1979,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
     });
     $('addSampleModal').addEventListener('hidden.bs.modal', function () {
         // After recording several words without reloading, refresh the counts once.
-        if (datasetDirty) { reloadWithMessage('Recordings saved. Counts and lists are updated.'); }
+        if (datasetDirty) { reloadWithMessage(<?= json_encode(__('Recordings saved. Counts and lists are updated.')) ?>); }
     });
 
     var pendingSave = null;
@@ -1991,20 +1991,20 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         var audio   = useFile ? rec.file : rec.blob;
 
         if (rec.recorder && rec.recorder.state === 'recording') {
-            showAlert(alertEl, 'warning', 'Stop the recording first.');
+            showAlert(alertEl, 'warning', <?= json_encode(__('Stop the recording first.')) ?>);
             return;
         }
         if (!rec.rerecordId && !$('sample_text').value.trim()) {
-            showAlert(alertEl, 'warning', 'Type the word or phrase that was recorded.');
+            showAlert(alertEl, 'warning', <?= json_encode(__('Type the word or phrase that was recorded.')) ?>);
             $('sample_text').focus();
             return;
         }
         if (!audio) {
-            showAlert(alertEl, 'warning', useFile ? 'Choose an audio file to upload.' : 'Record the pronunciation first.');
+            showAlert(alertEl, 'warning', useFile ? <?= json_encode(__('Choose an audio file to upload.')) ?> : <?= json_encode(__('Record the pronunciation first.')) ?>);
             return;
         }
         if (!rec.rerecordId && !$('consent_confirmed').checked) {
-            showAlert(alertEl, 'warning', 'Confirm that the speaker agreed to this recording being used.');
+            showAlert(alertEl, 'warning', <?= json_encode(__('Confirm that the speaker agreed to this recording being used.')) ?>);
             $('consent_confirmed').focus();
             return;
         }
@@ -2025,7 +2025,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
         var buttons = [$('btnSavePending'), $('btnSaveApprove'), $('btnSaveNext')];
         buttons.forEach(function (b) { b.disabled = true; });
-        showAlert(alertEl, 'info', 'Uploading…');
+        showAlert(alertEl, 'info', <?= json_encode(__('Uploading…')) ?>);
 
         post(url, fd).then(function (r) {
             buttons.forEach(function (b) { b.disabled = false; });
@@ -2033,7 +2033,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 if (next && queue) {
                     datasetDirty = true;
                     var msg = r.data.message;
-                    if (advanceQueue()) { showAlert(alertEl, 'success', msg + ' Next word loaded.'); }
+                    if (advanceQueue()) { showAlert(alertEl, 'success', msg + <?= json_encode(__(' Next word loaded.')) ?>); }
                     return;
                 }
                 alertEl.classList.add('d-none');
@@ -2050,7 +2050,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 bootstrap.Modal.getOrCreateInstance($('duplicateModal')).show();
                 return;
             }
-            showAlert(alertEl, 'danger', r.data.error || 'The recording could not be saved.');
+            showAlert(alertEl, 'danger', r.data.error || <?= json_encode(__('The recording could not be saved.')) ?>);
         });
     };
 
@@ -2108,31 +2108,31 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             if (!r.ok) {
                 badge.className = 'vt-badge vt-badge-red';
                 badge.textContent = 'Error';
-                $('testMessage').textContent = r.data.error || 'Preview failed.';
+                $('testMessage').textContent = r.data.error || <?= json_encode(__('Preview failed.')) ?>;
                 return;
             }
 
             var d = r.data;
             var recOnly = d.fallback === 'recorded_only';
             badge.className = 'vt-badge ' + (d.missing === 0 ? 'vt-badge-green' : (d.recorded ? 'vt-badge-gold' : 'vt-badge-blue'));
-            badge.textContent = d.missing === 0 ? 'All recorded' : (d.recorded ? (recOnly ? 'Partly recorded' : 'Recordings + device voice') : (recOnly ? 'Nothing recorded' : 'Device voice only'));
-            $('testProfileLabel').textContent = d.profile_name ? 'Profile: ' + d.profile_name : '';
+            badge.textContent = d.missing === 0 ? <?= json_encode(__('All recorded')) ?> : (d.recorded ? (recOnly ? <?= json_encode(__('Partly recorded')) ?> : <?= json_encode(__('Recordings + device voice')) ?>) : (recOnly ? <?= json_encode(__('Nothing recorded')) ?> : <?= json_encode(__('Device voice only')) ?>));
+            $('testProfileLabel').textContent = d.profile_name ? <?= json_encode(__('Profile: ')) ?> + d.profile_name : '';
             if (recOnly) {
                 $('testMessage').textContent = d.recorded
-                    ? d.recorded + ' recorded segment(s) play; ' + d.missing + ' unrecorded part(s) are skipped (Recorded voice only).'
+                    ? d.recorded + ' recorded segment(s) play; ' + d.missing + <?= json_encode(__(' unrecorded part(s) are skipped (Recorded voice only).')) ?>
                     : 'No approved recording matches this text yet, so residents would hear nothing (Recorded voice only). Record the words below.';
             } else {
                 $('testMessage').textContent = d.recorded
-                    ? d.recorded + ' recorded segment(s), ' + d.missing + ' read by the device voice' + (d.approximate && d.missing ? ' (an approximation)' : '') + '.'
-                    : 'No approved recording matches this text yet — it is read by the device voice' + (d.approximate ? ', which is only an approximation' : '') + '.';
+                    ? d.recorded + ' recorded segment(s), ' + d.missing + <?= json_encode(__(' read by the device voice')) ?> + (d.approximate && d.missing ? ' (an approximation)' : '') + '.'
+                    : <?= json_encode(__('No approved recording matches this text yet — it is read by the device voice')) ?> + (d.approximate ? ', which is only an approximation' : '') + '.';
             }
 
             d.segments.forEach(function (seg) {
                 var chip = document.createElement('span');
                 chip.className = 'vt-badge ' + (seg.type === 'recorded' ? 'vt-badge-green' : 'vt-badge-neutral');
                 chip.title = seg.type === 'recorded'
-                    ? 'Recording #' + seg.sample_id + (seg.language === 'ceb' ? ' (Bisaya)' : '') + (seg.speaker ? ' — ' + seg.speaker : '')
-                    : (recOnly ? 'No recording — skipped' : 'No recording — device voice');
+                    ? <?= json_encode(__('Recording #')) ?> + seg.sample_id + (seg.language === 'ceb' ? ' (Bisaya)' : '') + (seg.speaker ? ' — ' + seg.speaker : '')
+                    : (recOnly ? <?= json_encode(__('No recording — skipped')) ?> : <?= json_encode(__('No recording — device voice')) ?>);
                 chip.innerHTML = '<i class="bi ' + (seg.type === 'recorded' ? 'bi-mic-fill' : 'bi-robot') + ' me-1"></i>';
                 chip.appendChild(document.createTextNode(seg.text));
                 segBox.appendChild(chip);
@@ -2160,15 +2160,15 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
     window.runDiagnostics = function () {
         var box = $('diagnosticsBox');
         box.classList.remove('d-none');
-        box.textContent = 'Running diagnostics…';
+        box.textContent = <?= json_encode(__('Running diagnostics…')) ?>;
         post(URLS.diag, new FormData()).then(function (r) {
-            if (!r.ok) { box.textContent = r.data.error || 'Diagnostics failed.'; return; }
+            if (!r.ok) { box.textContent = r.data.error || <?= json_encode(__('Diagnostics failed.')) ?>; return; }
             var list = document.createElement('ul');
             list.className = 'list-unstyled mb-0 text-xs';
             r.data.results.forEach(function (t) {
                 var li = document.createElement('li');
                 li.className = 'py-1 border-bottom';
-                var label = t.status === 'passed' ? '✅ Passed' : (t.status === 'config_missing' ? '⚠️ Configuration missing' : '❌ Failed');
+                var label = t.status === 'passed' ? '✅ Passed' : (t.status === 'config_missing' ? <?= json_encode(__('⚠️ Configuration missing')) ?> : '❌ Failed');
                 var strong = document.createElement('strong');
                 strong.textContent = t.name + ': ';
                 li.appendChild(strong);
@@ -2184,5 +2184,5 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
 <?php
 $content   = ob_get_clean();
-$pageTitle = 'Voice Training & AI Dataset Hub';
+$pageTitle = __('Voice Training & AI Dataset Hub');
 require __DIR__ . '/../../layouts/admin.php';

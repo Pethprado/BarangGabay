@@ -553,5 +553,5 @@ function residentManager() {
 
 <?php
 $content   = ob_get_clean();
-$pageTitle = $pageTitle ?? 'Resident Management';
+$pageTitle = $pageTitle ?? __('Resident Management');
 require __DIR__ . '/../../layouts/admin.php';

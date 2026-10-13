@@ -15,7 +15,7 @@ $docType = $doc ? \App\Models\DocumentRequest::label((string)$doc['document_type
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sertipikasyon ng Beripikasyon — BARANGGABAY</title>
+    <title><?= e(__('Sertipikasyon ng Beripikasyon — BARANGGABAY')) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,12 +36,12 @@ $docType = $doc ? \App\Models\DocumentRequest::label((string)$doc['document_type
             <div class="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-sm border border-blue-100">
                 <i class="bi bi-shield-check text-3xl"></i>
             </div>
-            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Republika ng Pilipinas</div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400"><?= e(__('Republika ng Pilipinas')) ?></div>
             <div class="text-xs font-semibold text-slate-600"><?= e(\App\Models\Setting::get('doc_province', 'Lalawigan ng Surigao del Sur')) ?> &bull; <?= e(\App\Models\Setting::get('doc_municipality', 'Bayan ng Madrid')) ?></div>
             <div class="mt-0.5 text-lg font-black tracking-tight text-blue-950 font-cinzel"><?= e(strtoupper(\App\Models\Setting::get('doc_barangay_name', 'BARANGAY BAYOGO'))) ?></div>
             <div class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-0.5 text-[11px] font-bold text-slate-700">
                 <i class="bi bi-qr-code-scan text-blue-600"></i>
-                Sistema ng Beripikasyon ng Dokumento
+                <?= e(__('Sistema ng Beripikasyon ng Dokumento')) ?>
             </div>
         </div>
 
@@ -51,62 +51,62 @@ $docType = $doc ? \App\Models\DocumentRequest::label((string)$doc['document_type
             <div class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm mb-2">
                 <i class="bi bi-check-lg text-2xl font-bold"></i>
             </div>
-            <h2 class="text-base font-black text-emerald-950">OPISYAL AT TOTOO NA DOKUMENTO</h2>
+            <h2 class="text-base font-black text-emerald-950"><?= e(__('OPISYAL AT TOTOO NA DOKUMENTO')) ?></h2>
             <p class="text-xs text-emerald-800 mt-0.5">
-                Ang sertipikong ito ay lehitimong inisyu ng <?= e(\App\Models\Setting::get('doc_barangay_name', 'Barangay Bayogo')) ?> at nakatala sa opisyal na database.
+                <?= e(__('Ang sertipikong ito ay lehitimong inisyu ng')) ?> <?= e(\App\Models\Setting::get('doc_barangay_name', 'Barangay Bayogo')) ?> <?= e(__('at nakatala sa opisyal na database.')) ?>
             </p>
         </div>
 
         <!-- Details Grid -->
         <div class="mt-6 space-y-3.5 text-xs text-slate-600">
             <div class="flex justify-between items-center py-1.5 border-b border-slate-100">
-                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Uri ng Dokumento</span>
+                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]"><?= e(__('Uri ng Dokumento')) ?></span>
                 <span class="font-bold text-slate-900 text-sm"><?= e($docType) ?></span>
             </div>
 
             <div class="flex justify-between items-center py-1.5 border-b border-slate-100">
-                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Certificate No.</span>
+                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]"><?= e(__('Certificate No.')) ?></span>
                 <span class="font-mono font-bold text-blue-700 text-sm"><?= e((string)($doc['certificate_no'] ?: $doc['reference_no'])) ?></span>
             </div>
 
             <div class="flex justify-between items-center py-1.5 border-b border-slate-100">
-                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Ipinagkaloob Kay (Issued To)</span>
+                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]"><?= e(__('Ipinagkaloob Kay (Issued To)')) ?></span>
                 <span class="font-bold text-slate-900"><?= e((string)$doc['full_name']) ?></span>
             </div>
 
             <div class="flex justify-between items-center py-1.5 border-b border-slate-100">
-                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Tirahan (Address)</span>
+                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]"><?= e(__('Tirahan (Address)')) ?></span>
                 <span class="font-medium text-slate-800 text-right max-w-[240px] truncate"><?= e((string)$doc['address']) ?></span>
             </div>
 
             <div class="flex justify-between items-center py-1.5 border-b border-slate-100">
-                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Layunin (Purpose)</span>
+                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]"><?= e(__('Layunin (Purpose)')) ?></span>
                 <span class="font-medium text-slate-800 text-right max-w-[240px] truncate"><?= e((string)$doc['purpose']) ?></span>
             </div>
 
             <div class="flex justify-between items-center py-1.5 border-b border-slate-100">
-                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Petsa ng Pagkaka-isyu</span>
+                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]"><?= e(__('Petsa ng Pagkaka-isyu')) ?></span>
                 <span class="font-semibold text-slate-800">
                     <?= !empty($doc['issued_at']) ? date('F d, Y', strtotime((string)$doc['issued_at'])) : date('F d, Y', strtotime((string)$doc['requested_at'])) ?>
                 </span>
             </div>
 
             <div class="flex justify-between items-center py-1.5 border-b border-slate-100">
-                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Nag-isyung Opisyal</span>
+                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]"><?= e(__('Nag-isyung Opisyal')) ?></span>
                 <span class="font-semibold text-slate-800"><?= e((string)($doc['issued_by_name'] ?: 'Barangay Secretary')) ?></span>
             </div>
 
             <div class="flex justify-between items-center py-1.5">
-                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Estado (Status)</span>
+                <span class="text-slate-400 font-semibold uppercase tracking-wider text-[10px]"><?= e(__('Estado (Status)')) ?></span>
                 <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
-                    <i class="bi bi-patch-check-fill text-xs"></i> Aktibo / Rehistrado
+                    <i class="bi bi-patch-check-fill text-xs"></i> <?= e(__('Aktibo / Rehistrado')) ?>
                 </span>
             </div>
         </div>
 
         <div class="mt-6 rounded-2xl bg-blue-50/60 p-3.5 text-center text-[11px] text-blue-900 border border-blue-100">
             <i class="bi bi-lock-fill text-blue-600 me-1"></i>
-            Ang rekord na ito ay protektado ng cryptographic QR code at may digital security hash sa database ng BARANGGABAY.
+            <?= e(__('Ang rekord na ito ay protektado ng cryptographic QR code at may digital security hash sa database ng BARANGGABAY.')) ?>
         </div>
 
         <?php else: ?>
@@ -115,22 +115,22 @@ $docType = $doc ? \App\Models\DocumentRequest::label((string)$doc['document_type
             <div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm mb-3">
                 <i class="bi bi-x-lg text-2xl font-bold"></i>
             </div>
-            <h2 class="text-base font-black text-rose-950">HINDI NATAGPUAN ANG SERTIPIKO</h2>
+            <h2 class="text-base font-black text-rose-950"><?= e(__('HINDI NATAGPUAN ANG SERTIPIKO')) ?></h2>
             <p class="text-xs text-rose-800 mt-1">
-                Ang reference number o QR code na <code class="font-mono font-bold"><?= e($ref) ?></code> ay hindi natagpuan sa opisyal na rekord ng Barangay Poblacion.
+                <?= e(__('Ang reference number o QR code na')) ?> <code class="font-mono font-bold"><?= e($ref) ?></code> <?= e(__('ay hindi natagpuan sa opisyal na rekord ng Barangay Poblacion.')) ?>
             </p>
             <p class="text-[11px] text-rose-600 mt-2">
-                Maaaring peke, binawi, o mali ang na-scan na reference number. Mangyaring sumangguni sa Barangay Hall para sa opisyal na pagpapatotoo.
+                <?= e(__('Maaaring peke, binawi, o mali ang na-scan na reference number. Mangyaring sumangguni sa Barangay Hall para sa opisyal na pagpapatotoo.')) ?>
             </p>
         </div>
         <?php endif; ?>
 
         <div class="mt-6 text-center border-t border-slate-100 pt-4">
             <a href="/" class="text-xs font-semibold text-blue-600 hover:text-blue-800">
-                &larr; Pumunta sa BARANGGABAY Portal
+                <?= e(__('← Pumunta sa BARANGGABAY Portal')) ?>
             </a>
             <div class="text-[10px] text-slate-400 mt-1">
-                &copy; <?= date('Y') ?> Pamahalaang Barangay ng Poblacion. All rights reserved.
+                &copy; <?= date('Y') ?> <?= e(__('Pamahalaang Barangay ng Poblacion. All rights reserved.')) ?>
             </div>
         </div>
     </div>

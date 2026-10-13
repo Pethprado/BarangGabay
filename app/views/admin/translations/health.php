@@ -129,10 +129,10 @@ $__mn = $mnStats ?? ['posts' => 0, 'with_mn' => 0, 'gaps' => 0, 'bisaya_fallback
 $__mnPct = $__mn['posts'] > 0 ? round($__mn['with_mn'] / $__mn['posts'] * 100) : 0; ?>
 <div class="row g-3 mb-4">
     <?php foreach ([
-        ['Manobo coverage', $__mnPct . '%', $__mn['with_mn'] . ' of ' . $__mn['posts'] . ' posts have Manobo', 'bi-translate'],
-        ['Bisaya fallback', (string) $__mn['bisaya_fallback'], 'missing Manobo words filled with Bisaya', 'bi-chat-quote'],
-        ['Unresolved words', (string) $__mn['unresolved'], 'in neither dictionary — add them', 'bi-question-diamond'],
-        ['Posts needing work', (string) (int) ($overview['posts'] ?? 0), 'missing a translation or audio', 'bi-clipboard-x'],
+        [__('Manobo coverage'), $__mnPct . '%', $__mn['with_mn'] . ' of ' . $__mn['posts'] . __(' posts have Manobo'), 'bi-translate'],
+        [__('Bisaya fallback'), (string) $__mn['bisaya_fallback'], __('missing Manobo words filled with Bisaya'), 'bi-chat-quote'],
+        [__('Unresolved words'), (string) $__mn['unresolved'], __('in neither dictionary — add them'), 'bi-question-diamond'],
+        [__('Posts needing work'), (string) (int) ($overview['posts'] ?? 0), 'missing a translation or audio', 'bi-clipboard-x'],
     ] as [$__l, $__v, $__s, $__i]): ?>
     <div class="col-6 col-lg-3">
         <div class="stat-card h-100">
@@ -152,17 +152,17 @@ $__mnPct = $__mn['posts'] > 0 ? round($__mn['with_mn'] / $__mn['posts'] * 100) :
 <?php if (!empty($__mn['top'])): ?>
 <div class="admin-card mb-4" style="padding:1.25rem;">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-        <h2 class="h6 mb-0" style="font-weight:800;color:var(--text-primary);">Translation gaps — most used</h2>
-        <a href="<?= e(route('admin/manobo')) ?>" class="btn-barangay"><i class="bi bi-plus-circle me-1"></i>Add translation in Dictionary</a>
+        <h2 class="h6 mb-0" style="font-weight:800;color:var(--text-primary);"><?= e(__('Translation gaps — most used')) ?></h2>
+        <a href="<?= e(route('admin/manobo')) ?>" class="btn-barangay"><i class="bi bi-plus-circle me-1"></i><?= e(__('Add translation in Dictionary')) ?></a>
     </div>
     <div class="table-responsive">
         <table class="table table-sm mb-0 align-middle">
-            <thead><tr><th>Source word / phrase</th><th>Bisaya fallback used</th><th class="text-end">Times used</th></tr></thead>
+            <thead><tr><th><?= e(__('Source word / phrase')) ?></th><th><?= e(__('Bisaya fallback used')) ?></th><th class="text-end"><?= e(__('Times used')) ?></th></tr></thead>
             <tbody>
             <?php foreach ($__mn['top'] as $__g): ?>
                 <tr>
                     <td class="fw-semibold"><?= e((string) $__g['concept']) ?></td>
-                    <td><?= $__g['bisaya_fallback'] !== null ? e((string) $__g['bisaya_fallback']) : status_badge('failed', 'Unresolved') ?></td>
+                    <td><?= $__g['bisaya_fallback'] !== null ? e((string) $__g['bisaya_fallback']) : status_badge('failed', __('Unresolved')) ?></td>
                     <td class="text-end"><?= (int) $__g['usage_count'] ?></td>
                 </tr>
             <?php endforeach; ?>
@@ -176,16 +176,13 @@ $__mnPct = $__mn['posts'] > 0 ? round($__mn['with_mn'] / $__mn['posts'] * 100) :
 <div class="admin-card mb-4" id="mnRebuild">
     <div class="d-flex flex-wrap align-items-start gap-3">
         <div style="flex:1 1 320px;">
-            <h2 class="h6 mb-1" style="font-weight:800;color:var(--text-primary);">Rebuild MN translations</h2>
+            <h2 class="h6 mb-1" style="font-weight:800;color:var(--text-primary);"><?= e(__('Rebuild MN translations')) ?></h2>
             <p class="mb-0" style="font-size:.85rem;color:var(--text-secondary);">
-                Re-translates machine-made and sample Manobo with the current dictionaries:
-                Manobo first, Bisaya only where Manobo is missing. Words neither dictionary has are
-                flagged as <strong>unresolved</strong> and added to the Manobo gaps list in the Dictionary
-                admin, never passed off as Bisaya. Hand-written Manobo is not changed.
+                <?= e(__('Re-translates machine-made and sample Manobo with the current dictionaries: Manobo first, Bisaya only where Manobo is missing. Words neither dictionary has are flagged as')) ?> <strong><?= e(__('unresolved')) ?></strong> <?= e(__('and added to the Manobo gaps list in the Dictionary admin, never passed off as Bisaya. Hand-written Manobo is not changed.')) ?>
             </p>
         </div>
         <button type="button" class="btn-barangay" id="mnRebuildBtn" onclick="mnRebuild()">
-            <i class="bi bi-arrow-repeat me-1"></i> Rebuild MN translations
+            <i class="bi bi-arrow-repeat me-1"></i> <?= e(__('Rebuild MN translations')) ?>
         </button>
     </div>
     <div id="mnRebuildStatus" class="mt-3 d-none" style="font-size:.85rem;" aria-live="polite"></div>
@@ -196,12 +193,12 @@ async function mnRebuild() {
     var btn = document.getElementById('mnRebuildBtn');
     var status = document.getElementById('mnRebuildStatus');
     var log = document.getElementById('mnRebuildLog');
-    if (!confirm('Re-translate machine-made Manobo for all posts? This can take several minutes.')) { return; }
+    if (!confirm(<?= json_encode(__('Re-translate machine-made Manobo for all posts? This can take several minutes.')) ?>)) { return; }
     btn.disabled = true; log.innerHTML = ''; status.classList.remove('d-none');
     var offset = 0, unresolved = 0, failed = 0;
     try {
         while (true) {
-            status.textContent = 'Working... ' + offset + ' done. Keep this page open.';
+            status.textContent = <?= json_encode(__('Working... ')) ?> + offset + <?= json_encode(__(' done. Keep this page open.')) ?>;
             var fd = new FormData();
             fd.set('csrf_token', <?= json_encode(csrf_token()) ?>);
             fd.set('offset', offset);
@@ -216,12 +213,12 @@ async function mnRebuild() {
             });
             offset = data.next;
             if (data.done) {
-                status.textContent = 'Done: ' + data.total + ' post(s) rebuilt, ' + failed + ' failed, ' + unresolved + ' unresolved word(s) left in MN text (fill them in Dictionary → missing concepts).';
+                status.textContent = <?= json_encode(__('Done: ')) ?> + data.total + ' post(s) rebuilt, ' + failed + ' failed, ' + unresolved + <?= json_encode(__(' unresolved word(s) left in MN text (fill them in Dictionary → missing concepts).')) ?>;
                 break;
             }
         }
     } catch (e) {
-        status.textContent = 'Stopped at ' + offset + ': ' + e.message + '. Click again to restart.';
+        status.textContent = <?= json_encode(__('Stopped at ')) ?> + offset + ': ' + e.message + '. Click again to restart.';
     }
     btn.disabled = false;
 }

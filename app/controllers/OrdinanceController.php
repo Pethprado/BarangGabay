@@ -53,6 +53,17 @@ class OrdinanceController
     public function adminIndex(): void
     {
         $ordinances   = Ordinance::all();
+
+        // ?mine=1 — the staff sidebar's "My Ordinances": what this person uploaded.
+        $mine = ($_GET['mine'] ?? '') === '1';
+        if ($mine) {
+            $me = (int) ($_SESSION['user_id'] ?? 0);
+            $ordinances = array_values(array_filter(
+                $ordinances,
+                static fn (array $o): bool => (int) ($o['uploaded_by'] ?? 0) === $me
+            ));
+        }
+
         $pageTitle    = t('admin_ordinances.title');
         $pendingCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn();
         /* Why a language is missing, for every ordinance on this page, in
@@ -62,7 +73,7 @@ class OrdinanceController
             array_map(static fn (array $o): int => (int) $o['id'], $ordinances)
         );
 
-        view('admin/ordinances/index', compact('ordinances', 'pageTitle', 'pendingCount', 'ordAttempts'));
+        view('admin/ordinances/index', compact('ordinances', 'pageTitle', 'pendingCount', 'ordAttempts', 'mine'));
     }
 
     /** GET /admin/ordinances/upload */
@@ -95,7 +106,7 @@ class OrdinanceController
         );
 
         if (!$title || !$ordinanceNo || (empty($_FILES['file']['tmp_name']) && $imported === null)) {
-            flash('error', 'Title, ordinance number and PDF are required.');
+            flash('error', __('Title, ordinance number and PDF are required.'));
             redirect('/admin/ordinances/upload');
         }
 
@@ -110,7 +121,7 @@ class OrdinanceController
             try {
                 $fileUrl = (new FileService())->upload($_FILES['file'], 'ordinances');
             } catch (\Throwable $e) {
-                flash('error', 'PDF upload failed: ' . $e->getMessage());
+                flash('error', __('PDF upload failed: :error', ['error' => $e->getMessage()]));
                 redirect('/admin/ordinances/upload');
             }
         } else {
@@ -221,7 +232,7 @@ class OrdinanceController
     {
         $ordinance = Ordinance::find((int) ($params['id'] ?? 0));
         if (!$ordinance) {
-            flash('error', 'Ordinance not found.');
+            flash('error', __('Ordinance not found.'));
             redirect('/admin/ordinances');
         }
         $pageTitle    = t('admin_ordinances.edit_title');
@@ -237,7 +248,7 @@ class OrdinanceController
         $id        = (int) ($params['id'] ?? 0);
         $ordinance = Ordinance::find($id);
         if (!$ordinance) {
-            flash('error', 'Ordinance not found.');
+            flash('error', __('Ordinance not found.'));
             redirect('/admin/ordinances');
         }
 
@@ -249,7 +260,7 @@ class OrdinanceController
         $status      = \trim($_POST['status']        ?? 'active');
 
         if (!$title || !$ordinanceNo) {
-            flash('error', 'Title and ordinance number are required.');
+            flash('error', __('Title and ordinance number are required.'));
             redirect("/admin/ordinances/{$id}/edit");
         }
 
@@ -259,7 +270,7 @@ class OrdinanceController
             try {
                 $fileUrl = (new FileService())->upload($_FILES['file'], 'ordinances');
             } catch (\Throwable $e) {
-                flash('error', 'PDF upload failed: ' . $e->getMessage());
+                flash('error', __('PDF upload failed: :error', ['error' => $e->getMessage()]));
                 redirect("/admin/ordinances/{$id}/edit");
             }
         }
@@ -368,27 +379,10 @@ class OrdinanceController
     public function destroy(array $params): void
     {
         check_csrf();
-
-        $id        = (int) ($params['id'] ?? 0);
-        $ordinance = Ordinance::find($id);
-        if (!$ordinance) {
-            flash('error', 'Ordinance not found.');
-            redirect('/admin/ordinances');
-        }
-
-        // Before the row goes: the generated MP3s are files on disk that
-        // nothing else would ever clean up.
-        PostAudioService::purgeFor('ordinance', $id);
-
-        Ordinance::delete($id);
-
-        AuditLog::record(
-            (int) $_SESSION['user_id'],
-            'ordinance.delete',
-            'Deleted ordinance: ' . ($ordinance['title'] ?? "#{$id}")
-        );
-        flash('success', t('flash.ord_deleted'));
-        redirect('/admin/ordinances');
+        // Not deleted for good: moved to the Trash (/admin/trash), where it
+        // can be restored. Generated audio and files are only removed when
+        // an admin deletes it from the Trash. Staff may trash their own posts.
+        trash_post('ordinance', (int) ($params['id'] ?? 0), '/admin/ordinances' . (str_contains((string) ($_SERVER['HTTP_REFERER'] ?? ''), 'mine=1') ? '?mine=1' : ''));
     }
 
     /**

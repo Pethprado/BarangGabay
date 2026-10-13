@@ -129,7 +129,7 @@ class SocialAuthController
         unset($_SESSION['oauth_state'][$provider]);
         $code = (string) ($_GET['code'] ?? '');
         if ($expected === '' || !hash_equals($expected, (string) ($_GET['state'] ?? '')) || $code === '') {
-            flash('error', 'Sign-in was cancelled or expired. Please try again.');
+            flash('error', __('Sign-in was cancelled or expired. Please try again.'));
             redirect('/login');
         }
         return $code;
@@ -141,7 +141,7 @@ class SocialAuthController
 
         if ($user === null) {
             $_SESSION['oauth_prefill'] = ['email' => $email, 'full_name' => $name, 'provider' => $provider];
-            flash('success', 'No BarangGabay account uses ' . $email . ' yet. Finish registering below — your ID still needs to be verified by the barangay.');
+            flash('success', __('No BarangGabay account uses :email yet. Finish registering below — your ID still needs to be verified by the barangay.', ['email' => $email]));
             redirect('/register');
         }
         if (($user['status'] ?? '') === 'suspended') {
@@ -150,7 +150,7 @@ class SocialAuthController
         }
         if (($user['role'] ?? '') !== 'resident') {
             AuditLog::record((int) $user['id'], 'auth.social_refused', ucfirst($provider) . ' sign-in refused for a back-office account');
-            flash('error', 'Staff and admin accounts must sign in with their email and password.');
+            flash('error', __('Staff and admin accounts must sign in with their email and password.'));
             redirect('/login');
         }
 
@@ -171,7 +171,7 @@ class SocialAuthController
 
     private function fail(): void
     {
-        flash('error', 'Sign-in with that provider failed. Please try again or use your email and password.');
+        flash('error', __('Sign-in with that provider failed. Please try again or use your email and password.'));
         redirect('/login');
     }
 

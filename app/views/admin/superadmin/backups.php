@@ -104,14 +104,14 @@ ob_start();
     <i class="bi bi-x-octagon-fill" style="color:#dc2626;font-size:1.15rem;flex-shrink:0;margin-top:2px;"></i>
     <div>
         <p class="bk-title" style="margin:0 0 5px;font-weight:700;font-size:.92rem;">
-            <?= e(($driver ?? 'mysql') === 'pgsql' ? 'pg_dump was not found' : t('superadmin.bk_no_dump_title')) ?>
+            <?= e(($driver ?? 'mysql') === 'pgsql' ? __('pg_dump was not found') : t('superadmin.bk_no_dump_title')) ?>
         </p>
         <p class="bk-body" style="margin:0;font-size:.83rem;line-height:1.7;">
             <?php if (($driver ?? 'mysql') === 'pgsql'): ?>
-                Backups require the PostgreSQL dump utility (<span class="bk-code">pg_dump</span>). Install <span class="bk-code">postgresql-client</span> or configure <span class="bk-code">PG_DUMP_PATH</span> in your environment.
+                <?= e(__('Backups require the PostgreSQL dump utility (')) ?><span class="bk-code"><?= e(__('pg_dump')) ?></span><?= e(__('). Install')) ?> <span class="bk-code"><?= e(__('postgresql-client')) ?></span> <?= e(__('or configure')) ?> <span class="bk-code"><?= e(__('PG_DUMP_PATH')) ?></span> <?= e(__('in your environment.')) ?>
             <?php else: ?>
                 <?= e(t('superadmin.bk_no_dump_body')) ?>
-                <span class="bk-code">MYSQLDUMP_PATH</span>
+                <span class="bk-code"><?= e(__('MYSQLDUMP_PATH')) ?></span>
             <?php endif; ?>
         </p>
     </div>
@@ -156,12 +156,12 @@ ob_start();
             $toolStatus    = $available ? ($dumpToolLabel . ' (Available)') : ($dumpToolLabel . ' (Missing)');
 
             $summary = [
-                ['Database Type',  $dbDriverLabel],
-                ['Backup Tool',    $toolStatus],
+                [__('Database Type'),  $dbDriverLabel],
+                [__('Backup Tool'),    $toolStatus],
                 [t('superadmin.bk_count'),  count($backups) . ' / ' . $keepLatest],
                 [t('superadmin.bk_total'),  $bytes($totalSize)],
                 [t('superadmin.bk_last'),   $lastBackup === null ? '—' : $ago((int) $lastBackup)],
-                [t('superadmin.bk_sched'), 'Enabled (Daily at 2:00 AM)'],
+                [t('superadmin.bk_sched'), __('Enabled (Daily at 2:00 AM)')],
             ];
             foreach ($summary as [$label, $value]): ?>
             <div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;
@@ -184,7 +184,7 @@ ob_start();
                 <?= e(t('superadmin.bk_schedule_title')) ?>
             </h2>
             <p class="text-muted mb-2" style="font-size:.82rem;line-height:1.7;">
-                Automatic backups run nightly at 2:00 AM. In production on Render / Linux, trigger the backup CLI task:
+                <?= e(__('Automatic backups run nightly at 2:00 AM. In production on Render / Linux, trigger the backup CLI task:')) ?>
             </p>
             <?php if (PHP_OS_FAMILY === 'Windows'): ?>
             <p class="bk-code mb-3" style="display:block;padding:10px 12px;line-height:1.7;">
@@ -205,7 +205,7 @@ ob_start();
             </h2>
             <p class="text-muted mb-0" style="font-size:.82rem;line-height:1.7;">
                 <?= e(t('superadmin.bk_restore_body')) ?>
-                <span class="bk-code">storage/backups/README.md</span>
+                <span class="bk-code"><?= e(__('storage/backups/README.md')) ?></span>
             </p>
         </div>
     </div>

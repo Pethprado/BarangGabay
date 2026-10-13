@@ -24,22 +24,19 @@ ob_start();
 <div class="print-only" style="display:none; padding:2rem; font-family:Georgia,serif;">
     <div style="text-align:center; border-bottom:2px solid #000; padding-bottom:1rem; margin-bottom:1.5rem;">
         <h2 style="margin:0; font-size:1.1rem; text-transform:uppercase; letter-spacing:.05em;">
-            BARANGAY BAYOGO, MADRID, SURIGAO DEL SUR
+            <?= e(__('BARANGAY BAYOGO, MADRID, SURIGAO DEL SUR')) ?>
         </h2>
-        <p style="margin:.25rem 0 0; font-size:.85rem;">Official Barangay Communication</p>
+        <p style="margin:.25rem 0 0; font-size:.85rem;"><?= e(__('Official Barangay Communication')) ?></p>
     </div>
     <h1 style="font-size:1.4rem; margin-bottom:.5rem;"><?= e($announcement['title'] ?? '') ?></h1>
     <p style="font-size:.8rem; color:#555; margin-bottom:1.5rem;">
-        Category: <?= e(ucfirst($announcement['category'] ?? '')) ?> &nbsp;|&nbsp;
-        Urgency: <?= e(ucfirst($announcement['urgency'] ?? '')) ?> &nbsp;|&nbsp;
-        Status: <?= e(ucfirst($announcement['status'] ?? '')) ?> &nbsp;|&nbsp;
-        Date: <?= !empty($announcement['published_at']) ? date('F j, Y', strtotime($announcement['published_at'])) : date('F j, Y') ?>
+        <?= e(__('Category:')) ?> <?= e(ucfirst($announcement['category'] ?? '')) ?> <?= e(__('|  Urgency:')) ?> <?= e(ucfirst($announcement['urgency'] ?? '')) ?> <?= e(__('|  Status:')) ?> <?= e(ucfirst($announcement['status'] ?? '')) ?> <?= e(__('|  Date:')) ?> <?= !empty($announcement['published_at']) ? date('F j, Y', strtotime($announcement['published_at'])) : date('F j, Y') ?>
     </p>
     <div style="line-height:1.7; font-size:.95rem;">
         <?= $announcement['body'] ?? '' ?>
     </div>
     <div style="margin-top:3rem; border-top:1px solid #000; padding-top:1rem; font-size:.75rem; color:#555; text-align:center;">
-        Barangay Bayogo, Madrid, Surigao del Sur &mdash; Official Announcement
+        <?= e(__('Barangay Bayogo, Madrid, Surigao del Sur — Official Announcement')) ?>
     </div>
 </div>
 
@@ -47,7 +44,7 @@ ob_start();
 <div class="no-print">
 
 <div class="d-flex align-items-center justify-content-between mb-4">
-    <nav aria-label="breadcrumb">
+    <nav aria-label="<?= e(__('breadcrumb')) ?>">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item"><a href="<?= e(route('admin/announcements')) ?>"><?= e(t('admin_nav.announcements')) ?></a></li>
             <li class="breadcrumb-item active"><?= e(t('admin_announcements.breadcrumb_edit_prefix')) ?>: <?= e($announcement['title'] ?? '') ?></li>
@@ -201,7 +198,7 @@ ob_start();
 
                         <template x-if="preview">
                             <div @click.stop>
-                                <img :src="preview" alt="Preview" class="upload-preview-img mb-3">
+                                <img :src="preview" alt="<?= e(__('Preview')) ?>" class="upload-preview-img mb-3">
                                 <button type="button" class="btn btn-sm btn-outline-danger" @click="clearImage()">
                                     <i class="bi bi-x-lg me-1"></i><?= e(t('admin_announcements.remove_new_selection')) ?>
                                 </button>

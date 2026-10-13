@@ -67,7 +67,9 @@ class DocumentPayment
 
     public static function statusLabel(string $status): string
     {
-        return self::STATUS_LABELS[$status] ?? ucfirst(strtolower(str_replace('_', ' ', $status)));
+        // The stored labels are bilingual ("Libre (Free)"); __() shows the
+        // reader's language only.
+        return __(self::STATUS_LABELS[$status] ?? ucwords(strtolower(str_replace('_', ' ', $status))));
     }
 
     /**

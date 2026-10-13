@@ -29,7 +29,7 @@ ob_start();
 </style>
 
 <!-- ── Breadcrumb ────────────────────────────────────────────────── -->
-<nav style="margin-bottom:20px;" aria-label="breadcrumb">
+<nav style="margin-bottom:20px;" aria-label="<?= e(__('breadcrumb')) ?>">
     <ol style="list-style:none;display:flex;align-items:center;gap:6px;padding:0;margin:0;font-size:.82rem;color:var(--text-muted);">
         <li><a href="<?= e(route('admin')) ?>" style="color:var(--text-muted);text-decoration:none;hover:color:var(--brand-primary);"><?= e(t('admin_nav.dashboard')) ?></a></li>
         <li style="color:#e4ece6;">/</li>

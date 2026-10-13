@@ -225,9 +225,9 @@ ob_start();
     <!-- ── Document Issuance, Delivery & Signatories ───────────────────── -->
     <div class="set-section mt-3">
         <p class="set-legend">
-            <i class="bi bi-file-earmark-check me-1" style="color:var(--brand-primary);"></i>Mga Setting ng Pag-iisyu ng Dokumento at Delivery
+            <i class="bi bi-file-earmark-check me-1" style="color:var(--brand-primary);"></i><?= e(__('Mga Setting ng Pag-iisyu ng Dokumento at Delivery')) ?>
         </p>
-        <p class="set-help">Pamahalaan ang mga paraan ng pagkuha ng dokumento, delivery fee, at mga opisyal na lalagda sa mga sertipiko.</p>
+        <p class="set-help"><?= e(__('Pamahalaan ang mga paraan ng pagkuha ng dokumento, delivery fee, at mga opisyal na lalagda sa mga sertipiko.')) ?></p>
 
         <div class="row g-3">
             <div class="col-md-4">
@@ -237,10 +237,10 @@ ob_start();
                            <?= (int) ($settings['doc_digital_enabled'] ?? 1) === 1 ? 'checked' : '' ?>
                            style="cursor:pointer;">
                     <label class="form-check-label" for="docDigital" style="font-weight:600;font-size:.84rem;cursor:pointer;">
-                        Digital Soft Copy (Online Download)
+                        <?= e(__('Digital Soft Copy (Online Download)')) ?>
                     </label>
                 </div>
-                <p class="form-text" style="font-size:.72rem;">Pahintulutan ang mga residente na makakuha ng digital PDF copy online.</p>
+                <p class="form-text" style="font-size:.72rem;"><?= e(__('Pahintulutan ang mga residente na makakuha ng digital PDF copy online.')) ?></p>
             </div>
 
             <div class="col-md-4">
@@ -250,10 +250,10 @@ ob_start();
                            <?= (int) ($settings['doc_pickup_enabled'] ?? 1) === 1 ? 'checked' : '' ?>
                            style="cursor:pointer;">
                     <label class="form-check-label" for="docPickup" style="font-weight:600;font-size:.84rem;cursor:pointer;">
-                        Personal Pickup sa Barangay Hall
+                        <?= e(__('Personal Pickup sa Barangay Hall')) ?>
                     </label>
                 </div>
-                <p class="form-text" style="font-size:.72rem;">Pahintulutan ang personal na pagkuha ng pisikal na kopya sa counter.</p>
+                <p class="form-text" style="font-size:.72rem;"><?= e(__('Pahintulutan ang personal na pagkuha ng pisikal na kopya sa counter.')) ?></p>
             </div>
 
             <div class="col-md-4">
@@ -263,30 +263,30 @@ ob_start();
                            <?= (int) ($settings['doc_delivery_enabled'] ?? 1) === 1 ? 'checked' : '' ?>
                            style="cursor:pointer;">
                     <label class="form-check-label" for="docDelivery" style="font-weight:600;font-size:.84rem;cursor:pointer;">
-                        Serbisyo ng Home Delivery
+                        <?= e(__('Serbisyo ng Home Delivery')) ?>
                     </label>
                 </div>
-                <p class="form-text" style="font-size:.72rem;">I-enable ang delivery ng opisyal na sertipiko diretso sa tirahan.</p>
+                <p class="form-text" style="font-size:.72rem;"><?= e(__('I-enable ang delivery ng opisyal na sertipiko diretso sa tirahan.')) ?></p>
             </div>
         </div>
 
         <div class="row g-3 mt-1 border-top pt-2">
             <div class="col-md-4">
-                <label class="form-label" style="font-size:.78rem;font-weight:600;">Karagdagang Bayad sa Delivery (₱)</label>
+                <label class="form-label" style="font-size:.78rem;font-weight:600;"><?= e(__('Karagdagang Bayad sa Delivery (₱)')) ?></label>
                 <input type="number" step="0.50" min="0" name="doc_delivery_fee"
                        value="<?= e($val('doc_delivery_fee', '40.00')) ?>"
                        class="form-control" style="border-radius:8px;">
             </div>
 
             <div class="col-md-4">
-                <label class="form-label" style="font-size:.78rem;font-weight:600;">Pangalan ng Punong Barangay (Kapitan)</label>
+                <label class="form-label" style="font-size:.78rem;font-weight:600;"><?= e(__('Pangalan ng Punong Barangay (Kapitan)')) ?></label>
                 <input type="text" name="barangay_captain_name"
                        value="<?= e($val('barangay_captain_name', 'HON. JUAN DELA CRUZ')) ?>"
                        class="form-control" style="border-radius:8px;">
             </div>
 
             <div class="col-md-4">
-                <label class="form-label" style="font-size:.78rem;font-weight:600;">Pangalan ng Barangay Secretary</label>
+                <label class="form-label" style="font-size:.78rem;font-weight:600;"><?= e(__('Pangalan ng Barangay Secretary')) ?></label>
                 <input type="text" name="barangay_secretary_name"
                        value="<?= e($val('barangay_secretary_name', 'MARIA SANTOS')) ?>"
                        class="form-control" style="border-radius:8px;">
@@ -367,17 +367,15 @@ ob_start();
 <?php
 use App\Services\PayMongoService as __PM;
 $__pmFields = [
-    'PAYMONGO_SECRET_KEY'     => ['Secret key', 'sk_test_… or sk_live_…'],
-    'PAYMONGO_PUBLIC_KEY'     => ['Public key', 'pk_test_… or pk_live_…'],
-    'PAYMONGO_WEBHOOK_SECRET' => ['Webhook signing secret', 'whsk_…'],
+    'PAYMONGO_SECRET_KEY'     => [__('Secret key'), 'sk_test_… or sk_live_…'],
+    'PAYMONGO_PUBLIC_KEY'     => [__('Public key'), 'pk_test_… or pk_live_…'],
+    'PAYMONGO_WEBHOOK_SECRET' => [__('Webhook signing secret'), 'whsk_…'],
 ];
 ?>
 <div class="admin-card" id="payment-gateway">
-    <p class="set-legend"><i class="bi bi-wallet2 me-1" style="color:var(--brand-primary);"></i>Payment Gateway — PayMongo GCash</p>
+    <p class="set-legend"><i class="bi bi-wallet2 me-1" style="color:var(--brand-primary);"></i><?= e(__('Payment Gateway — PayMongo GCash')) ?></p>
     <p class="set-help">
-        Keys are encrypted before they are stored and are never shown again. Render environment
-        variables, if set, take precedence. Mode now: <strong><?= __PM::getMode() === 'live' ? 'LIVE (real money)' : 'TEST (no real money)' ?></strong>.
-        Webhook URL for PayMongo: <code><?= e(route('api/webhooks/paymongo')) ?></code>
+        <?= e(__('Keys are encrypted before they are stored and are never shown again. Render environment variables, if set, take precedence. Mode now:')) ?> <strong><?= __PM::getMode() === 'live' ? __('LIVE (real money)') : __('TEST (no real money)') ?></strong><?= e(__('. Webhook URL for PayMongo:')) ?> <code><?= e(route('api/webhooks/paymongo')) ?></code>
     </p>
     <form method="POST" action="<?= e(route('superadmin/settings/paymongo')) ?>" autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
@@ -386,29 +384,29 @@ $__pmFields = [
             <div class="col-12 col-lg-4">
                 <label class="form-label" for="pm_<?= e($__name) ?>" style="font-size:.78rem;font-weight:600;"><?= e($__label) ?></label>
                 <input type="password" class="form-control" id="pm_<?= e($__name) ?>" name="<?= e($__name) ?>"
-                       placeholder="<?= e($__src !== '' ? 'Saved — leave blank to keep' : $__ph) ?>" autocomplete="new-password" spellcheck="false">
+                       placeholder="<?= e($__src !== '' ? __('Saved — leave blank to keep') : $__ph) ?>" autocomplete="new-password" spellcheck="false">
                 <div class="form-text" style="font-size:.74rem;">
-                    <?= $__src === 'env' ? '✓ Set in the server environment' : ($__src === 'stored' ? '✓ Saved (encrypted)' : '✗ Not set') ?>
+                    <?= $__src === 'env' ? __('✓ Set in the server environment') : ($__src === 'stored' ? __('✓ Saved (encrypted)') : __('✗ Not set')) ?>
                 </div>
             </div>
             <?php endforeach; ?>
         </div>
-        <button type="submit" class="btn btn-barangay mt-3" style="border-radius:8px;font-weight:600;"><i class="bi bi-shield-lock me-1"></i>Save payment keys</button>
+        <button type="submit" class="btn btn-barangay mt-3" style="border-radius:8px;font-weight:600;"><i class="bi bi-shield-lock me-1"></i><?= e(__('Save payment keys')) ?></button>
     </form>
 </div>
 
 <!-- ── Danger zone ─────────────────────────────────────────────────────── -->
 <div class="admin-card" id="danger-zone" style="border:1px solid var(--status-danger);">
-    <p class="set-legend" style="color:var(--status-danger);"><i class="bi bi-exclamation-octagon me-1"></i>Danger zone — clear all document requests</p>
-    <p class="set-help">Deletes every document request with its payments, uploaded files, logs and notifications — for clearing test data. Document fees, residents and other modules are not touched. This cannot be undone.</p>
+    <p class="set-legend" style="color:var(--status-danger);"><i class="bi bi-exclamation-octagon me-1"></i><?= e(__('Danger zone — clear all document requests')) ?></p>
+    <p class="set-help"><?= e(__('Deletes every document request with its payments, uploaded files, logs and notifications — for clearing test data. Document fees, residents and other modules are not touched. This cannot be undone.')) ?></p>
     <form method="POST" action="<?= e(route('superadmin/settings/clear-document-requests')) ?>" class="d-flex flex-wrap gap-2 align-items-end"
-          onsubmit="return confirm('Delete ALL document requests and payments? This cannot be undone.');">
+          onsubmit="return confirm(<?= e(json_encode(__('Delete ALL document requests and payments? This cannot be undone.'))) ?>);">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
         <div style="flex:1 1 260px;">
-            <label class="form-label" for="clearPhrase" style="font-size:.78rem;font-weight:600;">Type <code>DELETE ALL REQUESTS</code> to confirm</label>
+            <label class="form-label" for="clearPhrase" style="font-size:.78rem;font-weight:600;"><?= e(__('Type')) ?> <code>DELETE ALL REQUESTS</code> <?= e(__('to confirm')) ?></label>
             <input class="form-control" id="clearPhrase" name="confirm_phrase" autocomplete="off" required>
         </div>
-        <button type="submit" class="btn btn-outline-danger" style="border-radius:8px;font-weight:600;"><i class="bi bi-trash me-1"></i>Clear all requests</button>
+        <button type="submit" class="btn btn-outline-danger" style="border-radius:8px;font-weight:600;"><i class="bi bi-trash me-1"></i><?= e(__('Clear all requests')) ?></button>
     </form>
 </div>
 

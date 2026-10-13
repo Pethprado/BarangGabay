@@ -28,7 +28,7 @@ ob_start();
 ?>
 
 <!-- ── Breadcrumb ─────────────────────────────────────────────── -->
-<nav class="mb-5 flex items-center gap-2 text-xs text-slate-400" aria-label="Breadcrumb">
+<nav class="mb-5 flex items-center gap-2 text-xs text-slate-400" aria-label="<?= e(__('Breadcrumb')) ?>">
     <a href="<?= e(route('')) ?>" class="hover:text-blue-700 transition-colors"><?= e(t('nav.home')) ?></a>
     <i class="bi bi-chevron-right" style="font-size:.65rem;"></i>
     <a href="<?= e(route('announcements')) ?>" class="hover:text-blue-700 transition-colors"><?= e(t('nav.announcements')) ?></a>
@@ -294,7 +294,7 @@ ob_start();
     btn.addEventListener('click', () => {
         navigator.clipboard.writeText(btn.dataset.url).then(() => {
             const txt = document.getElementById('copyLinkText');
-            txt.textContent = 'Nakopya!';
+            txt.textContent = <?= json_encode(__('Nakopya!')) ?>;
             btn.classList.add('text-blue-700', 'border-blue-300');
             setTimeout(() => {
                 txt.textContent = <?= json_encode(t('res_announcement_detail.copy_link')) ?>;

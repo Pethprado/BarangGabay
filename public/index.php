@@ -174,16 +174,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // tools/retry-translations.php does the same thing on a schedule for
     // deployments that have one. Running both is safe: each attempt is
     // claimed with a conditional UPDATE before any API call.
-    $retryEvery = 900;   // seconds
-    $lastRetry  = (int) ($_SESSION['bg_translation_retry_at'] ?? 0);
-
-    if (time() - $lastRetry >= $retryEvery) {
-        $_SESSION['bg_translation_retry_at'] = time();
-        try {
-            (new App\Services\TranslationRetryRunner())->run();
-        } catch (\Throwable $e) {
-            error_log('[translation retry sweep] ' . $e->getMessage());
-        }
+    //
+    // It no longer runs HERE, inside the page load: one Manobo post with 32
+    // untranslated parts kept a resident's page loading for minutes while the
+    // free Bisaya service was throttled. This only notes that a sweep is due;
+    // the layout then asks for it in the background once the page has loaded
+    // (shared/_background-sweep.php → MaintenanceController::translationSweep).
+    $lastRetry = (int) ($_SESSION['bg_translation_retry_at'] ?? 0);
+    if (time() - $lastRetry >= App\Controllers\MaintenanceController::TRANSLATION_SWEEP_EVERY) {
+        $GLOBALS['bg_translation_sweep_due'] = true;
     }
 }
 

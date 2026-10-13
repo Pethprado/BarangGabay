@@ -58,19 +58,25 @@ return [
     // way to try again is to re-save the post.
     ['POST', '/admin/announcements/{id}/translate', 'AnnouncementController@retranslate', ['auth', 'role:admin,staff']],
     ['POST', '/admin/announcements/{id}', 'AnnouncementController@update', ['auth', 'role:admin,staff']],
-    ['POST', '/admin/announcements/{id}/delete', 'AnnouncementController@destroy', ['auth', 'role:admin']],
+    ['POST', '/admin/announcements/{id}/delete', 'AnnouncementController@destroy', ['auth', 'role:admin,staff']],   // → Trash; staff: own posts only
     ['GET', '/admin/events', 'EventController@adminIndex', ['auth', 'role:admin,staff']],
     ['GET', '/admin/events/create', 'EventController@create', ['auth', 'role:admin,staff']],
     ['POST', '/admin/events', 'EventController@store', ['auth', 'role:admin,staff']],
     ['GET', '/admin/events/{id}/edit', 'EventController@edit', ['auth', 'role:admin,staff']],
     ['POST', '/admin/events/{id}', 'EventController@update', ['auth', 'role:admin,staff']],
-    ['POST', '/admin/events/{id}/delete', 'EventController@destroy', ['auth', 'role:admin']],
+    ['POST', '/admin/events/{id}/delete', 'EventController@destroy', ['auth', 'role:admin,staff']],   // → Trash; staff: own posts only
     ['GET', '/admin/ordinances', 'OrdinanceController@adminIndex', ['auth', 'role:admin,staff']],
     ['GET', '/admin/ordinances/upload', 'OrdinanceController@create', ['auth', 'role:admin,staff']],
     ['POST', '/admin/ordinances', 'OrdinanceController@store', ['auth', 'role:admin,staff']],
     ['GET', '/admin/ordinances/{id}/edit', 'OrdinanceController@edit', ['auth', 'role:admin,staff']],
     ['POST', '/admin/ordinances/{id}', 'OrdinanceController@update', ['auth', 'role:admin,staff']],
-    ['POST', '/admin/ordinances/{id}/delete', 'OrdinanceController@destroy', ['auth', 'role:admin']],
+    ['POST', '/admin/ordinances/{id}/delete', 'OrdinanceController@destroy', ['auth', 'role:admin,staff']],   // → Trash; staff: own posts only
+
+    // Trash: deleted announcements, events and ordinances (restore = posted again).
+    ['GET',  '/admin/trash',              'TrashController@index',      ['auth', 'role:admin,staff']],
+    ['POST', '/admin/trash/empty',        'TrashController@emptyTrash', ['auth', 'role:admin']],
+    ['POST', '/admin/trash/{id}/restore', 'TrashController@restore',    ['auth', 'role:admin,staff']],
+    ['POST', '/admin/trash/{id}/delete',  'TrashController@destroy',    ['auth', 'role:admin']],
     // Back-office account list. Staff could be created but never listed again,
 // which made a forgotten staff password unrecoverable.
 // Review gate for machine-translated URGENT announcements. Staff-level on

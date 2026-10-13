@@ -3,7 +3,7 @@
  * Import Preview and Curation Page for Manobo Vocabulary Documents.
  * Allows administrators to preview, correct, and map extracted entries before confirming import.
  */
-$filename     = $filename     ?? 'Document';
+$filename     = $filename     ?? __('Document');
 $entries      = $entries      ?? [];
 $unclearCount = $unclearCount ?? 0;
 $needsReview  = $needsReview  ?? false;
@@ -19,15 +19,15 @@ ob_start();
             <?= e(t('admin_nav.management')) ?> &raquo; Manobo Dictionary
         </p>
         <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;">
-            <i class="bi bi-file-earmark-text text-primary me-2"></i>Preview at Suriin ang In-upload na Dokumento
+            <i class="bi bi-file-earmark-text text-primary me-2"></i><?= e(__('Preview at Suriin ang In-upload na Dokumento')) ?>
         </h1>
         <p class="text-muted mt-1 mb-0" style="font-size:.85rem;">
-            Dokumento: <strong><?= e($filename) ?></strong> &bull; Nabasa: <strong><?= count($entries) ?></strong> entri.
+            <?= e(__('Dokumento:')) ?> <strong><?= e($filename) ?></strong> <?= e(__('• Nabasa:')) ?> <strong><?= count($entries) ?></strong> <?= e(__('entri.')) ?>
         </p>
     </div>
     <div class="d-flex gap-2">
         <a href="<?= e(route('admin/manobo')) ?>" class="btn btn-outline-secondary btn-sm" style="border-radius:8px;font-weight:600;">
-            <i class="bi bi-x-circle me-1"></i>Kanselahin (Cancel)
+            <i class="bi bi-x-circle me-1"></i><?= e(__('Kanselahin (Cancel)')) ?>
         </a>
     </div>
 </div>
@@ -36,9 +36,9 @@ ob_start();
 <div class="alert alert-warning border-0 shadow-sm d-flex align-items-start gap-3 mb-4" style="border-radius:12px;background-color:#fffbe0;border-left:4px solid #f59e0b !important;">
     <i class="bi bi-exclamation-triangle-fill text-warning fs-4 flex-shrink-0"></i>
     <div>
-        <h6 class="fw-bold mb-1 text-dark">Kailangan ng Manu-manong Pagsusuri (Review Required)</h6>
+        <h6 class="fw-bold mb-1 text-dark"><?= e(__('Kailangan ng Manu-manong Pagsusuri (Review Required)')) ?></h6>
         <p class="mb-0 text-muted" style="font-size:.85rem;">
-            Mayroong <strong><?= (int)$unclearCount ?></strong> entri na may hindi tiyak na pagkakabasa mula sa scanned/PDF document. Mangyaring suriin at iwasto ang spelling, kahulugan, o hanay bago kumpirmahin ang pag-import. Hindi kami kailanman nag-imbento ng kulang na salita.
+            <?= e(__('Mayroong')) ?> <strong><?= (int)$unclearCount ?></strong> <?= e(__('entri na may hindi tiyak na pagkakabasa mula sa scanned/PDF document. Mangyaring suriin at iwasto ang spelling, kahulugan, o hanay bago kumpirmahin ang pag-import. Hindi kami kailanman nag-imbento ng kulang na salita.')) ?>
         </p>
     </div>
 </div>
@@ -50,10 +50,10 @@ ob_start();
     <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
         <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-bold" style="font-size:1rem;color:var(--text-primary);">
-                <i class="bi bi-list-check me-2 text-primary"></i>Mga Na-extract na Bokabularyo (Extracted Entries)
+                <i class="bi bi-list-check me-2 text-primary"></i><?= e(__('Mga Na-extract na Bokabularyo (Extracted Entries)')) ?>
             </h5>
             <span class="badge bg-primary-subtle text-primary" style="font-size:.8rem;padding:.4em .8em;">
-                Kabuuan: <?= count($entries) ?>
+                <?= e(__('Kabuuan:')) ?> <?= count($entries) ?>
             </span>
         </div>
         <div class="table-responsive">
@@ -61,14 +61,14 @@ ob_start();
                 <thead style="background-color:var(--bg-secondary, #f8fafc);">
                     <tr style="border-bottom:2px solid var(--border, #e2e8f0);">
                         <th style="width:40px;text-align:center;">#</th>
-                        <th style="width:160px;">Manobo Word / Phrase</th>
-                        <th style="width:160px;">English Meaning</th>
-                        <th style="width:160px;">Tagalog / Filipino</th>
-                        <th style="width:140px;">Bisaya / Cebuano</th>
-                        <th style="width:110px;">Category</th>
+                        <th style="width:160px;"><?= e(__('Manobo Word / Phrase')) ?></th>
+                        <th style="width:160px;"><?= e(__('English Meaning')) ?></th>
+                        <th style="width:160px;"><?= e(__('Tagalog / Filipino')) ?></th>
+                        <th style="width:140px;"><?= e(__('Bisaya / Cebuano')) ?></th>
+                        <th style="width:110px;"><?= e(__('Category')) ?></th>
                         <th style="width:100px;">POS</th>
-                        <th style="width:140px;">Status / Duplicate</th>
-                        <th style="width:150px;text-align:center;">Aksyon (Action)</th>
+                        <th style="width:140px;"><?= e(__('Status / Duplicate')) ?></th>
+                        <th style="width:150px;text-align:center;"><?= e(__('Aksyon (Action)')) ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -102,7 +102,7 @@ ob_start();
                         </td>
                         <td>
                             <input type="text" name="entries[<?= $i ?>][bisaya]" value="<?= e($item['bisaya']) ?>" 
-                                   class="form-control form-control-sm" style="border-radius:6px;" placeholder="(Optional)">
+                                   class="form-control form-control-sm" style="border-radius:6px;" placeholder="<?= e(__('(Optional)')) ?>">
                         </td>
                         <td>
                             <select name="entries[<?= $i ?>][category]" class="form-select form-select-sm" style="border-radius:6px;">
@@ -124,15 +124,15 @@ ob_start();
                         </td>
                         <td>
                             <?php if ($status === 'exact_duplicate'): ?>
-                                <span class="badge bg-secondary mb-1" style="font-size:.7rem;"><i class="bi bi-files me-1"></i>May Katulad na (Duplicate)</span>
-                                <div style="font-size:.72rem;" class="text-muted">ID #<?= (int)$item['existing_id'] ?></div>
+                                <span class="badge bg-secondary mb-1" style="font-size:.7rem;"><i class="bi bi-files me-1"></i><?= e(__('May Katulad na (Duplicate)')) ?></span>
+                                <div style="font-size:.72rem;" class="text-muted"><?= e(__('ID #')) ?><?= (int)$item['existing_id'] ?></div>
                             <?php elseif ($status === 'conflicting_meaning'): ?>
-                                <span class="badge bg-warning text-dark mb-1" style="font-size:.7rem;"><i class="bi bi-exclamation-circle me-1"></i>Ibang Kahulugan</span>
-                                <div style="font-size:.72rem;" class="text-muted" title="Mayroon nang salita ngunit magkaiba ang ibig sabihin">
-                                    May umiiral na salita
+                                <span class="badge bg-warning text-dark mb-1" style="font-size:.7rem;"><i class="bi bi-exclamation-circle me-1"></i><?= e(__('Ibang Kahulugan')) ?></span>
+                                <div style="font-size:.72rem;" class="text-muted" title="<?= e(__('Mayroon nang salita ngunit magkaiba ang ibig sabihin')) ?>">
+                                    <?= e(__('May umiiral na salita')) ?>
                                 </div>
                             <?php else: ?>
-                                <span class="badge bg-success" style="font-size:.7rem;"><i class="bi bi-plus-circle me-1"></i>Bagong Salita</span>
+                                <span class="badge bg-success" style="font-size:.7rem;"><i class="bi bi-plus-circle me-1"></i><?= e(__('Bagong Salita')) ?></span>
                             <?php endif; ?>
                             
                             <input type="hidden" name="entries[<?= $i ?>][notes]" value="<?= e($item['notes']) ?>">
@@ -142,16 +142,16 @@ ob_start();
                         <td>
                             <select name="entries[<?= $i ?>][action]" class="form-select form-select-sm fw-semibold" style="border-radius:6px;">
                                 <?php if ($status === 'exact_duplicate'): ?>
-                                    <option value="skip" selected>Laktawan (Skip)</option>
-                                    <option value="separate">Idagdag bilang hiwalay</option>
-                                    <option value="overwrite">I-update ang umiiral</option>
+                                    <option value="skip" selected><?= e(__('Laktawan (Skip)')) ?></option>
+                                    <option value="separate"><?= e(__('Idagdag bilang hiwalay')) ?></option>
+                                    <option value="overwrite"><?= e(__('I-update ang umiiral')) ?></option>
                                 <?php elseif ($status === 'conflicting_meaning'): ?>
-                                    <option value="separate" selected>Hiwalay na Kahulugan</option>
-                                    <option value="overwrite">I-update ang umiiral</option>
-                                    <option value="skip">Laktawan (Skip)</option>
+                                    <option value="separate" selected><?= e(__('Hiwalay na Kahulugan')) ?></option>
+                                    <option value="overwrite"><?= e(__('I-update ang umiiral')) ?></option>
+                                    <option value="skip"><?= e(__('Laktawan (Skip)')) ?></option>
                                 <?php else: ?>
-                                    <option value="import" selected>I-import (Add)</option>
-                                    <option value="skip">Laktawan (Skip)</option>
+                                    <option value="import" selected><?= e(__('I-import (Add)')) ?></option>
+                                    <option value="skip"><?= e(__('Laktawan (Skip)')) ?></option>
                                 <?php endif; ?>
                             </select>
                         </td>
@@ -162,10 +162,10 @@ ob_start();
         </div>
         <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
             <a href="<?= e(route('admin/manobo')) ?>" class="btn btn-outline-secondary btn-sm" style="border-radius:8px;font-weight:600;">
-                <i class="bi bi-arrow-left me-1"></i>Bumalik
+                <i class="bi bi-arrow-left me-1"></i><?= e(__('Bumalik')) ?>
             </a>
             <button type="submit" class="btn btn-primary btn-sm px-4" style="border-radius:8px;font-weight:700;">
-                <i class="bi bi-check-circle-fill me-1"></i>Kumpirmahin at I-import ang Bokabularyo
+                <i class="bi bi-check-circle-fill me-1"></i><?= e(__('Kumpirmahin at I-import ang Bokabularyo')) ?>
             </button>
         </div>
     </div>

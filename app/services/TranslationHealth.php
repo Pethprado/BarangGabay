@@ -227,7 +227,7 @@ class TranslationHealth
 
         try {
             return db()->query(
-                "SELECT id, title, source_lang,
+                "SELECT id, title, {$body}, source_lang,
                         title_en,     {$body}_en,
                         title_fil,    {$body}_fil,
                         title_manobo, {$body}_manobo,

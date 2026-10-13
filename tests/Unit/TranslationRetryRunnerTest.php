@@ -150,56 +150,58 @@ final class TranslationRetryRunnerTest extends TestCase
     }
 
     /**
-     * The opportunistic trigger must keep the guards the existing sweep has.
+     * The opportunistic sweep keeps every guard, now split in two.
      *
-     * Dropping any one of them turns a catch-up into a tax on page loads:
-     * without the GET check it fires during a form POST somebody is waiting
-     * on; without the throttle it fires on every request; without the
-     * try/catch a translation failure takes down the page that triggered it.
+     * public/index.php only notes that a sweep is due (GET page views, at most
+     * once per throttle window per session); the page then asks for it in the
+     * background, and MaintenanceController does the work. It moved out of
+     * the page load because one Manobo post with 32 untranslated parts kept a
+     * resident's page loading for minutes while the Bisaya service was
+     * throttled. Dropping any guard below brings that back.
      */
     public function testTheOpportunisticSweepIsGuardedLikeTheExistingOne(): void
     {
-        $index = (string) file_get_contents(\dirname(__DIR__, 2) . '/public/index.php');
+        $root  = \dirname(__DIR__, 2);
+        $index = (string) file_get_contents($root . '/public/index.php');
 
-        $at = strpos($index, 'TranslationRetryRunner');
-        $this->assertNotFalse($at, 'the retry sweep is not wired into public/index.php at all');
-
-        // The block it lives in, from the enclosing GET guard.
+        $at = strpos($index, 'bg_translation_sweep_due');
+        $this->assertNotFalse($at, 'public/index.php never marks a translation sweep as due');
+        $this->assertStringNotContainsString(
+            'TranslationRetryRunner())->run(',
+            $index,
+            'the sweep is running inside the page load again'
+        );
         $guard = strrpos(substr($index, 0, $at), "\$_SERVER['REQUEST_METHOD'] === 'GET'");
         $this->assertNotFalse($guard, 'the sweep is not inside the GET-only guard');
-
-        $block = substr($index, $guard, $at - $guard + 400);
-
-        /*
-         * Both halves of the throttle, not just the name.
-         *
-         * A first version of this asserted only that the session key
-         * appeared somewhere in the block — which stayed green when the
-         * READ was replaced by a literal 0 and only the WRITE was left. The
-         * sweep then fired on every single page load while the test still
-         * passed, which is the exact failure a guard test exists to stop.
-         */
         $this->assertMatchesRegularExpression(
             '~\$lastRetry\s*=\s*\(int\)\s*\(\$_SESSION\[[\'"]bg_translation_retry_at[\'"]\]\s*\?\?\s*0\)~',
-            $block,
-            'the sweep does not read its last-run time from the session, so the throttle is dead'
+            substr($index, $guard, $at - $guard + 200),
+            'index.php does not read the last-run time from the session'
+        );
+
+        $controller = (string) file_get_contents($root . '/app/controllers/MaintenanceController.php');
+        $this->assertStringContainsString('check_csrf()', $controller);
+        $this->assertMatchesRegularExpression(
+            '~time\(\)\s*-\s*\$last\s*<\s*self::TRANSLATION_SWEEP_EVERY~',
+            $controller,
+            'the endpoint does not enforce the throttle itself'
         );
         $this->assertMatchesRegularExpression(
             '~\$_SESSION\[[\'"]bg_translation_retry_at[\'"]\]\s*=\s*time\(\)~',
-            $block,
+            $controller,
             'the sweep never records that it ran, so the throttle can never hold'
         );
-        $this->assertMatchesRegularExpression(
-            '~time\(\)\s*-\s*\$lastRetry\s*>=\s*\$retryEvery~',
-            $block,
-            'the two halves are not actually compared'
-        );
-        $this->assertStringContainsString('try {', $block);
-        $this->assertStringContainsString(
-            'catch (\Throwable',
-            $block,
-            'an unwrapped sweep lets a translation failure take down the page that triggered it'
-        );
+        $this->assertStringContainsString('session_write_close()', $controller, 'the sweep would block the resident\'s next page');
+        $this->assertStringContainsString('$machineDeadline', $controller, 'the sweep has no time budget');
+        $this->assertStringContainsString('catch (\Throwable', $controller);
+
+        foreach (['main.php', 'admin.php'] as $layout) {
+            $this->assertStringContainsString(
+                '_background-sweep.php',
+                (string) file_get_contents($root . '/app/views/layouts/' . $layout),
+                "the {$layout} layout never asks for the sweep"
+            );
+        }
     }
 
     /**

@@ -33,7 +33,7 @@ $end    = min($totalPages, $page + $window);
 ?>
 
 <nav class="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-between"
-     aria-label="Pagination">
+     aria-label="<?= e(__('Pagination')) ?>">
 
     <!-- Result count. The label is escaped first, then the placeholders are
          swapped for the bold spans, so the only markup that reaches the page

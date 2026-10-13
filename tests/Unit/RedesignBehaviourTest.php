@@ -51,13 +51,20 @@ final class RedesignBehaviourTest extends TestCase
         $this->assertSame('en', back_office_locale());
     }
 
-    public function testBackOfficeSwitchTranslatesLabelsButNotContentLocale(): void
+    public function testBackOfficeIsEnglishOnly(): void
     {
+        // The EN / FIL / MN switch was removed from the admin and staff top
+        // bar; an old ?scope=admin link or cookie must not bring it back.
         $GLOBALS['bg_is_back_office'] = true;
         set_back_office_locale('fil');
+        $_COOKIE['bg_bo_locale'] = 'msm';
 
-        $this->assertSame('Mga Anunsyo', t('admin_nav.announcements'), 'Labels follow the back-office switch');
+        $this->assertSame('en', back_office_locale());
+        $this->assertSame('Announcements', t('admin_nav.announcements'), 'Admin labels stay English');
         $this->assertSame('en', current_locale(), 'Content stays the original in the back office');
+
+        unset($_COOKIE['bg_bo_locale']);
+        $GLOBALS['bg_is_back_office'] = false;
     }
 
     public function testBackOfficeChoiceDoesNotLeakIntoResidentPages(): void

@@ -136,7 +136,7 @@ ob_start();
                          <?= $isMine ? '' : 'style="background:var(--brand-primary-light);"' ?>>
                         <div class="flex-shrink-0 mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold
                                     <?= $isMine ? 'bg-slate-100 text-slate-500' : 'bg-blue-600 text-white' ?>">
-                            <?= $isMine ? 'Ako' : '<i class="bi bi-building"></i>' ?>
+                            <?= $isMine ? __('Ako') : '<i class="bi bi-building"></i>' ?>
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-xs font-bold <?= $isMine ? 'text-slate-500' : 'text-blue-700' ?> mb-1">

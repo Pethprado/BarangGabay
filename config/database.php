@@ -480,6 +480,21 @@ function syncPostgresSchema(PDO $pdo): void
         )",
         "CREATE INDEX IF NOT EXISTS idx_tc_hash ON translation_cache(source_text_hash)",
 
+        // Trash for announcements, events and ordinances (migration 2026_10_13_000003).
+        "CREATE TABLE IF NOT EXISTS post_trash (
+            id SERIAL PRIMARY KEY,
+            content_type VARCHAR(20) NOT NULL,
+            content_id INT NOT NULL,
+            title VARCHAR(500) NOT NULL,
+            author_id INT NULL,
+            snapshot TEXT NOT NULL,
+            deleted_by INT NULL,
+            deleted_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_trash_type ON post_trash(content_type)",
+        "CREATE INDEX IF NOT EXISTS idx_trash_author ON post_trash(author_id)",
+        "CREATE INDEX IF NOT EXISTS idx_trash_deleted ON post_trash(deleted_at)",
+
         // 16. Manobo Missing Concepts table
         "CREATE TABLE IF NOT EXISTS manobo_missing_concepts (
             id SERIAL PRIMARY KEY,
@@ -802,6 +817,19 @@ function syncPostgresSchema(PDO $pdo): void
             }
         } catch (\Throwable $e) {
             error_log('PgSQL seed_comprehensive_demo note: ' . $e->getMessage());
+        }
+
+        // Current trilingual sample posts (2026-10). Replaces ONLY rows flagged
+        // is_sample = 1 — a post a staff member wrote on the live site is never
+        // touched. No network calls, no notifications, no SMS. Runs once.
+        try {
+            if (\App\Models\Setting::get('demo_current_content_v2') !== '1') {
+                require_once __DIR__ . '/../tools/seed_current_content.php';
+                bg_seed_current_content($pdo, 'pgsql', false);
+                \App\Models\Setting::set('demo_current_content_v2', '1');
+            }
+        } catch (\Throwable $e) {
+            error_log('PgSQL seed_current_content note: ' . $e->getMessage());
         }
     }
 }

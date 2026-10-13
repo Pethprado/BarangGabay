@@ -1,6 +1,6 @@
 ﻿<?php
 ob_start();
-$userName = e($_SESSION['full_name'] ?? 'Residente');
+$userName = e($_SESSION['full_name'] ?? __('Residente'));
 $status   = $_SESSION['status']    ?? 'pending';
 $isSuspended = $status === 'suspended';
 ?>
@@ -14,32 +14,29 @@ $isSuspended = $status === 'suspended';
     </div>
 
     <!-- Greeting -->
-    <p class="mb-0.5 text-sm font-medium text-slate-500">Kumusta,</p>
+    <p class="mb-0.5 text-sm font-medium text-slate-500"><?= e(__('Kumusta,')) ?></p>
     <p class="mb-6 text-lg font-bold text-slate-800"><?= $userName ?>!</p>
 
     <?php if ($isSuspended): ?>
 
     <!-- Suspended state -->
-    <h1 class="mb-2 text-2xl font-bold text-red-600">Account Suspended</h1>
+    <h1 class="mb-2 text-2xl font-bold text-red-600"><?= e(__('Account Suspended')) ?></h1>
     <p class="mb-6 max-w-[420px] text-sm leading-relaxed text-slate-600">
-        Ang iyong account ay nasuspinde. Para sa mga katanungan o apela,
-        mangyaring makipag-ugnayan sa Barangay Hall nang personal.
+        <?= e(__('Ang iyong account ay nasuspinde. Para sa mga katanungan o apela, mangyaring makipag-ugnayan sa Barangay Hall nang personal.')) ?>
     </p>
     <div class="mb-8 flex w-full max-w-[420px] items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-left">
         <i class="bi bi-exclamation-triangle-fill mt-px shrink-0 text-red-500"></i>
         <p class="text-sm leading-relaxed text-red-900">
-            Kung naniniwala kang ito ay pagkakamali, makipag-ugnayan sa Barangay Hall,
-            Barangay Bayogo upang ma-review ang iyong account.
+            <?= e(__('Kung naniniwala kang ito ay pagkakamali, makipag-ugnayan sa Barangay Hall, Barangay Bayogo upang ma-review ang iyong account.')) ?>
         </p>
     </div>
 
     <?php else: ?>
 
     <!-- Pending verification state -->
-    <h1 class="mb-2 text-2xl font-bold" style="color:var(--brand-primary);">Awaiting Verification</h1>
+    <h1 class="mb-2 text-2xl font-bold" style="color:var(--brand-primary);"><?= e(__('Awaiting Verification')) ?></h1>
     <p class="mb-6 max-w-[420px] text-sm leading-relaxed text-slate-600">
-        Ang iyong account ay kasalukuyang naghihintay ng pag-apruba ng barangay staff.
-        Mangyaring maghintay habang nire-review ang iyong impormasyon at valid ID.
+        <?= e(__('Ang iyong account ay kasalukuyang naghihintay ng pag-apruba ng barangay staff. Mangyaring maghintay habang nire-review ang iyong impormasyon at valid ID.')) ?>
     </p>
 
     <!-- Progress steps -->
@@ -49,7 +46,7 @@ $isSuspended = $status === 'suspended';
             <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold shrink-0">
                 <i class="bi bi-check2"></i>
             </div>
-            <span class="text-[10px] font-semibold text-blue-700 whitespace-nowrap">Nagrehistro</span>
+            <span class="text-[10px] font-semibold text-blue-700 whitespace-nowrap"><?= e(__('Nagrehistro')) ?></span>
         </div>
         <div class="flex-1 h-[2px] mb-5" style="background:linear-gradient(90deg,#1a6b3a 50%,#e2e8f0 50%);"></div>
         <!-- Step 2: current -->
@@ -57,7 +54,7 @@ $isSuspended = $status === 'suspended';
             <div class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-amber-400 bg-amber-50 text-amber-600 text-xs font-bold shrink-0">
                 <i class="bi bi-hourglass-split"></i>
             </div>
-            <span class="text-[10px] font-semibold text-amber-600 whitespace-nowrap">Nire-review</span>
+            <span class="text-[10px] font-semibold text-amber-600 whitespace-nowrap"><?= e(__('Nire-review')) ?></span>
         </div>
         <div class="flex-1 h-[2px] mb-5 bg-slate-200"></div>
         <!-- Step 3: pending -->
@@ -65,7 +62,7 @@ $isSuspended = $status === 'suspended';
             <div class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-200 bg-white text-slate-300 text-xs font-bold shrink-0">
                 <i class="bi bi-person-check"></i>
             </div>
-            <span class="text-[10px] font-semibold text-slate-400 whitespace-nowrap">Na-verify</span>
+            <span class="text-[10px] font-semibold text-slate-400 whitespace-nowrap"><?= e(__('Na-verify')) ?></span>
         </div>
     </div>
 
@@ -73,8 +70,7 @@ $isSuspended = $status === 'suspended';
     <div class="mb-8 flex w-full max-w-[420px] items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-left">
         <i class="bi bi-info-circle-fill mt-px shrink-0 text-amber-500"></i>
         <p class="text-sm leading-relaxed text-amber-900 m-0">
-            Karaniwang tumatagal ng <strong>1–2 araw ng trabaho</strong> ang pag-verify.
-            Makakatanggap ka ng notification sa sandaling ma-approve ang iyong account.
+            <?= e(__('Karaniwang tumatagal ng')) ?> <strong><?= e(__('1–2 araw ng trabaho')) ?></strong> <?= e(__('ang pag-verify. Makakatanggap ka ng notification sa sandaling ma-approve ang iyong account.')) ?>
         </p>
     </div>
 
@@ -84,7 +80,7 @@ $isSuspended = $status === 'suspended';
     <a href="<?= e(route('logout')) ?>"
        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition hover:border-red-300 hover:text-red-600">
         <i class="bi bi-box-arrow-right"></i>
-        Mag-logout
+        <?= e(__('Mag-logout')) ?>
     </a>
 
 </div>

@@ -12,7 +12,7 @@ class RateLimitMiddleware
         if ($userId <= 0) {
             http_response_code(401);
             header('Content-Type: application/json');
-            echo json_encode(['error' => 'Unauthorized']);
+            echo json_encode(['error' => __('Unauthorized')]);
             exit;
         }
 
@@ -26,7 +26,7 @@ class RateLimitMiddleware
         if ($count >= $maxPerHour) {
             http_response_code(429);
             header('Content-Type: application/json');
-            echo json_encode(['error' => 'Napalampas mo na ang limitasyon ng AI. Subukan muli pagkatapos ng isang oras.']);
+            echo json_encode(['error' => __('Napalampas mo na ang limitasyon ng AI. Subukan muli pagkatapos ng isang oras.')]);
             exit;
         }
     }

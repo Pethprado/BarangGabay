@@ -27,18 +27,18 @@ class AIController
 
         $ordinanceId = (int) ($_POST['ordinance_id'] ?? 0);
         if ($ordinanceId <= 0) {
-            echo json_encode(['error' => 'Missing ordinance ID.']);
+            echo json_encode(['error' => __('Missing ordinance ID.')]);
             return;
         }
 
         $ordinance = Ordinance::find($ordinanceId);
         if (!$ordinance) {
-            echo json_encode(['error' => 'Ordinance not found.']);
+            echo json_encode(['error' => __('Ordinance not found.')]);
             return;
         }
 
         if (!empty($ordinance['ai_summary'])) {
-            echo json_encode(['summary' => $ordinance['ai_summary'], 'cached' => true]);
+            echo json_encode(['summary' => translate_for_display((string) $ordinance['ai_summary']), 'cached' => true]);
             return;
         }
 
@@ -54,7 +54,7 @@ class AIController
                 ->execute([$userId ?: null, $ordinanceId]);
 
             AuditLog::record($userId, 'ai.summarize', "Ordinance #{$ordinanceId} summarized via AI");
-            echo json_encode(['summary' => $summary, 'cached' => false]);
+            echo json_encode(['summary' => translate_for_display($summary), 'cached' => false]);
         } catch (\Throwable $e) {
             /*
              * This block used to do neither of the two things a failed call
@@ -118,13 +118,13 @@ class AIController
         $contentId   = (int) ($_POST['content_id'] ?? 0);
 
         if (\strlen($text) < 3) {
-            echo json_encode(['error' => 'Walang teksto para isalin.']);
+            echo json_encode(['error' => __('Walang teksto para isalin.')]);
             return;
         }
 
         $validTypes = ['announcement', 'event', 'ordinance'];
         if (!\in_array($contentType, $validTypes, true) || $contentId <= 0) {
-            echo json_encode(['error' => 'Invalid content type or ID.']);
+            echo json_encode(['error' => __('Invalid content type or ID.')]);
             return;
         }
 
@@ -139,8 +139,7 @@ class AIController
             http_response_code(503);
             echo json_encode([
                 'success' => false,
-                'error'   => 'Hindi pa naka-configure ang AI key. '
-                           . 'Idagdag ang ANTHROPIC_API_KEY sa .env file.',
+                'error'   => __('Hindi pa naka-configure ang AI key. Idagdag ang ANTHROPIC_API_KEY sa .env file.'),
             ]);
             return;
         }

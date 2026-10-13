@@ -55,13 +55,14 @@ class DocumentRequest
 
     public static function deliveryLabel(string $method): string
     {
-        return self::DELIVERY_METHODS[$method] ?? ($method === 'digital' ? 'Digital Copy' : 'Pickup at Barangay Hall');
+        return __(self::DELIVERY_METHODS[$method] ?? ($method === 'digital' ? 'Digital Copy' : 'Pickup at Barangay Hall'));
     }
 
     public static function statusLabel(string $status): string
     {
         $normalized = strtolower(trim($status));
-        return match ($normalized) {
+        // Bilingual labels ("Tinanggihan (Rejected)"); __() shows one language.
+        return __(match ($normalized) {
             'draft'                  => 'Draft',
             'awaiting_payment'       => 'Naghihintay ng Bayad (Awaiting Payment)',
             'pending_review', 'pending' => 'Nakabinbin para sa Pagsusuri (Pending Review)',
@@ -73,8 +74,8 @@ class DocumentRequest
             'released', 'completed'  => 'Nakumpleto / Nakuha na (Completed)',
             'rejected'               => 'Tinanggihan (Rejected)',
             'cancelled'              => 'Kinansela (Cancelled)',
-            default                  => ucfirst(str_replace('_', ' ', $status)),
-        };
+            default                  => ucwords(str_replace('_', ' ', $status)),
+        });
     }
 
     public static function canMove(string $from, string $to): bool
@@ -548,7 +549,12 @@ class DocumentRequest
 
         $search = trim($search);
         if ($search !== '') {
-            $sql .= ' AND (r.reference_no ILIKE ? OR u.full_name ILIKE ? OR r.purpose ILIKE ? OR r.document_type ILIKE ? OR p.payment_ref ILIKE ? OR p.gcash_reference_no ILIKE ?)';
+            // ILIKE exists only on PostgreSQL (Render); MariaDB/MySQL (XAMPP)
+            // threw a syntax error on every search — the staff dashboard's
+            // Recent Tasks links land here with ?search=<reference>. LIKE is
+            // already case-insensitive there (utf8mb4_unicode_ci).
+            $like = db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql' ? 'ILIKE' : 'LIKE';
+            $sql .= " AND (r.reference_no {$like} ? OR u.full_name {$like} ? OR r.purpose {$like} ? OR r.document_type {$like} ? OR p.payment_ref {$like} ? OR p.gcash_reference_no {$like} ?)";
             $like = '%' . $search . '%';
             $params[] = $like;
             $params[] = $like;

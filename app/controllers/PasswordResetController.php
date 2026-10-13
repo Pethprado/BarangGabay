@@ -39,7 +39,7 @@ class PasswordResetController
         $done  = 'If an account uses that email, we sent a link to reset the password. It expires in one hour — check your inbox and spam folder.';
 
         if (!$email) {
-            flash('error', 'Enter a valid email address.');
+            flash('error', __('Enter a valid email address.'));
             redirect('/forgot-password');
         }
 
@@ -98,7 +98,7 @@ class PasswordResetController
         $back     = '/reset-password?token=' . rawurlencode($token);
 
         if ($row === null) {
-            flash('error', 'This reset link is invalid or has expired. Ask for a new one.');
+            flash('error', __('This reset link is invalid or has expired. Ask for a new one.'));
             redirect('/forgot-password');
         }
         if (AuthController::passwordRuleFailures($password) !== []) {
@@ -106,7 +106,7 @@ class PasswordResetController
             redirect($back);
         }
         if (!hash_equals($password, $confirm)) {
-            flash('error', 'The two passwords do not match.');
+            flash('error', __('The two passwords do not match.'));
             redirect($back);
         }
 
@@ -120,11 +120,11 @@ class PasswordResetController
             AuditLog::record($userId, 'auth.password_reset', 'Password reset with an emailed link');
         } catch (\Throwable $e) {
             error_log('[PasswordResetController::reset] ' . $e->getMessage());
-            flash('error', 'The password could not be changed because of a server error. Try again.');
+            flash('error', __('The password could not be changed because of a server error. Try again.'));
             redirect($back);
         }
 
-        flash('success', 'Your password was changed. Sign in with the new password.');
+        flash('success', __('Your password was changed. Sign in with the new password.'));
         redirect('/login');
     }
 

@@ -230,7 +230,7 @@ final class ManoboGlossTest extends TestCase
         set_locale('fil');
     }
 
-    public function testManoboLocaleFallsBackToFilipinoForUncoveredLabels(): void
+    public function testManoboLocaleUsesBisayaRatherThanEnglishOrTagalog(): void
     {
         $_SESSION = [];
         set_locale('en');
@@ -241,12 +241,80 @@ final class ManoboGlossTest extends TestCase
         set_locale('msm');
         $manobo = t('res_ordinances.ai_working');
 
-        // Long sentence, so the gloss guard rejects it. It must then land on
-        // Filipino (or hybrid Manobo translation of Filipino), NOT English.
-        // See the fallback note in helpers.php::t().
-        $this->assertTrue($manobo === $filipino || str_contains($manobo, 'Inaayos'));
-        $this->assertNotSame($english, $manobo, 'Manobo must not fall through to English');
+        // A long sentence the Manobo dataset cannot cover whole. MN must show
+        // the generated Manobo/Bisaya form, never the English or Tagalog one.
+        // See manobo_ui_text() in helpers.php.
+        $this->assertNotSame($english, $manobo, 'MN must not fall through to English');
+        $this->assertNotSame($filipino, $manobo, 'MN must not fall through to Tagalog');
+        $this->assertSame((require __DIR__ . '/../../lang/msm_auto.php')['res_ordinances.ai_working'], $manobo);
 
         set_locale('fil');
+    }
+
+    public function testEveryInterfaceStringHasAManoboForm(): void
+    {
+        $flatten = static function (array $arr, string $prefix = '') use (&$flatten): array {
+            $out = [];
+            foreach ($arr as $k => $v) {
+                $key = $prefix === '' ? (string) $k : $prefix . '.' . $k;
+                $out += is_array($v) ? $flatten($v, $key) : [$key => $v];
+            }
+            return $out;
+        };
+
+        $keys    = array_keys($flatten(require __DIR__ . '/../../lang/en.php'));
+        $auto    = require __DIR__ . '/../../lang/msm_auto.php';
+        $phrases = array_keys(require __DIR__ . '/../../lang/phrases/en.php');
+        $mnPhr   = require __DIR__ . '/../../lang/phrases/msm.php';
+
+        $this->assertSame([], array_values(array_diff($keys, array_keys($auto))),
+            'lang/en.php has keys with no MN form — run php tools/generate-manobo-ui.php');
+        $this->assertSame([], array_values(array_diff($phrases, array_keys($mnPhr))),
+            'lang/phrases/en.php has phrases with no MN form — run php tools/generate-manobo-ui.php');
+    }
+
+    public function testPhrasesFollowTheChosenLanguage(): void
+    {
+        $_SESSION = [];
+
+        set_locale('en');
+        $this->assertSame('Continue', __('Magpatuloy (Continue)'));
+        $this->assertSame('Event not found.', __('Event not found.'));
+
+        set_locale('fil');
+        $this->assertSame('Magpatuloy', __('Magpatuloy (Continue)'));
+        $this->assertSame('Hindi nahanap ang event.', __('Event not found.'));
+
+        set_locale('msm');
+        $mn = __('Magpatuloy (Continue)');
+        $this->assertNotSame('Continue', $mn);
+        $this->assertNotSame('Magpatuloy', $mn);
+
+        set_locale('fil');
+    }
+
+    public function testPhrasePlaceholdersAreFilledInEveryLanguage(): void
+    {
+        $_SESSION = [];
+        foreach (['en', 'fil', 'msm'] as $locale) {
+            set_locale($locale);
+            $text = __('Nalikha na ang inyong kahilingan (:ref). Kumpletuhin ang pagbabayad gamit ang online checkout.', ['ref' => 'DOC-123']);
+            $this->assertStringContainsString('DOC-123', $text, "placeholder lost under {$locale}");
+            $this->assertStringNotContainsString(':ref', $text);
+        }
+        set_locale('fil');
+    }
+
+    public function testPhraseCatalogsKeepTheirPlaceholders(): void
+    {
+        foreach (['en', 'fil', 'msm'] as $locale) {
+            foreach (require __DIR__ . "/../../lang/phrases/{$locale}.php" as $source => $translated) {
+                preg_match_all('/:[a-z_]+/', (string) $source, $a);
+                preg_match_all('/:[a-z_]+/', (string) $translated, $b);
+                sort($a[0]);
+                sort($b[0]);
+                $this->assertSame($a[0], $b[0], "{$locale}: placeholders differ for \"{$source}\"");
+            }
+        }
     }
 }

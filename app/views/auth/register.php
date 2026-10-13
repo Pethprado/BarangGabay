@@ -10,7 +10,7 @@ $flashOk  = flash('success');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mag-register — BarangGabay</title>
+    <title><?= e(__('Mag-register — BarangGabay')) ?></title>
     <base href="<?= e(base_url()) ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -315,38 +315,38 @@ require __DIR__ . '/_auth_open.php';
 <section class="auth-card auth-card--wide" aria-labelledby="regTitle">
     <div class="auth-card__body" x-data="registerForm()">
         <?php require __DIR__ . '/_auth_brand.php'; ?>
-        <h1 class="auth-title" id="regTitle">Create an Account</h1>
-        <p class="auth-sub">Join BarangGabay and be part of a safer community.</p>
+        <h1 class="auth-title" id="regTitle"><?= e(__('Create an Account')) ?></h1>
+        <p class="auth-sub"><?= e(__('Join BarangGabay and be part of a safer community.')) ?></p>
 
         <?php if ($__social['google'] || $__social['facebook']): ?>
             <div class="auth-social" style="margin-bottom:.25rem;">
-                <?php if ($__social['google']): ?><a href="<?= e(route('auth/google')) ?>"><i class="bi bi-google" aria-hidden="true"></i>Sign up with Google</a><?php endif; ?>
-                <?php if ($__social['facebook']): ?><a href="<?= e(route('auth/facebook')) ?>"><i class="bi bi-facebook" style="color:#1877f2;" aria-hidden="true"></i>Sign up with Facebook</a><?php endif; ?>
+                <?php if ($__social['google']): ?><a href="<?= e(route('auth/google')) ?>"><i class="bi bi-google" aria-hidden="true"></i><?= e(__('Sign up with Google')) ?></a><?php endif; ?>
+                <?php if ($__social['facebook']): ?><a href="<?= e(route('auth/facebook')) ?>"><i class="bi bi-facebook" style="color:#1877f2;" aria-hidden="true"></i><?= e(__('Sign up with Facebook')) ?></a><?php endif; ?>
             </div>
-            <div class="auth-divider">or fill in the form</div>
+            <div class="auth-divider"><?= e(__('or fill in the form')) ?></div>
         <?php endif; ?>
 
         <!-- Account type. Resident is the only self-service type; Staff and Admin are
              shown so people know where those accounts come from, but they cannot be
              chosen here — the controller hardcodes role = 'resident' regardless. -->
         <div class="auth-field" x-data="{ lockedNote: false }">
-            <span class="auth-label" id="acctTypeLabel"><i class="bi bi-person-badge" aria-hidden="true"></i>Account Type</span>
+            <span class="auth-label" id="acctTypeLabel"><i class="bi bi-person-badge" aria-hidden="true"></i><?= e(__('Account Type')) ?></span>
             <div class="auth-type auth-type--row" role="radiogroup" aria-labelledby="acctTypeLabel">
                 <div class="auth-type__opt is-selected" role="radio" aria-checked="true" tabindex="0">
                     <span class="auth-type__ico" aria-hidden="true"><i class="bi bi-house-door-fill"></i></span>
-                    <span><strong>Resident</strong><span class="auth-type__desc">For community members</span></span>
+                    <span><strong><?= e(__('Resident')) ?></strong><span class="auth-type__desc"><?= e(__('For community members')) ?></span></span>
                     <i class="bi bi-check-circle-fill auth-type__check" aria-hidden="true"></i>
                 </div>
                 <div class="auth-type__opt is-locked" role="radio" aria-checked="false" aria-disabled="true" tabindex="0"
                      @click="lockedNote = true" @keydown.enter.prevent="lockedNote = true" @keydown.space.prevent="lockedNote = true">
                     <span class="auth-type__ico" aria-hidden="true"><i class="bi bi-people-fill"></i></span>
-                    <span><strong>Staff</strong><span class="auth-type__desc">For barangay staff</span></span>
+                    <span><strong><?= e(__('Staff')) ?></strong><span class="auth-type__desc"><?= e(__('For barangay staff')) ?></span></span>
                     <span class="auth-type__lock"><i class="bi bi-lock-fill" aria-hidden="true"></i><?= e(t('auth_hero.type_locked')) ?></span>
                 </div>
                 <div class="auth-type__opt is-locked" role="radio" aria-checked="false" aria-disabled="true" tabindex="0"
                      @click="lockedNote = true" @keydown.enter.prevent="lockedNote = true" @keydown.space.prevent="lockedNote = true">
                     <span class="auth-type__ico" aria-hidden="true"><i class="bi bi-shield-lock-fill"></i></span>
-                    <span><strong>Admin</strong><span class="auth-type__desc">For system administrators</span></span>
+                    <span><strong><?= e(__('Admin')) ?></strong><span class="auth-type__desc"><?= e(__('For system administrators')) ?></span></span>
                     <span class="auth-type__lock"><i class="bi bi-lock-fill" aria-hidden="true"></i><?= e(t('auth_hero.type_locked')) ?></span>
                 </div>
             </div>
@@ -378,15 +378,15 @@ require __DIR__ . '/_auth_open.php';
                 <!-- Section 1: Personal Information -->
                 <div class="col-12 mt-1">
                     <h6 class="fw-bold text-dark border-bottom pb-1 mb-2 d-flex align-items-center gap-1" style="font-size:.9rem; color:var(--green)!important;">
-                        <i class="bi bi-person-badge"></i> 1. Impormasyon ng Residente (Personal Info)
+                        <i class="bi bi-person-badge"></i> <?= e(__('1. Impormasyon ng Residente (Personal Info)')) ?>
                     </h6>
                 </div>
 
                 <div class="col-sm-6">
-                    <label for="first_name" class="form-label">Pangalan (First Name) <span class="req">*</span></label>
+                    <label for="first_name" class="form-label"><?= e(__('Pangalan (First Name)')) ?> <span class="req">*</span></label>
                     <input type="text" id="first_name" name="first_name"
                            class="form-control <?= !empty($errors['first_name']) ? 'is-invalid' : '' ?>"
-                           placeholder="Hal. Juan"
+                           placeholder="<?= e(__('Hal. Juan')) ?>"
                            value="<?= e(old('first_name', $__preFirst)) ?>" required autocomplete="given-name">
                     <?php if (!empty($errors['first_name'])): ?>
                     <div class="invalid-feedback"><?= e($errors['first_name']) ?></div>
@@ -394,18 +394,18 @@ require __DIR__ . '/_auth_open.php';
                 </div>
 
                 <div class="col-sm-6">
-                    <label for="middle_name" class="form-label">Gitnang Pangalan (Middle Name)</label>
+                    <label for="middle_name" class="form-label"><?= e(__('Gitnang Pangalan (Middle Name)')) ?></label>
                     <input type="text" id="middle_name" name="middle_name"
                            class="form-control"
-                           placeholder="Hal. Protacio (opsyonal)"
+                           placeholder="<?= e(__('Hal. Protacio (opsyonal)')) ?>"
                            value="<?= e(old('middle_name')) ?>" autocomplete="additional-name">
                 </div>
 
                 <div class="col-sm-8">
-                    <label for="last_name" class="form-label">Apelyido (Last Name) <span class="req">*</span></label>
+                    <label for="last_name" class="form-label"><?= e(__('Apelyido (Last Name)')) ?> <span class="req">*</span></label>
                     <input type="text" id="last_name" name="last_name"
                            class="form-control <?= !empty($errors['last_name']) ? 'is-invalid' : '' ?>"
-                           placeholder="Hal. Dela Cruz"
+                           placeholder="<?= e(__('Hal. Dela Cruz')) ?>"
                            value="<?= e(old('last_name', $__preLast)) ?>" required autocomplete="family-name">
                     <?php if (!empty($errors['last_name'])): ?>
                     <div class="invalid-feedback"><?= e($errors['last_name']) ?></div>
@@ -413,16 +413,16 @@ require __DIR__ . '/_auth_open.php';
                 </div>
 
                 <div class="col-sm-4">
-                    <label for="suffix" class="form-label">Suffix</label>
+                    <label for="suffix" class="form-label"><?= e(__('Suffix')) ?></label>
                     <input type="text" id="suffix" name="suffix"
                            class="form-control"
-                           placeholder="Jr., Sr., III"
+                           placeholder="<?= e(__('Jr., Sr., III')) ?>"
                            value="<?= e(old('suffix')) ?>">
                 </div>
 
                 <!-- Date of Birth & Dynamic Age Display -->
                 <div class="col-sm-4">
-                    <label for="date_of_birth" class="form-label">Petsa ng Kapanganakan (DOB) <span class="req">*</span></label>
+                    <label for="date_of_birth" class="form-label"><?= e(__('Petsa ng Kapanganakan (DOB)')) ?> <span class="req">*</span></label>
                     <input type="date" id="date_of_birth" name="date_of_birth"
                            class="form-control <?= !empty($errors['date_of_birth']) ? 'is-invalid' : '' ?>"
                            value="<?= e(old('date_of_birth')) ?>" required>
@@ -432,46 +432,46 @@ require __DIR__ . '/_auth_open.php';
                 </div>
 
                 <div class="col-sm-4">
-                    <label for="sex" class="form-label">Kasarian (Sex) <span class="req">*</span></label>
+                    <label for="sex" class="form-label"><?= e(__('Kasarian (Sex)')) ?> <span class="req">*</span></label>
                     <select id="sex" name="sex" class="form-select <?= !empty($errors['sex']) ? 'is-invalid' : '' ?>" required>
-                        <option value="">— Pumili —</option>
-                        <option value="Male" <?= old('sex') === 'Male' ? 'selected' : '' ?>>Lalaki (Male)</option>
-                        <option value="Female" <?= old('sex') === 'Female' ? 'selected' : '' ?>>Babae (Female)</option>
-                        <option value="Other" <?= old('sex') === 'Other' ? 'selected' : '' ?>>Iba pa (Other)</option>
+                        <option value=""><?= e(__('— Pumili —')) ?></option>
+                        <option value="Male" <?= old('sex') === 'Male' ? 'selected' : '' ?>><?= e(__('Lalaki (Male)')) ?></option>
+                        <option value="Female" <?= old('sex') === 'Female' ? 'selected' : '' ?>><?= e(__('Babae (Female)')) ?></option>
+                        <option value="Other" <?= old('sex') === 'Other' ? 'selected' : '' ?>><?= e(__('Iba pa (Other)')) ?></option>
                     </select>
                 </div>
 
                 <div class="col-sm-4">
-                    <label for="civil_status" class="form-label">Civil Status <span class="req">*</span></label>
+                    <label for="civil_status" class="form-label"><?= e(__('Civil Status')) ?> <span class="req">*</span></label>
                     <select id="civil_status" name="civil_status" class="form-select <?= !empty($errors['civil_status']) ? 'is-invalid' : '' ?>" required>
-                        <option value="">— Pumili —</option>
-                        <option value="Single" <?= old('civil_status') === 'Single' ? 'selected' : '' ?>>Walang Asawa (Single)</option>
-                        <option value="Married" <?= old('civil_status') === 'Married' ? 'selected' : '' ?>>May Asawa (Married)</option>
-                        <option value="Widowed" <?= old('civil_status') === 'Widowed' ? 'selected' : '' ?>>Biyudo / Biyuda (Widowed)</option>
-                        <option value="Separated" <?= old('civil_status') === 'Separated' ? 'selected' : '' ?>>Hiwalay (Separated)</option>
+                        <option value=""><?= e(__('— Pumili —')) ?></option>
+                        <option value="Single" <?= old('civil_status') === 'Single' ? 'selected' : '' ?>><?= e(__('Walang Asawa (Single)')) ?></option>
+                        <option value="Married" <?= old('civil_status') === 'Married' ? 'selected' : '' ?>><?= e(__('May Asawa (Married)')) ?></option>
+                        <option value="Widowed" <?= old('civil_status') === 'Widowed' ? 'selected' : '' ?>><?= e(__('Biyudo / Biyuda (Widowed)')) ?></option>
+                        <option value="Separated" <?= old('civil_status') === 'Separated' ? 'selected' : '' ?>><?= e(__('Hiwalay (Separated)')) ?></option>
                     </select>
                 </div>
 
                 <!-- Section 2: Address & Household Information -->
                 <div class="col-12 mt-3">
                     <h6 class="fw-bold text-dark border-bottom pb-1 mb-2 d-flex align-items-center gap-1" style="font-size:.9rem; color:var(--green)!important;">
-                        <i class="bi bi-house-door"></i> 2. Tirahan at Sambahayan (Address & Household)
+                        <i class="bi bi-house-door"></i> <?= e(__('2. Tirahan at Sambahayan (Address & Household)')) ?>
                     </h6>
                 </div>
 
                 <div class="col-sm-6">
-                    <label for="house_no" class="form-label">House / Block / Lot No.</label>
+                    <label for="house_no" class="form-label"><?= e(__('House / Block / Lot No.')) ?></label>
                     <input type="text" id="house_no" name="house_no"
                            class="form-control"
-                           placeholder="Hal. Blk 2 Lot 14"
+                           placeholder="<?= e(__('Hal. Blk 2 Lot 14')) ?>"
                            value="<?= e(old('house_no')) ?>">
                 </div>
 
                 <div class="col-sm-6">
-                    <label for="street" class="form-label">Street / Kalye</label>
+                    <label for="street" class="form-label"><?= e(__('Street / Kalye')) ?></label>
                     <input type="text" id="street" name="street"
                            class="form-control"
-                           placeholder="Hal. Rizal Street"
+                           placeholder="<?= e(__('Hal. Rizal Street')) ?>"
                            value="<?= e(old('street')) ?>">
                 </div>
 
@@ -480,10 +480,10 @@ require __DIR__ . '/_auth_open.php';
                 $selZone = old('zone', '');
                 ?>
                 <div class="col-sm-6">
-                    <label for="zone" class="form-label">Purok / Sitio <span class="req">*</span></label>
+                    <label for="zone" class="form-label"><?= e(__('Purok / Sitio')) ?> <span class="req">*</span></label>
                     <?php if ($puroks !== []): ?>
                     <select id="zone" name="zone" class="form-select" required>
-                        <option value="">— Pumili ng Purok —</option>
+                        <option value=""><?= e(__('— Pumili ng Purok —')) ?></option>
                         <?php foreach ($puroks as $z): ?>
                         <option value="<?= e($z) ?>" <?= $selZone === $z ? 'selected' : '' ?>>
                             <?= e($z) ?>
@@ -494,49 +494,49 @@ require __DIR__ . '/_auth_open.php';
                     <input type="text" id="zone" name="zone" class="form-control"
                            maxlength="50"
                            value="<?= e($selZone) ?>"
-                           placeholder="Hal. Purok 1" required>
+                           placeholder="<?= e(__('Hal. Purok 1')) ?>" required>
                     <?php endif; ?>
                 </div>
 
                 <div class="col-sm-6">
-                    <label for="household_no" class="form-label">Household Number</label>
+                    <label for="household_no" class="form-label"><?= e(__('Household Number')) ?></label>
                     <input type="text" id="household_no" name="household_no"
                            class="form-control"
-                           placeholder="Hal. HH-0042 (opsyonal)"
+                           placeholder="<?= e(__('Hal. HH-0042 (opsyonal)')) ?>"
                            value="<?= e(old('household_no')) ?>">
                 </div>
 
                 <div class="col-sm-6">
-                    <label class="form-label d-block">Ikaw ba ang Punong Sambahayan (Head of Household)?</label>
+                    <label class="form-label d-block"><?= e(__('Ikaw ba ang Punong Sambahayan (Head of Household)?')) ?></label>
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" name="is_household_head" id="head_yes" value="1" <?= old('is_household_head') === '1' ? 'checked' : '' ?>>
-                        <label class="form-check-label" for="head_yes">Oo (Yes)</label>
+                        <label class="form-check-label" for="head_yes"><?= e(__('Oo (Yes)')) ?></label>
                     </div>
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" name="is_household_head" id="head_no" value="0" <?= old('is_household_head') !== '1' ? 'checked' : '' ?>>
-                        <label class="form-check-label" for="head_no">Hindi (No)</label>
+                        <label class="form-check-label" for="head_no"><?= e(__('Hindi (No)')) ?></label>
                     </div>
                 </div>
 
                 <div class="col-sm-6">
-                    <label for="head_relationship" class="form-label">Relasyon sa Head (kung Hindi)</label>
+                    <label for="head_relationship" class="form-label"><?= e(__('Relasyon sa Head (kung Hindi)')) ?></label>
                     <input type="text" id="head_relationship" name="head_relationship"
                            class="form-control"
-                           placeholder="Hal. Asawa, Anak, Kapatid"
+                           placeholder="<?= e(__('Hal. Asawa, Anak, Kapatid')) ?>"
                            value="<?= e(old('head_relationship')) ?>">
                 </div>
 
                 <!-- Section 3: Contact & Account Security -->
                 <div class="col-12 mt-3">
                     <h6 class="fw-bold text-dark border-bottom pb-1 mb-2 d-flex align-items-center gap-1" style="font-size:.9rem; color:var(--green)!important;">
-                        <i class="bi bi-shield-lock"></i> 3. Contact at Seguridad (Account Details)
+                        <i class="bi bi-shield-lock"></i> <?= e(__('3. Contact at Seguridad (Account Details)')) ?>
                     </h6>
                 </div>
 
                 <!-- Email -->
                 <div class="col-sm-6">
                     <label for="reg_email" class="form-label">
-                        Email Address <span class="req">*</span>
+                        <?= e(__('Email Address')) ?> <span class="req">*</span>
                     </label>
                     <input type="email" id="reg_email" name="email"
                            class="form-control <?= !empty($errors['email']) ? 'is-invalid' : '' ?>"
@@ -551,7 +551,7 @@ require __DIR__ . '/_auth_open.php';
                 <!-- Phone -->
                 <div class="col-sm-6">
                     <label for="phone" class="form-label">
-                        Numero ng Telepono (Mobile) <span class="req">*</span>
+                        <?= e(__('Numero ng Telepono (Mobile)')) ?> <span class="req">*</span>
                     </label>
                     <div class="input-group auth-ig">
                         <span class="input-group-text"><i class="bi bi-phone" style="font-size:.9rem;"></i></span>
@@ -569,13 +569,13 @@ require __DIR__ . '/_auth_open.php';
                 <!-- Password -->
                 <div class="col-sm-6">
                     <label for="reg_password" class="form-label">
-                        Password <span class="req">*</span>
+                        <?= e(__('Password')) ?> <span class="req">*</span>
                     </label>
                     <div class="input-group auth-ig">
                         <input :type="showPw ? 'text' : 'password'"
                                id="reg_password" name="password"
                                class="form-control has-btn <?= !empty($errors['password']) ? 'is-invalid' : '' ?>"
-                               placeholder="Min. 8 karakter"
+                               placeholder="<?= e(__('Min. 8 karakter')) ?>"
                                @input="checkStrength($event.target.value)"
                                aria-describedby="pwRules"
                                required autocomplete="new-password">
@@ -611,12 +611,12 @@ require __DIR__ . '/_auth_open.php';
                 <!-- Confirm Password -->
                 <div class="col-sm-6">
                     <label for="reg_password_confirm" class="form-label">
-                        Ulitin ang Password <span class="req">*</span>
+                        <?= e(__('Ulitin ang Password')) ?> <span class="req">*</span>
                     </label>
                     <input :type="showPw ? 'text' : 'password'"
                            id="reg_password_confirm" name="password_confirmation"
                            class="form-control <?= !empty($errors['password_confirmation']) ? 'is-invalid' : '' ?>"
-                           placeholder="Ulitin ang password"
+                           placeholder="<?= e(__('Ulitin ang password')) ?>"
                            x-model="confirmPw"
                            required autocomplete="new-password">
                     <p class="mt-1 mb-0" style="font-size:.76rem;" x-show="confirmPw.length > 0" aria-live="polite"
@@ -632,8 +632,8 @@ require __DIR__ . '/_auth_open.php';
                 <!-- Valid ID upload -->
                 <div class="col-12">
                     <label class="form-label">
-                        Valid ID <span class="req">*</span>
-                        <span class="text-muted fw-normal ms-1" style="font-size:.75rem;">(JPG, PNG, o PDF — max 10MB)</span>
+                        <?= e(__('Valid ID')) ?> <span class="req">*</span>
+                        <span class="text-muted fw-normal ms-1" style="font-size:.75rem;"><?= e(__('(JPG, PNG, o PDF — max 10MB)')) ?></span>
                     </label>
 
                     <!-- AI Verification notice -->
@@ -643,11 +643,10 @@ require __DIR__ . '/_auth_open.php';
                             <?php /* --tw-green-600/700 live in main.css, which this
                                      standalone page does not load, so both lines
                                      rendered with no colour at all. */ ?>
-                            <p style="margin:0 0 3px;font-size:.78rem;font-weight:700;color:#15803d;">AI-Powered ID Verification</p>
+                            <p style="margin:0 0 3px;font-size:.78rem;font-weight:700;color:#15803d;"><?= e(__('AI-Powered ID Verification')) ?></p>
                             <p style="margin:0;font-size:.73rem;color:#166534;line-height:1.5;">
-                                Ang inyong ID ay awtomatikong sususuriin ng AI. Tiyaking:
-                                <strong>malinaw ang larawan</strong>, <strong>nakikita ang mukha at pangalan</strong>,
-                                at <strong>tunay na Philippine government ID</strong> ang inyong ia-upload.
+                                <?= e(__('Ang inyong ID ay awtomatikong sususuriin ng AI. Tiyaking:')) ?>
+                                <strong><?= e(__('malinaw ang larawan')) ?></strong>, <strong><?= e(__('nakikita ang mukha at pangalan')) ?></strong><?= e(__(', at')) ?> <strong><?= e(__('tunay na Philippine government ID')) ?></strong> <?= e(__('ang inyong ia-upload.')) ?>
                             </p>
                         </div>
                     </div>
@@ -656,7 +655,7 @@ require __DIR__ . '/_auth_open.php';
                     <details style="margin-bottom:.75rem;">
                         <summary style="font-size:.75rem;font-weight:600;color:#374151;cursor:pointer;user-select:none;padding:6px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:.5rem;list-style:none;display:flex;align-items:center;gap:6px;">
                             <i class="bi bi-card-list" style="color:var(--green);"></i>
-                            Mga katanggap-tanggap na Valid ID <span style="margin-left:auto;font-size:.7rem;color:var(--text-muted);">(i-click para makita)</span>
+                            <?= e(__('Mga katanggap-tanggap na Valid ID')) ?> <span style="margin-left:auto;font-size:.7rem;color:var(--text-muted);"><?= e(__('(i-click para makita)')) ?></span>
                         </summary>
                         <div style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 .5rem .5rem;">
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;">
@@ -672,7 +671,7 @@ require __DIR__ . '/_auth_open.php';
                                     'Student ID (with seal)','Company ID (official)',
                                 ];
                                 foreach ($acceptedIds as $idName): ?>
-                                <p style="margin:0;font-size:.72rem;color:var(--text-secondary);">✓ <?= e($idName) ?></p>
+                                <p style="margin:0;font-size:.72rem;color:var(--text-secondary);">✓ <?= e(__($idName)) ?></p>
                                 <?php endforeach; ?>
                             </div>
                         </div>
@@ -694,16 +693,16 @@ require __DIR__ . '/_auth_open.php';
                         <div x-show="!fileName">
                             <i class="bi bi-cloud-arrow-up text-secondary" style="font-size:1.75rem;"></i>
                             <p class="mb-0 mt-2" style="font-size:.875rem; font-weight:600; color:var(--text-secondary);">
-                                I-drag dito o <span style="color:var(--green);">pumili ng file</span>
+                                <?= e(__('I-drag dito o')) ?> <span style="color:var(--green);"><?= e(__('pumili ng file')) ?></span>
                             </p>
-                            <p class="mb-0 text-muted" style="font-size:.75rem;">JPEG, PNG, PDF &bull; max 10MB</p>
+                            <p class="mb-0 text-muted" style="font-size:.75rem;"><?= e(__('JPEG, PNG, PDF • max 10MB')) ?></p>
                         </div>
 
                         <!-- File selected state -->
                         <div x-show="fileName" @click.stop>
                             <!-- Image preview -->
                             <template x-if="previewUrl">
-                                <img :src="previewUrl" class="id-preview-img" alt="ID preview">
+                                <img :src="previewUrl" class="id-preview-img" alt="<?= e(__('ID preview')) ?>">
                             </template>
                             <!-- PDF / no-preview -->
                             <template x-if="!previewUrl && fileName">
@@ -715,7 +714,7 @@ require __DIR__ . '/_auth_open.php';
                                     class="btn btn-sm btn-outline-secondary mt-2"
                                     style="font-size:.75rem; border-radius:.5rem;"
                                     @click.stop="clearFile()">
-                                <i class="bi bi-x me-1"></i>Palitan
+                                <i class="bi bi-x me-1"></i><?= e(__('Palitan')) ?>
                             </button>
                         </div>
                     </div>
@@ -744,14 +743,14 @@ require __DIR__ . '/_auth_open.php';
                 <!-- Submit -->
                 <div class="col-12 mt-1">
                     <button type="submit" class="auth-btn" data-loading-text="<?= e(t('auth_hero.creating')) ?>">
-                        Create Account
+                        <?= e(__('Create Account')) ?>
                     </button>
                 </div>
 
             </div><!-- /row -->
         </form>
 
-        <p class="auth-small">Already have an account? <a class="auth-link" href="<?= e(route('login')) ?>">Sign in</a></p>
+        <p class="auth-small"><?= e(__('Already have an account?')) ?> <a class="auth-link" href="<?= e(route('login')) ?>"><?= e(__('Sign in')) ?></a></p>
     </div>
 </section>
 
@@ -810,11 +809,11 @@ require __DIR__ . '/_auth_open.php';
                 if (/[^A-Za-z0-9]/.test(pw))     score++;
 
                 const levels = [
-                    { pct: 20,  color: '#dc3545', label: 'Napakahina' },
-                    { pct: 40,  color: '#fd7e14', label: 'Mahina'     },
-                    { pct: 60,  color: '#ffc107', label: 'Katamtaman' },
-                    { pct: 80,  color: '#20c997', label: 'Malakas'    },
-                    { pct: 100, color: '#198754', label: 'Napakalakas'},
+                    { pct: 20,  color: '#dc3545', label: <?= json_encode(__('Napakahina')) ?> },
+                    { pct: 40,  color: '#fd7e14', label: <?= json_encode(__('Mahina')) ?>     },
+                    { pct: 60,  color: '#ffc107', label: <?= json_encode(__('Katamtaman')) ?> },
+                    { pct: 80,  color: '#20c997', label: <?= json_encode(__('Malakas')) ?>    },
+                    { pct: 100, color: '#198754', label: <?= json_encode(__('Napakalakas')) ?>},
                 ];
                 const idx = Math.min(score, levels.length) - 1;
                 const lvl = levels[Math.max(idx, 0)];

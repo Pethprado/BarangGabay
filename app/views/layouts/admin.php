@@ -8,10 +8,10 @@
  *   string $content      – pre-rendered view HTML
  */
 
-$pageTitle    = $pageTitle    ?? 'Dashboard';
+$pageTitle    = $pageTitle    ?? __('Dashboard');
 $pendingCount = (int) ($pendingCount ?? 0);
 $userRole     = $_SESSION['role']      ?? 'staff';
-$userName     = $_SESSION['full_name'] ?? 'Admin';
+$userName     = $_SESSION['full_name'] ?? __('Admin');
 
 // Normalise the current path (strip query string and base-folder prefix).
 $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
@@ -41,7 +41,7 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= e($pageTitle) ?> — BarangGabay Admin</title>
+    <title><?= e($pageTitle) ?> <?= e(__('— BarangGabay Admin')) ?></title>
     <base href="<?= e(base_url()) ?>">
     <!-- Applied before first paint so navigating between admin pages never flashes the wrong theme. -->
     <script>
@@ -104,20 +104,24 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
         } catch (\Throwable) {}
     }
 
+    // Trash badge: staff count their own deleted posts, admins everything.
+    $__trashCount = \App\Models\PostTrash::count($__isStaff ? (int) ($_SESSION['user_id'] ?? 0) : null);
+
     if ($__isStaff) {
         $__primary = [
             ['/admin',                     'bi-grid-1x2',          t('admin_nav.dashboard'),          [], 0, true],
             ['/admin/announcements?mine=1','bi-megaphone',         t('admin_nav.my_announcements'),   ['/admin/announcements'], 0],
             ['/admin/events?mine=1',       'bi-calendar-event',    t('admin_nav.my_events'),          ['/admin/events'], 0],
+            ['/admin/ordinances?mine=1',   'bi-journal-text',      t('admin_nav.my_ordinances'),      ['/admin/ordinances'], 0],
             ['/admin#tasks',               'bi-list-check',        t('admin_nav.assigned_tasks'),     [], 0, 'never'],
             ['/admin/residents',           'bi-people',            t('admin_nav.residents'),          [], $pendingCount],
             ['/admin/documents',           'bi-file-earmark-text', t('admin_nav.documents'),          [], $__docOpen],
-            ['/admin/feedback',            'bi-chat-left-text',    t('admin_nav.feedback'),           [], $__fbUnread],
+            ['/admin/feedback?mine=1',     'bi-chat-left-text',    t('admin_nav.my_feedback'),        [], $__fbUnread],
             ['/admin/translation-health',  'bi-translate',         t('admin_nav.translation_review'), ['/admin/translations'], $__pendingTx],
+            ['/admin/trash',               'bi-trash3',            t('admin_nav.trash'),              [], $__trashCount],
             ['/admin/account',             'bi-person',            t('admin_nav.my_profile'),         [], 0],
         ];
         $__tools = [
-            ['/admin/ordinances', 'bi-journal-text',      t('admin_nav.ordinances'), [], 0],
             ['/admin/payments',   'bi-wallet2',           t('admin_nav.payments'),   [], $__payPending],
             ['/admin/evacuation', 'bi-house-exclamation', t('admin_nav.evacuation'), [], 0],
             ['/admin/safety',     'bi-shield-check',      t('admin_nav.safety'),     [], 0],
@@ -135,6 +139,7 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
             ['/admin/translation-health', 'bi-translate',         t('admin_nav.translation_hub'), ['/admin/translations'], $__pendingTx],
             ['/admin/documents',          'bi-file-earmark-text', t('admin_nav.documents'),       [], $__docOpen],
             ['/admin/reports',            'bi-bar-chart-line',    t('admin_nav.analytics'),       [], 0],
+            ['/admin/trash',              'bi-trash3',            t('admin_nav.trash'),           [], $__trashCount],
         ];
         if ($userRole === 'superadmin') {
             $__primary[] = ['/superadmin/settings', 'bi-gear', t('admin_nav.system_settings'), [], setting('maintenance_mode', false) ? '!' : 0];
@@ -184,7 +189,6 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
     $__toolsOpen   = str_contains($__toolsHtml, 'sidebar-link active');
     $__roleLabel   = t('admin_nav.role_' . (in_array($userRole, ['superadmin', 'admin', 'staff'], true) ? $userRole : 'staff'));
     $__panelLabel  = $__isStaff ? t('admin_nav.staff_panel') : t('admin_nav.admin_panel');
-    $__boLocale    = back_office_locale();
     ?>
 
     <!-- ====================================================
@@ -206,13 +210,42 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
         <nav class="sidebar-nav" aria-label="<?= e($__panelLabel) ?>">
             <?= $__primaryHtml ?>
 
-            <div class="sidebar-group" x-data="{ open: <?= $__toolsOpen ? 'true' : 'false' ?> }">
-                <button type="button" class="nav-section-toggle" @click="open = !open"
+            <?php /* Tools starts OPEN everywhere. It used to start folded on
+                     every page outside it, so Voice Training and the Manobo
+                     Dictionary looked "gone" from the admin; and on their own
+                     pages a click on TOOLS folded it shut, which looked empty.
+                     Folding is now the admin's choice, remembered per browser,
+                     and never applies while you are on one of its pages. */ ?>
+            <div class="sidebar-group" id="sidebarToolsGroup"
+                 x-data="{
+                     open: <?= $__toolsOpen ? 'true' : "(function () { try { return localStorage.getItem('bg_admin_tools') !== 'closed'; } catch (e) { return true; } })()" ?>,
+                     toggle() {
+                         this.open = !this.open;
+                         try { localStorage.setItem('bg_admin_tools', this.open ? 'open' : 'closed'); } catch (e) {}
+                         if (this.open) { this.$nextTick(() => this.reveal(true)); }
+                     },
+                     /* Tools sits at the bottom of a scrolling sidebar: on a
+                        laptop screen its links opened BELOW the visible area,
+                        under the profile card, so a click on TOOLS seemed to
+                        show nothing. Scroll the sidebar to bring them up. */
+                     reveal(smooth) {
+                         const target = document.getElementById('sidebarToolsGroup');
+                         const nav = target ? target.closest('.sidebar-nav') : null;
+                         if (!nav) { return; }
+                         const top = nav.scrollTop + target.getBoundingClientRect().top - nav.getBoundingClientRect().top - 8;
+                         nav.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+                     },
+                     init() {
+                         const active = document.querySelector('#sidebarTools .sidebar-link.active');
+                         if (active) { this.$nextTick(() => this.reveal(false)); }
+                     }
+                 }">
+                <button type="button" class="nav-section-toggle" @click="toggle()"
                         :aria-expanded="open.toString()" aria-controls="sidebarTools">
                     <span><?= e(t('admin_nav.tools')) ?></span>
                     <i class="bi bi-chevron-down" :class="{ 'is-open': open }" aria-hidden="true"></i>
                 </button>
-                <div id="sidebarTools" x-show="open"<?= $__toolsOpen ? '' : ' style="display:none"' ?>>
+                <div id="sidebarTools" x-show="open">
                     <?= $__toolsHtml ?>
                 </div>
             </div>
@@ -263,15 +296,9 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
             </div>
 
             <div class="topbar-right">
-                <!-- Interface language. Labels and menus follow it; post CONTENT in
-                     the back office stays the original text (see back_office_locale()). -->
-                <div class="topbar-lang d-none d-md-inline-flex" role="group" aria-label="<?= e(t('lang.switch_label')) ?>">
-                    <?php foreach (available_locales() as $__code => $__label): ?>
-                        <a href="<?= e(route('set-locale/' . $__code) . '?scope=admin') ?>" title="<?= e($__label) ?>"
-                           class="<?= $__boLocale === $__code ? 'is-active' : '' ?>"<?= $__boLocale === $__code ? ' aria-current="true"' : '' ?>><?= e(locale_short_code($__code)) ?></a>
-                    <?php endforeach; ?>
-                </div>
-
+                <?php /* No EN / FIL / MN switch here: the back office is English
+                         only (see back_office_locale()). The language switch and
+                         translator are on the resident side. */ ?>
                 <button type="button" class="topbar-icon-btn" onclick="window.toggleBgTheme()"
                         title="<?= e(t('theme.toggle')) ?>" aria-label="<?= e(t('theme.toggle')) ?>">
                     <i class="bi theme-toggle-icon" aria-hidden="true"></i>
@@ -293,12 +320,6 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
                     </button>
                     <div class="topbar-user-menu" x-show="open" x-transition.opacity style="display:none" role="menu">
                         <div class="topbar-user-menu__head"><strong><?= e($userName) ?></strong><span><?= e($__roleLabel) ?></span></div>
-                        <div class="topbar-lang topbar-lang--menu d-md-none" role="group" aria-label="<?= e(t('lang.switch_label')) ?>">
-                            <?php foreach (available_locales() as $__code => $__label): ?>
-                                <a href="<?= e(route('set-locale/' . $__code) . '?scope=admin') ?>" title="<?= e($__label) ?>"
-                                   class="<?= $__boLocale === $__code ? 'is-active' : '' ?>"><?= e(locale_short_code($__code)) ?></a>
-                            <?php endforeach; ?>
-                        </div>
                         <a href="<?= e(route('admin/account')) ?>" role="menuitem"><i class="bi bi-person-gear" aria-hidden="true"></i><?= e(t('admin_nav.account')) ?></a>
                         <a href="<?= e(route('logout')) ?>" role="menuitem"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><?= e(t('admin_nav.signout')) ?></a>
                     </div>
@@ -312,14 +333,14 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
             <div class="pending-banner-body">
                 <i class="bi bi-exclamation-triangle-fill"></i>
                 <strong>
-                    <?= $pendingCount ?> resident<?= $pendingCount !== 1 ? 's' : '' ?> awaiting verification.
+                    <?= e((int) $pendingCount === 1 ? __('1 resident awaiting verification.') : __(':n residents awaiting verification.', ['n' => (int) $pendingCount])) ?>
                 </strong>
                 <span class="d-none d-sm-inline">
-                    Review uploaded IDs and approve access.
+                    <?= e(__('Review uploaded IDs and approve access.')) ?>
                 </span>
             </div>
             <a href="<?= e(route('admin/residents')) ?>" class="pending-banner-link">
-                Review now <i class="bi bi-arrow-right-short"></i>
+                <?= e(__('Review now')) ?> <i class="bi bi-arrow-right-short"></i>
             </a>
         </div>
         <?php endif; ?>
@@ -417,6 +438,7 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
 </script>
 
 <script src="<?= e(asset_v('assets/js/admin.js')) ?>"></script>
+<?php require __DIR__ . '/../shared/_background-sweep.php'; ?>
 </body>
 </html>
 

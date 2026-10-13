@@ -13,13 +13,31 @@ class NotificationController
      */
     public function index(): void
     {
-        $userId        = (int) $_SESSION['user_id'];
-        $notifications = Notification::getForUser($userId);
+        $userId = (int) $_SESSION['user_id'];
+
+        // Staff and admins get their own page in the back-office layout:
+        // notifications only, in English, linking to back-office screens.
+        // The resident page brought the whole resident menu (Home, Events,
+        // Announcements, Ordinances, Documents, Feedback) along with it.
+        $backOffice = self::isBackOfficeUser();
+        if ($backOffice) {
+            $GLOBALS['bg_is_back_office'] = true;   // English labels, see back_office_locale()
+        }
+
+        // Stored in the language they were written in; shown in the reader's.
+        $notifications = localise_notifications(Notification::getForUser($userId));
 
         foreach ($notifications as &$notif) {
             $notif['url'] = $this->resolveUrl($notif);
         }
         unset($notif);
+
+        if ($backOffice) {
+            $pageTitle    = 'Notifications';
+            $pendingCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn();
+            view('admin/notifications', compact('notifications', 'pageTitle', 'pendingCount'));
+            return;
+        }
 
         view('resident/notifications', compact('notifications'));
     }
@@ -104,7 +122,7 @@ class NotificationController
 
         if (!$id) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Missing ID']);
+            echo json_encode(['success' => false, 'error' => __('Missing ID')]);
             return;
         }
 
@@ -120,7 +138,7 @@ class NotificationController
     {
         header('Content-Type: application/json');
         $userId = (int) $_SESSION['user_id'];
-        $notifs = \App\Models\Notification::getRecentForUser($userId, 8);
+        $notifs = localise_notifications(\App\Models\Notification::getRecentForUser($userId, 8));
 
         foreach ($notifs as &$n) {
             $n['url']      = $this->resolveUrl($n);
@@ -148,8 +166,31 @@ class NotificationController
      * Resolve the notification's related_type + related_id into a navigable URL.
      * Uses a single DB lookup per notification (acceptable for small lists).
      */
+    private static function isBackOfficeUser(): bool
+    {
+        return \in_array($_SESSION['role'] ?? '', ['staff', 'admin', 'superadmin'], true);
+    }
+
     private function resolveUrl(array $notif): string
     {
+        // Staff open the matching back-office screen, never a resident page.
+        if (self::isBackOfficeUser()) {
+            $rid = (int) ($notif['related_id'] ?? 0);
+            return match ((string) ($notif['related_type'] ?? '')) {
+                'announcement'     => $rid ? route('admin/announcements/' . $rid . '/edit') : route('admin/announcements'),
+                'event'            => $rid ? route('admin/events/' . $rid . '/edit') : route('admin/events'),
+                'ordinance'        => $rid ? route('admin/ordinances/' . $rid . '/edit') : route('admin/ordinances'),
+                'document_request' => route('admin/documents'),
+                'document_payment' => route('admin/payments'),
+                'feedback'         => route('admin/feedback'),
+                'user', 'resident' => route('admin/residents'),
+                default            => match ((string) ($notif['type'] ?? '')) {
+                    'verification' => route('admin/residents'),
+                    default        => route('notifications'),
+                },
+            };
+        }
+
         if (empty($notif['related_id']) || empty($notif['related_type'])) {
             return route('notifications');
         }

@@ -34,16 +34,16 @@ $minPassword   = \App\Controllers\AuthController::PASSWORD_MIN_LENGTH;
 $deviceLabel = static function (?string $agent): string {
     $agent = (string) $agent;
     if ($agent === '') {
-        return 'Unknown device';
+        return __('Unknown device');
     }
-    $browser = 'Browser';
+    $browser = __('Browser');
     foreach (['Edg' => 'Edge', 'OPR' => 'Opera', 'Firefox' => 'Firefox', 'Chrome' => 'Chrome', 'Safari' => 'Safari'] as $token => $name) {
         if (str_contains($agent, $token)) {
             $browser = $name;
             break;
         }
     }
-    $os = 'Unknown OS';
+    $os = __('Unknown OS');
     foreach (['Windows' => 'Windows', 'Android' => 'Android', 'iPhone' => 'iOS', 'iPad' => 'iPadOS', 'Mac OS' => 'macOS', 'Linux' => 'Linux'] as $token => $name) {
         if (str_contains($agent, $token)) {
             $os = $name;

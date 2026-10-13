@@ -558,7 +558,7 @@ class AuthController
                 'is_household_head' => $isHouseholdHead,
                 'head_relationship' => $headRelationship,
             ];
-            flash('error', 'Mangyaring itama ang mga may markang patlang at subukan muli.');
+            flash('error', __('Mangyaring itama ang mga may markang patlang at subukan muli.'));
             redirect('/register');
         }
 
@@ -611,7 +611,7 @@ class AuthController
                         'is_household_head' => $isHouseholdHead,
                         'head_relationship' => $headRelationship,
                     ];
-                    flash('error', 'Hindi tinanggap ang iyong Valid ID. Pakiupload ng tunay na government ID.');
+                    flash('error', __('Hindi tinanggap ang iyong Valid ID. Pakiupload ng tunay na government ID.'));
                     redirect('/register');
                 }
 
@@ -658,7 +658,7 @@ class AuthController
                     'is_household_head' => $isHouseholdHead,
                     'head_relationship' => $headRelationship,
                 ];
-                flash('error', 'Nabigong i-upload ang ID. Subukan muli.');
+                flash('error', __('Nabigong i-upload ang ID. Subukan muli.'));
                 redirect('/register');
             }
         }
@@ -720,7 +720,7 @@ class AuthController
         );
 
         unset($_SESSION['oauth_prefill']);
-        flash('success', 'Matagumpay na nairehistro! Suriin ang iyong email para ma-verify ang iyong account.');
+        flash('success', __('Matagumpay na nairehistro! Suriin ang iyong email para ma-verify ang iyong account.'));
         redirect('/login');
     }
 
@@ -738,7 +738,7 @@ class AuthController
             || empty($payload['email'])
             || empty($payload['hash'])
         ) {
-            flash('error', 'Invalid na verification link.');
+            flash('error', __('Invalid na verification link.'));
             redirect('/login');
         }
 
@@ -746,18 +746,18 @@ class AuthController
         $expected = hash_hmac('sha256', "{$payload['id']}:{$payload['email']}", $secret);
 
         if (!hash_equals($expected, $payload['hash'])) {
-            flash('error', 'Invalid na verification token.');
+            flash('error', __('Invalid na verification token.'));
             redirect('/login');
         }
 
         $user = User::find((int) $payload['id']);
         if (!$user || $user['email'] !== $payload['email']) {
-            flash('error', 'Hindi nahanap ang user.');
+            flash('error', __('Hindi nahanap ang user.'));
             redirect('/login');
         }
 
         if ((int) $user['email_verified'] === 1) {
-            flash('success', 'Ang iyong email ay nai-verify na. Mag-login na.');
+            flash('success', __('Ang iyong email ay nai-verify na. Mag-login na.'));
             redirect('/login');
         }
 
@@ -766,7 +766,7 @@ class AuthController
 
         AuditLog::record((int) $payload['id'], 'user.email_verified', "Email verified: {$payload['email']}");
 
-        flash('success', 'Email na-verify! Ang iyong account ay naghihintay na ng pag-apruba ng barangay admin.');
+        flash('success', __('Email na-verify! Ang iyong account ay naghihintay na ng pag-apruba ng barangay admin.'));
         redirect('/login');
     }
 

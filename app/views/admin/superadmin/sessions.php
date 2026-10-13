@@ -31,12 +31,12 @@ $device = static function (?string $ua): string {
     if ($ua === null || $ua === '') {
         return '—';
     }
-    $os = 'Unknown OS';
+    $os = __('Unknown OS');
     foreach (['Windows NT 10' => 'Windows', 'Windows' => 'Windows', 'Android' => 'Android',
               'iPhone' => 'iOS', 'iPad' => 'iPadOS', 'Mac OS X' => 'macOS', 'Linux' => 'Linux'] as $needle => $label) {
         if (stripos($ua, $needle) !== false) { $os = $label; break; }
     }
-    $browser = 'Unknown';
+    $browser = __('Unknown');
     foreach (['Edg' => 'Edge', 'OPR' => 'Opera', 'Chrome' => 'Chrome',
               'Safari' => 'Safari', 'Firefox' => 'Firefox', 'curl' => 'curl'] as $needle => $label) {
         if (stripos($ua, $needle) !== false) { $browser = $label; break; }

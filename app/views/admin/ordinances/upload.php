@@ -12,7 +12,7 @@ ob_start();
 
 <!-- Breadcrumb -->
 <div class="d-flex align-items-center justify-content-between mb-4">
-    <nav aria-label="breadcrumb">
+    <nav aria-label="<?= e(__('breadcrumb')) ?>">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item"><a href="<?= e(route('admin/ordinances')) ?>"><?= e(t('admin_nav.ordinances')) ?></a></li>
             <li class="breadcrumb-item active"><?= e(t('admin_ordinances.breadcrumb_upload_new')) ?></li>
@@ -116,14 +116,14 @@ ob_start();
                     <option value=""><?= e(t('admin_ordinances.category_placeholder')) ?></option>
                     <?php
                     $cats = [
-                        'General'        => 'General',
-                        'Health'         => 'Health (Kalusugan)',
-                        'Safety'         => 'Safety (Kaligtasan)',
-                        'Environmental'  => 'Environmental (Kalikasan)',
-                        'Government'     => 'Government (Pamahalaan)',
-                        'Education'      => 'Education (Edukasyon)',
-                        'Infrastructure' => 'Infrastructure (Imprastruktura)',
-                        'Social'         => 'Social (Panlipunan)',
+                        'General'        => __('General'),
+                        'Health'         => __('Health (Kalusugan)'),
+                        'Safety'         => __('Safety (Kaligtasan)'),
+                        'Environmental'  => __('Environmental (Kalikasan)'),
+                        'Government'     => __('Government (Pamahalaan)'),
+                        'Education'      => __('Education (Edukasyon)'),
+                        'Infrastructure' => __('Infrastructure (Imprastruktura)'),
+                        'Social'         => __('Social (Panlipunan)'),
                     ];
                     $oldCat = $old['category'] ?? '';
                     foreach ($cats as $val => $lbl): ?>

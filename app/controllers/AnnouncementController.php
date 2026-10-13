@@ -666,16 +666,10 @@ class AnnouncementController
     public function destroy(array $params): void
     {
         check_csrf();
-        $id = (int) ($params['id'] ?? 0);
-
-        // Before the row goes: the generated MP3s are files on disk that
-        // nothing else would ever clean up.
-        PostAudioService::purgeFor('announcement', $id);
-
-        db()->prepare('DELETE FROM announcements WHERE id = ?')->execute([$id]);
-        AuditLog::record((int) $_SESSION['user_id'], 'announcement.delete', "Deleted ID {$id}");
-        flash('success', t('flash.ann_deleted'));
-        redirect('/admin/announcements');
+        // Not deleted for good: moved to the Trash (/admin/trash), where it
+        // can be restored. Generated audio and files are only removed when
+        // an admin deletes it from the Trash. Staff may trash their own posts.
+        trash_post('announcement', (int) ($params['id'] ?? 0), '/admin/announcements' . (str_contains((string) ($_SERVER['HTTP_REFERER'] ?? ''), 'mine=1') ? '?mine=1' : ''));
     }
 
     /**

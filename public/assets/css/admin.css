@@ -207,7 +207,13 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
 }
-.sidebar-nav::-webkit-scrollbar { display: none; }
+/* A visible (thin) scrollbar: with it hidden, nothing showed that the menu
+   continued below the fold, and the TOOLS links looked missing on laptops. */
+.sidebar-nav { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.28) transparent; }
+.sidebar-nav::-webkit-scrollbar       { width: 6px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.28); border-radius: 3px; }
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.45); }
 
 /* Section labels */
 .nav-section-label {

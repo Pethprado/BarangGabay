@@ -256,10 +256,17 @@ ob_start();
                     <?= e(t('resident_home.urgent_label')) ?>
                     <span class="font-semibold">&middot; <?= e(date('M j, Y', strtotime((string) $u['published_at']))) ?></span>
                 </p>
+                <?php $uTitle = localised_content($u, 'title'); ?>
                 <h2 class="urgent-banner-title mt-1 text-lg font-black leading-tight sm:text-xl">
-                    <?= e(localised_text($u, 'title')) ?>
+                    <?= e($uTitle['text']) ?>
                 </h2>
-                <?php $snippet = trim(strip_tags((string) ($u['excerpt'] ?? ''))); ?>
+                <?php if (!empty($uTitle['unreviewed'])): ?>
+                <p class="urgent-banner-body mt-1 text-xs font-semibold">
+                    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                    <?= e(t('content_lang.machine_unreviewed', ['language' => available_locales()[$uTitle['locale']] ?? $uTitle['locale']])) ?>
+                </p>
+                <?php endif; ?>
+                <?php $snippet = trim(\App\Services\SpokenText::plain(localised_text($u, 'body'))); ?>
                 <?php if ($snippet !== ''): ?>
                 <p class="urgent-banner-body mt-1.5 line-clamp-3 text-sm leading-relaxed">
                     <?= e(mb_strimwidth($snippet, 0, 180, '…', 'UTF-8')) ?>
@@ -338,7 +345,7 @@ ob_start();
     <h2 id="rd-lang-title" class="rd-h2"><?= e(t('resident_home.lang_voice_title')) ?></h2>
     <div class="rd-card rd-lang">
         <div class="rd-lang__opts" role="group" aria-label="<?= e(t('resident_home.lang_voice_title')) ?>">
-            <?php foreach (['en' => ['EN', 'English'], 'fil' => ['FIL', 'Filipino'], 'msm' => ['MN', 'Manobo']] as $lc => [$lcShort, $lcName]): ?>
+            <?php foreach (['en' => ['EN', __('English')], 'fil' => ['FIL', __('Filipino')], 'msm' => ['MN', __('Manobo')]] as $lc => [$lcShort, $lcName]): ?>
                 <a href="<?= e(route('set-locale/' . $lc)) ?>" class="rd-lang__opt<?= $curLocale === $lc ? ' is-active' : '' ?>" aria-current="<?= $curLocale === $lc ? 'true' : 'false' ?>">
                     <strong><?= $lcShort ?></strong><span><?= $lcName ?></span>
                 </a>
@@ -374,13 +381,13 @@ ob_start();
             <div class="rd-post__img" style="background-image:<?= $lpImg !== '' ? "url('" . e(asset($lpImg)) . "'), " : '' ?>url('<?= e(post_placeholder_image($lp['category'] ?? '', $lpUrg)) ?>');" role="presentation"></div>
             <div class="rd-post__body">
                 <div class="flex items-center gap-2 text-xs text-slate-500">
-                    <?php if ($lpUrg === 'urgent'): ?><span class="rd-badge rd-badge--urgent"><i class="bi bi-exclamation-triangle-fill"></i> Urgent</span><?php endif; ?>
+                    <?php if ($lpUrg === 'urgent'): ?><span class="rd-badge rd-badge--urgent"><i class="bi bi-exclamation-triangle-fill"></i> <?= e(__('Urgent')) ?></span><?php endif; ?>
                     <?php if ($lpUrg === 'important'): ?><span class="rd-badge rd-badge--important"><?= e(t('landing.important')) ?></span><?php endif; ?>
                     <time datetime="<?= e((string) $lp['published_at']) ?>"><?= e($shortWhen($lp['published_at'] ?? null)) ?></time>
                 </div>
                 <h3 class="text-base font-bold leading-snug text-slate-900"><a href="<?= e($lpUrl) ?>" class="hover:underline"><?= e($lpTitle) ?></a></h3>
                 <p class="text-sm text-slate-600"><?= e(mb_strimwidth($lpBody, 0, 120, '…')) ?></p>
-                <div class="rd-tags" aria-label="Languages"><span>EN</span><span>FIL</span><span>MN</span></div>
+                <div class="rd-tags" aria-label="<?= e(__('Languages')) ?>"><span>EN</span><span>FIL</span><span>MN</span></div>
                 <a href="<?= e($lpUrl) ?>" class="rd-link mt-auto" aria-label="<?= e(t('resident_home.read_more') . ': ' . $lpTitle) ?>"><?= e(t('resident_home.read_more')) ?> <i class="bi bi-arrow-right"></i></a>
             </div>
         </article>
@@ -811,7 +818,7 @@ $isFirstVisit = empty($attention)
                     </h3>
                     <?php if (!empty($ev['venue'])): ?>
                     <p class="mt-1 flex items-center gap-1 text-xs text-slate-600">
-                        <i class="bi bi-geo-alt flex-shrink-0"></i><span class="truncate"><?= e($ev['venue']) ?></span>
+                        <i class="bi bi-geo-alt flex-shrink-0"></i><span class="truncate"><?= e(translate_for_display((string) $ev['venue'], null, true)) ?></span>
                     </p>
                     <?php endif; ?>
                     <a href="<?= e(route('events/' . $ev['slug'] . '/calendar')) ?>"
@@ -834,7 +841,7 @@ $isFirstVisit = empty($attention)
      dashboard nothing. Omitted entirely when nothing has been summarised yet,
      rather than showing an empty promise. -->
 <?php if ($featuredOrdinance !== null):
-    $ordSummary = trim(strip_tags((string) ($featuredOrdinance['ai_summary'] ?? '')));
+    $ordSummary = translate_for_display(trim(strip_tags((string) ($featuredOrdinance['ai_summary'] ?? ''))));
 ?>
 <section class="fade-up mb-8">
     <a href="<?= e(route('ordinances/' . (int) $featuredOrdinance['id'])) ?>"
@@ -903,7 +910,7 @@ $docState = (string) ($docOpen['status'] ?? '');
             </p>
             <p class="mt-0.5 text-xs leading-relaxed text-green-800">
                 <?php if (($docOpen['delivery_method'] ?? 'pickup') === 'digital'): ?>
-                <i class="bi bi-file-earmark-arrow-down me-1"></i> <?= e(t('documents.status_ready_digital')) ?> &bull; I-download at i-print mula sa portal.
+                <i class="bi bi-file-earmark-arrow-down me-1"></i> <?= e(t('documents.status_ready_digital')) ?> <?= e(__('• I-download at i-print mula sa portal.')) ?>
                 <?php else: ?>
                 <?= e(t('resident_home.doc_ready_help')) ?>
                 <?php endif; ?>
@@ -1156,7 +1163,7 @@ $docState = (string) ($docOpen['status'] ?? '');
 
 <script>
     /* Progressive enhancement for the notifications panel. Everything here is
-       an upgrade on markup that already works without it: the "mark all read"
+       an upgrade on markup that already works without it: the <?= json_encode(__('mark all read')) ?>
        control is a real form, and each row is a real link. If this script does
        not run, both still do the right thing — just with a page load. */
     (function () {
@@ -1425,7 +1432,7 @@ $docState = (string) ($docOpen['status'] ?? '');
                 <?php if (!empty($ev['venue'])): ?>
                 <p class="mt-1.5 flex items-center gap-1 text-xs text-slate-500">
                     <i class="bi bi-geo-alt flex-shrink-0"></i>
-                    <span class="truncate"><?= e($ev['venue']) ?></span>
+                    <span class="truncate"><?= e(translate_for_display((string) $ev['venue'], null, true)) ?></span>
                 </p>
                 <?php endif; ?>
 

@@ -368,14 +368,14 @@ class SmsController
         header('Content-Type: application/json');
 
         if (!$this->sms->isConfigured()) {
-            echo json_encode(['error' => 'SMS API key not configured.']);
+            echo json_encode(['error' => __('SMS API key not configured.')]);
             return;
         }
 
         $data = $this->sms->getBalance();
         if ($data === null) {
             http_response_code(503);
-            echo json_encode(['error' => 'Could not reach Semaphore API. Try again later.']);
+            echo json_encode(['error' => __('Could not reach Semaphore API. Try again later.')]);
             return;
         }
 

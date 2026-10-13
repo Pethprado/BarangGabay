@@ -16,7 +16,7 @@ $isPaid    = in_array($payStatus, ['PAID_VERIFIED', 'PAID_AT_PICKUP'], true);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Katibayan ng Pagbabayad — <?= e((string) $payment['payment_ref']) ?></title>
+    <title><?= e(__('Katibayan ng Pagbabayad —')) ?> <?= e((string) $payment['payment_ref']) ?></title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -50,13 +50,13 @@ $isPaid    = in_array($payStatus, ['PAID_VERIFIED', 'PAID_AT_PICKUP'], true);
             <span class="d-inline-flex p-2 rounded-3 bg-primary text-white">
                 <i class="bi bi-wallet2 fs-4"></i>
             </span>
-            <span class="fs-4 fw-bold text-dark tracking-tight">BARANGGABAY</span>
+            <span class="fs-4 fw-bold text-dark tracking-tight"><?= e(__('BARANGGABAY')) ?></span>
         </div>
         <div class="small text-muted text-uppercase tracking-wider fw-semibold">
-            Barangay Bayogo, Madrid, Surigao del Sur
+            <?= e(__('Barangay Bayogo, Madrid, Surigao del Sur')) ?>
         </div>
-        <h2 class="h5 fw-bold text-dark mt-2 mb-0">KATIBAYAN NG PAGBABAYAD</h2>
-        <span class="text-muted" style="font-size:.78rem;">(Electronic Payment Acknowledgement)</span>
+        <h2 class="h5 fw-bold text-dark mt-2 mb-0"><?= e(__('KATIBAYAN NG PAGBABAYAD')) ?></h2>
+        <span class="text-muted" style="font-size:.78rem;"><?= e(__('(Electronic Payment Acknowledgement)')) ?></span>
     </div>
 
     <!-- Status Banner -->
@@ -66,55 +66,55 @@ $isPaid    = in_array($payStatus, ['PAID_VERIFIED', 'PAID_AT_PICKUP'], true);
             <span class="fw-bold text-uppercase tracking-wider"><?= e(\App\Models\DocumentPayment::statusLabel($payStatus)) ?></span>
         </div>
         <div class="small mt-1" style="font-size:.75rem;">
-            <?= $isPaid ? 'Matagumpay na natanggap at naberipika ang inyong bayad.' : 'Kasalukuyan pang pinoproseso ang pagbabayad na ito.' ?>
+            <?= $isPaid ? __('Matagumpay na natanggap at naberipika ang inyong bayad.') : __('Kasalukuyan pang pinoproseso ang pagbabayad na ito.') ?>
         </div>
     </div>
 
     <!-- Details Grid -->
     <div class="row g-3 py-2 small border-bottom mb-4">
         <div class="col-6">
-            <span class="text-muted text-uppercase" style="font-size:.7rem;">Payment Reference:</span>
+            <span class="text-muted text-uppercase" style="font-size:.7rem;"><?= e(__('Payment Reference:')) ?></span>
             <div class="fw-bold font-monospace text-primary fs-6"><?= e((string) $payment['payment_ref']) ?></div>
         </div>
         <div class="col-6 text-end">
-            <span class="text-muted text-uppercase" style="font-size:.7rem;">Request Reference:</span>
+            <span class="text-muted text-uppercase" style="font-size:.7rem;"><?= e(__('Request Reference:')) ?></span>
             <div class="fw-bold font-monospace text-dark fs-6"><?= e((string) $request['reference_no']) ?></div>
         </div>
 
         <div class="col-6">
-            <span class="text-muted text-uppercase" style="font-size:.7rem;">Pangalan ng Residente:</span>
+            <span class="text-muted text-uppercase" style="font-size:.7rem;"><?= e(__('Pangalan ng Residente:')) ?></span>
             <div class="fw-bold text-dark"><?= e((string) $request['full_name']) ?></div>
         </div>
         <div class="col-6 text-end">
-            <span class="text-muted text-uppercase" style="font-size:.7rem;">Uri ng Dokumento:</span>
+            <span class="text-muted text-uppercase" style="font-size:.7rem;"><?= e(__('Uri ng Dokumento:')) ?></span>
             <div class="fw-bold text-dark"><?= e($docLabel) ?></div>
         </div>
 
         <div class="col-6">
-            <span class="text-muted text-uppercase" style="font-size:.7rem;">Paraan ng Pagbayad:</span>
+            <span class="text-muted text-uppercase" style="font-size:.7rem;"><?= e(__('Paraan ng Pagbayad:')) ?></span>
             <div class="fw-bold text-dark"><?= !empty($payment['paymongo_checkout_id']) ? 'GCASH (PAYMONGO)' : strtoupper((string) $payment['payment_method']) ?></div>
         </div>
         <div class="col-6 text-end">
-            <span class="text-muted text-uppercase" style="font-size:.7rem;"><?= !empty($payment['paymongo_payment_id']) ? 'PayMongo Payment ID' : 'GCash Reference' ?>:</span>
-            <div class="fw-bold font-monospace text-dark"><?= e((string) ($payment['paymongo_payment_id'] ?: ($payment['gcash_reference_no'] ?: 'N/A (Counter)'))) ?></div>
-            <?php if (($payment['verification_type'] ?? '') === 'paymongo'): ?><div style="font-size:.7rem;" class="text-success">Automatically verified through PayMongo</div><?php endif; ?>
+            <span class="text-muted text-uppercase" style="font-size:.7rem;"><?= !empty($payment['paymongo_payment_id']) ? __('PayMongo Payment ID') : __('GCash Reference') ?>:</span>
+            <div class="fw-bold font-monospace text-dark"><?= e((string) ($payment['paymongo_payment_id'] ?: ($payment['gcash_reference_no'] ?: __('N/A (Counter)')))) ?></div>
+            <?php if (($payment['verification_type'] ?? '') === 'paymongo'): ?><div style="font-size:.7rem;" class="text-success"><?= e(__('Automatically verified through PayMongo')) ?></div><?php endif; ?>
         </div>
 
         <div class="col-6">
-            <span class="text-muted text-uppercase" style="font-size:.7rem;">Petsa ng Transaksyon:</span>
+            <span class="text-muted text-uppercase" style="font-size:.7rem;"><?= e(__('Petsa ng Transaksyon:')) ?></span>
             <div class="fw-semibold text-secondary"><?= e(format_datetime((string) $payment['created_at'])) ?></div>
         </div>
         <div class="col-6 text-end">
-            <span class="text-muted text-uppercase" style="font-size:.7rem;">Petsa ng Beripikasyon:</span>
-            <div class="fw-semibold text-secondary"><?= !empty($payment['verified_at']) ? e(format_datetime((string) $payment['verified_at'])) : 'Pending' ?></div>
+            <span class="text-muted text-uppercase" style="font-size:.7rem;"><?= e(__('Petsa ng Beripikasyon:')) ?></span>
+            <div class="fw-semibold text-secondary"><?= !empty($payment['verified_at']) ? e(format_datetime((string) $payment['verified_at'])) : __('Pending') ?></div>
         </div>
     </div>
 
     <!-- Amount Summary Box -->
     <div class="p-3 bg-light rounded-3 d-flex justify-content-between align-items-center mb-4 border">
         <div>
-            <span class="text-muted text-uppercase fw-semibold" style="font-size:.72rem;">Kabuuang Halaga</span>
-            <div class="small text-muted">Document Fee</div>
+            <span class="text-muted text-uppercase fw-semibold" style="font-size:.72rem;"><?= e(__('Kabuuang Halaga')) ?></span>
+            <div class="small text-muted"><?= e(__('Document Fee')) ?></div>
         </div>
         <div class="h3 fw-bold text-success mb-0">
             ₱<?= number_format($amount, 2) ?>
@@ -124,16 +124,16 @@ $isPaid    = in_array($payStatus, ['PAID_VERIFIED', 'PAID_AT_PICKUP'], true);
     <!-- Notice -->
     <div class="p-3 rounded-2 bg-light text-muted" style="font-size:.72rem;line-height:1.5;">
         <i class="bi bi-info-circle me-1 text-primary"></i>
-        <strong>Paalala:</strong> Ito ay isang digital system payment acknowledgement mula sa BarangGabay. Hindi ito pamalit sa opisyal na Official Receipt (OR) ng pamahalaan maliban kung may hiwalay na itinalagang opisyal na resibo ang Barangay Treasurer.
+        <strong><?= e(__('Paalala:')) ?></strong> <?= e(__('Ito ay isang digital system payment acknowledgement mula sa BarangGabay. Hindi ito pamalit sa opisyal na Official Receipt (OR) ng pamahalaan maliban kung may hiwalay na itinalagang opisyal na resibo ang Barangay Treasurer.')) ?>
     </div>
 
     <!-- Print / Close buttons -->
     <div class="text-center mt-4 no-print d-flex gap-2 justify-content-center">
         <button type="button" class="btn btn-primary px-4 fw-semibold" onclick="window.print()">
-            <i class="bi bi-printer me-1"></i>I-print ang Katibayan
+            <i class="bi bi-printer me-1"></i><?= e(__('I-print ang Katibayan')) ?>
         </button>
         <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" onclick="window.close()">
-            Isara
+            <?= e(__('Isara')) ?>
         </button>
     </div>
 </div>

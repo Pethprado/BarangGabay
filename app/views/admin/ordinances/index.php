@@ -7,6 +7,9 @@ $draft    = count(array_filter($ordinances, static fn($o) => $o['status'] === 'd
 $repealed = count(array_filter($ordinances, static fn($o) => $o['status'] === 'repealed'));
 
 ob_start();
+$__msPath = 'admin/ordinances'; $__msMine = (bool) ($mine ?? false);
+$__msMineLabel = 'My ordinances'; $__msAllLabel = 'All ordinances';
+require __DIR__ . '/../../shared/_mine-switch.php';
 ?>
 
 <!-- Page header -->
@@ -155,7 +158,7 @@ ob_start();
                     <span class="badge rounded-pill"
                           style="background:#e0f2fe;color:#075985;font-size:.6rem;font-weight:600;"
                           title="<?= e(t('admin_announcements.audio_badge')) ?>">
-                        🎙 Audio
+                        <?= e(__('🎙 Audio')) ?>
                     </span>
                     <?php endif; ?>
 
@@ -177,7 +180,7 @@ ob_start();
                 <td>
                     <?php if (!empty($ord['category'])): ?>
                     <span class="status-badge" style="background:#f3e8ff;color:#5b21b6;">
-                        <?= e($ord['category']) ?>
+                        <?= e(__($ord['category'])) ?>
                     </span>
                     <?php else: ?>
                     <span style="color:#cbd5e1;font-size:.82rem;">—</span>

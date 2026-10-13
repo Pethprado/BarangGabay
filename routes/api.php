@@ -55,6 +55,10 @@ return [
     // use — never audio, which stays behind the route above. Rate-limited so
     // the barangay's translation allowance cannot be spent by one resident
     // mashing the button across many posts.
+    // Background retry of unfinished translations, requested by the page after
+    // it loads (shared/_background-sweep.php). Any visitor's traffic drives it.
+    ['POST', '/api/translations/sweep', 'MaintenanceController@translationSweep', []],
+
     ['POST', '/api/voice/translate-now', 'VoiceController@translateNow', ['auth', 'verified', 'rate-limit']],
 
     // Content import. These make outbound HTTP requests to an address the

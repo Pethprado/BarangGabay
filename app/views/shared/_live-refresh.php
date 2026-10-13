@@ -12,7 +12,7 @@
      style="position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:2000;">
     <button type="button" onclick="location.reload()"
             style="border:0;border-radius:999px;padding:.6rem 1.1rem;font-weight:700;font-size:.85rem;color:#fff;background:#087a4b;box-shadow:0 8px 24px rgba(0,0,0,.2);cursor:pointer;">
-        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> New updates — refresh
+        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> <?= e(__('New updates — refresh')) ?>
     </button>
 </div>
 <script>

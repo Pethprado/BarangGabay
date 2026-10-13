@@ -54,20 +54,24 @@ final class UrgentTranslationGateTest extends TestCase
         ], $overrides);
     }
 
-    // ── 1. Urgent + free MT → not publicly visible until confirmed ────────
+    // ── 1. Urgent + free MT → shown, but flagged as not yet checked ────────
+    //
+    // Barangay decision (2026-10-13): an EN reader gets English right away.
+    // Because the machine text can be dangerously wrong (this very fixture),
+    // the pick is flagged 'unreviewed' and carries the original, so the page
+    // can warn and offer it one click away.
 
-    public function testUrgentMachineTranslationIsHiddenUntilConfirmed(): void
+    public function testUrgentMachineTranslationIsShownFlaggedUntilConfirmed(): void
     {
         set_locale('en');
         $pick = localised_content($this->row(), 'body');
 
-        $this->assertSame(
-            'May bagyo, lumikas na sa evacuation center.',
-            $pick['text'],
-            'A pending machine translation must not reach a reader'
-        );
-        $this->assertFalse($pick['translated'], 'It must read as "no translation yet"');
-        $this->assertStringNotContainsString('has evacuated', $pick['text']);
+        $this->assertSame('A hurricane has evacuated the evacuation center.', $pick['text']);
+        $this->assertTrue($pick['translated']);
+        $this->assertTrue($pick['machine']);
+        $this->assertTrue($pick['unreviewed'], 'The page must be able to warn that staff have not checked it');
+        $this->assertSame('May bagyo, lumikas na sa evacuation center.', $pick['original'], 'The original must travel with it');
+        $this->assertSame('fil', $pick['source_lang']);
     }
 
     public function testConfirmedTranslationBecomesVisible(): void
@@ -169,13 +173,24 @@ final class UrgentTranslationGateTest extends TestCase
         $this->assertSame('pending', Announcement::REVIEW_PENDING);
     }
 
-    /** The gate keys off the state column, not off urgency, at read time. */
-    public function testTitleIsGatedAlongsideTheBody(): void
+    /** The flag keys off the state column, not off urgency, at read time. */
+    public function testTitleIsFlaggedAlongsideTheBody(): void
     {
         set_locale('en');
         $pick = localised_content($this->row(), 'title');
 
-        $this->assertSame('May bagyo, lumikas na', $pick['text']);
-        $this->assertFalse($pick['translated']);
+        $this->assertSame('A hurricane has evacuated', $pick['text']);
+        $this->assertTrue($pick['unreviewed']);
+        $this->assertSame('May bagyo, lumikas na', $pick['original']);
+    }
+
+    /** Once confirmed, the warning goes away. */
+    public function testConfirmedTranslationIsNotFlagged(): void
+    {
+        set_locale('en');
+        $pick = localised_content($this->row(['en_review_state' => Announcement::REVIEW_APPROVED]), 'body');
+
+        $this->assertFalse($pick['unreviewed']);
+        $this->assertNull($pick['original']);
     }
 }

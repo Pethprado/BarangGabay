@@ -48,6 +48,7 @@ $__tnMachine  = false;
  */
 $__tnShown = null;
 $__tnGated = false;
+$__tnUnreviewed = null;   // the pick carrying the longest original, if any part is unchecked
 
 foreach ($__tnPicks as $__tnOne) {
     if (!is_array($__tnOne)) {
@@ -61,6 +62,10 @@ foreach ($__tnPicks as $__tnOne) {
     $__tnMissing = $__tnMissing || !($__tnOne['translated'] ?? true);
     $__tnGated   = $__tnGated || !empty($__tnOne['gated']);
     $__tnMachine = $__tnMachine || (bool) ($__tnOne['machine'] ?? false);
+    if (!empty($__tnOne['unreviewed'])
+        && mb_strlen((string) ($__tnOne['original'] ?? '')) > mb_strlen((string) ($__tnUnreviewed['original'] ?? ''))) {
+        $__tnUnreviewed = $__tnOne;
+    }
 
     if ($__tnShown === null
         && !($__tnOne['translated'] ?? true)
@@ -154,6 +159,29 @@ $__tnAuto = $__tnMissing && !$__tnGated && $__tnType !== null && $__tnId > 0;
     run(false);
 })();
 </script>
+<?php elseif ($__tnUnreviewed !== null):
+    $__tnSrcName  = available_locales()[$__tnUnreviewed['source_lang'] ?? 'fil'] ?? 'Filipino';
+    $__tnOriginal = trim(\App\Services\SpokenText::plain((string) $__tnUnreviewed['original'])); ?>
+<!-- Urgent post: the machine translation is shown (barangay decision), with a
+     plain warning and the original one click away, because free machine
+     translation does make dangerous mistakes on these. -->
+<style>
+    .post-note-unreviewed { border: 1px solid #f1c4bf; background: #fdecea; color: #5c1a16; border-radius: .75rem; padding: .75rem 1rem; display: block; }
+    .post-note-unreviewed summary { cursor: pointer; font-weight: 700; text-decoration: underline; margin-top: .4rem; }
+    .post-note-unreviewed .tn-original { margin-top: .6rem; white-space: pre-line; color: #3b1512; }
+    :root[data-theme="dark"] .post-note-unreviewed { background: #3a1714; border-color: #7a2f28; color: #f6c9c4; }
+    :root[data-theme="dark"] .post-note-unreviewed .tn-original { color: #fbe3e0; }
+</style>
+<div data-translation-notice="unreviewed" class="post-note-unreviewed" role="note">
+    <p class="mb-0"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+        <?= e(t('content_lang.machine_unreviewed', ['language' => $__tnLanguage])) ?></p>
+    <?php if ($__tnOriginal !== ''): ?>
+    <details>
+        <summary><?= e(t('content_lang.show_original', ['language' => $__tnSrcName])) ?></summary>
+        <div class="tn-original" lang="<?= e((string) ($__tnUnreviewed['source_lang'] ?? 'fil')) ?>"><?= e($__tnOriginal) ?></div>
+    </details>
+    <?php endif; ?>
+</div>
 <?php elseif ($__tnMissing && $__tnGated): ?>
 <p data-translation-notice="pending-review" class="post-note">
     <i class="bi bi-shield-check"></i>

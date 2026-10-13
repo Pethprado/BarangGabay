@@ -342,10 +342,18 @@ class VoiceTrainingController
                     if (VoiceText::normalize($text) === '') {
                         throw new \InvalidArgumentException('The word or phrase cannot be empty.');
                     }
+                    // Keep the recording tied to its Manobo dictionary word. The
+                    // edit form does not send dictionary_entry_id, so it used to
+                    // be wiped on every edit; now an explicit id wins, otherwise
+                    // the (possibly corrected) spelling is matched again.
+                    $dictEntryId = !empty($_POST['dictionary_entry_id']) ? (int) $_POST['dictionary_entry_id'] : null;
+                    if ($dictEntryId === null && ($sample['language'] ?? '') === 'msm') {
+                        $dictEntryId = VoiceUsageIndex::dictionaryByWord()[VoiceText::normalize($text)]['id'] ?? null;
+                    }
                     VoiceSample::update($id, [
                         'text'                => $text,
                         'translation'         => trim((string) ($_POST['translation'] ?? $sample['translation'] ?? '')),
-                        'dictionary_entry_id' => !empty($_POST['dictionary_entry_id']) ? (int) $_POST['dictionary_entry_id'] : null,
+                        'dictionary_entry_id' => $dictEntryId,
                         'speaker_label'       => trim((string) ($_POST['speaker_label'] ?? $sample['speaker_label'])),
                         'voice_type'          => $this->cleanVoiceType((string) ($_POST['voice_type'] ?? $sample['voice_type'])),
                         'notes'               => trim((string) ($_POST['notes'] ?? $sample['notes'] ?? '')),
@@ -438,7 +446,7 @@ class VoiceTrainingController
         $language = (string) ($_POST['language'] ?? 'msm');
 
         if ($text === '' || !in_array($language, VoiceSample::LANGUAGES, true)) {
-            $this->json(['success' => false, 'error' => 'Type some text to preview.'], 422);
+            $this->json(['success' => false, 'error' => __('Type some text to preview.')], 422);
             return;
         }
 
@@ -458,7 +466,7 @@ class VoiceTrainingController
 
         $language = (string) ($_POST['language'] ?? '');
         if (!in_array($language, VoiceSample::LANGUAGES, true)) {
-            $this->json(['success' => false, 'error' => 'Unknown language.'], 422);
+            $this->json(['success' => false, 'error' => __('Unknown language.')], 422);
             return;
         }
 
@@ -480,7 +488,7 @@ class VoiceTrainingController
 
         $text = mb_substr(trim((string) ($_POST['text'] ?? '')), 0, 20000);
         if ($text === '') {
-            $this->json(['success' => false, 'error' => 'Nothing to read.'], 422);
+            $this->json(['success' => false, 'error' => __('Nothing to read.')], 422);
             return;
         }
 
@@ -602,7 +610,7 @@ class VoiceTrainingController
         $this->ensureAdmin();
         check_csrf();
         if (($_SESSION['role'] ?? '') !== 'superadmin') {
-            $this->json(['success' => false, 'error' => 'Super Admin only.'], 403);
+            $this->json(['success' => false, 'error' => __('Super Admin only.')], 403);
             return;
         }
 
@@ -843,10 +851,10 @@ class VoiceTrainingController
         $role = strtolower((string) ($_SESSION['role'] ?? ''));
         if (!in_array($role, ['admin', 'superadmin'], true)) {
             if ($this->isAjax()) {
-                $this->json(['success' => false, 'error' => 'Admin access is required.'], 403);
+                $this->json(['success' => false, 'error' => __('Admin access is required.')], 403);
                 exit;
             }
-            flash('error', 'Kailangan ng Admin access para sa pahinang ito.');
+            flash('error', __('Kailangan ng Admin access para sa pahinang ito.'));
             redirect('login');
         }
     }

@@ -60,7 +60,7 @@ class FeedbackController
 
         $this->alertStaffOfMessage($feedbackId, $userId, true);
 
-        flash('success', 'Naipadala na ang iyong mensahe. Abangan ang sagot mula sa aming mga kawani.');
+        flash('success', __('Naipadala na ang iyong mensahe. Abangan ang sagot mula sa aming mga kawani.'));
         redirect('/feedback');
     }
 
@@ -86,7 +86,7 @@ class FeedbackController
         // but the effect is the same as everywhere else in this codebase: blocked,
         // flashed error, no row written — verified via a live cross-user attempt.
         if (!Feedback::belongsToUser($id, $userId)) {
-            flash('error', 'Hindi mo maa-access ang thread na ito.');
+            flash('error', __('Hindi mo maa-access ang thread na ito.'));
             redirect('/feedback');
         }
 
@@ -95,7 +95,7 @@ class FeedbackController
 
         $this->alertStaffOfMessage($id, $userId, false);
 
-        flash('success', 'Naipadala ang iyong sagot.');
+        flash('success', __('Naipadala ang iyong sagot.'));
         redirect('/feedback');
     }
 
@@ -106,13 +106,27 @@ class FeedbackController
     {
         $search    = \trim($_GET['search'] ?? '');
         $feedbacks = Feedback::allAdmin($search);
+
+        // ?mine=1 — the staff sidebar's "My Feedback": conversations this
+        // person has replied to. Residents write the feedback itself; staff
+        // own the threads they answered. "All" still lists every thread, so
+        // new feedback waiting for a first reply is one click away.
+        $mine = ($_GET['mine'] ?? '') === '1';
+        if ($mine) {
+            $handled   = array_flip(Feedback::idsRepliedBy((int) ($_SESSION['user_id'] ?? 0)));
+            $feedbacks = array_values(array_filter(
+                $feedbacks,
+                static fn (array $f): bool => isset($handled[(int) $f['id']])
+            ));
+        }
+
         $unread    = Feedback::unreadCountAdmin();
         $pendingCount = (int) db()->query(
             "SELECT COUNT(*) FROM users WHERE status = 'pending'"
         )->fetchColumn();
         $pageTitle = t('admin_feedback.page_title');
 
-        view('admin/feedback/index', compact('feedbacks', 'unread', 'search', 'pendingCount', 'pageTitle'));
+        view('admin/feedback/index', compact('feedbacks', 'unread', 'search', 'pendingCount', 'pageTitle', 'mine'));
     }
 
     /** GET /admin/feedback/{id}/messages — full thread, for the reply modal (AJAX) */
@@ -152,7 +166,7 @@ class FeedbackController
             redirect('/admin/feedback');
         }
         if (\strlen($reply) > self::MSG_MAX) {
-            flash('error', "Ang sagot ay masyadong mahaba (maximum " . self::MSG_MAX . " karakter).");
+            flash('error', __('Ang sagot ay masyadong mahaba (maximum :max karakter).', ['max' => self::MSG_MAX]));
             redirect('/admin/feedback');
         }
 
@@ -169,7 +183,7 @@ class FeedbackController
         Notification::create([
             'user_id'      => (int) $feedback['user_id'],
             'title'        => 'Nasagot ang iyong mensahe',
-            'message'      => 'Ang iyong mensahe ay nasagot na ng aming kawani. Bisitahin ang Feedback page para makita ang sagot.',
+            'message'      => __('Ang iyong mensahe ay nasagot na ng aming kawani. Bisitahin ang Feedback page para makita ang sagot.'),
             'type'         => 'system',
             'related_id'   => null,
             'related_type' => null,

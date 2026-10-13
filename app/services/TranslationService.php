@@ -346,8 +346,22 @@ class TranslationService
             : 'fil';
 
         $filled = static function (string $suffix) use ($row, $bodyField): bool {
-            return \trim((string) ($row['title_' . $suffix] ?? '')) !== ''
-                || \trim((string) ($row[$bodyField . '_' . $suffix] ?? '')) !== '';
+            $title = \trim((string) ($row['title_' . $suffix] ?? '')) !== '';
+            $body  = \trim((string) ($row[$bodyField . '_' . $suffix] ?? '')) !== '';
+
+            // When the original text is known, a half-done translation — the
+            // title translated, the body not (the free translator's quota ran
+            // out mid-post) — is still missing. Counting it as done hid it
+            // from the retry sweep and the backfill, so residents who chose
+            // English kept reading the Filipino body.
+            if (\array_key_exists($bodyField, $row)) {
+                $needsBody  = \trim(\strip_tags((string) $row[$bodyField])) !== '';
+                $needsTitle = \trim((string) ($row['title'] ?? '')) !== '';
+
+                return ($title || !$needsTitle) && ($body || !$needsBody);
+            }
+
+            return $title || $body;
         };
 
         $machine = static fn (string $flag): bool => (int) ($row[$flag] ?? 0) === 1;
@@ -680,6 +694,7 @@ class TranslationService
 
         $titleGloss = null;
         $bodyGloss  = null;
+        $unresolved = 0;
 
         $source = $title . "\n" . $body;
 
@@ -688,10 +703,12 @@ class TranslationService
             if ($needTitle) {
                 $tRes = $translator->translate($title, $sourceLang);
                 $titleGloss = !empty($tRes['translation']) ? $tRes['translation'] : null;
+                $unresolved += (int) ($tRes['unresolved'] ?? 0);
             }
             if ($needBody) {
                 $bRes = $translator->translate($body, $sourceLang);
                 $bodyGloss = !empty($bRes['translation']) ? $bRes['translation'] : null;
+                $unresolved += (int) ($bRes['unresolved'] ?? 0);
             }
 
             if (($needTitle && $titleGloss === null) || ($needBody && $bodyGloss === null)) {
@@ -712,6 +729,34 @@ class TranslationService
                 );
 
                 return false;
+            }
+
+            // Never trade a better Manobo for a worse one. A retry whose time
+            // budget ran out mid-post leaves the rest in Tagalog, and storing
+            // that replaced 10 untranslated parts with 69. For the SAME source
+            // text a partial result is kept only if it leaves fewer parts
+            // untranslated than what is stored; an edited post always gets
+            // its new translation, since the old one is for the old wording.
+            if ($unresolved > 0) {
+                $previous = TranslationAttempt::find($contentType, $contentId, 'msm');
+                $sameText = $previous !== null
+                    && (string) ($previous['source_hash'] ?? '') === TranslationAttempt::hash($source);
+                if ($sameText) {
+                    $storedLeft = (int) ($previous['ok'] ?? 0) === 1
+                        ? 0
+                        : (preg_match('/^(\d+) part/', (string) ($previous['message'] ?? ''), $m) ? (int) $m[1] : PHP_INT_MAX);
+                    if ($unresolved >= $storedLeft) {
+                        if ($storedLeft > 0) {
+                            TranslationAttempt::record(
+                                $contentType, $contentId, 'msm', TranslationOutcome::PARTIAL_RESULT, 'text',
+                                "{$storedLeft} part(s) are still in the source language; will retry for Bisaya.",
+                                'hybrid_translator', $source
+                            );
+                        }
+
+                        return true;   // what is stored is as good or better
+                    }
+                }
             }
 
             $t = $titleGloss ?? '';
@@ -735,6 +780,22 @@ class TranslationService
                     return false;
             }
             self::flagAuto($contentType, $contentId, 'manobo_is_auto', true);
+
+            if ($unresolved > 0) {
+                /* Stored — mostly Manobo/Bisaya beats none — but NOT marked
+                   done. Words still in Tagalog/English mean the Bisaya
+                   service was out (on Render its free quota is shared with
+                   every app on the same IP). PARTIAL_RESULT is retryable, so
+                   the background sweep translates the post again and
+                   replaces this once the service answers. */
+                TranslationAttempt::record(
+                    $contentType, $contentId, 'msm', TranslationOutcome::PARTIAL_RESULT, 'text',
+                    "{$unresolved} part(s) are still in the source language; will retry for Bisaya.",
+                    'hybrid_translator', $source
+                );
+
+                return true;
+            }
 
             TranslationAttempt::recordOk($contentType, $contentId, 'msm', 'text', 'hybrid_translator', $source);
 
@@ -846,12 +907,15 @@ class TranslationService
         $db = db();
         $stats = ['announcements' => 0, 'events' => 0, 'ordinances' => 0];
 
+        // Manobo typed by staff (manobo_is_auto = 0) is never regenerated:
+        // the queries below skip it, so this button cannot erase a person's work.
+
         // Increment version to invalidate cache
         ManoboHybridTranslator::incrementDictionaryVersion();
 
         // 1. Announcements
         try {
-            $stmt = $db->query("SELECT id, title, body, source_lang FROM announcements");
+            $stmt = $db->query("SELECT id, title, body, source_lang FROM announcements WHERE NOT (manobo_is_auto = 0 AND COALESCE(title_manobo, '') <> '')");
             while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
                 $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? (string)$row['source_lang'] : 'fil';
                 if (self::autoTranslatePostToManobo('announcement', (int)$row['id'], (string)$row['title'], (string)$row['body'], $src)) {
@@ -864,7 +928,7 @@ class TranslationService
 
         // 2. Events
         try {
-            $stmt = $db->query("SELECT id, title, description, source_lang FROM events");
+            $stmt = $db->query("SELECT id, title, description, source_lang FROM events WHERE NOT (manobo_is_auto = 0 AND COALESCE(title_manobo, '') <> '')");
             while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
                 $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? (string)$row['source_lang'] : 'fil';
                 if (self::autoTranslatePostToManobo('event', (int)$row['id'], (string)$row['title'], (string)($row['description'] ?? ''), $src)) {
@@ -877,7 +941,7 @@ class TranslationService
 
         // 3. Ordinances
         try {
-            $stmt = $db->query("SELECT id, title, description, source_lang FROM ordinances");
+            $stmt = $db->query("SELECT id, title, description, source_lang FROM ordinances WHERE NOT (manobo_is_auto = 0 AND COALESCE(title_manobo, '') <> '')");
             while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
                 $src = in_array((string)($row['source_lang'] ?? 'fil'), ['fil', 'en'], true) ? (string)$row['source_lang'] : 'fil';
                 if (self::autoTranslatePostToManobo('ordinance', (int)$row['id'], (string)$row['title'], (string)($row['description'] ?? ''), $src)) {

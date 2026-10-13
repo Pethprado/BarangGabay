@@ -121,7 +121,7 @@ class TwoFactorController
             flash('success', t('twofa.enabled_ok'));
         } catch (\Throwable $e) {
             error_log('2FA enable failed: ' . $e->getMessage());
-            flash('error', 'May naganap na error sa pag-activate ng 2FA: ' . $e->getMessage());
+            flash('error', __('May naganap na error sa pag-activate ng 2FA: :error', ['error' => $e->getMessage()]));
         }
         redirect('/two-factor');
     }

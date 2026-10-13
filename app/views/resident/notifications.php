@@ -107,7 +107,7 @@ ob_start();
 <!-- ── Page header ──────────────────────────────────────────────── -->
 <div class="flex items-start justify-between flex-wrap gap-3 mb-6">
     <div>
-        <p class="text-xs font-bold uppercase tracking-widest text-blue-700 mb-0.5">Account</p>
+        <p class="text-xs font-bold uppercase tracking-widest text-blue-700 mb-0.5"><?= e(__('Account')) ?></p>
         <h1 class="text-2xl font-bold text-slate-900 sm:text-3xl mt-0"><?= e(t('res_notifications.title')) ?></h1>
 
         <!-- Reactive sub-headline driven by Alpine unreadCount getter -->
@@ -150,12 +150,12 @@ ob_start();
 <!-- ── Type filter ──────────────────────────────────────────────── -->
 <?php
 $__typesPresent = array_values(array_unique(array_map(static fn ($n) => (string) ($n['type'] ?? 'system'), $notifications)));
-$__typeNames = ['announcement' => 'Announcements', 'event' => 'Events', 'ordinance' => 'Ordinances', 'document' => 'Documents',
-                'payment' => 'Payments', 'emergency' => 'Emergency', 'verification' => 'Account', 'system' => 'System'];
+$__typeNames = ['announcement' => __('Announcements'), 'event' => __('Events'), 'ordinance' => __('Ordinances'), 'document' => __('Documents'),
+                'payment' => __('Payments'), 'emergency' => __('Emergency'), 'verification' => __('Account'), 'system' => __('System')];
 ?>
 <?php if (count($__typesPresent) > 1): ?>
-<div class="ds-chips mb-4" role="group" aria-label="Filter notifications">
-    <button type="button" class="ds-chip" :class="{ 'is-active': typeFilter === '' }" @click="typeFilter = ''">All</button>
+<div class="ds-chips mb-4" role="group" aria-label="<?= e(__('Filter notifications')) ?>">
+    <button type="button" class="ds-chip" :class="{ 'is-active': typeFilter === '' }" @click="typeFilter = ''"><?= e(__('All')) ?></button>
     <?php foreach ($__typesPresent as $__t): ?>
         <button type="button" class="ds-chip" :class="{ 'is-active': typeFilter === <?= e(json_encode($__t)) ?> }" @click="typeFilter = <?= e(json_encode($__t)) ?>">
             <?= e($__typeNames[$__t] ?? ucfirst($__t)) ?>

@@ -32,30 +32,30 @@ ob_start();
 <div class="print-only" style="display:none; padding:2rem; font-family:Georgia,serif;">
     <div style="text-align:center; border-bottom:2px solid #000; padding-bottom:1rem; margin-bottom:1.5rem;">
         <h2 style="margin:0; font-size:1.1rem; text-transform:uppercase; letter-spacing:.05em;">
-            BARANGAY BAYOGO, MADRID, SURIGAO DEL SUR
+            <?= e(__('BARANGAY BAYOGO, MADRID, SURIGAO DEL SUR')) ?>
         </h2>
-        <p style="margin:.25rem 0 0; font-size:.85rem;">Official Event Announcement</p>
+        <p style="margin:.25rem 0 0; font-size:.85rem;"><?= e(__('Official Event Announcement')) ?></p>
     </div>
     <h1 style="font-size:1.4rem; margin-bottom:.5rem;"><?= e($event['title']) ?></h1>
     <p style="font-size:.85rem; color:#555; margin-bottom:.5rem;">
-        <strong>Date:</strong> <?= date('F j, Y \a\t g:i A', strtotime($event['event_date'])) ?>
+        <strong><?= e(__('Date:')) ?></strong> <?= date('F j, Y \a\t g:i A', strtotime($event['event_date'])) ?>
         <?php if (!empty($event['end_date'])): ?>
         &mdash; <?= date('g:i A', strtotime($event['end_date'])) ?>
         <?php endif; ?>
     </p>
     <?php if (!empty($event['venue'])): ?>
     <p style="font-size:.85rem; color:#555; margin-bottom:1.5rem;">
-        <strong>Venue:</strong> <?= e($event['venue']) ?>
+        <strong><?= e(__('Venue:')) ?></strong> <?= e($event['venue']) ?>
     </p>
     <?php endif; ?>
     <div style="line-height:1.7; font-size:.95rem;"><?= e(strip_tags($event['description'])) ?></div>
     <div style="margin-top:3rem; border-top:1px solid #000; padding-top:1rem; font-size:.75rem; color:#555; text-align:center;">
-        Barangay Bayogo, Madrid, Surigao del Sur &mdash; Official Event Notice
+        <?= e(__('Barangay Bayogo, Madrid, Surigao del Sur — Official Event Notice')) ?>
     </div>
 </div>
 
 <div class="no-print d-flex align-items-center justify-content-between mb-4">
-    <nav aria-label="breadcrumb">
+    <nav aria-label="<?= e(__('breadcrumb')) ?>">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
                 <a href="<?= e(route('admin/events')) ?>"><?= e(t('admin_nav.events')) ?></a>
@@ -230,13 +230,13 @@ ob_start();
                 <?php else: ?>
                 <p class="mb-2 small text-warning">
                     <i class="bi bi-exclamation-triangle me-1"></i>
-                    Set <code>GOOGLE_MAPS_API_KEY</code> in .env to enable the map picker.
+                    <?= e(__('Set')) ?> <code>GOOGLE_MAPS_API_KEY</code> <?= e(__('in .env to enable the map picker.')) ?>
                 </p>
                 <?php endif; ?>
 
                 <div class="row g-3">
                     <div class="col-sm-6">
-                        <label for="latitude" class="form-label fw-semibold small">Latitude</label>
+                        <label for="latitude" class="form-label fw-semibold small"><?= e(__('Latitude')) ?></label>
                         <input type="text"
                                id="latitude"
                                name="latitude"
@@ -245,7 +245,7 @@ ob_start();
                                placeholder="e.g. 9.2647">
                     </div>
                     <div class="col-sm-6">
-                        <label for="longitude" class="form-label fw-semibold small">Longitude</label>
+                        <label for="longitude" class="form-label fw-semibold small"><?= e(__('Longitude')) ?></label>
                         <input type="text"
                                id="longitude"
                                name="longitude"
@@ -312,7 +312,7 @@ ob_start();
                             </div>
                         </template>
                         <template x-if="preview">
-                            <img :src="preview" alt="Preview"
+                            <img :src="preview" alt="<?= e(__('Preview')) ?>"
                                  class="rounded-2 w-100"
                                  style="max-height:100px;object-fit:cover;">
                         </template>

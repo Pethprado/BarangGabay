@@ -64,7 +64,7 @@ class ResidentController
 
         // Personal counts — the headline tiles.
         $unreadNotifications  = Notification::unreadCount($userId);
-        $recentNotifications  = Notification::unreadForUser($userId, 4);
+        $recentNotifications  = localise_notifications(Notification::unreadForUser($userId, 4));
         Feedback::ensureMessagesTable();
         $feedbackThreads      = Feedback::dashboardForUser($userId, 3);
         $openFeedbackCount    = Feedback::countForUser($userId);
@@ -348,7 +348,7 @@ class ResidentController
 
             if (($submittedName !== '' && $submittedName !== $currentName) ||
                 ($submittedAddress !== '' && $submittedAddress !== $currentAddress)) {
-                flash('error', 'Naka-lock ang inyong beripikadong impormasyon. Mangyaring gamitin ang "Request Profile Update" kalakip ang patunay upang magsumite ng pagbabago.');
+                flash('error', __('Naka-lock ang inyong beripikadong impormasyon. Mangyaring gamitin ang "Request Profile Update" kalakip ang patunay upang magsumite ng pagbabago.'));
                 redirect('/profile');
             }
 
@@ -356,7 +356,7 @@ class ResidentController
             $phone = trim($_POST['phone'] ?? '');
             db()->prepare('UPDATE users SET phone = ?, updated_at = NOW() WHERE id = ?')->execute([$phone ?: null, $userId]);
             AuditLog::record($userId, 'user.profile.update', 'Updated contact phone number');
-            flash('success', 'Na-update na ang inyong contact number.');
+            flash('success', __('Na-update na ang inyong contact number.'));
             redirect('/profile');
         }
 
@@ -366,7 +366,7 @@ class ResidentController
         $address  = \trim($_POST['address']   ?? '');
 
         if (!$fullName) {
-            flash('error', 'Kinakailangan ang pangalan.');
+            flash('error', __('Kinakailangan ang pangalan.'));
             redirect('/profile');
         }
 
@@ -379,7 +379,7 @@ class ResidentController
         $_SESSION['full_name'] = $fullName;
 
         AuditLog::record($userId, 'user.profile.update', 'Profile updated');
-        flash('success', 'Na-update na ang iyong profile.');
+        flash('success', __('Na-update na ang iyong profile.'));
         redirect('/profile');
     }
 
@@ -391,17 +391,17 @@ class ResidentController
         $confirm = \trim($_POST['confirm_password'] ?? '');
 
         if (!$user || !\password_verify($current, (string) $user['password_hash'])) {
-            flash('error', 'Mali ang kasalukuyang password.');
+            flash('error', __('Mali ang kasalukuyang password.'));
             redirect('/profile');
         }
 
         if (\strlen($new) < 8) {
-            flash('error', 'Ang bagong password ay dapat hindi bababa sa 8 karakter.');
+            flash('error', __('Ang bagong password ay dapat hindi bababa sa 8 karakter.'));
             redirect('/profile');
         }
 
         if ($new !== $confirm) {
-            flash('error', 'Hindi tumutugma ang bagong password at kumpirmasyon.');
+            flash('error', __('Hindi tumutugma ang bagong password at kumpirmasyon.'));
             redirect('/profile');
         }
 
@@ -410,14 +410,14 @@ class ResidentController
             ->execute([$hash, $userId]);
 
         AuditLog::record($userId, 'user.password.change', 'Password changed');
-        flash('success', 'Matagumpay na nabago ang iyong password.');
+        flash('success', __('Matagumpay na nabago ang iyong password.'));
         redirect('/profile');
     }
 
     private function handleAvatarUpload(int $userId): void
     {
         if (empty($_FILES['avatar']['tmp_name'])) {
-            flash('error', 'Walang na-upload na larawan.');
+            flash('error', __('Walang na-upload na larawan.'));
             redirect('/profile');
         }
 
@@ -427,12 +427,12 @@ class ResidentController
         \finfo_close($finfo);
 
         if (!\in_array($mimeType, ['image/jpeg', 'image/png'], true)) {
-            flash('error', 'Tanggap lamang ang JPG o PNG na larawan.');
+            flash('error', __('Tanggap lamang ang JPG o PNG na larawan.'));
             redirect('/profile');
         }
 
         if ($file['size'] > 2 * 1024 * 1024) {
-            flash('error', 'Ang larawan ay hindi dapat lumampas sa 2MB.');
+            flash('error', __('Ang larawan ay hindi dapat lumampas sa 2MB.'));
             redirect('/profile');
         }
 
@@ -448,7 +448,7 @@ class ResidentController
         db()->prepare('UPDATE users SET avatar_url = ?, updated_at = NOW() WHERE id = ?')
             ->execute([$url, $userId]);
 
-        flash('success', 'Na-update na ang iyong profile photo.');
+        flash('success', __('Na-update na ang iyong profile photo.'));
         redirect('/profile');
     }
 
@@ -629,7 +629,7 @@ class ResidentController
         Notification::create([
             'user_id'      => $userId,
             'title'        => 'Account Verified!',
-            'message'      => 'Ang iyong account ay na-verify na! Maaari ka nang mag-login at i-access ang lahat ng features ng BarangGabay.',
+            'message'      => __('Ang iyong account ay na-verify na! Maaari ka nang mag-login at i-access ang lahat ng features ng BarangGabay.'),
             'type'         => 'verification',
             'related_id'   => null,
             'related_type' => null,
@@ -848,7 +848,7 @@ class ResidentController
         $adminId = (int) $_SESSION['user_id'];
 
         if (!$ids || !in_array($action, ['verify', 'suspend'], true)) {
-            flash('error', 'Invalid action or no residents selected.');
+            flash('error', __('Invalid action or no residents selected.'));
             redirect('/admin/residents');
         }
 
@@ -865,7 +865,7 @@ class ResidentController
                 Notification::create([
                     'user_id' => $userId,
                     'title'   => 'Account Verified!',
-                    'message' => 'Ang iyong account ay na-verify na! Maaari ka nang mag-login at i-access ang lahat ng features ng BarangGabay.',
+                    'message' => __('Ang iyong account ay na-verify na! Maaari ka nang mag-login at i-access ang lahat ng features ng BarangGabay.'),
                     'type'    => 'verification',
                 ]);
                 AuditLog::record(
@@ -879,7 +879,7 @@ class ResidentController
                 Notification::create([
                     'user_id' => $userId,
                     'title'   => 'Account Suspended',
-                    'message' => 'Ang iyong account ay na-suspend. Para sa mga katanungan, makipag-ugnayan sa Barangay Hall.',
+                    'message' => __('Ang iyong account ay na-suspend. Para sa mga katanungan, makipag-ugnayan sa Barangay Hall.'),
                     'type'    => 'verification',
                 ]);
                 AuditLog::record(
@@ -908,13 +908,13 @@ class ResidentController
         $user   = User::find($userId);
 
         if (!$user) {
-            flash('error', 'User not found.');
+            flash('error', __('User not found.'));
             redirect('/login');
         }
 
         $reason = trim($_POST['reason'] ?? '');
         if (mb_strlen($reason) < 5) {
-            flash('error', 'Mangyaring magbigay ng malinaw na dahilan (hindi bababa sa 5 karakter) para sa pagbabago ng impormasyon.');
+            flash('error', __('Mangyaring magbigay ng malinaw na dahilan (hindi bababa sa 5 karakter) para sa pagbabago ng impormasyon.'));
             redirect('/profile');
         }
 
@@ -941,7 +941,7 @@ class ResidentController
         }
 
         if (empty($requestedChanges)) {
-            flash('info', 'Walang nakitang pagbabago sa mga patlang.');
+            flash('info', __('Walang nakitang pagbabago sa mga patlang.'));
             redirect('/profile');
         }
 
@@ -974,7 +974,7 @@ class ResidentController
             );
         } catch (\Throwable $e) {}
 
-        flash('success', 'Naisumite na ang inyong kahilingan para sa pagbabago ng profile. Susuriin ito ng Barangay Administrator.');
+        flash('success', __('Naisumite na ang inyong kahilingan para sa pagbabago ng profile. Susuriin ito ng Barangay Administrator.'));
         redirect('/profile');
     }
 
@@ -1006,7 +1006,7 @@ class ResidentController
 
         $req = \App\Models\ProfileUpdateRequest::find($id);
         if (!$req) {
-            flash('error', 'Hindi nahanap ang kahilingan.');
+            flash('error', __('Hindi nahanap ang kahilingan.'));
             redirect('/admin/profile-updates');
         }
 
@@ -1023,9 +1023,9 @@ class ResidentController
                 );
             } catch (\Throwable $e) {}
 
-            flash('success', 'Matagumpay na naaprubahan ang pagbabago ng profile ng residente at na-update ang database.');
+            flash('success', __('Matagumpay na naaprubahan ang pagbabago ng profile ng residente at na-update ang database.'));
         } else {
-            flash('error', 'Nabigong aprubahan ang kahilingan.');
+            flash('error', __('Nabigong aprubahan ang kahilingan.'));
         }
 
         redirect('/admin/profile-updates');
@@ -1044,13 +1044,13 @@ class ResidentController
         $notes   = trim($_POST['admin_notes'] ?? '');
 
         if ($reason === '') {
-            flash('error', 'Kinakailangan ang dahilan ng pagtanggi (rejection reason).');
+            flash('error', __('Kinakailangan ang dahilan ng pagtanggi (rejection reason).'));
             redirect('/admin/profile-updates');
         }
 
         $req = \App\Models\ProfileUpdateRequest::find($id);
         if (!$req) {
-            flash('error', 'Hindi nahanap ang kahilingan.');
+            flash('error', __('Hindi nahanap ang kahilingan.'));
             redirect('/admin/profile-updates');
         }
 
@@ -1066,9 +1066,9 @@ class ResidentController
                 );
             } catch (\Throwable $e) {}
 
-            flash('info', 'Tinanggihan ang kahilingan sa pagbabago ng profile.');
+            flash('info', __('Tinanggihan ang kahilingan sa pagbabago ng profile.'));
         } else {
-            flash('error', 'Nabigong tanggihan ang kahilingan.');
+            flash('error', __('Nabigong tanggihan ang kahilingan.'));
         }
 
         redirect('/admin/profile-updates');

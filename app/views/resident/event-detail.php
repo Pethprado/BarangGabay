@@ -38,7 +38,7 @@ ob_start();
 ?>
 
 <!-- ── Breadcrumb ───────────────────────────────────────────────────────── -->
-<nav class="mb-5 flex items-center gap-2 text-xs text-slate-400" aria-label="Breadcrumb">
+<nav class="mb-5 flex items-center gap-2 text-xs text-slate-400" aria-label="<?= e(__('Breadcrumb')) ?>">
     <a href="<?= e(route('')) ?>" class="hover:text-blue-700 transition-colors"><?= e(t('nav.home')) ?></a>
     <i class="bi bi-chevron-right" style="font-size:.65rem;"></i>
     <a href="<?= e(route('events')) ?>" class="hover:text-blue-700 transition-colors"><?= e(t('nav.events')) ?></a>
@@ -155,7 +155,7 @@ $evTitlePick  = localised_content($event, 'title');
                     </span>
                     <div>
                         <p class="post-fact-label"><?= e(t('res_event_detail.venue')) ?></p>
-                        <p class="post-fact-value"><?= e($event['venue']) ?></p>
+                        <p class="post-fact-value"><?= e(translate_for_display((string) $event['venue'], null, true)) ?></p>
                     </div>
                 </li>
                 <?php endif; ?>
@@ -196,14 +196,14 @@ $evTitlePick  = localised_content($event, 'title');
                 allowfullscreen
                 loading="lazy"
                 referrerpolicy="no-referrer-when-downgrade"
-                title="Event venue map">
+                title="<?= e(__('Event venue map')) ?>">
             </iframe>
         </div>
         <?php elseif (!empty($event['venue'])): ?>
         <!-- No coordinates but venue text is present -->
         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
             <i class="bi bi-geo-alt text-2xl text-slate-300"></i>
-            <p class="mt-2 text-sm font-medium text-slate-600"><?= e($event['venue']) ?></p>
+            <p class="mt-2 text-sm font-medium text-slate-600"><?= e(translate_for_display((string) $event['venue'], null, true)) ?></p>
             <p class="mt-1 text-xs text-slate-400"><?= e(t('res_event_detail.map_unavailable')) ?></p>
         </div>
         <?php endif; ?>

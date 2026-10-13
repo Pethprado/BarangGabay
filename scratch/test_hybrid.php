@@ -1,8 +1,14 @@
 <?php
-require 'app/bootstrap.php';
-$t = new \App\Services\ManoboHybridTranslator(db());
-$res = $t->translate('BABALA: Malakas na ulan at baha sa Barangay Bayogo', 'fil');
-echo "Translated: " . ($res['translation'] ?? '') . "\n";
-echo "Manobo matches: " . ($res['manoboMatches'] ?? 0) . "\n";
-echo "Bisaya matches: " . ($res['bisayaFallbacks'] ?? 0) . "\n";
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../app/helpers.php';
 
+$t = new App\Services\ManoboHybridTranslator();
+$title = "Barangay Bayogo Inter-Purok Basketball League 2026";
+$body = "Opisyal sa kasim ang taunang Inter-Purok Basketball Tournament to ande maglalaban-laban ang mga purok.";
+
+echo "--- TITLE --- \n";
+print_r($t->translate($title, 'fil'));
+
+echo "\n--- BODY --- \n";
+print_r($t->translate($body, 'fil'));

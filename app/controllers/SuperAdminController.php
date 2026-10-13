@@ -342,7 +342,7 @@ class SuperAdminController
         check_csrf();
         $userId = (int) ($_SESSION['user_id'] ?? 0);
         if (trim((string) ($_POST['confirm_phrase'] ?? '')) !== 'DELETE ALL REQUESTS') {
-            flash('error', 'Not cleared: type DELETE ALL REQUESTS exactly to confirm.');
+            flash('error', __('Not cleared: type DELETE ALL REQUESTS exactly to confirm.'));
             redirect('/superadmin/settings#danger-zone');
         }
 
@@ -379,7 +379,7 @@ class SuperAdminController
                 $pdo->rollBack();
             }
             error_log('[SuperAdmin::clearDocumentRequests] ' . $e->getMessage());
-            flash('error', 'Nothing was deleted — the clean-up failed and was rolled back.');
+            flash('error', __('Nothing was deleted — the clean-up failed and was rolled back.'));
             redirect('/superadmin/settings#danger-zone');
         }
 
@@ -877,7 +877,7 @@ class SuperAdminController
             exit;
         }
 
-        flash('success', 'Matagumpay na naitanim ang sample data sa sistema (Announcements, Events, Ordinances, Residents, Evacuation Centers, Document Requests, Feedback, Notifications)!');
+        flash('success', __('Matagumpay na naitanim ang sample data sa sistema (Announcements, Events, Ordinances, Residents, Evacuation Centers, Document Requests, Feedback, Notifications)!'));
         redirect('/admin');
     }
 }

@@ -16,14 +16,18 @@ $status = $ordinance['status'] ?? 'active';
 $sMeta  = $statusMeta[$status] ?? $statusMeta['active'];
 
 // Escape AI summary for safe JS interpolation
-$cachedSummaryJson = json_encode($ordinance['ai_summary'] ?? null, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
+// The summary is stored in the language the AI wrote it in; shown in the reader's.
+$cachedSummaryJson = json_encode(
+    !empty($ordinance['ai_summary']) ? translate_for_display((string) $ordinance['ai_summary']) : null,
+    JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT
+);
 
 ob_start();
 ?>
 
 <!-- Breadcrumb -->
-<nav class="mb-5 flex items-center gap-2 text-xs text-slate-400" aria-label="Breadcrumb">
-    <a href="<?= e(route('')) ?>" class="hover:text-amber-700 transition-colors">Home</a>
+<nav class="mb-5 flex items-center gap-2 text-xs text-slate-400" aria-label="<?= e(__('Breadcrumb')) ?>">
+    <a href="<?= e(route('')) ?>" class="hover:text-amber-700 transition-colors"><?= e(__('Home')) ?></a>
     <i class="bi bi-chevron-right" style="font-size:.65rem;"></i>
     <a href="<?= e(route('ordinances')) ?>" class="hover:text-amber-700 transition-colors"><?= e(t('nav.ordinances')) ?></a>
     <i class="bi bi-chevron-right" style="font-size:.65rem;"></i>
@@ -189,7 +193,7 @@ require __DIR__ . '/../shared/_voice-reader.php';
                 <li class="flex items-start gap-3 py-3">
                     <i class="bi bi-hash mt-0.5 flex-shrink-0 text-amber-600"></i>
                     <div>
-                        <p class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Numero</p>
+                        <p class="text-[10px] font-bold uppercase tracking-wide text-slate-400"><?= e(__('Numero')) ?></p>
                         <p class="font-mono text-sm font-semibold text-slate-800"><?= e($ordinance['ordinance_no']) ?></p>
                     </div>
                 </li>
@@ -198,7 +202,7 @@ require __DIR__ . '/../shared/_voice-reader.php';
                     <i class="bi bi-tag mt-0.5 flex-shrink-0 text-amber-600"></i>
                     <div>
                         <p class="text-[10px] font-bold uppercase tracking-wide text-slate-400"><?= e(t('res_ordinances.category_label')) ?></p>
-                        <p class="text-sm text-slate-700"><?= e($ordinance['category']) ?></p>
+                        <p class="text-sm text-slate-700"><?= e(__($ordinance['category'])) ?></p>
                     </div>
                 </li>
                 <?php endif; ?>
@@ -283,7 +287,7 @@ require __DIR__ . '/../shared/_voice-reader.php';
                     <div>
                         <p class="text-xs font-bold uppercase tracking-widest text-blue-800"><?= e(t('res_ordinances.ai_summary_title')) ?></p>
                         <p class="text-[10px] text-blue-600"
-                           x-text="cached ? 'Nakaraang buod (cached)' : 'Bagong na-generate'"></p>
+                           x-text="cached ? <?= e(json_encode(__('Nakaraang buod (cached)'))) ?> : <?= e(json_encode(__('Bagong na-generate'))) ?>"></p>
                     </div>
                 </div>
 
@@ -296,7 +300,7 @@ require __DIR__ . '/../shared/_voice-reader.php';
                         x-show="cached"
                         @click="summary = null; cached = false; summarize()"
                         class="mt-3 inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 hover:underline">
-                    <i class="bi bi-arrow-clockwise"></i> I-refresh
+                    <i class="bi bi-arrow-clockwise"></i> <?= e(__('I-refresh')) ?>
                 </button>
             </div>
 
@@ -309,7 +313,7 @@ require __DIR__ . '/../shared/_voice-reader.php';
                     @click="openChat()"
                     class="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:border-slate-300">
                 <i class="bi bi-chat-dots"></i>
-                Mayroon ka bang tanong?
+                <?= e(__('Mayroon ka bang tanong?')) ?>
             </button>
 
         </div><!-- /AI summarize -->
@@ -349,7 +353,7 @@ function pdfViewer(pdfUrl) {
 
         async init() {
             if (!pdfUrl) {
-                this.error = 'Hindi available ang PDF file.';
+                this.error = <?= json_encode(__('Hindi available ang PDF file.')) ?>;
                 return;
             }
             try {
@@ -463,7 +467,7 @@ function ordinanceSummarize(ordinanceId, hasCachedSummary, cachedText) {
                     this.retryable = data.retryable !== false;
                 }
             } catch {
-                this.errorMsg  = 'May problema sa koneksyon. Pakisuriin ang internet at subukan muli.';
+                this.errorMsg  = <?= json_encode(__('May problema sa koneksyon. Pakisuriin ang internet at subukan muli.')) ?>;
                 this.retryable = true;
             } finally {
                 this.loading = false;
@@ -482,7 +486,7 @@ function ordinanceSummarize(ordinanceId, hasCachedSummary, cachedText) {
 
         openChat() {
             const title   = <?= json_encode($ordinance['title'], JSON_HEX_TAG) ?>;
-            const prefill = 'Tungkol sa ordinansa na "' + title + '": ';
+            const prefill = <?= json_encode(__('Tungkol sa ordinansa na "')) ?> + title + '": ';
             document.dispatchEvent(new CustomEvent('ai-chat:open', { detail: { prefill } }));
         },
     };

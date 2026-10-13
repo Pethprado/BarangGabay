@@ -289,7 +289,7 @@ class VoiceController
         $before = $state();
         if ($before === null) {
             http_response_code(404);
-            echo json_encode(['status' => 'failed', 'error' => 'Not found']);
+            echo json_encode(['status' => 'failed', 'error' => __('Not found')]);
             return;
         }
         if ($before !== 'missing') {

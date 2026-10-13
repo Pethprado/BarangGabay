@@ -205,7 +205,7 @@ $__mAudioPath = $__mAudioPath ?? null;
 
             <div class="mb-3 rounded-3 p-3" style="background:#fef9c3;border:1px solid #d4c48a;" x-show="!deletePending">
                 <p class="mb-2 fw-semibold" style="font-size:.8rem;color:#78350f;">
-                    <i class="bi bi-volume-up-fill me-1"></i> Kasalukuyang Audio
+                    <i class="bi bi-volume-up-fill me-1"></i> <?= e(__('Kasalukuyang Audio')) ?>
                 </p>
                 <audio controls
                        class="w-100 mb-2"
@@ -238,7 +238,7 @@ $__mAudioPath = $__mAudioPath ?? null;
                         @click="deletePending = false"
                         class="btn btn-sm btn-outline-secondary"
                         style="font-size:.77rem;">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> Huwag alisin
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> <?= e(__('Huwag alisin')) ?>
                 </button>
             </div>
 
@@ -265,7 +265,7 @@ $__mAudioPath = $__mAudioPath ?? null;
                             : 'btn btn-outline-secondary'"
                         class="btn btn-sm d-inline-flex align-items-center gap-1"
                         style="font-size:.8rem;">
-                    <i class="bi bi-mic-fill"></i> Mag-record
+                    <i class="bi bi-mic-fill"></i> <?= e(__('Mag-record')) ?>
                 </button>
                 <button type="button"
                         @click="switchTab('upload')"
@@ -312,7 +312,7 @@ $__mAudioPath = $__mAudioPath ?? null;
                             @click="stopRecord()"
                             class="btn btn-danger d-inline-flex align-items-center gap-2"
                             style="font-size:.85rem;padding:9px 20px;">
-                        <i class="bi bi-stop-circle-fill"></i> I-stop at I-save
+                        <i class="bi bi-stop-circle-fill"></i> <?= e(__('I-stop at I-save')) ?>
                     </button>
                 </div>
 
@@ -320,7 +320,7 @@ $__mAudioPath = $__mAudioPath ?? null;
                 <div x-show="recState === 'done'" x-cloak>
                     <div class="rounded-3 p-3 mb-3" style="background:#f0faf4;border:1px solid #c3e6cb;">
                         <p class="mb-2 fw-semibold" style="font-size:.8rem;color:var(--brand-primary);">
-                            <i class="bi bi-check-circle-fill me-1"></i> Recording handa na
+                            <i class="bi bi-check-circle-fill me-1"></i> <?= e(__('Recording handa na')) ?>
                         </p>
                         <audio controls
                                class="w-100"
@@ -333,7 +333,7 @@ $__mAudioPath = $__mAudioPath ?? null;
                                 @click="clearRecord()"
                                 class="btn btn-sm btn-outline-secondary"
                                 style="font-size:.77rem;">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Ulit-ulitin
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> <?= e(__('Ulit-ulitin')) ?>
                         </button>
                     </div>
                     <p class="form-text mt-2">
@@ -360,7 +360,7 @@ $__mAudioPath = $__mAudioPath ?? null;
                         <?= e(t('manobo_fields.drop_hint')) ?>
                     </p>
                     <p class="mb-0 text-muted" style="font-size:.77rem;">
-                        MP3, WAV, M4A, OGG, WebM &mdash; max 10 MB
+                        <?= e(__('MP3, WAV, M4A, OGG, WebM — max 10 MB')) ?>
                     </p>
                 </div>
 
@@ -388,7 +388,7 @@ $__mAudioPath = $__mAudioPath ?? null;
                                 @click="clearUpload()"
                                 class="btn btn-sm btn-outline-danger"
                                 style="font-size:.77rem;">
-                            <i class="bi bi-trash3 me-1"></i> Alisin
+                            <i class="bi bi-trash3 me-1"></i> <?= e(__('Alisin')) ?>
                         </button>
                     </div>
                 </div>

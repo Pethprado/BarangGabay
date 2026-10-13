@@ -73,7 +73,7 @@ class PaymentController
         // Manual verification is only for payments in Manual Review. An online
         // PayMongo payment is confirmed by PayMongo — use "Check PayMongo Status".
         if (!in_array((string) $payment['payment_status'], DocumentPayment::FILTER_GROUPS['manual_review'], true)) {
-            flash('warning', 'Only payments in Manual Review can be verified by hand. For online payments, use "Check PayMongo Status".');
+            flash('warning', __('Only payments in Manual Review can be verified by hand. For online payments, use "Check PayMongo Status".'));
             redirect($this->safeReturn('/admin/payments'));
         }
 
@@ -114,7 +114,7 @@ class PaymentController
 
             flash('success', sprintf('Matagumpay na na-verify ang bayad para sa %s (%s).', $reqRef, (string) $payment['payment_ref']));
         } else {
-            flash('error', 'Nagka-problema sa pag-verify ng bayad.');
+            flash('error', __('Nagka-problema sa pag-verify ng bayad.'));
         }
 
         redirect($this->safeReturn('/admin/payments'));
@@ -133,7 +133,7 @@ class PaymentController
         $note    = trim($_POST['rejection_note'] ?? '');
 
         if ($reason === '') {
-            flash('error', 'Mangyaring pumili ng dahilan ng pagtanggi sa resibo.');
+            flash('error', __('Mangyaring pumili ng dahilan ng pagtanggi sa resibo.'));
             redirect('/admin/payments');
         }
 
@@ -181,7 +181,7 @@ class PaymentController
 
             flash('warning', sprintf('Tinanggihan ang patunay ng bayad para sa %s. Naabisuhan na ang residente.', $reqRef));
         } else {
-            flash('error', 'Nagka-problema sa pagtanggi sa bayad.');
+            flash('error', __('Nagka-problema sa pagtanggi sa bayad.'));
         }
 
         redirect($this->safeReturn('/admin/payments'));
@@ -207,7 +207,7 @@ class PaymentController
         if (!empty($payment['paymongo_checkout_id'])) {
             $check = PaymentConfirmation::reconcile($payment, $staffId);
             if (in_array($check['outcome'], [PaymentConfirmation::OUTCOME_CONFIRMED, PaymentConfirmation::OUTCOME_ALREADY], true)) {
-                flash('warning', 'PayMongo shows this request is already paid online — do not collect cash. ' . $check['message']);
+                flash('warning', __('PayMongo shows this request is already paid online — do not collect cash.') . ' ' . $check['message']);
                 redirect($this->safeReturn('/admin/payments'));
             }
         }
@@ -221,7 +221,7 @@ class PaymentController
 
             flash('success', sprintf('Naitampok na bayad na sa counter ang ₱%.2f para sa request %s.', (float) $payment['amount_due'], (string) $payment['request_ref']));
         } else {
-            flash('error', 'Hindi na-update ang estado ng bayad.');
+            flash('error', __('Hindi na-update ang estado ng bayad.'));
         }
 
         redirect($this->safeReturn('/admin/payments'));
@@ -260,7 +260,7 @@ class PaymentController
         if ($payment && !empty($payment['paymongo_checkout_id'])) {
             $check = PaymentConfirmation::reconcile($payment, $staffId);
             if (in_array($check['outcome'], [PaymentConfirmation::OUTCOME_CONFIRMED, PaymentConfirmation::OUTCOME_ALREADY], true)) {
-                flash('warning', 'PayMongo shows this request is already paid online — do not collect cash.');
+                flash('warning', __('PayMongo shows this request is already paid online — do not collect cash.'));
                 redirect('/admin/documents');
             }
         }
@@ -273,7 +273,7 @@ class PaymentController
             );
             flash('success', sprintf('Naitampok na bayad na sa counter ang ₱%.2f para sa request %s.', (float) ($req['fee_amount'] ?? 0), (string) $req['reference_no']));
         } else {
-            flash('error', 'Hindi na-update ang estado ng bayad.');
+            flash('error', __('Hindi na-update ang estado ng bayad.'));
         }
 
         redirect('/admin/documents');
@@ -291,7 +291,7 @@ class PaymentController
         $reason  = trim($_POST['waiver_reason'] ?? '');
 
         if ($reason === '') {
-            flash('error', 'Kailangan ng dahilan para sa pagpapalampas / libreng dokumento.');
+            flash('error', __('Kailangan ng dahilan para sa pagpapalampas / libreng dokumento.'));
             redirect('/admin/payments');
         }
 
@@ -310,7 +310,7 @@ class PaymentController
 
             flash('success', sprintf('Naitalang libre / waived ang bayad para sa %s.', (string) $payment['request_ref']));
         } else {
-            flash('error', 'Hindi nai-waive ang bayad.');
+            flash('error', __('Hindi nai-waive ang bayad.'));
         }
 
         redirect('/admin/payments');
@@ -329,7 +329,7 @@ class PaymentController
         $reason  = trim($_POST['refund_reason'] ?? '');
 
         if ($amount <= 0 || $reason === '') {
-            flash('error', 'Ilagay ang wastong halaga at dahilan ng refund.');
+            flash('error', __('Ilagay ang wastong halaga at dahilan ng refund.'));
             redirect('/admin/payments');
         }
 
@@ -348,7 +348,7 @@ class PaymentController
 
             flash('success', sprintf('Naitala ang refund na ₱%.2f para sa %s.', $amount, (string) $payment['request_ref']));
         } else {
-            flash('error', 'Hindi naitala ang refund.');
+            flash('error', __('Hindi naitala ang refund.'));
         }
 
         redirect('/admin/payments');
@@ -485,7 +485,7 @@ class PaymentController
         $payment = DocumentPayment::find((int) ($params['id'] ?? 0));
         if (!$payment) {
             http_response_code(404);
-            echo json_encode(['error' => 'Not found']);
+            echo json_encode(['error' => __('Not found')]);
             return;
         }
         $rows = array_map(static fn (array $l): array => [
@@ -523,11 +523,11 @@ class PaymentController
         }
 
         if (mb_strlen($name) < 2 || mb_strlen($name) > 100) {
-            flash('error', 'Enter the GCash account name (as shown in GCash).');
+            flash('error', __('Enter the GCash account name (as shown in GCash).'));
             redirect('/admin/payments/fees#gcash-account');
         }
         if (!preg_match('/^09\d{9}$/', $number)) {
-            flash('error', 'Enter a valid 11-digit GCash mobile number, e.g. 09171234567.');
+            flash('error', __('Enter a valid 11-digit GCash mobile number, e.g. 09171234567.'));
             redirect('/admin/payments/fees#gcash-account');
         }
 
@@ -543,14 +543,14 @@ class PaymentController
         } elseif (isset($_FILES['gcash_qr']) && ($_FILES['gcash_qr']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
             $file = $_FILES['gcash_qr'];
             if ($file['error'] !== UPLOAD_ERR_OK || (int) $file['size'] > 3 * 1024 * 1024) {
-                flash('error', 'The QR image could not be uploaded (max 3 MB).');
+                flash('error', __('The QR image could not be uploaded (max 3 MB).'));
                 redirect('/admin/payments/fees#gcash-account');
             }
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mime  = (string) finfo_file($finfo, (string) $file['tmp_name']);
             finfo_close($finfo);
             if (!in_array($mime, ['image/png', 'image/jpeg', 'image/webp'], true)) {
-                flash('error', 'The QR must be a PNG, JPG or WEBP image.');
+                flash('error', __('The QR must be a PNG, JPG or WEBP image.'));
                 redirect('/admin/payments/fees#gcash-account');
             }
             $values['gcash_receive_qr']      = base64_encode((string) file_get_contents((string) $file['tmp_name']));
@@ -560,7 +560,7 @@ class PaymentController
         \App\Models\Setting::setMany($values, $staffId);
         AuditLog::record($staffId, 'payment.gcash_account', sprintf('GCash receiving account set to %s (%s)%s',
             $name, $number, isset($values['gcash_receive_qr']) ? ($values['gcash_receive_qr'] === '' ? ', QR removed' : ', QR updated') : ''));
-        flash('success', 'GCash receiving account saved.');
+        flash('success', __('GCash receiving account saved.'));
         redirect('/admin/payments/fees#gcash-account');
     }
 
@@ -661,17 +661,17 @@ class PaymentController
         }
 
         if ((float) ($request['fee_amount'] ?? 0) <= 0.00) {
-            flash('info', 'Ang dokumentong ito ay libre. Hindi kailangan ng pagbabayad.');
+            flash('info', __('Ang dokumentong ito ay libre. Hindi kailangan ng pagbabayad.'));
             redirect('/documents');
         }
         if (($request['payment_method'] ?? '') === 'pickup') {
-            flash('info', 'Ang inyong kahilingan ay babayaran sa Barangay Hall sa pagkuha.');
+            flash('info', __('Ang inyong kahilingan ay babayaran sa Barangay Hall sa pagkuha.'));
             redirect('/documents');
         }
 
         $payment = DocumentPayment::findByRequest($id);
         if (!$payment) {
-            flash('error', 'Walang talaan ng pagbabayad para sa kahilingang ito.');
+            flash('error', __('Walang talaan ng pagbabayad para sa kahilingang ito.'));
             redirect('/documents');
         }
 
@@ -714,39 +714,41 @@ class PaymentController
         }
         $payment = DocumentPayment::findByRequest($requestId);
         if (!$payment) {
-            flash('error', 'No payment record was found for this request.');
+            flash('error', __('No payment record was found for this request.'));
             redirect('/documents');
         }
         if (in_array((string) $payment['payment_status'], DocumentPayment::SETTLED_STATES, true)) {
-            flash('info', 'This request is already paid — no proof is needed.');
+            flash('info', __('This request is already paid — no proof is needed.'));
             redirect($back);
         }
         if (in_array((string) $request['status'], ['rejected', 'cancelled'], true)) {
-            flash('error', 'This request was ' . $request['status'] . ' and can no longer be paid.');
+            flash('error', $request['status'] === 'rejected'
+                ? __('This request was rejected and can no longer be paid.')
+                : __('This request was cancelled and can no longer be paid.'));
             redirect('/documents');
         }
 
         // GCash reference numbers are 13 digits; accept spaces/dashes as typed.
         $gcashRef = preg_replace('/[\s\-]/', '', (string) ($_POST['gcash_reference_no'] ?? ''));
         if (!preg_match('/^\d{8,20}$/', $gcashRef)) {
-            flash('error', 'Enter the GCash reference number (the 13-digit "Ref. No." on your GCash receipt).');
+            flash('error', __('Enter the GCash reference number (the 13-digit "Ref. No." on your GCash receipt).'));
             redirect($back);
         }
 
         $file = $_FILES['receipt_file'] ?? null;
         if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            flash('error', 'Attach a screenshot of your GCash receipt.');
+            flash('error', __('Attach a screenshot of your GCash receipt.'));
             redirect($back);
         }
         if ((int) $file['size'] > 10 * 1024 * 1024) {
-            flash('error', 'The screenshot must be 10 MB or smaller.');
+            flash('error', __('The screenshot must be 10 MB or smaller.'));
             redirect($back);
         }
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mime  = (string) finfo_file($finfo, (string) $file['tmp_name']);
         finfo_close($finfo);
         if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], true)) {
-            flash('error', 'Upload a JPG, PNG, WEBP or PDF file.');
+            flash('error', __('Upload a JPG, PNG, WEBP or PDF file.'));
             redirect($back);
         }
 
@@ -773,7 +775,7 @@ class PaymentController
 
         // The amount owed is the official fee; the resident does not type it.
         if (!DocumentPayment::submitProof((int) $payment['id'], (float) $payment['amount_due'], $gcashRef, $fileMeta, $note ?: null)) {
-            flash('error', 'Your proof could not be saved. Please try again.');
+            flash('error', __('Your proof could not be saved. Please try again.'));
             redirect($back);
         }
 
@@ -790,7 +792,7 @@ class PaymentController
             error_log('[PaymentController::residentUploadProof] notify: ' . $e->getMessage());
         }
 
-        flash('success', 'Proof sent. The barangay will verify your GCash payment — this page updates automatically.');
+        flash('success', __('Proof sent. The barangay will verify your GCash payment — this page updates automatically.'));
         redirect($back);
     }
 
@@ -817,7 +819,7 @@ class PaymentController
 
         $payment = DocumentPayment::findByRequest($requestId);
         if (!$payment) {
-            flash('error', 'Walang talaan ng pagbabayad.');
+            flash('error', __('Walang talaan ng pagbabayad.'));
             redirect('/documents');
         }
 
@@ -841,13 +843,13 @@ class PaymentController
         $token = (string) ($input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
         if ($userId <= 0 || !hash_equals(csrf_token(), $token)) {
             http_response_code($userId <= 0 ? 401 : 403);
-            echo json_encode(['success' => false, 'error' => 'Your session expired. Please reload the page.']);
+            echo json_encode(['success' => false, 'error' => __('Your session expired. Please reload the page.')]);
             return;
         }
 
         if (!(bool) \App\Models\Setting::get('paymongo_checkout_enabled', false)) {
             http_response_code(409);
-            echo json_encode(['success' => false, 'error' => 'Online checkout is turned off. Please pay by sending GCash and uploading your proof.']);
+            echo json_encode(['success' => false, 'error' => __('Online checkout is turned off. Please pay by sending GCash and uploading your proof.')]);
             return;
         }
 
@@ -858,7 +860,7 @@ class PaymentController
         // Only the resident who filed the request can pay for it.
         if (!$request || !$payment || (int) $request['user_id'] !== $userId) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'error' => 'Request not found.']);
+            echo json_encode(['success' => false, 'error' => __('Request not found.')]);
             return;
         }
 
@@ -1032,7 +1034,7 @@ class PaymentController
 
         $payment = DocumentPayment::findByRequest($requestId);
         if (!$payment) {
-            flash('error', 'Walang natagpuang talaan ng pagbabayad.');
+            flash('error', __('Walang natagpuang talaan ng pagbabayad.'));
             redirect('/documents');
         }
 
@@ -1071,7 +1073,7 @@ class PaymentController
             }
         }
 
-        flash('warning', 'Hindi natuloy ang pagbabayad. Naka-save pa rin ang inyong kahilingan — maaari kayong magbayad muli anumang oras.');
+        flash('warning', __('Hindi natuloy ang pagbabayad. Naka-save pa rin ang inyong kahilingan — maaari kayong magbayad muli anumang oras.'));
         redirect('/documents/' . $requestId . '/payment');
     }
 
@@ -1089,7 +1091,7 @@ class PaymentController
         $payment   = $request ? DocumentPayment::findByRequest($requestId) : null;
         if (!$request || !$payment || (int) $request['user_id'] !== $userId) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'error' => 'Not found']);
+            echo json_encode(['success' => false, 'error' => __('Not found')]);
             return;
         }
 

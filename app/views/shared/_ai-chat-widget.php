@@ -334,7 +334,7 @@
          x-transition:leave-start="opacity-100 translate-y-0 scale-100"
          x-transition:leave-end="opacity-0 translate-y-3 scale-95"
          role="dialog"
-         aria-label="BarangGabay AI Chat"
+         aria-label="<?= e(__('BarangGabay AI Chat')) ?>"
          style="display:none;">
 
         <!-- Header ─────────────────────── -->

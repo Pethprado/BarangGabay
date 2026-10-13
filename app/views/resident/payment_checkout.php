@@ -32,11 +32,11 @@ $rejected  = $payStatus === DocumentPayment::STATUS_PAYMENT_REJECTED;
 $number    = (string) $gcash['number'];
 $numberFmt = strlen($number) === 11 ? substr($number, 0, 4) . ' ' . substr($number, 4, 3) . ' ' . substr($number, 7) : $number;
 $verifiedBy = match ((string) ($payment['verification_type'] ?? '')) {
-    'paymongo' => 'Automatically verified through PayMongo',
-    'manual'   => 'Verified by barangay staff',
-    'counter'  => 'Paid in cash at the Barangay Hall',
-    'waiver'   => 'Fee waived by the barangay',
-    default    => 'Verified',
+    'paymongo' => __('Automatically verified through PayMongo'),
+    'manual'   => __('Verified by barangay staff'),
+    'counter'  => __('Paid in cash at the Barangay Hall'),
+    'waiver'   => __('Fee waived by the barangay'),
+    default    => __('Verified'),
 };
 
 ob_start();
@@ -60,18 +60,18 @@ ob_start();
 
 <div class="mx-auto max-w-xl px-4 py-6 sm:px-6">
     <a href="<?= e(route('documents?tab=requests')) ?>" class="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold" style="color:var(--text-secondary);">
-        <i class="bi bi-arrow-left" aria-hidden="true"></i> My requests
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> <?= e(__('My requests')) ?>
     </a>
 
     <div class="gc-card mb-4">
         <div class="flex items-start justify-between gap-3">
             <div>
-                <p class="text-xs font-bold uppercase tracking-wider" style="color:#007dfe;">Document payment</p>
-                <h1 class="text-2xl font-extrabold" style="color:var(--text-primary);">Pay with GCash</h1>
+                <p class="text-xs font-bold uppercase tracking-wider" style="color:#007dfe;"><?= e(__('Document payment')) ?></p>
+                <h1 class="text-2xl font-extrabold" style="color:var(--text-primary);"><?= e(__('Pay with GCash')) ?></h1>
                 <p class="gc-muted mt-1"><?= e($docLabel) ?> · <span class="font-mono"><?= e($reqRef) ?></span></p>
             </div>
             <div class="text-right">
-                <p class="gc-muted">Amount</p>
+                <p class="gc-muted"><?= e(__('Amount')) ?></p>
                 <p class="text-3xl font-extrabold" style="color:var(--text-primary);">₱<?= $feeText ?></p>
             </div>
         </div>
@@ -80,28 +80,28 @@ ob_start();
 <?php if ($isPaid): ?>
     <div class="gc-card text-center" role="status">
         <i class="bi bi-check-circle-fill" style="font-size:3rem;color:#16a36d;" aria-hidden="true"></i>
-        <h2 class="mt-2 text-xl font-extrabold" style="color:var(--text-primary);">Payment successful</h2>
+        <h2 class="mt-2 text-xl font-extrabold" style="color:var(--text-primary);"><?= e(__('Payment successful')) ?></h2>
         <p class="gc-muted mt-1"><?= e($verifiedBy) ?><?= !empty($payment['paid_at']) ? ' · ' . e(format_datetime((string) $payment['paid_at'])) : '' ?></p>
         <dl class="mt-4 grid grid-cols-2 gap-2 text-left text-sm" style="color:var(--text-secondary);">
-            <dt>Amount</dt><dd class="text-right font-bold" style="color:var(--text-primary);">₱<?= $feeText ?></dd>
-            <dt>Payment ref.</dt><dd class="text-right font-mono"><?= e($payRef) ?></dd>
-            <?php if (!empty($payment['gcash_reference_no'])): ?><dt>GCash Ref. No.</dt><dd class="text-right font-mono"><?= e((string) $payment['gcash_reference_no']) ?></dd><?php endif; ?>
+            <dt><?= e(__('Amount')) ?></dt><dd class="text-right font-bold" style="color:var(--text-primary);">₱<?= $feeText ?></dd>
+            <dt><?= e(__('Payment ref.')) ?></dt><dd class="text-right font-mono"><?= e($payRef) ?></dd>
+            <?php if (!empty($payment['gcash_reference_no'])): ?><dt><?= e(__('GCash Ref. No.')) ?></dt><dd class="text-right font-mono"><?= e((string) $payment['gcash_reference_no']) ?></dd><?php endif; ?>
         </dl>
-        <p class="gc-muted mt-4">Your document is now being processed. You will be notified when it is ready.</p>
-        <a href="<?= e(route('documents?tab=requests')) ?>" class="gc-btn gc-blue mt-4"><i class="bi bi-folder2-open" aria-hidden="true"></i> View my requests</a>
+        <p class="gc-muted mt-4"><?= e(__('Your document is now being processed. You will be notified when it is ready.')) ?></p>
+        <a href="<?= e(route('documents?tab=requests')) ?>" class="gc-btn gc-blue mt-4"><i class="bi bi-folder2-open" aria-hidden="true"></i> <?= e(__('View my requests')) ?></a>
     </div>
 
 <?php elseif ($inReview): ?>
     <div class="gc-card text-center" role="status" aria-live="polite">
         <div class="mx-auto mb-2 h-12 w-12 animate-spin rounded-full border-4 border-t-transparent" style="border-color:#007dfe;border-top-color:transparent;" aria-hidden="true"></div>
-        <h2 class="text-xl font-extrabold" style="color:var(--text-primary);">Waiting for verification</h2>
-        <p class="gc-muted mt-1">We received your proof. Barangay staff are checking the GCash payment. This page updates by itself — you can also leave and come back.</p>
+        <h2 class="text-xl font-extrabold" style="color:var(--text-primary);"><?= e(__('Waiting for verification')) ?></h2>
+        <p class="gc-muted mt-1"><?= e(__('We received your proof. Barangay staff are checking the GCash payment. This page updates by itself — you can also leave and come back.')) ?></p>
         <dl class="mt-4 grid grid-cols-2 gap-2 text-left text-sm" style="color:var(--text-secondary);">
-            <dt>GCash Ref. No.</dt><dd class="text-right font-mono" style="color:var(--text-primary);"><?= e((string) ($payment['gcash_reference_no'] ?? '')) ?></dd>
-            <dt>Amount</dt><dd class="text-right font-bold" style="color:var(--text-primary);">₱<?= $feeText ?></dd>
+            <dt><?= e(__('GCash Ref. No.')) ?></dt><dd class="text-right font-mono" style="color:var(--text-primary);"><?= e((string) ($payment['gcash_reference_no'] ?? '')) ?></dd>
+            <dt><?= e(__('Amount')) ?></dt><dd class="text-right font-bold" style="color:var(--text-primary);">₱<?= $feeText ?></dd>
         </dl>
         <details class="mt-4 text-left">
-            <summary class="cursor-pointer text-sm font-semibold" style="color:var(--text-secondary);">Sent the wrong screenshot? Send it again</summary>
+            <summary class="cursor-pointer text-sm font-semibold" style="color:var(--text-secondary);"><?= e(__('Sent the wrong screenshot? Send it again')) ?></summary>
             <?php $resend = true; require __DIR__ . '/_gcash-proof-form.php'; ?>
         </details>
     </div>
@@ -109,50 +109,49 @@ ob_start();
 <?php else: ?>
     <?php if ($rejected): ?>
     <div class="mb-4 rounded-xl border p-3 text-sm" role="alert" style="border-color:var(--status-danger);background:var(--status-danger-bg);color:var(--status-danger);">
-        <strong>Your proof was not accepted:</strong> <?= e((string) ($payment['rejection_reason'] ?? '')) ?><?= !empty($payment['rejection_note']) ? ' — ' . e((string) $payment['rejection_note']) : '' ?>.
-        Please check your GCash transaction and send the correct proof below.
+        <strong><?= e(__('Your proof was not accepted:')) ?></strong> <?= e((string) ($payment['rejection_reason'] ?? '')) ?><?= !empty($payment['rejection_note']) ? ' — ' . e((string) $payment['rejection_note']) : '' ?><?= e(__('. Please check your GCash transaction and send the correct proof below.')) ?>
     </div>
     <?php endif; ?>
 
     <!-- Step 1: send the payment -->
     <section class="gc-card mb-4" aria-labelledby="step1">
-        <h2 id="step1" class="mb-3 flex items-center gap-2 text-lg font-extrabold" style="color:var(--text-primary);"><span class="gc-step">1</span> Send ₱<?= $feeText ?> via GCash</h2>
+        <h2 id="step1" class="mb-3 flex items-center gap-2 text-lg font-extrabold" style="color:var(--text-primary);"><span class="gc-step">1</span> <?= e(__('Send ₱:amount via GCash', ['amount' => $feeText])) ?></h2>
 
         <div class="rounded-2xl p-4" style="background:var(--surface-muted);">
-            <p class="gc-muted">Send to</p>
+            <p class="gc-muted"><?= e(__('Send to')) ?></p>
             <p class="text-lg font-bold" style="color:var(--text-primary);"><?= e((string) $gcash['name']) ?></p>
             <div class="mt-1 flex flex-wrap items-center justify-between gap-2">
                 <span class="gc-num" id="gcNumber"><?= e($numberFmt) ?></span>
-                <button type="button" class="gc-copy" data-copy="<?= e($number) ?>"><i class="bi bi-copy" aria-hidden="true"></i> Copy number</button>
+                <button type="button" class="gc-copy" data-copy="<?= e($number) ?>"><i class="bi bi-copy" aria-hidden="true"></i> <?= e(__('Copy number')) ?></button>
             </div>
             <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3" style="border-color:var(--border);">
-                <span>Exact amount: <strong style="color:var(--text-primary);">₱<?= $feeText ?></strong></span>
-                <button type="button" class="gc-copy" data-copy="<?= e(number_format($fee, 2, '.', '')) ?>"><i class="bi bi-copy" aria-hidden="true"></i> Copy amount</button>
+                <span><?= e(__('Exact amount:')) ?> <strong style="color:var(--text-primary);">₱<?= $feeText ?></strong></span>
+                <button type="button" class="gc-copy" data-copy="<?= e(number_format($fee, 2, '.', '')) ?>"><i class="bi bi-copy" aria-hidden="true"></i> <?= e(__('Copy amount')) ?></button>
             </div>
         </div>
 
-        <a href="#" id="openGcash" class="gc-btn gc-blue mt-4"><i class="bi bi-phone" aria-hidden="true"></i> Open GCash</a>
-        <p class="gc-muted mt-2 text-center" id="openGcashHint">Copies the number, then opens the GCash app. In GCash tap <strong>Send → Express Send</strong>, paste the number and enter ₱<?= $feeText ?>.</p>
+        <a href="#" id="openGcash" class="gc-btn gc-blue mt-4"><i class="bi bi-phone" aria-hidden="true"></i> <?= e(__('Open GCash')) ?></a>
+        <p class="gc-muted mt-2 text-center" id="openGcashHint"><?= e(__('Copies the number, then opens the GCash app. In GCash tap')) ?> <strong><?= e(__('Send → Express Send')) ?></strong><?= e(__(', paste the number and enter ₱:amount.', ['amount' => $feeText])) ?></p>
 
         <?php if ($gcash['has_qr']): ?>
         <div class="mt-5 text-center">
-            <p class="text-sm font-bold" style="color:var(--text-primary);">Or scan this QR in GCash</p>
+            <p class="text-sm font-bold" style="color:var(--text-primary);"><?= e(__('Or scan this QR in GCash')) ?></p>
             <img src="<?= e(route('payments/gcash-qr')) ?>" alt="Barangay GCash QR code for <?= e((string) $gcash['name']) ?>" class="gc-qr mx-auto mt-2" loading="lazy">
-            <p class="gc-muted mt-2">On a phone? <a href="<?= e(route('payments/gcash-qr') . '?download=1') ?>" class="font-semibold underline">Save the QR</a>, then in GCash tap <strong>QR → Upload QR</strong>.</p>
+            <p class="gc-muted mt-2"><?= e(__('On a phone?')) ?> <a href="<?= e(route('payments/gcash-qr') . '?download=1') ?>" class="font-semibold underline"><?= e(__('Save the QR')) ?></a><?= e(__(', then in GCash tap')) ?> <strong><?= e(__('QR → Upload QR')) ?></strong>.</p>
         </div>
         <?php endif; ?>
     </section>
 
     <!-- Step 2: send the proof -->
     <section class="gc-card mb-4" aria-labelledby="step2">
-        <h2 id="step2" class="mb-1 flex items-center gap-2 text-lg font-extrabold" style="color:var(--text-primary);"><span class="gc-step">2</span> Send your proof of payment</h2>
-        <p class="gc-muted mb-3">After paying, come back here and upload the GCash receipt. The barangay verifies it, then your request is processed.</p>
+        <h2 id="step2" class="mb-1 flex items-center gap-2 text-lg font-extrabold" style="color:var(--text-primary);"><span class="gc-step">2</span> <?= e(__('Send your proof of payment')) ?></h2>
+        <p class="gc-muted mb-3"><?= e(__('After paying, come back here and upload the GCash receipt. The barangay verifies it, then your request is processed.')) ?></p>
         <?php $resend = false; require __DIR__ . '/_gcash-proof-form.php'; ?>
     </section>
 
     <?php if ($paymongoEnabled): ?>
     <div class="text-center">
-        <button type="button" id="payBtn" class="text-sm font-semibold underline" style="color:var(--text-secondary);">Or pay online through PayMongo instead</button>
+        <button type="button" id="payBtn" class="text-sm font-semibold underline" style="color:var(--text-secondary);"><?= e(__('Or pay online through PayMongo instead')) ?></button>
         <p id="payAlert" class="mt-2 hidden text-sm" role="alert" style="color:var(--status-danger);"></p>
     </div>
     <?php endif; ?>
@@ -193,16 +192,19 @@ ob_start();
             } else if (appUrl) {
                 window.location.href = appUrl;
                 setTimeout(function () {
-                    if (!document.hidden) { hint.innerHTML = 'If GCash did not open, open the GCash app yourself. The number <strong>' + <?= json_encode($numberFmt) ?> + '</strong> is copied.'; }
+                    if (!document.hidden) { hint.innerHTML = <?= json_encode(__('If GCash did not open, open the GCash app yourself. The number :number is copied.')) ?>.replace(':number', '<strong>' + <?= json_encode($numberFmt) ?> + '</strong>'); }
                 }, 1500);
             } else {
-                hint.innerHTML = 'Open GCash on your phone and send ₱<?= $feeText ?> to <strong>' + <?= json_encode($numberFmt) ?> + '</strong><?= $gcash['has_qr'] ? ', or scan the QR below with GCash' : '' ?>. The number is copied.';
+                hint.innerHTML = <?= json_encode($gcash['has_qr']
+                    ? __('Open GCash on your phone and send ₱:amount to :number, or scan the QR below with GCash. The number is copied.', ['amount' => $feeText])
+                    : __('Open GCash on your phone and send ₱:amount to :number. The number is copied.', ['amount' => $feeText])) ?>
+                    .replace(':number', '<strong>' + <?= json_encode($numberFmt) ?> + '</strong>');
             }
         });
     }
 
 <?php if ($inReview): ?>
-    // Switch to "Payment successful" (or show the rejection) as soon as staff decide.
+    // Switch to <?= json_encode(__('Payment successful')) ?> (or show the rejection) as soon as staff decide.
     var statusUrl = <?= json_encode(route('api/payments/status/' . $reqId)) ?>;
     setInterval(function () {
         if (document.hidden) { return; }
@@ -216,7 +218,7 @@ ob_start();
 <?php if ($paymongoEnabled && !$isPaid && !$inReview): ?>
     var payBtn = document.getElementById('payBtn');
     payBtn.addEventListener('click', function () {
-        payBtn.disabled = true; payBtn.textContent = 'Opening secure checkout…';
+        payBtn.disabled = true; payBtn.textContent = <?= json_encode(__('Opening secure checkout…')) ?>;
         fetch(<?= json_encode(route('api/payments/paymongo/create-checkout')) ?>, {
             method: 'POST', credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -224,9 +226,9 @@ ob_start();
         }).then(function (r) { return r.json(); }).then(function (d) {
             if (d.checkout_url) { window.location.href = d.checkout_url; return; }
             if (d.already_paid) { location.reload(); return; }
-            throw new Error(d.error || 'Could not start the online checkout.');
+            throw new Error(d.error || <?= json_encode(__('Could not start the online checkout.')) ?>);
         }).catch(function (e) {
-            payBtn.disabled = false; payBtn.textContent = 'Or pay online through PayMongo instead';
+            payBtn.disabled = false; payBtn.textContent = <?= json_encode(__('Or pay online through PayMongo instead')) ?>;
             var a = document.getElementById('payAlert'); a.textContent = e.message; a.classList.remove('hidden');
         });
     });

@@ -262,6 +262,31 @@ class Feedback
      * first, then most recently active. Enriched with resident identity,
      * message_count, last_message (+ its sender role), and unread_count.
      */
+    /**
+     * Feedback threads a staff member has replied to.
+     *
+     * @return list<int>
+     */
+    public static function idsRepliedBy(int $userId): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+        try {
+            $stmt = db()->prepare(
+                "SELECT DISTINCT feedback_id FROM feedback_messages WHERE sender_id = ? AND sender_role <> 'resident'
+                 UNION
+                 SELECT id FROM feedbacks WHERE replied_by = ?"
+            );
+            $stmt->execute([$userId, $userId]);
+
+            return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+        } catch (\Throwable $e) {
+            error_log('[Feedback::idsRepliedBy] ' . $e->getMessage());
+            return [];
+        }
+    }
+
     public static function allAdmin(string $search = ''): array
     {
         $where  = '';

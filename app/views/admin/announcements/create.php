@@ -12,7 +12,7 @@ ob_start();
 </style>
 
 <!-- Breadcrumb -->
-<nav aria-label="breadcrumb" class="mb-3">
+<nav aria-label="<?= e(__('breadcrumb')) ?>" class="mb-3">
     <ol class="breadcrumb" style="font-size:.8rem;margin:0;">
         <li class="breadcrumb-item">
             <a href="<?= e(route('admin')) ?>" class="text-decoration-none" style="color:var(--brand-green);"><?= e(t('admin_nav.dashboard')) ?></a>
@@ -177,7 +177,7 @@ ob_start();
 
                         <template x-if="preview">
                             <div @click.stop>
-                                <img :src="preview" alt="Preview" class="upload-preview-img mb-3">
+                                <img :src="preview" alt="<?= e(__('Preview')) ?>" class="upload-preview-img mb-3">
                                 <div class="d-flex align-items-center justify-content-center gap-2">
                                     <button type="button"
                                             @click="clearImage()"
@@ -225,12 +225,12 @@ ob_start();
                             <?= e(t('admin_announcements.field_category')) ?> <span class="text-danger">*</span>
                         </label>
                         <select name="category" class="form-select" style="font-size:.875rem;">
-                            <option value="general">🗂 General</option>
-                            <option value="health">🏥 Health (Kalusugan)</option>
-                            <option value="safety">⚠️ Safety (Kaligtasan)</option>
-                            <option value="government">🏛 Government (Pamahalaan)</option>
-                            <option value="infrastructure">🏗 Infrastructure (Imprastruktura)</option>
-                            <option value="social">🤝 Social (Panlipunan)</option>
+                            <option value="general"><?= e(__('🗂 General')) ?></option>
+                            <option value="health"><?= e(__('🏥 Health (Kalusugan)')) ?></option>
+                            <option value="safety"><?= e(__('⚠️ Safety (Kaligtasan)')) ?></option>
+                            <option value="government"><?= e(__('🏛 Government (Pamahalaan)')) ?></option>
+                            <option value="infrastructure"><?= e(__('🏗 Infrastructure (Imprastruktura)')) ?></option>
+                            <option value="social"><?= e(__('🤝 Social (Panlipunan)')) ?></option>
                         </select>
                     </div>
 
@@ -240,9 +240,9 @@ ob_start();
                             <?= e(t('admin_announcements.field_urgency')) ?>
                         </label>
                         <select name="urgency" class="form-select" style="font-size:.875rem;">
-                            <option value="normal">⚪ Normal</option>
-                            <option value="important">🟡 Important (Mahalaga)</option>
-                            <option value="urgent">🔴 Urgent (Napaka-importante)</option>
+                            <option value="normal"><?= e(__('⚪ Normal')) ?></option>
+                            <option value="important"><?= e(__('🟡 Important (Mahalaga)')) ?></option>
+                            <option value="urgent"><?= e(__('🔴 Urgent (Napaka-importante)')) ?></option>
                         </select>
                         <p class="form-text text-muted mt-1" style="font-size:.77rem;">
                             <?= e(t('admin_announcements.urgency_hint')) ?>

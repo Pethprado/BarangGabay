@@ -334,7 +334,7 @@ class EventController
     {
         $event = Event::find((int) $params['id']);
         if (!$event) {
-            flash('error', 'Event not found.');
+            flash('error', __('Event not found.'));
             redirect('/admin/events');
         }
         $pageTitle    = t('admin_events.breadcrumb_edit');
@@ -353,7 +353,7 @@ class EventController
         $id    = (int) $params['id'];
         $event = Event::find($id);
         if (!$event) {
-            flash('error', 'Event not found.');
+            flash('error', __('Event not found.'));
             redirect('/admin/events');
         }
 
@@ -474,20 +474,10 @@ class EventController
     public function destroy(array $params): void
     {
         check_csrf();
-        $id = (int) $params['id'];
-
-        // Before the row goes: the generated MP3s are files on disk that
-        // nothing else would ever clean up.
-        PostAudioService::purgeFor('event', $id);
-
-        Event::delete($id);
-        AuditLog::record(
-            (int) $_SESSION['user_id'],
-            'event.delete',
-            'Deleted event #' . $id
-        );
-        flash('success', 'Event deleted successfully.');
-        redirect('/admin/events');
+        // Not deleted for good: moved to the Trash (/admin/trash), where it
+        // can be restored. Generated audio and files are only removed when
+        // an admin deletes it from the Trash. Staff may trash their own posts.
+        trash_post('event', (int) ($params['id'] ?? 0), '/admin/events' . (str_contains((string) ($_SERVER['HTTP_REFERER'] ?? ''), 'mine=1') ? '?mine=1' : ''));
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

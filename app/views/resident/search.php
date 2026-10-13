@@ -1,39 +1,39 @@
 <?php
 /** @var string $q @var array $results @var int $total */
 $groups = [
-    'announcements' => ['Announcements', 'bi-megaphone-fill'],
-    'events'        => ['Events', 'bi-calendar-event-fill'],
-    'ordinances'    => ['Ordinances', 'bi-journal-text'],
-    'documents'     => ['Document requests', 'bi-file-earmark-text-fill'],
-    'dictionary'    => ['Dictionary', 'bi-book-half'],
+    'announcements' => [__('Announcements'), 'bi-megaphone-fill'],
+    'events'        => [__('Events'), 'bi-calendar-event-fill'],
+    'ordinances'    => [__('Ordinances'), 'bi-journal-text'],
+    'documents'     => [__('Document requests'), 'bi-file-earmark-text-fill'],
+    'dictionary'    => [__('Dictionary'), 'bi-book-half'],
 ];
 ob_start();
 ?>
 <div class="ds-page-head">
-    <p class="ds-page-head__eyebrow">Search</p>
-    <h1 class="ds-page-head__title">Search BarangGabay</h1>
-    <p class="ds-page-head__sub">Announcements, events, ordinances, document requests and the dictionary.</p>
+    <p class="ds-page-head__eyebrow"><?= e(__('Search')) ?></p>
+    <h1 class="ds-page-head__title"><?= e(__('Search BarangGabay')) ?></h1>
+    <p class="ds-page-head__sub"><?= e(__('Announcements, events, ordinances, document requests and the dictionary.')) ?></p>
 </div>
 
 <form method="get" action="<?= e(route('search')) ?>" class="ds-card mb-6 p-3 flex gap-2" role="search">
-    <label for="globalSearch" class="visually-hidden sr-only">Search</label>
+    <label for="globalSearch" class="visually-hidden sr-only"><?= e(__('Search')) ?></label>
     <div class="relative flex-1">
         <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-500"><i class="bi bi-search" aria-hidden="true"></i></span>
         <input id="globalSearch" type="search" name="q" value="<?= e($q) ?>" minlength="2" maxlength="100" autofocus
-               placeholder="Search announcements, events, ordinances…"
+               placeholder="<?= e(__('Search announcements, events, ordinances…')) ?>"
                class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-800">
     </div>
-    <button type="submit" class="rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-bold text-white">Search</button>
+    <button type="submit" class="rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-bold text-white"><?= e(__('Search')) ?></button>
 </form>
 
 <?php if ($q === ''): ?>
-    <div class="ds-card ds-empty"><i class="bi bi-search" aria-hidden="true"></i><strong>What are you looking for?</strong>Type at least two letters.</div>
+    <div class="ds-card ds-empty"><i class="bi bi-search" aria-hidden="true"></i><strong><?= e(__('What are you looking for?')) ?></strong><?= e(__('Type at least two letters.')) ?></div>
 <?php elseif (mb_strlen($q) < 2): ?>
-    <div class="ds-card ds-empty"><i class="bi bi-search" aria-hidden="true"></i><strong>Keep typing</strong>Type at least two letters.</div>
+    <div class="ds-card ds-empty"><i class="bi bi-search" aria-hidden="true"></i><strong><?= e(__('Keep typing')) ?></strong><?= e(__('Type at least two letters.')) ?></div>
 <?php elseif ($total === 0): ?>
-    <div class="ds-card ds-empty"><i class="bi bi-emoji-neutral" aria-hidden="true"></i><strong>No results for “<?= e($q) ?>”</strong>Try a different word, or check the spelling.</div>
+    <div class="ds-card ds-empty"><i class="bi bi-emoji-neutral" aria-hidden="true"></i><strong><?= e(__('No results for “:query”', ['query' => $q])) ?></strong><?= e(__('Try a different word, or check the spelling.')) ?></div>
 <?php else: ?>
-    <p class="mb-4 text-sm text-slate-500"><?= (int) $total ?> result<?= $total === 1 ? '' : 's' ?> for “<span class="font-semibold text-slate-700"><?= e($q) ?></span>”</p>
+    <p class="mb-4 text-sm text-slate-500"><?= e((int) $total === 1 ? __('1 result for') : __(':n results for', ['n' => (int) $total])) ?> “<span class="font-semibold text-slate-700"><?= e($q) ?></span>”</p>
     <div class="space-y-6">
     <?php foreach ($groups as $key => [$label, $icon]): if (empty($results[$key])) { continue; } ?>
         <section aria-labelledby="sg-<?= $key ?>">
@@ -47,7 +47,7 @@ ob_start();
                     <a href="<?= e(route('announcements/' . $r['slug'])) ?>" class="block px-4 py-3 hover:bg-slate-50">
                         <span class="flex items-center gap-2">
                             <span class="font-bold text-slate-900"><?= e(localised_text($r, 'title')) ?></span>
-                            <?php if (($r['urgency'] ?? '') === 'urgent'): ?><?= status_badge('failed', 'Urgent') ?><?php endif; ?>
+                            <?php if (($r['urgency'] ?? '') === 'urgent'): ?><?= status_badge('failed', __('Urgent')) ?><?php endif; ?>
                         </span>
                         <span class="block text-xs text-slate-500"><?= e(date('M j, Y', strtotime((string) $r['published_at']))) ?></span>
                         <span class="mt-1 block text-sm text-slate-600"><?= e(\App\Controllers\SearchController::excerpt($r, 'body')) ?></span>
@@ -65,7 +65,7 @@ ob_start();
                 <?php elseif ($key === 'documents'): ?>
                     <a href="<?= e(route('documents')) ?>" class="block px-4 py-3 hover:bg-slate-50">
                         <span class="font-bold text-slate-900"><?= e($r['label']) ?></span>
-                        <span class="block text-xs text-slate-500">Request this document online</span>
+                        <span class="block text-xs text-slate-500"><?= e(__('Request this document online')) ?></span>
                     </a>
                 <?php else: ?>
                     <a href="<?= e(route('dictionary') . '?q=' . rawurlencode((string) ($r['manobo'] ?? ''))) ?>" class="block px-4 py-3 hover:bg-slate-50">

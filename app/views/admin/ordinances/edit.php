@@ -61,7 +61,7 @@ ob_start();
                            name="ordinance_no"
                            class="form-control font-monospace"
                            value="<?= e($ordinance['ordinance_no'] ?? '') ?>"
-                           placeholder="e.g. Ordinance No. 2026-001"
+                           placeholder="<?= e(__('e.g. Ordinance No. 2026-001')) ?>"
                            required>
                 </div>
 
@@ -73,7 +73,7 @@ ob_start();
                            name="category"
                            class="form-control"
                            value="<?= e($ordinance['category'] ?? '') ?>"
-                           placeholder="e.g. Environmental, Public Order, Health">
+                           placeholder="<?= e(__('e.g. Environmental, Public Order, Health')) ?>">
                 </div>
 
                 <!-- Enacted Date -->
