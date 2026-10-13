@@ -1510,4 +1510,6 @@ return [
     '🗂 General' => '🗂 Pangkalahatan',
     '🟡 Important (Mahalaga)' => '🟡 Mahalaga',
     '🤝 Social (Panlipunan)' => '🤝 Panlipunan',
+    'Unread Feedback' => 'Hindi pa Nababasang Puna',
+    'Open Document Requests' => 'Mga Bukas na Kahilingan sa Dokumento',
 ];

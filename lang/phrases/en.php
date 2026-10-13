@@ -1510,4 +1510,6 @@ return [
     '🗂 General' => '🗂 General',
     '🟡 Important (Mahalaga)' => '🟡 Important',
     '🤝 Social (Panlipunan)' => '🤝 Social',
+    'Unread Feedback' => 'Unread Feedback',
+    'Open Document Requests' => 'Open Document Requests',
 ];

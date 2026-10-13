@@ -318,13 +318,6 @@ require __DIR__ . '/_auth_open.php';
         <h1 class="auth-title" id="regTitle"><?= e(__('Create an Account')) ?></h1>
         <p class="auth-sub"><?= e(__('Join BarangGabay and be part of a safer community.')) ?></p>
 
-        <?php if ($__social['google'] || $__social['facebook']): ?>
-            <div class="auth-social" style="margin-bottom:.25rem;">
-                <?php if ($__social['google']): ?><a href="<?= e(route('auth/google')) ?>"><i class="bi bi-google" aria-hidden="true"></i><?= e(__('Sign up with Google')) ?></a><?php endif; ?>
-                <?php if ($__social['facebook']): ?><a href="<?= e(route('auth/facebook')) ?>"><i class="bi bi-facebook" style="color:#1877f2;" aria-hidden="true"></i><?= e(__('Sign up with Facebook')) ?></a><?php endif; ?>
-            </div>
-            <div class="auth-divider"><?= e(__('or fill in the form')) ?></div>
-        <?php endif; ?>
 
         <!-- Account type. Resident is the only self-service type; Staff and Admin are
              shown so people know where those accounts come from, but they cannot be

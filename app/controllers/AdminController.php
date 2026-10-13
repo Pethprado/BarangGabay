@@ -188,6 +188,15 @@ class AdminController
             $staffKpi['events'] = (int) $mine->fetchColumn();
             $staffKpi['feedback']  = (int) Feedback::unreadCountAdmin();
             $staffKpi['approvals'] = (int) $pdo->query("SELECT COUNT(*) FROM document_requests WHERE status = 'pending'")->fetchColumn();
+
+            // Barangay-wide figures, so a card never reads a bare 0 that only
+            // means "you have not posted yet" or "nothing is at this one step".
+            $staffKpi['announcements_all'] = (int) $pdo->query("SELECT COUNT(*) FROM announcements WHERE status = 'published'")->fetchColumn();
+            $staffKpi['events_all']        = (int) $pdo->query('SELECT COUNT(*) FROM events')->fetchColumn();
+            $staffKpi['feedback_all']      = (int) $pdo->query('SELECT COUNT(*) FROM feedbacks')->fetchColumn();
+            $staffKpi['requests_open']     = (int) $pdo->query(
+                "SELECT COUNT(*) FROM document_requests WHERE status IN ('pending', 'processing', 'ready', 'awaiting_payment')"
+            )->fetchColumn();
             $recentTasks = $pdo->query(
                 'SELECT dr.id, dr.reference_no, dr.document_type, dr.status, dr.requested_at, u.full_name
                  FROM document_requests dr LEFT JOIN users u ON u.id = dr.user_id

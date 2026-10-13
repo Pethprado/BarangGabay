@@ -69,11 +69,26 @@ $__isStaffView = ($_SESSION['role'] ?? '') === 'staff';
 $__isAdmin     = in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true);
 $staffKpi      = $staffKpi ?? ['announcements' => 0, 'events' => 0, 'feedback' => 0, 'approvals' => 0];
 $recentTasks   = $recentTasks ?? [];
+/*
+ * Staff cards show their own posts once they have some, and otherwise the
+ * barangay's totals (the same rule as the "My" lists). Feedback shows unread
+ * when there is any, else all threads; requests count everything still open,
+ * not only the ones not yet started — a bare 0 there read as "broken".
+ */
+$__myAnn = (int) $staffKpi['announcements'];
+$__myEv  = (int) $staffKpi['events'];
+$__unread = (int) $staffKpi['feedback'];
 $__kpis = $__isStaffView ? [
-    [__('My Announcements'), (int) $staffKpi['announcements'], route('admin/announcements') . '?mine=1', 'bi-megaphone-fill', 'green'],
-    [__('My Events'), (int) $staffKpi['events'], route('admin/events') . '?mine=1', 'bi-calendar-event-fill', 'orange'],
-    [__('Feedback'), (int) $staffKpi['feedback'], route('admin/feedback'), 'bi-chat-square-text-fill', 'blue'],
-    [__('Pending Approvals'), (int) $staffKpi['approvals'], route('admin/documents') . '?status=pending', 'bi-shield-fill-exclamation', 'red'],
+    $__myAnn > 0
+        ? [__('My Announcements'), $__myAnn, route('admin/announcements') . '?mine=1', 'bi-megaphone-fill', 'green']
+        : [__('Announcements'), (int) ($staffKpi['announcements_all'] ?? 0), route('admin/announcements'), 'bi-megaphone-fill', 'green'],
+    $__myEv > 0
+        ? [__('My Events'), $__myEv, route('admin/events') . '?mine=1', 'bi-calendar-event-fill', 'orange']
+        : [__('Events'), (int) ($staffKpi['events_all'] ?? 0), route('admin/events'), 'bi-calendar-event-fill', 'orange'],
+    $__unread > 0
+        ? [__('Unread Feedback'), $__unread, route('admin/feedback'), 'bi-chat-square-text-fill', 'blue']
+        : [__('Feedback'), (int) ($staffKpi['feedback_all'] ?? 0), route('admin/feedback'), 'bi-chat-square-text-fill', 'blue'],
+    [__('Open Document Requests'), (int) ($staffKpi['requests_open'] ?? $staffKpi['approvals']), route('admin/documents'), 'bi-file-earmark-text-fill', 'red'],
 ] : [
     [__('Total Residents'), (int) ($totalResidents ?? $verifiedCount), route('admin/residents'), 'bi-people-fill', 'green'],
     [__('Active Staff'), (int) ($activeStaffCount ?? 0), $__isAdmin ? route('admin/staff') : route('admin'), 'bi-person-fill', 'blue'],

@@ -1510,4 +1510,6 @@ return [
     '🗂 General' => '🗂 Kinatibuk-an',
     '🟡 Important (Mahalaga)' => '🟡 Importante',
     '🤝 Social (Panlipunan)' => '🤝 Sosyal',
+    'Unread Feedback' => 'Wala pa Nabasa nga Komento',
+    'Open Document Requests' => 'Mga Abli nga Hangyo sa Dokumento',
 ];
