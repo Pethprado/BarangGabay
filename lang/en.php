@@ -2183,7 +2183,7 @@ return [
         'recipient_loading' => 'Searching…',
         'recipient_none'    => 'No registered resident matches that. You can still type a number.',
         'recipient_chosen'  => 'Sending to :name',
-        'subtitle'              => 'Semaphore SMS — :count verified resident(s) with phone numbers',
+        'subtitle'              => 'SMS — :count verified resident(s) with phone numbers',
         'test_mode_title'       => 'TEST MODE — SMS is logged but not actually sent',
         'test_mode_body'        => 'To activate real SMS delivery, do the following:<br>1. Log in to your <strong><a href="https://semaphore.co" target="_blank" style="color:#b45309;">Semaphore account</a></strong> &rarr; top up your credits (minimum &#8369;100).<br>2. Once the account is approved, open the <code>.env</code> file and change:<br>&nbsp;&nbsp;&nbsp;<code style="background:#fef3c7;padding:2px 6px;border-radius:4px;">SEMAPHORE_TEST_MODE=true</code> &nbsp;&rarr;&nbsp; <code style="background:#d1fae5;padding:2px 6px;border-radius:4px;">SEMAPHORE_TEST_MODE=false</code><br>3. Restart XAMPP Apache after changing the .env file.',
         'api_key_missing_title' => 'SEMAPHORE_API_KEY is not set in .env',

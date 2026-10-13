@@ -611,6 +611,9 @@ ob_start();
                     </td>
                     <td>
                         <span class="badge" style="<?= $statusStyle ?>font-size:.7rem;"><?= $statusLabel ?></span>
+                        <?php if ($log['status'] === 'failed' && !empty($log['response_excerpt'])): ?>
+                            <div class="text-danger mt-1" style="font-size:.72rem;max-width:260px;white-space:normal;"><?= e(mb_strimwidth((string) $log['response_excerpt'], 0, 160, '…')) ?></div>
+                        <?php endif; ?>
                     </td>
                     <td style="max-width:340px;">
                         <span title="<?= e($log['message']) ?>">

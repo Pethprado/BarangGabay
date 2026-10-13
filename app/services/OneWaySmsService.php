@@ -104,7 +104,7 @@ class OneWaySmsService implements SmsSender
     {
         if (!$this->isConfigured()) {
             error_log('OneWaySMS: API credentials not configured.');
-            return ['success' => false, 'error' => 'OneWaySMS credentials not configured in environment.'];
+            return ['success' => false, 'error' => 'No SMS provider is connected. Paste your MoceanAPI token in the "MoceanAPI connection" box on the SMS page and click Save & test.'];
         }
 
         $clean = $this->cleanPhone($number);

@@ -2142,7 +2142,7 @@ return [
         'recipient_loading' => 'Naghahanap…',
         'recipient_none'    => 'Walang rehistradong residente ang tumutugma. Pwede ka pa ring mag-type ng numero.',
         'recipient_chosen'  => 'Ipapadala kay :name',
-        'subtitle'              => 'Semaphore SMS — :count verified na residenteng may numero ng telepono',
+        'subtitle'              => 'SMS — :count verified na residenteng may numero ng telepono',
         'test_mode_title'       => 'TEST MODE — Ang SMS ay nilo-log pero hindi talaga naipapadala',
         'test_mode_body'        => 'Para ma-activate ang tunay na SMS delivery, gawin ang sumusunod:<br>1. Mag-log in sa iyong <strong><a href="https://semaphore.co" target="_blank" style="color:#b45309;">Semaphore account</a></strong> &rarr; i-top up ang iyong credits (minimum &#8369;100).<br>2. Kapag naaprubahan na ang account, buksan ang <code>.env</code> file at baguhin ang:<br>&nbsp;&nbsp;&nbsp;<code style="background:#fef3c7;padding:2px 6px;border-radius:4px;">SEMAPHORE_TEST_MODE=true</code> &nbsp;&rarr;&nbsp; <code style="background:#d1fae5;padding:2px 6px;border-radius:4px;">SEMAPHORE_TEST_MODE=false</code><br>3. I-restart ang XAMPP Apache pagkatapos baguhin ang .env.',
         'api_key_missing_title' => 'SEMAPHORE_API_KEY ay hindi naka-set sa .env',
