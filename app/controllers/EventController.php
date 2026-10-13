@@ -149,12 +149,21 @@ class EventController
         // ?mine=1 — the staff sidebar's "My Events". See
         // AnnouncementController::adminIndex().
         $mine = ($_GET['mine'] ?? '') === '1';
+        // Nothing posted by this person yet: show everything residents
+        // can see (with a note) rather than an empty page.
+        $mineEmpty = false;
         if ($mine) {
+            $__everything = $allEvents;
             $me = (int) ($_SESSION['user_id'] ?? 0);
             $allEvents = array_values(array_filter(
                 $allEvents,
                 static fn (array $e): bool => (int) ($e['created_by'] ?? 0) === $me
             ));
+            if ($allEvents === []) {
+                $allEvents = $__everything;
+                $mine      = false;
+                $mineEmpty = true;
+            }
         }
 
         $valid  = ['upcoming', 'ongoing', 'completed', 'cancelled'];
@@ -178,7 +187,7 @@ class EventController
         );
 
         view('admin/events/index', compact(
-            'events', 'allEvents', 'status', 'pageTitle', 'pendingCount', 'evAttempts', 'mine'
+            'events', 'allEvents', 'status', 'pageTitle', 'pendingCount', 'evAttempts', 'mine', 'mineEmpty'
         ));
     }
 

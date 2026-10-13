@@ -225,12 +225,21 @@ class AnnouncementController
         // ?mine=1 — the staff sidebar's "My Announcements". Applied to the
         // full list too, so the summary counts describe the same scope.
         $mine = ($_GET['mine'] ?? '') === '1';
+        // Nothing posted by this person yet: show everything residents
+        // can see (with a note) rather than an empty page.
+        $mineEmpty = false;
         if ($mine) {
+            $__everything = $allAnnouncements;
             $me = (int) ($_SESSION['user_id'] ?? 0);
             $allAnnouncements = array_values(array_filter(
                 $allAnnouncements,
                 static fn (array $a): bool => (int) ($a['author_id'] ?? 0) === $me
             ));
+            if ($allAnnouncements === []) {
+                $allAnnouncements = $__everything;
+                $mine      = false;
+                $mineEmpty = true;
+            }
         }
 
         $announcements = match ($status) {
@@ -263,7 +272,7 @@ class AnnouncementController
             'status',
             'pendingCount',
             'annAttempts',
-            'mine'
+            'mine', 'mineEmpty'
         ));
     }
 

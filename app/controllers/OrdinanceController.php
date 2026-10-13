@@ -56,12 +56,21 @@ class OrdinanceController
 
         // ?mine=1 — the staff sidebar's "My Ordinances": what this person uploaded.
         $mine = ($_GET['mine'] ?? '') === '1';
+        // Nothing posted by this person yet: show everything residents
+        // can see (with a note) rather than an empty page.
+        $mineEmpty = false;
         if ($mine) {
+            $__everything = $ordinances;
             $me = (int) ($_SESSION['user_id'] ?? 0);
             $ordinances = array_values(array_filter(
                 $ordinances,
                 static fn (array $o): bool => (int) ($o['uploaded_by'] ?? 0) === $me
             ));
+            if ($ordinances === []) {
+                $ordinances = $__everything;
+                $mine      = false;
+                $mineEmpty = true;
+            }
         }
 
         $pageTitle    = t('admin_ordinances.title');
@@ -73,7 +82,7 @@ class OrdinanceController
             array_map(static fn (array $o): int => (int) $o['id'], $ordinances)
         );
 
-        view('admin/ordinances/index', compact('ordinances', 'pageTitle', 'pendingCount', 'ordAttempts', 'mine'));
+        view('admin/ordinances/index', compact('ordinances', 'pageTitle', 'pendingCount', 'ordAttempts', 'mine', 'mineEmpty'));
     }
 
     /** GET /admin/ordinances/upload */

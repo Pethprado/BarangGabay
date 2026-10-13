@@ -32,7 +32,7 @@ $userRole = $_SESSION['role'] ?? 'staff';
 $canDelete = in_array($userRole, ['admin', 'superadmin'], true);
 
 ob_start();
-$__msPath = 'admin/events'; $__msMine = (bool) ($mine ?? false);
+$__msPath = 'admin/events'; $__msMine = (bool) ($mine ?? false); $__msFellBack = (bool) ($mineEmpty ?? false);
 $__msMineLabel = 'My events'; $__msAllLabel = 'All events';
 require __DIR__ . '/../../shared/_mine-switch.php';
 ?>

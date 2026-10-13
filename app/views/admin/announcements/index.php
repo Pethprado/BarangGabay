@@ -37,7 +37,7 @@ $userRole = $_SESSION['role'] ?? 'staff';
 $canDelete = in_array($userRole, ['admin', 'superadmin'], true);
 
 ob_start();
-$__msPath = 'admin/announcements'; $__msMine = (bool) ($mine ?? false);
+$__msPath = 'admin/announcements'; $__msMine = (bool) ($mine ?? false); $__msFellBack = (bool) ($mineEmpty ?? false);
 $__msMineLabel = 'My announcements'; $__msAllLabel = 'All announcements';
 require __DIR__ . '/../../shared/_mine-switch.php';
 ?>

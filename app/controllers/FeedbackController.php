@@ -112,12 +112,21 @@ class FeedbackController
         // own the threads they answered. "All" still lists every thread, so
         // new feedback waiting for a first reply is one click away.
         $mine = ($_GET['mine'] ?? '') === '1';
+        // Nothing posted by this person yet: show everything residents
+        // can see (with a note) rather than an empty page.
+        $mineEmpty = false;
         if ($mine) {
+            $__everything = $feedbacks;
             $handled   = array_flip(Feedback::idsRepliedBy((int) ($_SESSION['user_id'] ?? 0)));
             $feedbacks = array_values(array_filter(
                 $feedbacks,
                 static fn (array $f): bool => isset($handled[(int) $f['id']])
             ));
+            if ($feedbacks === []) {
+                $feedbacks = $__everything;
+                $mine      = false;
+                $mineEmpty = true;
+            }
         }
 
         $unread    = Feedback::unreadCountAdmin();
@@ -126,7 +135,7 @@ class FeedbackController
         )->fetchColumn();
         $pageTitle = t('admin_feedback.page_title');
 
-        view('admin/feedback/index', compact('feedbacks', 'unread', 'search', 'pendingCount', 'pageTitle', 'mine'));
+        view('admin/feedback/index', compact('feedbacks', 'unread', 'search', 'pendingCount', 'pageTitle', 'mine', 'mineEmpty'));
     }
 
     /** GET /admin/feedback/{id}/messages — full thread, for the reply modal (AJAX) */

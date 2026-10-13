@@ -7,7 +7,7 @@ $draft    = count(array_filter($ordinances, static fn($o) => $o['status'] === 'd
 $repealed = count(array_filter($ordinances, static fn($o) => $o['status'] === 'repealed'));
 
 ob_start();
-$__msPath = 'admin/ordinances'; $__msMine = (bool) ($mine ?? false);
+$__msPath = 'admin/ordinances'; $__msMine = (bool) ($mine ?? false); $__msFellBack = (bool) ($mineEmpty ?? false);
 $__msMineLabel = 'My ordinances'; $__msAllLabel = 'All ordinances';
 require __DIR__ . '/../../shared/_mine-switch.php';
 ?>

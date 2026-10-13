@@ -11,7 +11,7 @@ $answered   = count(array_filter($feedbacks, fn($f) => !empty($f['has_staff_repl
 $unanswered = count($feedbacks) - $answered;
 
 ob_start();
-$__msPath = 'admin/feedback'; $__msMine = (bool) ($mine ?? false);
+$__msPath = 'admin/feedback'; $__msMine = (bool) ($mine ?? false); $__msFellBack = (bool) ($mineEmpty ?? false);
 $__msMineLabel = 'Feedback I replied to'; $__msAllLabel = 'All feedback';
 require __DIR__ . '/../../shared/_mine-switch.php';
 ?>
