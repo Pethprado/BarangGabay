@@ -86,6 +86,9 @@ class SmsController
             'filterStatus'   => $status,
             'smsConfigured'  => $this->sms->isConfigured(),
             'smsProvider'    => $this->sms->providerName(),
+            'moceanSource'   => \App\Services\MoceanSmsService::tokenSource(),
+            'smsBalance'     => $this->sms->providerName() === 'MoceanAPI' ? $this->sms->getBalance() : null,
+            'canConfigure'   => \in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true),
             'testMode'       => $this->sms->isTestMode(),
             'purokReach'     => $purokReach,
             'preselectType'  => $preType,
@@ -94,6 +97,39 @@ class SmsController
     }
 
     // ── Actions ───────────────────────────────────────────────────────────
+
+    /**
+     * POST /admin/sms/mocean — admins connect MoceanAPI by pasting the API
+     * token. It is checked with Mocean first, then stored encrypted, so SMS
+     * works on Render without editing its environment.
+     */
+    public function saveMocean(): void
+    {
+        check_csrf();
+        $error = \App\Services\MoceanSmsService::saveToken(
+            (string) ($_POST['mocean_token'] ?? ''),
+            (string) ($_POST['mocean_sender'] ?? ''),
+            (int) $_SESSION['user_id']
+        );
+        if ($error !== null) {
+            flash('error', $error);
+            redirect('/admin/sms');
+        }
+        \App\Models\Setting::flush();
+        AuditLog::record((int) $_SESSION['user_id'], 'sms.mocean_connected', 'Connected MoceanAPI (token saved, encrypted)');
+        flash('success', 'MoceanAPI is connected. SMS to residents is now sent for real.');
+        redirect('/admin/sms');
+    }
+
+    /** POST /admin/sms/mocean/remove — forget the saved MoceanAPI token. */
+    public function removeMocean(): void
+    {
+        check_csrf();
+        \App\Services\MoceanSmsService::clearStoredToken((int) $_SESSION['user_id']);
+        AuditLog::record((int) $_SESSION['user_id'], 'sms.mocean_removed', 'Removed the saved MoceanAPI token');
+        flash('success', 'The saved MoceanAPI token was removed.');
+        redirect('/admin/sms');
+    }
 
     /**
      * POST /admin/sms/send

@@ -111,6 +111,35 @@ class MoceanSmsServiceTest extends TestCase
         $this->assertSame([], $history, 'test mode never calls Mocean');
     }
 
+    public function testSavingATokenChecksItWithMoceanAndStoresItEncrypted(): void
+    {
+        $this->assertNotNull(MoceanSmsService::saveToken('not-a-token', '', 0), 'wrong format is refused');
+
+        $previous  = \App\Models\Setting::get(MoceanSmsService::SETTING_TOKEN, '');
+        $hadSecret = $_ENV['JWT_SECRET'] ?? null;
+        $_ENV['JWT_SECRET'] ??= 'unit-test-secret';   // tests do not load .env
+        try {
+            $rejecting = new Client(['handler' => HandlerStack::create(new MockHandler([
+                new Response(401, [], '{"status":1,"err_msg":"Authorization failed"}'),
+            ])), 'http_errors' => false]);
+            $this->assertNotNull(MoceanSmsService::saveToken('apit-wrongwrongwrong', 'BarangGabay', 0, $rejecting), 'a token Mocean refuses is not saved');
+
+            $accepting = new Client(['handler' => HandlerStack::create(new MockHandler([
+                new Response(200, [], '{"status":0,"value":19}'),
+            ])), 'http_errors' => false]);
+            $this->assertNull(MoceanSmsService::saveToken('apit-goodgoodgoodgood', 'BarangGabay', 0, $accepting));
+
+            \App\Models\Setting::flush();
+            $stored = (string) \App\Models\Setting::get(MoceanSmsService::SETTING_TOKEN, '');
+            $this->assertStringNotContainsString('apit-good', $stored, 'stored encrypted, never in plain text');
+            $this->assertSame('apit-goodgoodgoodgood', \App\Services\SecretBox::decrypt($stored));
+        } finally {
+            \App\Models\Setting::set(MoceanSmsService::SETTING_TOKEN, (string) $previous);
+            \App\Models\Setting::flush();
+            if ($hadSecret === null) { unset($_ENV['JWT_SECRET']); } else { $_ENV['JWT_SECRET'] = $hadSecret; }
+        }
+    }
+
     public function testGatewayPrefersMoceanWhenConfigured(): void
     {
         $saved = [$_ENV['MOCEAN_API_TOKEN'] ?? null, $_ENV['SMS_PROVIDER'] ?? null];

@@ -150,6 +150,8 @@ return [
     // SMS management
     ['GET',  '/admin/sms',                       'SmsController@index',             ['auth', 'role:admin,staff']],
     ['POST', '/admin/sms/send',                  'SmsController@send',              ['auth', 'role:admin,staff']],
+    ['POST', '/admin/sms/mocean',                'SmsController@saveMocean',        ['auth', 'role:admin']],
+    ['POST', '/admin/sms/mocean/remove',         'SmsController@removeMocean',      ['auth', 'role:admin']],
     ['POST', '/admin/sms/broadcast',             'SmsController@broadcast',         ['auth', 'role:admin,staff']],
     // Send an already-published post. Separate from broadcast because the
     // message is derived from a post and every row it writes to sms_logs

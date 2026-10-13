@@ -55,14 +55,101 @@ class MoceanSmsService implements SmsSender
         $this->token     = $env('MOCEAN_API_TOKEN');
         $this->apiKey    = $env('MOCEAN_API_KEY');
         $this->apiSecret = $env('MOCEAN_API_SECRET');
-        $this->senderId  = $env('MOCEAN_SENDER_ID', 'BarangGabay');
+        $this->senderId  = $env('MOCEAN_SENDER_ID', '');
+
+        // No token in the server environment: use the one an admin saved on
+        // the SMS page (encrypted in the settings table, like PayMongo keys),
+        // so the barangay never has to edit Render's environment by hand.
+        if ($config === null) {
+            if ($this->token === '' && $this->apiKey === '') {
+                $this->token = self::storedToken();
+            }
+            if ($this->senderId === '') {
+                $this->senderId = self::storedSetting(self::SETTING_SENDER);
+            }
+        }
+        if ($this->senderId === '') {
+            $this->senderId = 'BarangGabay';
+        }
         $this->testMode  = filter_var($env('MOCEAN_TEST_MODE', 'false'), FILTER_VALIDATE_BOOLEAN);
         $this->client    = $client ?? new Client(['timeout' => 20, 'http_errors' => false]);
     }
 
+    public const SETTING_TOKEN  = 'mocean_api_token';
+    public const SETTING_SENDER = 'mocean_sender_id';
+
     public function providerName(): string
     {
         return 'MoceanAPI';
+    }
+
+    /** 'env' (server environment), 'stored' (saved on the SMS page) or ''. */
+    public static function tokenSource(): string
+    {
+        foreach (['MOCEAN_API_TOKEN', 'MOCEAN_API_KEY'] as $k) {
+            $v = $_ENV[$k] ?? getenv($k);
+            if (is_string($v) && trim($v) !== '') {
+                return 'env';
+            }
+        }
+        return self::storedToken() !== '' ? 'stored' : '';
+    }
+
+    private static function storedSetting(string $key): string
+    {
+        try {
+            return trim((string) \App\Models\Setting::get($key, ''));
+        } catch (\Throwable $e) {
+            return '';   // no database (CLI without .env, tests)
+        }
+    }
+
+    private static function storedToken(): string
+    {
+        $stored = self::storedSetting(self::SETTING_TOKEN);
+        return $stored === '' ? '' : SecretBox::decrypt($stored);
+    }
+
+    /**
+     * Save a token entered on the SMS page — only after Mocean accepts it.
+     *
+     * @return string|null an error to show, or null when saved
+     */
+    public static function saveToken(string $token, string $senderId, int $updatedBy, ?Client $client = null): ?string
+    {
+        $token    = trim($token);
+        $senderId = trim($senderId);
+
+        if (!preg_match('/^apit-[A-Za-z0-9_\-]{10,}$/', $token)) {
+            return 'That does not look like a Mocean API token (it starts with "apit-").';
+        }
+        if ($senderId !== '' && !preg_match('/^[A-Za-z0-9 ]{1,11}$/', $senderId)) {
+            return 'Sender name: up to 11 letters or numbers.';
+        }
+        if (!SecretBox::available()) {
+            return 'The server has no secret (JWT_SECRET) to encrypt the token with.';
+        }
+
+        // Check it with Mocean before saving: a typo should fail here, not
+        // silently on the next announcement.
+        $probe   = new self($client, ['MOCEAN_API_TOKEN' => $token]);
+        $balance = $probe->getBalance();
+        if ($balance === null || ($balance['status'] ?? '') !== 'ok') {
+            return 'Mocean did not accept this token' . (isset($balance['error']) ? ': ' . $balance['error'] : '. Check it and try again.');
+        }
+
+        \App\Models\Setting::set(self::SETTING_TOKEN, SecretBox::encrypt($token), $updatedBy);
+        if ($senderId !== '') {
+            \App\Models\Setting::set(self::SETTING_SENDER, $senderId, $updatedBy);
+        }
+
+        return null;
+    }
+
+    /** Forget the token saved on the SMS page. */
+    public static function clearStoredToken(int $updatedBy): void
+    {
+        \App\Models\Setting::set(self::SETTING_TOKEN, '', $updatedBy);
     }
 
     public function isConfigured(): bool

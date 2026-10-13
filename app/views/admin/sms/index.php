@@ -10,6 +10,9 @@ $filterStatus   = $filterStatus   ?? '';
 $smsConfigured  = $smsConfigured  ?? false;
 $testMode       = $testMode       ?? false;
 $smsProvider    = $smsProvider    ?? 'SMS';
+$moceanSource   = $moceanSource   ?? '';
+$smsBalance     = $smsBalance     ?? null;
+$canConfigure   = $canConfigure   ?? false;
 $totalPages     = $perPage > 0 ? (int) ceil($total / $perPage) : 1;
 
 $typeMeta = [
@@ -41,6 +44,53 @@ ob_start();
     </div>
 </div>
 
+<!-- ── MoceanAPI connection ─────────────────────────────────────────────── -->
+<div class="admin-card mb-4" id="mocean">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <h2 class="h6 fw-bold mb-1"><i class="bi bi-broadcast me-1" aria-hidden="true"></i>MoceanAPI connection</h2>
+            <?php if ($smsProvider === 'MoceanAPI'): ?>
+                <span class="badge bg-success">Connected</span>
+                <span class="small text-muted ms-1">
+                    Token <?= $moceanSource === 'env' ? 'from the server environment' : 'saved in BarangGabay (encrypted)' ?>
+                    <?php if (is_array($smsBalance) && ($smsBalance['status'] ?? '') === 'ok'): ?>
+                        · Credits left: <strong><?= e((string) $smsBalance['credits']) ?></strong> (1 credit = 1 SMS to 1 resident)
+                    <?php elseif (is_array($smsBalance) && !empty($smsBalance['error'])): ?>
+                        · <span class="text-danger"><?= e((string) $smsBalance['error']) ?></span>
+                    <?php endif; ?>
+                </span>
+            <?php else: ?>
+                <span class="badge bg-secondary">Not connected</span>
+                <span class="small text-muted ms-1">Paste your Mocean API token to send real SMS to residents.</span>
+            <?php endif; ?>
+        </div>
+        <?php if ($canConfigure && $moceanSource === 'stored'): ?>
+        <form method="post" action="<?= e(route('admin/sms/mocean/remove')) ?>" onsubmit="return confirm('Remove the saved MoceanAPI token? SMS will stop being sent.');">
+            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Remove token</button>
+        </form>
+        <?php endif; ?>
+    </div>
+    <?php if ($canConfigure && $moceanSource !== 'env'): ?>
+    <form method="post" action="<?= e(route('admin/sms/mocean')) ?>" class="row g-2 align-items-end mt-2" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <div class="col-md-7">
+            <label class="form-label small fw-semibold" for="mocean_token">API token <span class="text-muted fw-normal">(moceanapi.com → API Account → Generate Token; starts with "apit-")</span></label>
+            <input type="password" class="form-control" id="mocean_token" name="mocean_token" required placeholder="<?= $moceanSource === 'stored' ? 'Saved — paste a new token to replace it' : 'apit-…' ?>">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold" for="mocean_sender">Sender name</label>
+            <input type="text" class="form-control" id="mocean_sender" name="mocean_sender" maxlength="11" value="BarangGabay">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-success w-100">Save &amp; test</button>
+        </div>
+    </form>
+    <?php elseif (!$canConfigure && $smsProvider !== 'MoceanAPI'): ?>
+    <p class="small text-muted mb-0 mt-2">Ask a barangay admin to connect MoceanAPI on this page.</p>
+    <?php endif; ?>
+</div>
+
 <!-- ── Test-mode / account notice ────────────────────────────────────── -->
 <?php if ($testMode): ?>
 <div style="background:#fefce8;border:1px solid #fde047;border-radius:10px;padding:14px 18px;margin-bottom:1.25rem;display:flex;gap:12px;align-items:flex-start;">
@@ -50,7 +100,11 @@ ob_start();
             <?= e(t('admin_sms.test_mode_title')) ?>
         </p>
         <p style="margin:0;color:#78350f;font-size:.82rem;line-height:1.6;">
-            <?= t('admin_sms.test_mode_body') ?>
+            <?php if ($smsProvider === 'MoceanAPI'): ?>
+                MoceanAPI is connected but <code>MOCEAN_TEST_MODE=true</code> is set, so messages are only logged. Set it to <code>false</code> to send real SMS.
+            <?php else: ?>
+                Messages are only logged, not sent, because no SMS provider is connected. Connect <strong>MoceanAPI</strong> in the box below to send real SMS to residents.
+            <?php endif; ?>
         </p>
     </div>
 </div>
