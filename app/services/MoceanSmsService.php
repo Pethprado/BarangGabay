@@ -138,6 +138,7 @@ class MoceanSmsService implements SmsSender
             return 'Mocean did not accept this token' . (isset($balance['error']) ? ': ' . $balance['error'] : '. Check it and try again.');
         }
 
+        $updatedBy = $updatedBy > 0 ? $updatedBy : null;   // settings.updated_by references users
         \App\Models\Setting::set(self::SETTING_TOKEN, SecretBox::encrypt($token), $updatedBy);
         if ($senderId !== '') {
             \App\Models\Setting::set(self::SETTING_SENDER, $senderId, $updatedBy);
@@ -149,7 +150,7 @@ class MoceanSmsService implements SmsSender
     /** Forget the token saved on the SMS page. */
     public static function clearStoredToken(int $updatedBy): void
     {
-        \App\Models\Setting::set(self::SETTING_TOKEN, '', $updatedBy);
+        \App\Models\Setting::set(self::SETTING_TOKEN, '', $updatedBy > 0 ? $updatedBy : null);
     }
 
     public function isConfigured(): bool
