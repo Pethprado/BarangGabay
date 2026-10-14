@@ -24,7 +24,7 @@ class PostSmsFullTest extends TestCase
 
         $this->assertStringContainsString('Water interruption', $msg);
         $this->assertStringContainsString("No water on Monday 8 AM - 5 PM.\n- Store water\n- Boil before drinking", $msg);
-        $this->assertStringContainsString('Basahin dito: ' . app_url('announcements/water-interruption'), $msg);
+        $this->assertStringContainsString('Tingnan sa BarangGabay: ' . app_url('announcements/water-interruption'), $msg);
         $this->assertStringNotContainsString('<', $msg, 'no HTML reaches the phone');
         $this->assertTrue(PostSms::isGsm($msg), 'dashes are made plain so parts stay 153 characters');
     }
@@ -52,6 +52,36 @@ class PostSmsFullTest extends TestCase
         $this->assertStringContainsString('Ord. 2026-003 - Curfew', $msg);
         $this->assertStringContainsString('Minors home by 10 PM.', $msg);
         $this->assertStringContainsString(app_url('ordinances/12'), $msg);
+    }
+
+    public function testOrdinanceSendsAllItsInfoNotJustOnePart(): void
+    {
+        $msg = PostSms::full('ordinance', [
+            'id' => 5, 'ordinance_no' => 'Ord. 2026-004', 'title' => 'Clean-up', 'category' => 'Environmental',
+            'enacted_date' => '2026-10-01', 'description' => 'Every Saturday clean-up.', 'ai_summary' => 'Walang kalat sa kalsada.',
+        ]);
+
+        $this->assertStringContainsString("Kategorya: Environmental\nPinagtibay: Oct 01, 2026", $msg);
+        $this->assertStringContainsString('Every Saturday clean-up.', $msg);
+        $this->assertStringContainsString('Buod: Walang kalat sa kalsada.', $msg);
+    }
+
+    public function testAnnouncementShowsCategoryDateAndImportance(): void
+    {
+        $msg = PostSms::full('announcement', [
+            'id' => 9, 'slug' => 'x', 'title' => 'Bakuna', 'urgency' => 'important', 'category' => 'health',
+            'published_at' => '2026-10-08 08:00:00', 'body' => '<p>Libre.</p>',
+        ]);
+
+        $this->assertStringStartsWith("[BarangGabay] MAHALAGANG ANUNSYO: Bakuna\nKategorya: Kalusugan\nPetsa: Oct 08, 2026 8:00 AM", $msg);
+    }
+
+    public function testAutoSendFallsBackToShortTextWhenThePostCannotBeLoaded(): void
+    {
+        $msg = PostSms::fullById('event', 0, ['title' => 'Drill', 'event_date' => '2026-11-07 09:00:00', 'venue' => 'Court']);
+
+        $this->assertStringContainsString('Drill', $msg);
+        $this->assertLessThanOrEqual(PostSms::LIMIT, mb_strlen($msg));
     }
 
     public function testVeryLongContentIsShortenedButTheLinkAlwaysArrives(): void

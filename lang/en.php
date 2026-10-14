@@ -1926,11 +1926,11 @@ return [
     // Shared "also send this by SMS" control (announcements, events, ordinances)
     'sms_notify' => [
         'label'          => 'Text message',
-        'checkbox'       => 'Also send this to residents by SMS',
+        'checkbox'       => 'Also send this to residents by SMS (the full post with its BarangGabay link; long posts use more credits)',
         'reach'          => 'Will be sent to :count resident(s) who have a registered phone number.',
         'reach_none'     => 'No resident has a registered phone number yet, so no SMS will be sent.',
         'reach_unknown'  => 'Sent to every resident with a registered phone number.',
-        'not_configured' => 'SMS is not set up yet, so nothing can be sent. Add a Semaphore API key on the SMS page.',
+        'not_configured' => 'SMS is not set up yet, so nothing can be sent. Connect MoceanAPI on the SMS page.',
         'test_mode'      => 'SMS is in test mode — messages are recorded in the log but not actually delivered.',
         'scheduled_note' => 'For a scheduled post, the SMS goes out when it publishes — not now.',
         'already_sent'   => 'Residents were already texted about this on :when. Editing the post does not send another message.',

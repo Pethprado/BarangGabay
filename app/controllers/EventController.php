@@ -578,7 +578,8 @@ class EventController
             // fixed a real overrun: the old inline version could reach 171
             // characters with a long title and venue — two credits per
             // recipient for a message that should cost one.
-            $message = PostSms::build('event', [
+            // The whole post plus its link, same text as the SMS page sends.
+            $message = PostSms::fullById('event', $id, [
                 'title'      => $title,
                 'event_date' => $eventDate,
                 'venue'      => $venue,

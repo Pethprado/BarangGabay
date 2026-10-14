@@ -93,11 +93,13 @@ final class PostSms
     }
 
     /**
-     * The whole post as one SMS: title, the full content, and a link to the
-     * post's page. Used when staff pick a post on the SMS page.
+     * The whole post as one SMS: title, every detail residents see on the
+     * post page (category, dates, venue, number), the full content, and a
+     * link to the post on BarangGabay. Used by every post SMS: the SMS page
+     * and the automatic send when a post is published.
      *
      * Capped at MAX_LENGTH; only the content is ever shortened (with "..."),
-     * so the title, the date and the link always arrive. Curly quotes and
+     * so the title, the details and the link always arrive. Curly quotes and
      * dashes become plain ones so the text stays in the cheaper GSM parts.
      *
      * @param string              $type 'announcement' | 'event' | 'ordinance'
@@ -107,40 +109,73 @@ final class PostSms
     {
         $title = self::smsText((string) ($post['title'] ?? ''));
         $link  = self::reference($type, $post);
+        $lines = [];
 
         switch ($type) {
             case 'event':
-                $head = '[BarangGabay] KAGANAPAN: ' . $title;
-                $when = trim((string) ($post['event_date'] ?? ''));
+                $status = (string) ($post['status'] ?? 'upcoming');
+                $head   = '[BarangGabay] ' . ($status === 'cancelled' ? 'KANSELADONG KAGANAPAN: ' : 'KAGANAPAN: ') . $title;
+                $when   = trim((string) ($post['event_date'] ?? ''));
                 if ($when !== '') {
-                    $head .= "\nPetsa: " . date('M d, Y g:i A', strtotime($when));
-                    $end = trim((string) ($post['end_date'] ?? ''));
+                    $date = 'Petsa: ' . date('M d, Y g:i A', strtotime($when));
+                    $end  = trim((string) ($post['end_date'] ?? ''));
                     if ($end !== '') {
-                        $head .= ' - ' . date(substr($end, 0, 10) === substr($when, 0, 10) ? 'g:i A' : 'M d, Y g:i A', strtotime($end));
+                        $date .= ' - ' . date(substr($end, 0, 10) === substr($when, 0, 10) ? 'g:i A' : 'M d, Y g:i A', strtotime($end));
                     }
+                    $lines[] = $date;
                 }
-                $venue = self::smsText((string) ($post['venue'] ?? ''));
-                $head .= "\nLugar: " . ($venue !== '' ? $venue : 'Barangay Hall');
-                $body  = (string) ($post['description'] ?? '');
+                $venue   = self::smsText((string) ($post['venue'] ?? ''));
+                $lines[] = 'Lugar: ' . ($venue !== '' ? $venue : 'Barangay Hall');
+                if (isset(self::EVENT_STATUS[$status]) && $status !== 'upcoming') {
+                    $lines[] = 'Katayuan: ' . self::EVENT_STATUS[$status];
+                }
+                $body = self::smsText((string) ($post['description'] ?? ''));
                 break;
 
             case 'ordinance':
                 $number = self::smsText((string) ($post['ordinance_no'] ?? ''));
                 $head   = '[BarangGabay] ORDINANSA: ' . ($number !== '' ? $number . ' - ' : '') . $title;
-                $body   = (string) ($post['description'] ?? '');
-                if (trim(strip_tags($body)) === '') {
-                    $body = (string) ($post['ai_summary'] ?? '');
+                if (trim((string) ($post['category'] ?? '')) !== '') {
+                    $lines[] = 'Kategorya: ' . self::smsText((string) $post['category']);
+                }
+                if (!empty($post['enacted_date'])) {
+                    $lines[] = 'Pinagtibay: ' . date('M d, Y', strtotime((string) $post['enacted_date']));
+                }
+                if (($post['status'] ?? '') === 'repealed') {
+                    $lines[] = 'Katayuan: Pinawalang-bisa na';
+                }
+                // The ordinance itself is a PDF: send what we hold as text, the
+                // description AND the plain-language summary, then the link.
+                $description = self::smsText((string) ($post['description'] ?? ''));
+                $summary     = self::smsText((string) ($post['ai_summary'] ?? ''));
+                $body        = $description;
+                if ($summary !== '' && $summary !== $description) {
+                    $body .= ($body !== '' ? "\n\n" : '') . 'Buod: ' . $summary;
                 }
                 break;
 
             default:
-                $urgent = ($post['urgency'] ?? '') === 'urgent';
-                $head   = ($urgent ? '[BarangGabay URGENT] ' : '[BarangGabay] ANUNSYO: ') . $title;
-                $body   = (string) ($post['body'] ?? '');
+                $urgency  = (string) ($post['urgency'] ?? 'normal');
+                $label    = ['urgent' => 'URGENT', 'important' => 'MAHALAGANG ANUNSYO'][$urgency] ?? 'ANUNSYO';
+                $head     = '[BarangGabay] ' . $label . ': ' . $title;
+                $category = (string) ($post['category'] ?? '');
+                if (isset(self::CATEGORY[$category])) {
+                    $lines[] = 'Kategorya: ' . self::CATEGORY[$category];
+                }
+                $posted = (string) ($post['published_at'] ?? '');
+                if ($posted !== '') {
+                    $lines[] = 'Petsa: ' . date('M d, Y g:i A', strtotime($posted));
+                }
+                if (trim((string) ($post['target_purok'] ?? '')) !== '') {
+                    $lines[] = 'Para sa: ' . self::smsText((string) $post['target_purok']);
+                }
+                $body = self::smsText((string) ($post['body'] ?? ''));
         }
 
-        $tail = ($link !== null ? "\n\nBasahin dito: " . $link : '') . "\n- " . self::place($scope);
-        $body = self::smsText($body);
+        if ($lines !== []) {
+            $head .= "\n" . implode("\n", $lines);
+        }
+        $tail = ($link !== null ? "\n\nTingnan sa BarangGabay: " . $link : '') . "\n- " . self::place($scope);
 
         $room = self::MAX_LENGTH - mb_strlen($head) - mb_strlen($tail) - 2;
         if ($body !== '' && $room > 20) {
@@ -154,6 +189,44 @@ final class PostSms
 
         return mb_substr($head, 0, self::MAX_LENGTH - mb_strlen($tail)) . $tail;
     }
+
+    /**
+     * full() for a post loaded by id, for the automatic sends on publish.
+     * Falls back to the short build() text if the row cannot be read, so a
+     * database hiccup never stops the SMS.
+     *
+     * @param array<string,mixed> $fallback Fields for build() if the load fails.
+     */
+    public static function fullById(string $type, int $id, array $fallback = [], string $scope = ''): string
+    {
+        $table = ['announcement' => 'announcements', 'event' => 'events', 'ordinance' => 'ordinances'][$type] ?? null;
+        try {
+            if ($table !== null && $id > 0) {
+                $stmt = db()->prepare("SELECT * FROM {$table} WHERE id = ?");
+                $stmt->execute([$id]);
+                $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                if (is_array($row)) {
+                    return self::full($type, $row, $scope);
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[PostSms::fullById] ' . $e->getMessage());
+        }
+
+        return self::build($type, $fallback, $scope);
+    }
+
+    /** Announcement categories as residents read them. */
+    private const CATEGORY = [
+        'general' => 'Pangkalahatan', 'health' => 'Kalusugan', 'safety' => 'Kaligtasan',
+        'government' => 'Pamahalaan', 'infrastructure' => 'Imprastraktura', 'social' => 'Panlipunan',
+    ];
+
+    /** Event statuses as residents read them. */
+    private const EVENT_STATUS = [
+        'upcoming' => 'Paparating', 'ongoing' => 'Nagaganap ngayon',
+        'completed' => 'Natapos na', 'cancelled' => 'Kanselado',
+    ];
 
     /**
      * Rich text (Quill HTML) as plain SMS text: paragraphs and list items on

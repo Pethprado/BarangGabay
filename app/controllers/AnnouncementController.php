@@ -848,7 +848,8 @@ class AnnouncementController
 
             // One builder for auto-send and for the SMS page's manual send, so
             // the two can never produce different text for the same post.
-            $message = PostSms::build('announcement', [
+            // The whole post plus its link, same text as the SMS page sends.
+            $message = PostSms::fullById('announcement', $id, [
                 'title'   => $title,
                 'urgency' => $urgency,
             ]);

@@ -220,8 +220,9 @@ class ScheduledPublisher
             // PostSms owns the wording and the 160-character arithmetic. A
             // targeted send passes the purok as the sign-off, so the recipient
             // can tell from the text alone that it concerns them.
-            $message = PostSms::build(
+            $message = PostSms::fullById(
                 'announcement',
+                $id,
                 ['title' => $title, 'urgency' => $urgency],
                 $purok
             );

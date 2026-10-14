@@ -444,7 +444,8 @@ class OrdinanceController
                 return;
             }
 
-            $message = self::buildOrdinanceSms($ordinanceNo, $title);
+            // The whole ordinance info plus its link, same text as the SMS page sends.
+            $message = PostSms::fullById('ordinance', $id, ['ordinance_no' => $ordinanceNo, 'title' => $title]);
 
             (new SemaphoreSmsService())->sendBulk($phones, $message, 'ordinance', $id);
         } catch (\Throwable $e) {

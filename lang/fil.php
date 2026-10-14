@@ -1885,7 +1885,7 @@ return [
     // Pinagsasaluhang kontrol sa pagpapadala ng SMS (anunsyo, kaganapan, ordinansa)
     'sms_notify' => [
         'label'          => 'Text message (SMS)',
-        'checkbox'       => 'Ipadala rin ito sa mga residente sa pamamagitan ng SMS',
+        'checkbox'       => 'Ipadala rin ito sa mga residente sa pamamagitan ng SMS (buong post at link sa BarangGabay; mas maraming credit ang mahabang post)',
         'reach'          => 'Ipapadala sa :count residente na may nakarehistrong numero ng telepono.',
         'reach_none'     => 'Wala pang residente na may nakarehistrong numero, kaya walang SMS na maipapadala.',
         'reach_unknown'  => 'Ipapadala sa lahat ng residente na may nakarehistrong numero ng telepono.',
