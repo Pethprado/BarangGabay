@@ -212,9 +212,10 @@ class MoceanSmsService implements SmsSender
             return ['success' => false, 'sent' => 0, 'failed' => 0, 'error' => 'No valid Philippine mobile number.'];
         }
 
-        // Kept to one SMS part (160 characters) like the other providers, so a
-        // broadcast never costs residents x3 credits by surprise.
-        $message = mb_substr(trim($message), 0, 160);
+        // Long messages go out as one joined SMS (Mocean splits them; the
+        // phone shows one message). The SMS screens show the credit cost
+        // first; PostSms::MAX_LENGTH is the ceiling.
+        $message = mb_substr(trim($message), 0, PostSms::MAX_LENGTH);
         if ($message === '') {
             return ['success' => false, 'sent' => 0, 'failed' => 0, 'error' => 'The message is empty.'];
         }
@@ -241,6 +242,9 @@ class MoceanSmsService implements SmsSender
                 'mocean-text'        => $message,
                 'mocean-resp-format' => 'JSON',
             ];
+            if (!PostSms::isGsm($message)) {
+                $form['mocean-coding'] = '3';   // UCS-2, so emoji and dashes arrive intact
+            }
             $options = ['form_params' => $form];
             if ($this->token !== '') {
                 $options['headers'] = ['Authorization' => 'Bearer ' . $this->token];

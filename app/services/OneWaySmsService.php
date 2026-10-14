@@ -95,7 +95,7 @@ class OneWaySmsService implements SmsSender
      * Send an SMS to a single recipient.
      *
      * @param  string   $number  Raw phone number in any PH format.
-     * @param  string   $message Message body (trimmed to 160 chars).
+     * @param  string   $message Message body (up to PostSms::MAX_LENGTH chars).
      * @param  string   $type    Log category ('document_request', 'announcement', 'event', 'verification', 'manual', …).
      * @param  int|null $refId   Optional foreign key to related row.
      * @return array{success:bool, response?:mixed, error?:string, test_mode?:bool}
@@ -113,7 +113,7 @@ class OneWaySmsService implements SmsSender
             return ['success' => false, 'error' => 'Invalid Philippine mobile number: ' . $number];
         }
 
-        $message = substr(trim($message), 0, 160);
+        $message = mb_substr(trim($message), 0, PostSms::MAX_LENGTH);
 
         if ($this->testMode) {
             SmsLog::create([

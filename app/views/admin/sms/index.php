@@ -186,7 +186,7 @@ ob_start();
                 </h5>
                 <p class="text-muted mb-3" style="font-size:.8rem;"><?= e(t('admin_sms.manual_sms_desc')) ?></p>
 
-                <form method="post" action="<?= e(route('admin/sms/send')) ?>" x-data="charCounter('manual_msg', 160)">
+                <form method="post" action="<?= e(route('admin/sms/send')) ?>" x-data="charCounter('manual_msg')">
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
 
                     <!-- ── Recipient picker ──────────────────────────────────
@@ -262,13 +262,13 @@ ob_start();
                     <div class="mb-3">
                         <label class="form-label fw-600" style="font-size:.85rem;"><?= e(t('admin_sms.field_message')) ?></label>
                         <textarea name="message" id="manual_msg" class="form-control" rows="4"
-                                  maxlength="160" placeholder="<?= e(t('admin_sms.message_ph')) ?>"
+                                  maxlength="<?= \App\Services\PostSms::MAX_LENGTH ?>" placeholder="<?= e(t('admin_sms.message_ph')) ?>"
                                   @input="update()"
                                   required <?= $smsConfigured ? '' : 'disabled' ?>><?= e($_POST['message'] ?? '') ?></textarea>
                         <div class="d-flex justify-content-between mt-1">
                             <div class="form-text"><?= e(t('admin_sms.max_chars_help')) ?></div>
-                            <span class="form-text" :class="remaining < 20 ? 'text-danger fw-bold' : ''">
-                                <span x-text="remaining"></span> <?= e(t('admin_sms.remaining_suffix')) ?>
+                            <span class="form-text text-nowrap" :class="parts > 1 ? 'fw-bold' : ''">
+                                <span x-text="length"></span> chars · <span x-text="parts"></span> SMS per resident
                             </span>
                         </div>
                     </div>
@@ -293,7 +293,7 @@ ob_start();
                 </p>
 
                 <form method="post" action="<?= e(route('admin/sms/broadcast')) ?>"
-                      x-data="charCounter('broadcast_msg', 160)"
+                      x-data="charCounter('broadcast_msg')"
                       @submit.prevent="
                           if (!confirm(<?= e(json_encode(t('admin_sms.broadcast_confirm', ['count' => $recipientCount]))) ?>)) return;
                           $el.submit();
@@ -303,13 +303,13 @@ ob_start();
                     <div class="mb-3">
                         <label class="form-label fw-600" style="font-size:.85rem;"><?= e(t('admin_sms.broadcast_field_label')) ?></label>
                         <textarea name="message" id="broadcast_msg" class="form-control" rows="5"
-                                  maxlength="160" placeholder="<?= e(t('admin_sms.broadcast_message_ph')) ?>"
+                                  maxlength="<?= \App\Services\PostSms::MAX_LENGTH ?>" placeholder="<?= e(t('admin_sms.broadcast_message_ph')) ?>"
                                   @input="update()"
                                   required <?= ($smsConfigured && $recipientCount > 0) ? '' : 'disabled' ?>></textarea>
                         <div class="d-flex justify-content-between mt-1">
                             <div class="form-text"><?= t('admin_sms.broadcast_credit_help', ['count' => $recipientCount]) ?></div>
-                            <span class="form-text" :class="remaining < 20 ? 'text-danger fw-bold' : ''">
-                                <span x-text="remaining"></span> <?= e(t('admin_sms.remaining_suffix')) ?>
+                            <span class="form-text text-nowrap" :class="parts > 1 ? 'fw-bold' : ''">
+                                <span x-text="length"></span> chars · <span x-text="parts"></span> SMS per resident
                             </span>
                         </div>
                     </div>
@@ -364,7 +364,7 @@ ob_start();
          'preId'     => (int) ($preselectId ?? 0),
          'allCount'  => (int) $recipientCount,
          'puroks'    => $purokReach ?? [],
-         'limit'     => \App\Services\PostSms::LIMIT,
+         'limit'     => \App\Services\PostSms::MAX_LENGTH,
          'canSend'   => (bool) $smsConfigured,
      ])) ?>)" x-init="init()">
     <div class="card-body p-4">
@@ -465,9 +465,9 @@ ob_start();
                     <textarea id="post-message" name="message" class="form-control" rows="5"
                               x-model="message" :disabled="!post"></textarea>
                     <div class="d-flex justify-content-between mt-1 mb-3">
-                        <span class="form-text"><?= e(t('sms_post.preview_help', ['limit' => \App\Services\PostSms::LIMIT])) ?></span>
-                        <span class="form-text" :class="message.length > limit ? 'text-danger fw-bold' : ''">
-                            <span x-text="message.length"></span>/<span x-text="limit"></span>
+                        <span class="form-text"><?= e(t('sms_post.preview_help')) ?></span>
+                        <span class="form-text text-nowrap" :class="segments() > 1 ? 'fw-bold' : ''">
+                            <span x-text="message.length"></span> chars · <span x-text="segments()"></span> SMS
                         </span>
                     </div>
 
@@ -801,7 +801,7 @@ function postSms(cfg) {
             return n + this.extraCount();
         },
 
-        segments() { return Math.max(1, Math.ceil(this.message.length / this.limit)); },
+        segments() { return smsSegments(this.message); },
         credits()  { return this.recipients() * this.segments(); },
 
         costLine() {
@@ -874,12 +874,24 @@ function smsRecipients() {
     };
 }
 
-function charCounter(textareaId, max) {
+// SMS parts (= credits per recipient), counted like PostSms::segments().
+function smsSegments(text) {
+    const n = [...text].length;
+    if (n === 0) { return 1; }
+    const gsm = /^[A-Za-z0-9 \r\n@£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ!"#¤%&'()*+,\-.\/:;<=>?¡ÄÖÑÜ§¿äöñüà^{}\\\[~\]|€]*$/.test(text);
+    const [single, part] = gsm ? [160, 153] : [70, 67];
+    return n <= single ? 1 : Math.ceil(n / part);
+}
+
+function charCounter(textareaId) {
     return {
-        remaining: max,
+        length: 0,
+        parts: 1,
         update() {
             const el = document.getElementById(textareaId);
-            this.remaining = max - (el ? el.value.length : 0);
+            const text = el ? el.value : '';
+            this.length = [...text].length;
+            this.parts  = smsSegments(text);
         },
         init() { this.update(); }
     };

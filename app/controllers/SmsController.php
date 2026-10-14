@@ -146,7 +146,7 @@ class SmsController
             flash('error', t('flash.sms_number_message_req'));
             redirect('/admin/sms');
         }
-        if (strlen($message) > 160) {
+        if (mb_strlen($message) > PostSms::MAX_LENGTH) {
             flash('error', t('flash.sms_too_long'));
             redirect('/admin/sms');
         }
@@ -181,7 +181,7 @@ class SmsController
             flash('error', t('flash.sms_message_required'));
             redirect('/admin/sms');
         }
-        if (strlen($message) > 160) {
+        if (mb_strlen($message) > PostSms::MAX_LENGTH) {
             flash('error', t('flash.sms_too_long'));
             redirect('/admin/sms');
         }
@@ -292,7 +292,7 @@ class SmsController
                 'is_sample' => (int) ($row['is_sample'] ?? 0) === 1,
                 'message'   => $message,
                 'length'    => mb_strlen($message),
-                'segments'  => max(1, (int) ceil(mb_strlen($message) / PostSms::LIMIT)),
+                'segments'  => PostSms::segments($message),
                 // Null unless this post has already gone out — the panel turns
                 // this into the "already sent" warning.
                 'last_sent' => $lastSent,
@@ -351,7 +351,7 @@ class SmsController
             flash('error', t('flash.sms_message_required'));
             redirect('/admin/sms');
         }
-        if (mb_strlen($message) > PostSms::LIMIT) {
+        if (mb_strlen($message) > PostSms::MAX_LENGTH) {
             flash('error', t('flash.sms_too_long'));
             redirect('/admin/sms');
         }

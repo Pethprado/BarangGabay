@@ -35,8 +35,37 @@ namespace App\Services;
  */
 final class PostSms
 {
-    /** One SMS credit. */
+    /** One SMS credit. Auto-built post messages are fitted to this. */
     public const LIMIT = 160;
+
+    /**
+     * Longest message staff may type: 10 joined parts. Longer than one part is
+     * allowed (the phone shows it as one message); every part is one credit
+     * per recipient, so the screens show the cost before sending.
+     */
+    public const MAX_LENGTH = 1530;
+
+    /**
+     * How many SMS parts (credits per recipient) a message uses, counted the
+     * way carriers do: 160 / 153 per part in plain text, 70 / 67 once it has
+     * a character outside the GSM alphabet (emoji, curly quotes, em-dash...).
+     */
+    public static function segments(string $message): int
+    {
+        $length = mb_strlen($message);
+        if ($length === 0) {
+            return 1;
+        }
+        [$single, $part] = self::isGsm($message) ? [160, 153] : [70, 67];
+
+        return $length <= $single ? 1 : (int) ceil($length / $part);
+    }
+
+    /** True when every character fits the plain GSM 7-bit SMS alphabet. */
+    public static function isGsm(string $message): bool
+    {
+        return preg_match('/^[A-Za-z0-9 \r\n@£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ!"#¤%&\'()*+,\-.\/:;<=>?¡ÄÖÑÜ§¿äöñüà^{}\\\[~\]|€]*$/u', $message) === 1;
+    }
 
     /** What mb_strimwidth appends when it cuts a title. */
     private const ELLIPSIS = '…';

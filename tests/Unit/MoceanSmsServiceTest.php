@@ -62,6 +62,20 @@ class MoceanSmsServiceTest extends TestCase
         $this->assertArrayNotHasKey('mocean-api-secret', $form, 'the token path never sends key/secret');
     }
 
+    public function testLongMessagesAreSentWholeNotCutAt160(): void
+    {
+        $history = [];
+        $sms = $this->service([new Response(202, [], '{"messages":[{"status":0,"receiver":"639171234567","msgid":"l1"}]}')],
+            ['MOCEAN_API_TOKEN' => 't'], $history);
+
+        $long = self::MSG . ' ' . str_repeat('Paalala sa lahat ng residente. ', 12);
+        $this->assertTrue($sms->send('09171234567', $long)['success']);
+        parse_str((string) $history[0]['request']->getBody(), $form);
+        $this->assertSame(trim($long), $form['mocean-text']);
+        $this->assertArrayNotHasKey('mocean-coding', $form, 'plain text stays GSM (cheaper parts)');
+        $this->assertSame(3, \App\Services\PostSms::segments(trim($long)));
+    }
+
     public function testFallsBackToKeyAndSecret(): void
     {
         $history = [];
