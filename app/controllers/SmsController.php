@@ -282,7 +282,7 @@ class SmsController
 
         $results = [];
         foreach ($rows as $row) {
-            $message  = PostSms::build($type, $row);
+            $message  = PostSms::full($type, $row);
             $lastSent = SmsLog::lastForPost($type, (int) $row['id']);
 
             $results[] = [
@@ -345,7 +345,7 @@ class SmsController
          * to the typist, not a limit anyone has to respect.
          */
         $edited  = trim((string) ($_POST['message'] ?? ''));
-        $message = $edited !== '' ? $edited : PostSms::build($type, $post);
+        $message = $edited !== '' ? $edited : PostSms::full($type, $post);
 
         if ($message === '') {
             flash('error', t('flash.sms_message_required'));
@@ -445,7 +445,7 @@ class SmsController
 
         [$sql, $params] = match ($type) {
             'event' => [
-                "SELECT id, title, slug, venue, event_date, is_sample,
+                "SELECT id, title, slug, venue, event_date, end_date, description, is_sample,
                         event_date AS sort_date
                    FROM events
                   WHERE (? = '' OR title LIKE ?)
@@ -454,7 +454,7 @@ class SmsController
                 [$query, $like],
             ],
             'ordinance' => [
-                "SELECT id, title, ordinance_no, is_sample,
+                "SELECT id, title, ordinance_no, description, ai_summary, is_sample,
                         COALESCE(enacted_date, created_at) AS sort_date
                    FROM ordinances
                   WHERE status = 'active' AND (? = '' OR title LIKE ? OR ordinance_no LIKE ?)
@@ -465,7 +465,7 @@ class SmsController
             default => [
                 // Published AND already live: a scheduled post must not be
                 // textable before its own moment arrives.
-                "SELECT id, title, slug, urgency, is_sample,
+                "SELECT id, title, slug, urgency, body, is_sample,
                         published_at AS sort_date
                    FROM announcements
                   WHERE status = 'published'

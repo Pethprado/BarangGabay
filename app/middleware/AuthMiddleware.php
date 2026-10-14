@@ -10,6 +10,9 @@ class AuthMiddleware
     public function handle(): void
     {
         if (empty($_SESSION['user_id'])) {
+            // Remember the page (e.g. a post link tapped in an SMS) so login
+            // can bring the resident straight back to it.
+            remember_intended_url();
             header('Location: ' . app_url('/login'));
             exit;
         }

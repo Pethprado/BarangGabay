@@ -109,6 +109,34 @@ function route(string $path = ''): string
     return app_url($path);
 }
 
+/**
+ * Remember the page a signed-out visitor asked for (GET only), so login can
+ * return them to it, e.g. a post link tapped in an SMS.
+ */
+function remember_intended_url(): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        return;
+    }
+    $path = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    $base = rtrim((string) parse_url(get_base_url(), PHP_URL_PATH), '/');
+    if ($base !== '' && str_starts_with($path, $base)) {
+        $path = substr($path, strlen($base));
+    }
+    if (preg_match('~^/(announcements|events|ordinances)/[A-Za-z0-9_-]+$~', $path) === 1) {
+        $_SESSION['intended_url'] = $path;
+    }
+}
+
+/** The remembered page (once), or null. Only post pages are ever stored. */
+function pull_intended_url(): ?string
+{
+    $path = $_SESSION['intended_url'] ?? null;
+    unset($_SESSION['intended_url']);
+
+    return is_string($path) && preg_match('~^/(announcements|events|ordinances)/[A-Za-z0-9_-]+$~', $path) === 1 ? $path : null;
+}
+
 function redirect(string $path): void
 {
     if (strpos($path, '://') === false) {

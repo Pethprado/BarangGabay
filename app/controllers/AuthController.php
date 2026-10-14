@@ -443,6 +443,10 @@ class AuthController
 
         // Staff and admin roles go to the admin panel; residents go to the portal.
         if ($user['status'] === 'verified') {
+            $intended = pull_intended_url();
+            if ($intended !== null) {
+                redirect($intended);
+            }
             $adminRoles = ['admin', 'superadmin', 'staff'];
             redirect(in_array($user['role'], $adminRoles, true) ? '/admin' : '/');
         }

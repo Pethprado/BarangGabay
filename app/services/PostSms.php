@@ -93,6 +93,93 @@ final class PostSms
     }
 
     /**
+     * The whole post as one SMS: title, the full content, and a link to the
+     * post's page. Used when staff pick a post on the SMS page.
+     *
+     * Capped at MAX_LENGTH; only the content is ever shortened (with "..."),
+     * so the title, the date and the link always arrive. Curly quotes and
+     * dashes become plain ones so the text stays in the cheaper GSM parts.
+     *
+     * @param string              $type 'announcement' | 'event' | 'ordinance'
+     * @param array<string,mixed> $post The full row.
+     */
+    public static function full(string $type, array $post, string $scope = ''): string
+    {
+        $title = self::smsText((string) ($post['title'] ?? ''));
+        $link  = self::reference($type, $post);
+
+        switch ($type) {
+            case 'event':
+                $head = '[BarangGabay] KAGANAPAN: ' . $title;
+                $when = trim((string) ($post['event_date'] ?? ''));
+                if ($when !== '') {
+                    $head .= "\nPetsa: " . date('M d, Y g:i A', strtotime($when));
+                    $end = trim((string) ($post['end_date'] ?? ''));
+                    if ($end !== '') {
+                        $head .= ' - ' . date(substr($end, 0, 10) === substr($when, 0, 10) ? 'g:i A' : 'M d, Y g:i A', strtotime($end));
+                    }
+                }
+                $venue = self::smsText((string) ($post['venue'] ?? ''));
+                $head .= "\nLugar: " . ($venue !== '' ? $venue : 'Barangay Hall');
+                $body  = (string) ($post['description'] ?? '');
+                break;
+
+            case 'ordinance':
+                $number = self::smsText((string) ($post['ordinance_no'] ?? ''));
+                $head   = '[BarangGabay] ORDINANSA: ' . ($number !== '' ? $number . ' - ' : '') . $title;
+                $body   = (string) ($post['description'] ?? '');
+                if (trim(strip_tags($body)) === '') {
+                    $body = (string) ($post['ai_summary'] ?? '');
+                }
+                break;
+
+            default:
+                $urgent = ($post['urgency'] ?? '') === 'urgent';
+                $head   = ($urgent ? '[BarangGabay URGENT] ' : '[BarangGabay] ANUNSYO: ') . $title;
+                $body   = (string) ($post['body'] ?? '');
+        }
+
+        $tail = ($link !== null ? "\n\nBasahin dito: " . $link : '') . "\n- " . self::place($scope);
+        $body = self::smsText($body);
+
+        $room = self::MAX_LENGTH - mb_strlen($head) - mb_strlen($tail) - 2;
+        if ($body !== '' && $room > 20) {
+            if (mb_strlen($body) > $room) {
+                $cut  = mb_substr($body, 0, $room - 3);
+                $at   = mb_strrpos($cut, ' ');
+                $body = rtrim($at !== false && $at > $room * 0.7 ? mb_substr($cut, 0, $at) : $cut) . '...';
+            }
+            return $head . "\n\n" . $body . $tail;
+        }
+
+        return mb_substr($head, 0, self::MAX_LENGTH - mb_strlen($tail)) . $tail;
+    }
+
+    /**
+     * Rich text (Quill HTML) as plain SMS text: paragraphs and list items on
+     * their own lines, entities decoded, spaces tidied, and typographic
+     * characters swapped for plain ones (a single "—" would otherwise make
+     * every part hold 67 characters instead of 153).
+     */
+    public static function smsText(string $html): string
+    {
+        $text = preg_replace('~<\s*br\s*/?>~i', "\n", $html) ?? $html;
+        $text = preg_replace('~<\s*li[^>]*>~i', "\n- ", $text) ?? $text;
+        $text = preg_replace('~</\s*(p|div|h[1-6]|li|ul|ol|blockquote)\s*>~i', "\n", $text) ?? $text;
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = strtr($text, [
+            "\u{2018}" => "'", "\u{2019}" => "'", "\u{201C}" => '"', "\u{201D}" => '"',
+            "\u{2013}" => '-', "\u{2014}" => '-', "\u{2026}" => '...', "\u{00A0}" => ' ',
+            "\u{2022}" => '-', "\u{00B7}" => '-', "\t" => ' ',
+        ]);
+        $text = preg_replace('/[ ]{2,}/', ' ', $text) ?? $text;
+        $text = preg_replace('/ *\n */', "\n", $text) ?? $text;
+        $text = preg_replace('/\n{2,}/', "\n", $text) ?? $text;   // one line per paragraph/item: blank lines cost credits
+
+        return trim($text);
+    }
+
+    /**
      * A short portal link for the post, or null when there is nothing to link.
      *
      * Kept separate from build() rather than folded into it: a link costs
