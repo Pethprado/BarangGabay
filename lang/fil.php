@@ -618,6 +618,7 @@ return [
         'manobo_tooltip'   => 'Manobo — :done sa :total na label ang saklaw',
     ],
     'admin_nav' => [
+        'puroks'            => 'Mga Purok',
         'community' => 'Komunidad',
         'language'  => 'Wika',
         'services'  => 'Serbisyo',

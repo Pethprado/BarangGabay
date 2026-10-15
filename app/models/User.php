@@ -508,7 +508,8 @@ class User
     {
         $stmt = db()->query(
             "SELECT id, full_name, email FROM users
-             WHERE status = 'verified' AND role = 'resident'"
+             WHERE status = 'verified' AND role = 'resident'
+               AND email NOT LIKE '%@" . Purok::NO_EMAIL_DOMAIN . "'"   // added in person without an email
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

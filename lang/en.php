@@ -644,6 +644,7 @@ return [
         'manobo_tooltip'   => 'Manobo — :done of :total labels covered',
     ],
     'admin_nav' => [
+        'puroks'            => 'Puroks',
         'community' => 'Community',
         'language'  => 'Language',
         'services'  => 'Services',
