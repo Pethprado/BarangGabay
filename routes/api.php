@@ -60,6 +60,8 @@ return [
     ['POST', '/api/translations/sweep', 'MaintenanceController@translationSweep', []],
     // Automatic hazard monitoring, asked for by pages in the background.
     ['POST', '/api/hazards/sweep', 'MaintenanceController@hazardSweep', []],
+    // For an outside scheduler (cron-job.org etc.): keeps checks running while nobody visits.
+    ['GET',  '/api/hazards/cron',  'MaintenanceController@hazardCron', []],
 
     ['POST', '/api/voice/translate-now', 'VoiceController@translateNow', ['auth', 'verified', 'rate-limit']],
 

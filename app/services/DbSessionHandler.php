@@ -66,7 +66,10 @@ final class DbSessionHandler implements \SessionHandlerInterface
     {
         try {
             $pdo = db();
-            if ($data === $this->loaded && $data !== '') {
+            if ($data === '' && $this->loaded === '') {
+                return true;    // nothing to keep (a ping or a bot): no row
+            }
+            if ($data === $this->loaded) {
                 // Nothing changed: just keep the login alive.
                 $pdo->prepare('UPDATE php_sessions SET last_activity = ? WHERE id = ?')->execute([time(), $id]);
                 return true;

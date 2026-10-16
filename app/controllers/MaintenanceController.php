@@ -18,6 +18,45 @@ class MaintenanceController
     public const HAZARD_SWEEP_EVERY = 600;
 
     /**
+     * GET /api/hazards/cron — for an outside scheduler (e.g. cron-job.org
+     * every 15 minutes). Render's free plan sleeps when nobody visits, so
+     * without this a typhoon alert at night would wait for the first visitor.
+     * The ping also keeps the site awake.
+     *
+     * Safe to leave public: it runs the check at most once per 20 minutes
+     * site-wide (HazardMonitor::runIfDue) and returns only public facts.
+     */
+    public function hazardCron(): void
+    {
+        header('Content-Type: application/json');
+        header('Cache-Control: no-store');
+        session_write_close();
+        ignore_user_abort(true);
+        @set_time_limit(120);
+
+        $summary = null;
+        try {
+            $summary = (new \App\Services\HazardMonitor())->runIfDue();
+        } catch (\Throwable $e) {
+            error_log('[hazard cron] ' . $e->getMessage());
+        }
+        $active = \App\Services\HazardMonitor::active();
+        $last   = (int) \App\Models\Setting::get('hazard_last_check_at', 0);
+
+        echo json_encode([
+            'enabled'    => \App\Services\HazardMonitor::enabled(),
+            'ran'        => $summary !== null,
+            'summary'    => $summary,
+            'last_check' => $last > 0 ? date('c', $last) : null,
+            'next_check' => $last > 0 ? date('c', $last + \App\Services\HazardMonitor::CHECK_EVERY) : null,
+            'active'     => array_map(static fn (array $a): array => [
+                'source' => $a['source'], 'level' => $a['level'], 'title' => $a['title'], 'until' => $a['expires_at'],
+            ], $active),
+            'last_error' => (string) \App\Models\Setting::get('hazard_last_error', ''),
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
      * POST /api/hazards/sweep — run the automatic hazard check if it is due
      * (HazardMonitor: once per 20 minutes for the whole site). Called in the
      * background after a page has loaded, so nobody waits for it.
