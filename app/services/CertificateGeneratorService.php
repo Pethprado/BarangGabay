@@ -211,16 +211,16 @@ class CertificateGeneratorService
         $pdf->Rect(10, 10, 277, 190);
         $pdf->SetLineWidth(0.35);
         $pdf->Rect(14, 14, 269, 182);
-        // Corner ornaments: nested squares around a filled diamond
-        foreach ([[10, 10], [271, 10], [10, 184], [271, 184]] as [$cx, $cy]) {
-            $pdf->SetFillColor(255, 255, 255);
-            $pdf->Rect($cx, $cy, 16, 16, 'DF');
-            $pdf->SetLineWidth(0.8);
-            $pdf->Rect($cx + 2.5, $cy + 2.5, 11, 11);
-            $pdf->SetLineWidth(0.3);
-            $pdf->Rect($cx + 4.5, $cy + 4.5, 7, 7);
+        // The scroll ornaments of the barangay's permit, one per corner
+        // (mirrored copies of the same corner). Simple diamonds if missing.
+        $size = 34.0;
+        foreach (['tl' => [5, 5], 'tr' => [297 - 5 - $size, 5], 'bl' => [5, 210 - 5 - $size], 'br' => [297 - 5 - $size, 210 - 5 - $size]] as $corner => [$cx, $cy]) {
+            if (is_file(self::ASSETS . 'corner-' . $corner . '.png')) {
+                $pdf->Image(self::ASSETS . 'corner-' . $corner . '.png', $cx, $cy, $size, $size);
+                continue;
+            }
             $pdf->SetFillColor(30, 30, 30);
-            $pdf->diamond($cx + 8, $cy + 8, 2.6);
+            $pdf->diamond($cx + $size / 2, $cy + $size / 2, 3);
         }
         $pdf->SetLineWidth(0.35);
 
