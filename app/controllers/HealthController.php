@@ -28,6 +28,9 @@ class HealthController
             'php'         => PHP_VERSION,
             'timestamp'   => date('c'),
             'version'     => '2.8.0-paymongo-gcash',
+            // Which git commit Render is serving (Render sets RENDER_GIT_COMMIT),
+            // so "did my push go live?" is answered by one request.
+            'commit'      => substr((string) (getenv('RENDER_GIT_COMMIT') ?: ($_ENV['RENDER_GIT_COMMIT'] ?? 'local')), 0, 7),
             // Yes/no only — never a key, never part of one.
             'paymongo'    => [
                 'configured'     => \App\Services\PayMongoService::isConfigured(),
