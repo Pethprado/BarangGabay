@@ -540,6 +540,7 @@ class PaymentController
         if (!empty($_POST['remove_qr'])) {
             $values['gcash_receive_qr']      = '';
             $values['gcash_receive_qr_mime'] = '';
+            $values['gcash_qr_payload']      = '';   // back to the bundled QR and its text
         } elseif (isset($_FILES['gcash_qr']) && ($_FILES['gcash_qr']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
             $file = $_FILES['gcash_qr'];
             if ($file['error'] !== UPLOAD_ERR_OK || (int) $file['size'] > 3 * 1024 * 1024) {
@@ -555,6 +556,11 @@ class PaymentController
             }
             $values['gcash_receive_qr']      = base64_encode((string) file_get_contents((string) $file['tmp_name']));
             $values['gcash_receive_qr_mime'] = $mime;
+            // Its text (read in the browser) powers the fee-filled QR. Not
+            // readable → 'none', so no fee-filled QR can ever point to the
+            // previous account.
+            $payload = trim((string) ($_POST['gcash_qr_payload'] ?? ''));
+            $values['gcash_qr_payload'] = \App\Services\QrPh::isValid($payload) ? $payload : 'none';
         }
 
         \App\Models\Setting::setMany($values, $staffId);
@@ -562,6 +568,40 @@ class PaymentController
             $name, $number, isset($values['gcash_receive_qr']) ? ($values['gcash_receive_qr'] === '' ? ', QR removed' : ', QR updated') : ''));
         flash('success', __('GCash receiving account saved.'));
         redirect('/admin/payments/fees#gcash-account');
+    }
+
+    /**
+     * GET /documents/{id}/gcash-qr — the barangay's GCash / InstaPay QR with
+     * this request's exact fee filled in (owner only). In GCash: QR → Upload
+     * QR (or scan), and the recipient and amount are already filled.
+     */
+    public function amountQr(array $params): void
+    {
+        $id      = (int) ($params['id'] ?? 0);
+        $request = DocumentRequest::find($id);
+        $payment = $request ? DocumentPayment::findByRequest($id) : null;
+        if (!$request || (int) $request['user_id'] !== (int) ($_SESSION['user_id'] ?? 0) || !$payment) {
+            http_response_code(404);
+            exit('Not found.');
+        }
+        $amount  = (float) ($payment['amount_due'] ?? $request['fee_amount'] ?? 0);
+        $payload = \App\Services\QrPh::payload();
+        $text    = $payload !== null ? \App\Services\QrPh::withAmount($payload, $amount) : null;
+        if ($text === null) {
+            http_response_code(404);
+            exit('No payment QR is available.');
+        }
+
+        $png = \App\Services\QrPh::png($text);
+        header('Content-Type: image/png');
+        header('Content-Length: ' . strlen($png));
+        header('Cache-Control: private, max-age=300');
+        header('X-Content-Type-Options: nosniff');
+        if (isset($_GET['download'])) {
+            header('Content-Disposition: attachment; filename="gcash-pay-' . number_format($amount, 2, '.', '') . '-' . preg_replace('/[^A-Za-z0-9\-]/', '', (string) $request['reference_no']) . '.png"');
+        }
+        echo $png;
+        exit;
     }
 
     /**
@@ -689,6 +729,8 @@ class PaymentController
             'name'   => (string) \App\Models\Setting::get('gcash_receive_name', ''),
             'number' => (string) \App\Models\Setting::get('gcash_receive_number', ''),
             'has_qr' => \App\Services\GcashQr::available(),
+            // A QR with this request's fee already filled in (QR Ph amount field)
+            'amount_qr' => \App\Services\QrPh::payload() !== null,
         ];
         $pageTitle = 'Pay with GCash — BarangGabay';
         view('resident/payment_checkout', compact('request', 'payment', 'pageTitle', 'paymongoEnabled', 'gcash'));

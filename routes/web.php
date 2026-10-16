@@ -214,6 +214,7 @@ return [
     // A request's own QR: scan → details & fee → pay → proof → unlocked after staff approve.
     ['GET',  '/d/{token}',                        'DocumentClaimController@show',           ['auth', 'verified']],
     ['GET',  '/documents/{id}/qr',                'DocumentClaimController@qrImage',        ['auth']],
+    ['GET',  '/documents/{id}/gcash-qr',          'PaymentController@amountQr',             ['auth', 'verified']],
     ['POST', '/documents/{id}/print-request',     'DocumentTemplateController@requestPrint', ['auth', 'verified']],
     ['GET',  '/admin/documents',                  'DocumentRequestController@adminIndex',   ['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/status',      'DocumentRequestController@updateStatus', ['auth', 'role:admin,staff']],

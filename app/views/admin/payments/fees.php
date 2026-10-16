@@ -52,6 +52,8 @@ $__pmOn     = (bool) \App\Models\Setting::get('paymongo_checkout_enabled', false
         <div class="col-12 col-md-4">
             <label class="form-label small fw-semibold" for="gcQr"><?= e(__('GCash QR code image')) ?></label>
             <input class="form-control form-control-sm" id="gcQr" name="gcash_qr" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="gcQrHelp">
+            <input type="hidden" name="gcash_qr_payload" id="gcQrPayload" value="">
+            <p class="small mt-1 mb-0" id="gcQrRead" role="status"></p>
             <div class="fee-meta mt-1" id="gcQrHelp"><?= e(__('In GCash tap')) ?> <strong><?= e(__('QR → Receive money / My QR → Save')) ?></strong><?= e(__(', then upload that image here.')) ?></div>
             <?php if ($__gcHasQr): ?>
                 <div class="d-flex align-items-center gap-2 mt-2">
@@ -125,6 +127,38 @@ $__pmOn     = (bool) \App\Models\Setting::get('paymongo_checkout_enabled', false
     </div>
 </form>
 
+<!-- Read the QR's text in the browser so residents can get a QR with the fee filled in -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+(function () {
+    var input = document.getElementById('gcQr');
+    if (!input) { return; }
+    input.addEventListener('change', function () {
+        var out = document.getElementById('gcQrPayload'), msg = document.getElementById('gcQrRead');
+        out.value = ''; msg.textContent = '';
+        var file = input.files && input.files[0];
+        if (!file || typeof jsQR !== 'function') { return; }
+        var img = new Image();
+        img.onload = function () {
+            var text = null;
+            [1, 0.5, 0.75, 1.5].some(function (scale) {
+                var c = document.createElement('canvas');
+                c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+                var ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, c.width, c.height);
+                var r = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height, { inversionAttempts: 'attemptBoth' });
+                if (r) { text = r.data; }
+                return !!r;
+            });
+            out.value = text || '';
+            msg.textContent = text && text.indexOf('000201') === 0
+                ? 'QR read. Residents will get this QR with the fee already filled in.'
+                : 'Could not read this QR. Residents will see it as is and type the amount themselves.';
+            msg.style.color = text ? '#166534' : '#92400e';
+        };
+        img.src = URL.createObjectURL(file);
+    });
+})();
+</script>
 <script>
 document.querySelectorAll('[data-fee-toggle]').forEach(function (sel) {
     sel.addEventListener('change', function () {

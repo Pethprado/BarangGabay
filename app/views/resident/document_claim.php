@@ -119,7 +119,16 @@ ob_start();
         </div>
 
         <p class="mt-3 mb-1 font-bold" style="color:var(--text-primary);"><?= e(__('Scan with GCash or any InstaPay bank app')) ?></p>
-        <?php if ($gcash['has_qr']): ?>
+        <?php if (!empty($gcash['amount_qr'])): ?>
+            <img src="<?= e(route('documents/' . $reqId . '/gcash-qr')) ?>" alt="<?= e(__('GCash QR with ₱:amount filled in', ['amount' => number_format((float) $fee, 2)])) ?>" class="dq-pay-qr" style="max-width:260px;">
+            <p class="dq-muted mb-0 text-center"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i> <?= e(__('The amount :amount is already in this QR.', ['amount' => $feeText])) ?></p>
+            <a href="<?= e(route('documents/' . $reqId . '/gcash-qr') . '?download=1') ?>" class="dq-btn mt-2" style="background:#007dfe;color:#fff;">
+                <i class="bi bi-download" aria-hidden="true"></i> <?= e(__('Save the QR to your phone')) ?>
+            </a>
+            <a href="#" data-open-gcash class="dq-btn mt-2" style="background:var(--surface-card);color:#0b4ea2;border:2px solid #007dfe;">
+                <i class="bi bi-phone" aria-hidden="true"></i> <?= e(__('Open GCash')) ?>
+            </a>
+        <?php elseif ($gcash['has_qr']): ?>
             <img src="<?= e(route('payments/gcash-qr')) ?>" alt="<?= e(__('GCash / InstaPay QR of :name', ['name' => $gcash['name']])) ?>" class="dq-pay-qr">
             <a href="<?= e(route('payments/gcash-qr') . '?download=1') ?>" class="dq-btn mt-2" style="background:#007dfe;color:#fff;">
                 <i class="bi bi-download" aria-hidden="true"></i> <?= e(__('Save the QR to your phone')) ?>
@@ -132,7 +141,7 @@ ob_start();
         </p>
         <ol class="dq-muted mt-3 mb-0 pl-5 list-decimal space-y-1">
             <li><?= e(__('Open GCash → QR → Upload QR, and choose the saved QR (or scan it from another phone).')) ?></li>
-            <li><?= e(__('Send exactly :amount.', ['amount' => $feeText])) ?></li>
+            <li><?= e(!empty($gcash['amount_qr']) ? __('Check that GCash shows :amount, then tap Pay.', ['amount' => $feeText]) : __('Send exactly :amount.', ['amount' => $feeText])) ?></li>
             <li><?= e(__('Take a screenshot of the receipt and note the Ref. No.')) ?></li>
         </ol>
     </section>
@@ -227,6 +236,20 @@ ob_start();
             if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done, done); return; }
             var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select();
             try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(t); done();
+        });
+    });
+    document.querySelectorAll('[data-open-gcash]').forEach(function (a) {
+        a.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            var ua = navigator.userAgent || '';
+            if (/android/i.test(ua)) {
+                location.href = 'intent://#Intent;scheme=gcash;package=com.globe.gcash.android;S.browser_fallback_url='
+                    + encodeURIComponent('https://play.google.com/store/apps/details?id=com.globe.gcash.android') + ';end';
+            } else if (/iphone|ipad|ipod/i.test(ua)) {
+                location.href = 'gcash://';
+            } else {
+                alert(<?= json_encode(__('Open GCash on your phone, tap QR, and scan this QR.')) ?>);
+            }
         });
     });
     <?php if ($stage === 'verifying'): ?>

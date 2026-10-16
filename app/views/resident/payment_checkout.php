@@ -16,7 +16,8 @@ use App\Models\DocumentRequest;
 
 $request = $request ?? [];
 $payment = $payment ?? [];
-$gcash   = $gcash ?? ['name' => '', 'number' => '', 'has_qr' => false];
+$gcash   = $gcash ?? ['name' => '', 'number' => '', 'has_qr' => false, 'amount_qr' => false];
+$amountQr = !empty($gcash['amount_qr']);
 $paymongoEnabled = $paymongoEnabled ?? false;
 
 $reqId     = (int) ($request['id'] ?? 0);
@@ -107,6 +108,14 @@ ob_start();
     </div>
 
 <?php else: ?>
+    <?php if ($paymongoEnabled): ?>
+    <section class="gc-card mb-4 text-center" aria-labelledby="autoPay">
+        <h2 id="autoPay" class="text-lg font-extrabold" style="color:var(--text-primary);"><i class="bi bi-lightning-charge-fill" style="color:#007dfe;" aria-hidden="true"></i> <?= e(__('Pay automatically')) ?></h2>
+        <p class="gc-muted mt-1"><?= e(__('Opens GCash\'s payment page with ₱:amount already filled in. Approve it in GCash and your payment is confirmed automatically, with no screenshot needed.', ['amount' => $feeText])) ?></p>
+        <button type="button" id="payBtnTop" class="gc-btn gc-blue mt-3"><i class="bi bi-wallet2" aria-hidden="true"></i> <?= e(__('Pay ₱:amount with GCash', ['amount' => $feeText])) ?></button>
+        <p class="gc-muted mt-3"><?= e(__('Or pay by QR / Express Send below and upload your receipt.')) ?></p>
+    </section>
+    <?php endif; ?>
     <?php if ($rejected): ?>
     <div class="mb-4 rounded-xl border p-3 text-sm" role="alert" style="border-color:var(--status-danger);background:var(--status-danger-bg);color:var(--status-danger);">
         <strong><?= e(__('Your proof was not accepted:')) ?></strong> <?= e((string) ($payment['rejection_reason'] ?? '')) ?><?= !empty($payment['rejection_note']) ? ' — ' . e((string) $payment['rejection_note']) : '' ?><?= e(__('. Please check your GCash transaction and send the correct proof below.')) ?>
@@ -116,6 +125,20 @@ ob_start();
     <!-- Step 1: send the payment -->
     <section class="gc-card mb-4" aria-labelledby="step1">
         <h2 id="step1" class="mb-3 flex items-center gap-2 text-lg font-extrabold" style="color:var(--text-primary);"><span class="gc-step">1</span> <?= e(__('Send ₱:amount via GCash', ['amount' => $feeText])) ?></h2>
+
+        <?php if ($amountQr): ?>
+        <div class="mb-4 rounded-2xl p-4 text-center" style="background:#eaf3ff;border:1px solid #b9d8ff;">
+            <p class="text-sm font-extrabold" style="color:#0b4ea2;"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i> <?= e(__('Fastest: the amount is already in this QR')) ?></p>
+            <img src="<?= e(route('documents/' . $reqId . '/gcash-qr')) ?>" alt="<?= e(__('GCash QR with ₱:amount filled in', ['amount' => $feeText])) ?>" class="gc-qr mx-auto mt-2" width="220" height="220">
+            <p class="mt-1 text-sm font-bold" style="color:var(--text-primary);">₱<?= $feeText ?> → <?= e((string) $gcash['name']) ?></p>
+            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <a href="<?= e(route('documents/' . $reqId . '/gcash-qr') . '?download=1') ?>" class="gc-btn" style="background:#fff;color:#0b4ea2;border:2px solid #007dfe;"><i class="bi bi-download" aria-hidden="true"></i> <?= e(__('1. Save QR')) ?></a>
+                <a href="#" class="gc-btn gc-blue" data-open-gcash><i class="bi bi-phone" aria-hidden="true"></i> <?= e(__('2. Open GCash')) ?></a>
+            </div>
+            <p class="gc-muted mt-2"><?= e(__('In GCash tap')) ?> <strong><?= e(__('QR → Upload QR')) ?></strong><?= e(__(', choose the saved QR, check that it shows ₱:amount, then tap Pay. Or scan this QR from another phone.', ['amount' => $feeText])) ?></p>
+        </div>
+        <p class="gc-muted mb-2 text-center"><?= e(__('Or send it yourself:')) ?></p>
+        <?php endif; ?>
 
         <div class="rounded-2xl p-4" style="background:var(--surface-muted);">
             <p class="gc-muted"><?= e(__('Send to')) ?></p>
@@ -130,12 +153,12 @@ ob_start();
             </div>
         </div>
 
-        <a href="#" id="openGcash" class="gc-btn gc-blue mt-4"><i class="bi bi-phone" aria-hidden="true"></i> <?= e(__('Open GCash')) ?></a>
+        <a href="#" id="openGcash" class="gc-btn gc-blue mt-4" data-open-gcash><i class="bi bi-phone" aria-hidden="true"></i> <?= e(__('Open GCash')) ?></a>
         <p class="gc-muted mt-2 text-center" id="openGcashHint"><?= e(__('Copies the number, then opens the GCash app. In GCash tap')) ?> <strong><?= e(__('Send → Express Send')) ?></strong><?= e(__(', paste the number and enter ₱:amount.', ['amount' => $feeText])) ?></p>
 
         <?php if ($gcash['has_qr']): ?>
         <div class="mt-5 text-center">
-            <p class="text-sm font-bold" style="color:var(--text-primary);"><?= e(__('Or scan this QR in GCash')) ?></p>
+            <p class="text-sm font-bold" style="color:var(--text-primary);"><?= e($amountQr ? __('The barangay\'s plain QR (type the amount yourself)') : __('Or scan this QR in GCash')) ?></p>
             <img src="<?= e(route('payments/gcash-qr')) ?>" alt="Barangay GCash QR code for <?= e((string) $gcash['name']) ?>" class="gc-qr mx-auto mt-2" loading="lazy">
             <p class="gc-muted mt-2"><?= e(__('On a phone?')) ?> <a href="<?= e(route('payments/gcash-qr') . '?download=1') ?>" class="font-semibold underline"><?= e(__('Save the QR')) ?></a><?= e(__(', then in GCash tap')) ?> <strong><?= e(__('QR → Upload QR')) ?></strong>.</p>
         </div>
@@ -179,8 +202,7 @@ ob_start();
         return null;
     };
 
-    var open = document.getElementById('openGcash');
-    if (open) {
+    document.querySelectorAll('[data-open-gcash]').forEach(function (open) {
         open.addEventListener('click', function (ev) {
             ev.preventDefault();
             copy(<?= json_encode($number) ?>, null);
@@ -201,7 +223,7 @@ ob_start();
                     .replace(':number', '<strong>' + <?= json_encode($numberFmt) ?> + '</strong>');
             }
         });
-    }
+    });
 
 <?php if ($inReview): ?>
     // Switch to <?= json_encode(__('Payment successful')) ?> (or show the rejection) as soon as staff decide.
@@ -217,6 +239,8 @@ ob_start();
 
 <?php if ($paymongoEnabled && !$isPaid && !$inReview): ?>
     var payBtn = document.getElementById('payBtn');
+    var payTop = document.getElementById('payBtnTop');
+    if (payTop) { payTop.addEventListener('click', function () { payBtn.click(); payTop.disabled = true; payTop.textContent = <?= json_encode(__('Opening secure checkout…')) ?>; }); }
     payBtn.addEventListener('click', function () {
         payBtn.disabled = true; payBtn.textContent = <?= json_encode(__('Opening secure checkout…')) ?>;
         fetch(<?= json_encode(route('api/payments/paymongo/create-checkout')) ?>, {

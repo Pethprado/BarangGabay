@@ -63,6 +63,7 @@ class DocumentClaimController
                 'name'   => (string) \App\Models\Setting::get('gcash_receive_name', GcashQr::BUNDLED_NAME),
                 'number' => (string) \App\Models\Setting::get('gcash_receive_number', ''),
                 'has_qr' => GcashQr::available(),
+                'amount_qr' => \App\Services\QrPh::payload() !== null && $payment !== null,
             ],
             'isStaff'   => $isStaff,
             'pageTitle' => DocumentRequest::label((string) $request['document_type']) . ' — ' . $request['reference_no'],
