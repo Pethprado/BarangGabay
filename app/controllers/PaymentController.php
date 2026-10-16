@@ -569,13 +569,13 @@ class PaymentController
      */
     public function gcashQr(): void
     {
-        $data = (string) \App\Models\Setting::get('gcash_receive_qr', '');
-        $mime = (string) \App\Models\Setting::get('gcash_receive_qr_mime', '');
-        $raw  = $data !== '' ? base64_decode($data, true) : false;
-        if ($raw === false || !in_array($mime, ['image/png', 'image/jpeg', 'image/webp'], true)) {
+        // The uploaded QR, or the barangay's bundled one (Mary Jane P.).
+        $qr = \App\Services\GcashQr::current();
+        if ($qr === null) {
             http_response_code(404);
             exit('No GCash QR has been uploaded.');
         }
+        ['data' => $raw, 'mime' => $mime] = $qr;
         header('Content-Type: ' . $mime);
         header('Content-Length: ' . strlen($raw));
         header('Cache-Control: private, max-age=300');
@@ -688,7 +688,7 @@ class PaymentController
         $gcash = [
             'name'   => (string) \App\Models\Setting::get('gcash_receive_name', ''),
             'number' => (string) \App\Models\Setting::get('gcash_receive_number', ''),
-            'has_qr' => (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '',
+            'has_qr' => \App\Services\GcashQr::available(),
         ];
         $pageTitle = 'Pay with GCash — BarangGabay';
         view('resident/payment_checkout', compact('request', 'payment', 'pageTitle', 'paymongoEnabled', 'gcash'));
@@ -711,6 +711,11 @@ class PaymentController
         if (!$request || (int) $request['user_id'] !== $userId) {
             flash('error', t('flash.not_found'));
             redirect('/documents');
+        }
+        // Sent from the document's QR page: go back there afterwards.
+        $fromQr = (string) ($_POST['from_qr'] ?? '');
+        if ($fromQr !== '' && \App\Services\DocumentQr::matches($fromQr, $request)) {
+            $back = '/d/' . $fromQr;
         }
         $payment = DocumentPayment::findByRequest($requestId);
         if (!$payment) {

@@ -309,8 +309,8 @@ class DocumentRequestController
             exit('Access Denied.');
         }
 
-        // SERVER-SIDE CHECK: For digital delivery with fee, payment must be verified before resident can download
-        if (!$isStaff && $request['delivery_method'] === 'digital' && !DocumentRequest::isPaymentVerified($request)) {
+        // Locked until the fee is paid and approved, whatever the delivery method.
+        if (!$isStaff && !DocumentRequest::isPaymentVerified($request)) {
             http_response_code(403);
             flash('error', __('Kailangan munang maberipika ang inyong bayad bago ma-download ang dokumento.'));
             redirect('/documents');
@@ -350,8 +350,8 @@ class DocumentRequestController
             exit('Access Denied.');
         }
 
-        // SERVER-SIDE CHECK: For digital delivery with fee, payment must be verified before resident can preview
-        if (!$isStaff && $request['delivery_method'] === 'digital' && !DocumentRequest::isPaymentVerified($request)) {
+        // Locked until the fee is paid and approved, whatever the delivery method.
+        if (!$isStaff && !DocumentRequest::isPaymentVerified($request)) {
             http_response_code(403);
             flash('error', __('Kailangan munang maberipika ang inyong bayad bago ma-preview ang dokumento.'));
             redirect('/documents');

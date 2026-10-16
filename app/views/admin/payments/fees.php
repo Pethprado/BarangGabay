@@ -33,7 +33,7 @@ ob_start();
 <?php
 $__gcName   = (string) \App\Models\Setting::get('gcash_receive_name', '');
 $__gcNumber = (string) \App\Models\Setting::get('gcash_receive_number', '');
-$__gcHasQr  = (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '';
+$__gcHasQr  = \App\Services\GcashQr::available();
 $__pmOn     = (bool) \App\Models\Setting::get('paymongo_checkout_enabled', false);
 ?>
 <form method="post" action="<?= e(route('admin/payments/gcash-account')) ?>" enctype="multipart/form-data" class="fee-card" id="gcash-account" style="border-color:#007dfe;">

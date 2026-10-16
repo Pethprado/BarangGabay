@@ -211,6 +211,9 @@ return [
     ['GET',  '/documents/{id}/download',          'DocumentRequestController@download',     ['auth', 'verified']],
     ['GET',  '/documents/{id}/preview',           'DocumentRequestController@preview',      ['auth', 'verified']],
     ['GET',  '/documents/{ref}/verify',           'DocumentRequestController@verifyPublic', []],
+    // A request's own QR: scan → details & fee → pay → proof → unlocked after staff approve.
+    ['GET',  '/d/{token}',                        'DocumentClaimController@show',           ['auth', 'verified']],
+    ['GET',  '/documents/{id}/qr',                'DocumentClaimController@qrImage',        ['auth']],
     ['GET',  '/admin/documents',                  'DocumentRequestController@adminIndex',   ['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/status',      'DocumentRequestController@updateStatus', ['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/approve',     'DocumentRequestController@approve',      ['auth', 'role:admin,staff']],

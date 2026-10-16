@@ -1,13 +1,15 @@
 <?php
 /**
  * GCash proof upload form (used by payment_checkout.php).
- * Expects $reqId; $resend (bool) only changes the button label.
+ * Expects $reqId; $resend (bool) only changes the button label; $fromQr (the
+ * document QR token, optional) brings the resident back to that QR page.
  */
 $__fid = !empty($resend) ? 'resend' : 'proof';
 ?>
 <form method="post" action="<?= e(route('documents/' . $reqId . '/payment')) ?>" enctype="multipart/form-data" class="mt-3 space-y-4"
       onsubmit="var b=this.querySelector('button[type=submit]'); b.disabled=true; b.innerHTML='<i class=&quot;bi bi-hourglass-split&quot;></i> Sending…';">
     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+    <?php if (!empty($fromQr)): ?><input type="hidden" name="from_qr" value="<?= e((string) $fromQr) ?>"><?php endif; ?>
     <div>
         <label class="gc-label" for="<?= $__fid ?>Ref"><?= e(__('GCash reference number')) ?></label>
         <input class="gc-input font-mono" id="<?= $__fid ?>Ref" name="gcash_reference_no" required inputmode="numeric"

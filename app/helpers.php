@@ -123,18 +123,18 @@ function remember_intended_url(): void
     if ($base !== '' && str_starts_with($path, $base)) {
         $path = substr($path, strlen($base));
     }
-    if (preg_match('~^/(announcements|events|ordinances)/[A-Za-z0-9_-]+$~', $path) === 1) {
+    if (preg_match('~^/(announcements|events|ordinances|d)/[A-Za-z0-9_-]+$~', $path) === 1) {
         $_SESSION['intended_url'] = $path;
     }
 }
 
-/** The remembered page (once), or null. Only post pages are ever stored. */
+/** The remembered page (once), or null. Only post and document-QR pages are ever stored. */
 function pull_intended_url(): ?string
 {
     $path = $_SESSION['intended_url'] ?? null;
     unset($_SESSION['intended_url']);
 
-    return is_string($path) && preg_match('~^/(announcements|events|ordinances)/[A-Za-z0-9_-]+$~', $path) === 1 ? $path : null;
+    return is_string($path) && preg_match('~^/(announcements|events|ordinances|d)/[A-Za-z0-9_-]+$~', $path) === 1 ? $path : null;
 }
 
 function redirect(string $path): void

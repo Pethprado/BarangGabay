@@ -80,7 +80,7 @@ ob_start();
                     $delivery = (string) ($r['delivery_method'] ?? 'pickup');
                     $certNo   = (string) ($r['certificate_no'] ?? '');
                     $hasFile  = !empty($r['document_file_name']);
-                    $isVerified = in_array((string)($r['payment_status'] ?? ''), ['PAID_VERIFIED', 'PAID_AT_PICKUP', 'FREE', 'WAIVED'], true);
+                    $isVerified = \App\Models\DocumentRequest::isPaymentVerified($r);
                 ?>
                 <tr class="hover:bg-slate-50/60 transition">
                     <td class="py-3.5 px-4">
@@ -133,7 +133,12 @@ ob_start();
                     </td>
                     <td class="py-3.5 px-4 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1.5">
-                            <?php if ($hasFile && ($delivery !== 'digital' || $isVerified)): ?>
+                            <a href="<?= e(\App\Services\DocumentQr::url($r)) ?>"
+                               class="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                               title="<?= e(__('Document QR: details, payment and claiming')) ?>">
+                                <i class="bi bi-qr-code"></i> <?= e(__('QR')) ?>
+                            </a>
+                            <?php if ($hasFile && $isVerified): ?>
                             <a href="<?= e(route('documents/' . $reqId . '/preview')) ?>" target="_blank"
                                class="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                                title="<?= e(__('Tingnan (Preview)')) ?>">

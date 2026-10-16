@@ -98,7 +98,7 @@ ob_start();
 <div class="pm-gw" role="status">
     <strong style="color:var(--text-primary);"><i class="bi bi-wallet2 me-1" aria-hidden="true"></i>GCash</strong>
     <span><?= e(__('Residents pay to')) ?> <strong><?= e((string) \App\Models\Setting::get('gcash_receive_name', '')) ?></strong> · <?= e((string) \App\Models\Setting::get('gcash_receive_number', '')) ?></span>
-    <span class="pm-pill <?= (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '' ? 'pm-pill--ok' : 'pm-pill--warn' ?>"><?= (string) \App\Models\Setting::get('gcash_receive_qr', '') !== '' ? __('QR uploaded') : __('No QR yet') ?></span>
+    <?php $__qrOk = \App\Services\GcashQr::available(); ?><span class="pm-pill <?= $__qrOk ? 'pm-pill--ok' : 'pm-pill--warn' ?>"><?= $__qrOk ? __('QR uploaded') : __('No QR yet') ?></span>
     <a href="<?= e(route('admin/payments/fees') . '#gcash-account') ?>" style="color:var(--brand-primary);font-weight:600;"><?= e(__('Change')) ?></a>
 </div>
 <?php if ((bool) \App\Models\Setting::get('paymongo_checkout_enabled', false)): ?>

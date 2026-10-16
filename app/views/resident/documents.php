@@ -599,6 +599,11 @@ ob_start();
                             </a>
                             <?php endif; ?>
 
+                            <a href="<?= e(\App\Services\DocumentQr::url($r)) ?>"
+                               class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                               title="<?= e(__('Document QR: details, payment and claiming')) ?>">
+                                <i class="bi bi-qr-code" aria-hidden="true"></i> <?= e(__('QR')) ?>
+                            </a>
                             <button type="button" onclick="openDetailsModal(<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>)"
                                     class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                                 <i class="bi bi-eye"></i> <?= e(__('View Details')) ?>
