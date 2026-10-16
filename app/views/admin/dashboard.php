@@ -458,9 +458,11 @@ $__hzColors  = ['info' => 'var(--status-info, #0369a1)', 'warning' => 'var(--sta
         <div>
             <h2 class="admin-card-title mb-0"><i class="bi bi-cloud-lightning-rain me-1" style="color:var(--brand-primary);"></i>Automatic hazard monitoring</h2>
             <p class="text-muted mb-0 mt-1" style="font-size:.78rem;max-width:720px;">
-                Every 20 minutes BarangGabay checks for typhoons near the barangay (GDACS), heavy rain and strong wind in the
-                3-day forecast (Open-Meteo) and nearby earthquakes and tsunami flags (USGS). Warnings are posted automatically as
-                urgent announcements, residents are notified, and the advisory above is updated; it clears itself when the hazard passes.
+                Every 20 minutes BarangGabay reads the official <strong>PAGASA</strong> public alerts (typhoon, rainfall, flood and
+                thunderstorm warnings covering Surigao del Sur) and the <strong>PHIVOLCS</strong> earthquake list (with tsunami
+                statements). International data (GDACS, Open-Meteo, USGS) is the backup when PAGASA has nothing yet. Warnings are posted
+                automatically as urgent announcements, residents are notified, and the advisory above and the residents' "Upcoming hazards"
+                list are updated; they clear themselves when the hazard passes.
             </p>
         </div>
         <span class="badge <?= $__hzOn ? 'bg-success' : 'bg-secondary' ?>"><?= $__hzOn ? 'ON' : 'OFF' ?></span>

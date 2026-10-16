@@ -16,6 +16,7 @@ require __DIR__ . '/../vendor/autoload.php';
 Dotenv\Dotenv::createImmutable(dirname(__DIR__))->safeLoad();
 require __DIR__ . '/../app/helpers.php';
 require __DIR__ . '/../config/database.php';
+date_default_timezone_set((string) ($_ENV['APP_TIMEZONE'] ?? 'Asia/Manila') ?: 'Asia/Manila');
 
 use App\Services\HazardMonitor;
 use GuzzleHttp\Client;

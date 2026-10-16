@@ -235,6 +235,57 @@ ob_start();
 </section>
 <?php endif; ?>
 
+<!-- ══ UPCOMING HAZARDS ═══════════════════════════════════════════════════
+     Every hazard the automatic monitor is tracking right now: official
+     PAGASA alerts and PHIVOLCS earthquakes first, then early warnings from
+     international data. Each says where it came from and until when. -->
+<?php
+$hazards = $hazards ?? [];
+if ($hazards !== []):
+    $__fil = current_locale() !== 'en';
+    $__hzStyle = [
+        'info'    => ['#5b5240', '#ece7dd', '#3f382c', 'bi-info-circle-fill'],
+        'warning' => ['#8a5a12', '#f5e8d0', '#5a3a0c', 'bi-exclamation-triangle-fill'],
+        'danger'  => ['#a3311c', '#f6ded7', '#6b1f11', 'bi-exclamation-octagon-fill'],
+    ];
+    $__hzLabel = ['info' => __('Notice'), 'warning' => __('Warning'), 'danger' => __('Danger')];
+?>
+<section class="mb-4" aria-labelledby="hz-title">
+    <h2 id="hz-title" class="mb-2 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide" style="color:var(--text-primary);">
+        <i class="bi bi-cloud-lightning-rain" aria-hidden="true"></i> <?= e(__('Upcoming hazards')) ?>
+        <span class="rounded-full px-2 py-0.5 text-[11px]" style="background:var(--surface-muted);"><?= count($hazards) ?></span>
+    </h2>
+    <ul class="space-y-2">
+    <?php foreach ($hazards as $hz):
+        $d   = json_decode((string) ($hz['data'] ?? ''), true) ?: [];
+        [$bar, $bg, $ink, $icon] = $__hzStyle[$hz['level']] ?? $__hzStyle['warning'];
+        $official = (string) ($d['official'] ?? '');
+        $isOfficial = in_array($hz['source'], ['pagasa', 'phivolcs'], true);
+        $title = $__fil ? (string) ($d['title_fil'] ?? $hz['title']) : (string) $hz['title'];
+        $text  = $__fil ? (string) ($hz['summary_fil'] ?: $hz['summary']) : (string) $hz['summary'];
+    ?>
+        <li class="rounded-xl p-3" style="background:<?= $bg ?>;border-left:5px solid <?= $bar ?>;color:<?= $ink ?>;">
+            <div class="flex items-start gap-2">
+                <i class="bi <?= $icon ?> mt-0.5" aria-hidden="true"></i>
+                <div class="min-w-0">
+                    <p class="text-[11px] font-extrabold uppercase tracking-wide">
+                        <?= e($__hzLabel[$hz['level']] ?? '') ?> ·
+                        <?= e($isOfficial ? __('Official: :agency', ['agency' => $official ?: strtoupper((string) $hz['source'])]) : __('Early warning (international data)')) ?>
+                    </p>
+                    <p class="text-sm font-bold"><?= e($title) ?></p>
+                    <p class="text-[13px] leading-snug"><?= e($text) ?></p>
+                    <p class="mt-1 text-[11px] opacity-80">
+                        <?php if (!empty($hz['expires_at'])): ?><?= e(__('Until :when', ['when' => date('M j, g:i A', strtotime((string) $hz['expires_at']))])) ?><?php endif; ?>
+                        <?php if (!empty($hz['announcement_id'])): ?> · <a href="<?= e(route('announcements/' . (string) (\App\Models\Announcement::find((int) $hz['announcement_id'])['slug'] ?? ''))) ?>" class="font-bold underline"><?= e(__('Read the full alert')) ?></a><?php endif; ?>
+                    </p>
+                </div>
+            </div>
+        </li>
+    <?php endforeach; ?>
+    </ul>
+</section>
+<?php endif; ?>
+
 <!-- ══ C. URGENT NOTICE ═══════════════════════════════════════════════════
      Pinned above everything. Full-width, high-contrast, and never hidden on a
      timer — in a coastal barangay "urgent" means typhoon signal, evacuation or

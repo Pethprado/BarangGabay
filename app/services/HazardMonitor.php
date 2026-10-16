@@ -12,7 +12,14 @@ use PDO;
  *
  * Every CHECK_EVERY seconds (driven by site traffic in the background, by
  * tools/hazard-check.php from cron, or by staff pressing "Check now") it
- * reads three free public sources, no account or key needed:
+ * reads the official Philippine sources first (OfficialHazards):
+ *
+ *   - PAGASA public alerts (CAP feed): tropical cyclone, rainfall, flood
+ *     and thunderstorm warnings whose area covers the barangay.
+ *   - PHIVOLCS latest earthquakes, with the bulletin's tsunami statement.
+ *
+ * and, as a backup when PAGASA has nothing for that hazard yet, three free
+ * international sources, no account or key needed:
  *
  *   - GDACS (UN/EC Global Disaster Alert and Coordination System): tropical
  *     cyclones that are active now, with their current position.
@@ -97,6 +104,39 @@ final class HazardMonitor
         $failed = [];
         $errors = [];
 
+        // 1. Official Philippine sources: PAGASA alerts and PHIVOLCS earthquakes.
+        foreach (['pagasa' => fn () => $this->pagasa($lat, $lon), 'phivolcs' => fn () => $this->phivolcs($lat, $lon)] as $group => $fetch) {
+            try {
+                foreach ($fetch() as $hazard) {
+                    if (!empty($hazard['cancel'])) {
+                        db()->prepare('UPDATE hazard_alerts SET resolved_at = NOW() WHERE source = ? AND external_id = ? AND resolved_at IS NULL')
+                            ->execute([$hazard['source'], $hazard['external_id']]);
+                        continue;
+                    }
+                    $found[$hazard['source'] . '|' . $hazard['external_id']] = $hazard;
+                }
+            } catch (\Throwable $e) {
+                $failed[] = $group;
+                $errors[] = $group . ': ' . $e->getMessage();
+                error_log('[HazardMonitor] ' . $group . ': ' . $e->getMessage());
+            }
+        }
+
+        // What PAGASA already covers (this run or still active) is not
+        // posted again from the international backup sources.
+        $officialKinds = [];
+        foreach ($found as $h) {
+            $officialKinds[$h['kind'] ?? 'other'] = true;
+        }
+        foreach (self::active() as $row) {
+            $d = json_decode((string) ($row['data'] ?? ''), true);
+            if ($row['source'] === 'pagasa' && is_array($d)) {
+                $officialKinds[$d['kind'] ?? 'other'] = true;
+            }
+        }
+        $phivolcsAnswered = !in_array('phivolcs', $failed, true);
+
+        // 2. International backup: GDACS, Open-Meteo, and USGS when PHIVOLCS did not answer.
         foreach ([
             'typhoon'    => fn () => self::parseTyphoons($this->json(self::GDACS, [
                 'eventlist' => 'TC', 'alertlevel' => 'green;orange;red',
@@ -106,10 +146,14 @@ final class HazardMonitor
                 'latitude' => $lat, 'longitude' => $lon, 'timezone' => 'Asia/Manila', 'forecast_days' => 3,
                 'daily' => 'precipitation_sum,wind_gusts_10m_max',
             ])),
-            'earthquake' => fn () => self::parseQuakes($this->json(self::USGS, []), $lat, $lon),
+            'earthquake' => fn () => $phivolcsAnswered ? [] : self::parseQuakes($this->json(self::USGS, []), $lat, $lon),
         ] as $group => $fetch) {
             try {
                 foreach ($fetch() as $hazard) {
+                    $kind = ['typhoon' => 'typhoon', 'rain' => 'rain'][$hazard['source']] ?? 'other';
+                    if (isset($officialKinds[$kind])) {
+                        continue;   // PAGASA has an official alert for this already
+                    }
                     $found[$hazard['source'] . '|' . $hazard['external_id']] = $hazard;
                 }
             } catch (\Throwable $e) {
@@ -300,6 +344,11 @@ final class HazardMonitor
     /** @return 'new'|'updated'|'same' */
     private function record(array $h): string
     {
+        $h['data'] = (array) ($h['data'] ?? []) + [
+            'title_fil' => $h['title_fil'] ?? $h['title'],
+            'official'  => $h['official'] ?? '',
+            'kind'      => $h['kind'] ?? (['typhoon' => 'typhoon', 'rain' => 'rain'][$h['source']] ?? 'other'),
+        ];
         $pdo  = db();
         $stmt = $pdo->prepare('SELECT * FROM hazard_alerts WHERE source = ? AND external_id = ?');
         $stmt->execute([$h['source'], $h['external_id']]);
@@ -346,8 +395,8 @@ final class HazardMonitor
             $prefixFil = ($isUpdate ? 'UPDATE — ' : '') . ($danger ? 'MATINDING BABALA: ' : 'BABALA: ');
             $titleEn  = mb_substr($prefixEn . $h['title'], 0, 255);
             $titleFil = mb_substr($prefixFil . $h['title_fil'], 0, 255);
-            $bodyEn   = self::body($h['summary'], $h['actions'], 'What to do', $h['official'], false);
-            $bodyFil  = self::body($h['summary_fil'], $h['actions_fil'], 'Ano ang gagawin', $h['official'], true);
+            $bodyEn   = isset($h['description']) ? self::officialBody($h, false) : self::body($h['summary'], $h['actions'], 'What to do', $h['official'], false);
+            $bodyFil  = isset($h['description']) ? self::officialBody($h, true) : self::body($h['summary_fil'], $h['actions_fil'], 'Ano ang gagawin', $h['official'], true);
             $slug     = 'hazard-' . $h['source'] . '-' . preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $h['external_id'])) . '-' . date('YmdHi');
 
             self::insertExisting($pdo, 'announcements', [
@@ -379,7 +428,8 @@ final class HazardMonitor
     /** Mark alerts that are no longer detected (by a source that answered) or have expired as resolved. */
     private function resolveGone(array $foundKeys, array $failedGroups): int
     {
-        $groupOf = ['typhoon' => 'typhoon', 'rain' => 'weather', 'wind' => 'weather', 'earthquake' => 'earthquake'];
+        $groupOf = ['typhoon' => 'typhoon', 'rain' => 'weather', 'wind' => 'weather', 'earthquake' => 'earthquake', 'phivolcs' => 'phivolcs', 'pagasa' => 'pagasa'];
+        $failedGroups[] = 'pagasa';   // never "gone": a PAGASA alert lasts until it expires or is cancelled
         $count = 0;
         foreach (self::active() as $row) {
             $key     = $row['source'] . '|' . $row['external_id'];
@@ -444,7 +494,118 @@ final class HazardMonitor
         Setting::flush();
     }
 
+    // ── Official sources ────────────────────────────────────────────────
+
+    /**
+     * New PAGASA CAP alerts covering the barangay. Only CAP files not read
+     * before are fetched (remembered in hazard_pagasa_seen), oldest first so
+     * the latest update of a series is applied last.
+     *
+     * @return list<array<string,mixed>>
+     */
+    private function pagasa(float $lat, float $lon): array
+    {
+        $feed = OfficialHazards::parseFeed($this->text(OfficialHazards::PAGASA_FEED));
+        $seen = json_decode((string) Setting::get('hazard_pagasa_seen', '[]'), true);
+        $seen = is_array($seen) ? $seen : [];
+        $todo = array_values(array_filter($feed, static fn (array $e): bool =>
+            !in_array($e['id'], $seen, true)
+            && OfficialHazards::feedEntryIsRelevant($e['title'])
+            && strtotime($e['updated']) >= strtotime('-3 days')));
+        usort($todo, static fn (array $a, array $b): int => strtotime($a['updated']) <=> strtotime($b['updated']));
+
+        $out = [];
+        foreach (array_slice($todo, 0, 20) as $entry) {
+            $hazard = OfficialHazards::parseCap($this->text($entry['cap']), $lat, $lon);
+            if ($hazard !== null && strtotime((string) $hazard['expires_at']) > time()) {
+                $out[] = $hazard;
+            }
+            $seen[] = $entry['id'];
+        }
+        Setting::set('hazard_pagasa_seen', json_encode(array_slice($seen, -400)));
+
+        return $out;
+    }
+
+    /**
+     * PHIVOLCS earthquakes of the past day near the barangay; for strong
+     * ones the bulletin is opened for its tsunami statement.
+     *
+     * @return list<array<string,mixed>>
+     */
+    private function phivolcs(float $lat, float $lon): array
+    {
+        $quakes = OfficialHazards::parsePhivolcs($this->text(OfficialHazards::PHIVOLCS));
+        if ($quakes === []) {
+            throw new \RuntimeException('no earthquakes could be read from the PHIVOLCS page');
+        }
+        $notes = [];
+        foreach ($quakes as $q) {
+            if ($q['bulletin'] !== '' && $q['mag'] >= 6.0 && $q['time'] >= time() - 86400
+                && self::distanceKm($lat, $lon, $q['lat'], $q['lon']) <= 1000 && count($notes) < 3) {
+                try {
+                    $notes[$q['bulletin']] = OfficialHazards::tsunamiSentence($this->text($q['bulletin']));
+                } catch (\Throwable $e) {
+                    // the table alone is enough to alert
+                }
+            }
+        }
+
+        return OfficialHazards::quakeHazards($quakes, $lat, $lon, $notes);
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────
+
+    /**
+     * PHIVOLCS's server sends its certificate without the GlobalSign
+     * intermediate that links it to a trusted root (browsers fetch it on
+     * their own; PHP does not), so HTTPS to it fails with "unable to get
+     * local issuer certificate". Verification stays ON: the system's trusted
+     * roots plus that one public intermediate (config/certs, issued by
+     * GlobalSign Root R3, valid to 2028) are used for PHIVOLCS requests only.
+     */
+    private static function phivolcsCaBundle(): ?string
+    {
+        $intermediate = __DIR__ . '/../../config/certs/globalsign-rsa-ov-ssl-ca-2018.pem';
+        if (!is_file($intermediate)) {
+            return null;
+        }
+        $locations = function_exists('openssl_get_cert_locations') ? openssl_get_cert_locations() : [];
+        $system = '';
+        foreach ([ini_get('curl.cainfo'), ini_get('openssl.cafile'), getenv('SSL_CERT_FILE') ?: '', $locations['default_cert_file'] ?? '',
+                  '/etc/ssl/certs/ca-certificates.crt', '/etc/pki/tls/certs/ca-bundle.crt'] as $candidate) {
+            if (is_string($candidate) && $candidate !== '' && is_file($candidate)) {
+                $system = (string) file_get_contents($candidate);
+                break;
+            }
+        }
+        if ($system === '') {
+            return null;
+        }
+        $path = sys_get_temp_dir() . '/baranggabay-phivolcs-ca-' . md5($system . filemtime($intermediate)) . '.pem';
+        if (!is_file($path)) {
+            file_put_contents($path, $system . "\n" . file_get_contents($intermediate));
+        }
+
+        return $path;
+    }
+
+    private function text(string $url): string
+    {
+        $options = [];
+        if (str_contains((string) parse_url($url, PHP_URL_HOST), 'phivolcs.dost.gov.ph')) {
+            $bundle = self::phivolcsCaBundle();
+            if ($bundle !== null) {
+                $options['verify'] = $bundle;
+            }
+        }
+        $res = $this->http->get($url, $options);
+        if ($res->getStatusCode() >= 400) {
+            throw new \RuntimeException('HTTP ' . $res->getStatusCode() . ' from ' . parse_url($url, PHP_URL_HOST));
+        }
+
+        return (string) $res->getBody();
+    }
 
     /**
      * INSERT only the columns this database has (PostgreSQL on Render lacks
@@ -493,15 +654,42 @@ final class HazardMonitor
         return $data;
     }
 
+    /** A PAGASA alert in its own words (description and instruction), with the source credited. */
+    private static function officialBody(array $h, bool $fil): string
+    {
+        $e = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+        $area = (string) ($h['data']['area'] ?? '');
+        $html = '<p><strong>' . $e($fil ? "Opisyal na abiso ng PAGASA para sa {$area}" : "Official PAGASA alert for {$area}") . '</strong></p>';
+        foreach (preg_split("/\n\s*\n/", (string) $h['description']) ?: [] as $para) {
+            if (trim($para) !== '') {
+                $html .= '<p>' . nl2br($e(trim($para))) . '</p>';
+            }
+        }
+        if (trim((string) ($h['instruction'] ?? '')) !== '') {
+            $html .= '<p><strong>' . $e($fil ? 'Tagubilin ng PAGASA' : 'PAGASA instruction') . ':</strong> ' . $e(trim((string) $h['instruction'])) . '</p>';
+        }
+        if (!empty($h['expires_at'])) {
+            $html .= '<p>' . $e(($fil ? 'Bisa hanggang ' : 'Valid until ') . date('F j, Y g:i A', strtotime((string) $h['expires_at']))) . '</p>';
+        }
+        $html .= '<p><em>' . $e($fil
+            ? 'Pinagmulan: PAGASA-DOST public alerts (CC BY 4.0), awtomatikong ipinost ng BarangGabay. Sundan ang tagubilin ng barangay.'
+            : 'Source: PAGASA-DOST public alerts (CC BY 4.0), posted automatically by BarangGabay. Follow barangay instructions.') . '</em></p>';
+
+        return $html;
+    }
+
     private static function body(string $summary, array $actions, string $heading, string $official, bool $fil): string
     {
         $html = '<p>' . htmlspecialchars($summary, ENT_QUOTES, 'UTF-8') . '</p><p><strong>' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . ':</strong></p><ul>';
         foreach ($actions as $a) {
             $html .= '<li>' . htmlspecialchars($a, ENT_QUOTES, 'UTF-8') . '</li>';
         }
-        $html .= '</ul><p><em>' . htmlspecialchars($fil
-            ? "Awtomatikong babala mula sa BarangGabay batay sa pandaigdigang datos (GDACS, Open-Meteo, USGS). Sundan ang opisyal na abiso ng {$official} at ng barangay."
-            : "Automatic alert from BarangGabay based on international data (GDACS, Open-Meteo, USGS). Follow the official {$official} bulletins and barangay instructions.", ENT_QUOTES, 'UTF-8') . '</em></p>';
+        $fromPhivolcs = $official === 'PHIVOLCS' && str_starts_with($summary, $fil ? 'Iniulat ng PHIVOLCS' : 'PHIVOLCS');
+        $html .= '</ul><p><em>' . htmlspecialchars($fromPhivolcs
+            ? ($fil ? 'Pinagmulan: PHIVOLCS-DOST, awtomatikong ipinost ng BarangGabay. Sundan ang mga bulletin ng PHIVOLCS at ang tagubilin ng barangay.'
+                    : 'Source: PHIVOLCS-DOST, posted automatically by BarangGabay. Follow PHIVOLCS bulletins and barangay instructions.')
+            : ($fil ? "Awtomatikong babala mula sa BarangGabay batay sa pandaigdigang datos (GDACS, Open-Meteo, USGS). Sundan ang opisyal na abiso ng {$official} at ng barangay."
+                    : "Automatic alert from BarangGabay based on international data (GDACS, Open-Meteo, USGS). Follow the official {$official} bulletins and barangay instructions."), ENT_QUOTES, 'UTF-8') . '</em></p>';
 
         return $html;
     }

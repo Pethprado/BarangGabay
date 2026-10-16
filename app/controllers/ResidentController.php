@@ -212,7 +212,15 @@ class ResidentController
         // Record the visit last, so nothing above is affected by it.
         User::touchLastSeen($userId);
 
+        // Every active hazard (PAGASA / PHIVOLCS first), for "Upcoming hazards".
+        try {
+            $hazards = \App\Services\HazardMonitor::active();
+        } catch (\Throwable $e) {
+            $hazards = [];
+        }
+
         view('resident/home', compact(
+            'hazards',
             'user',
             'latestPosts',
             'advisoryText',

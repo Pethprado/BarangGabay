@@ -1621,4 +1621,12 @@ return [
     'The amount :amount is already in this QR.' => 'Nakalagay na sa QR na ito ang halagang :amount.',
     'Check that GCash shows :amount, then tap Pay.' => 'Tiyaking :amount ang ipinapakita ng GCash, saka pindutin ang Pay.',
     'Open GCash on your phone, tap QR, and scan this QR.' => 'Buksan ang GCash sa inyong telepono, pindutin ang QR, at i-scan ang QR na ito.',
+    'Notice' => 'Paalala',
+    'Warning' => 'Babala',
+    'Danger' => 'Panganib',
+    'Upcoming hazards' => 'Mga paparating na panganib',
+    'Official: :agency' => 'Opisyal: :agency',
+    'Early warning (international data)' => 'Maagang babala (pandaigdigang datos)',
+    'Until :when' => 'Hanggang :when',
+    'Read the full alert' => 'Basahin ang buong abiso',
 ];

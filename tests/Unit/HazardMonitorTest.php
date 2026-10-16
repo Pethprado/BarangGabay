@@ -47,6 +47,15 @@ class HazardMonitorTest extends TestCase
         Setting::flush();
     }
 
+    /** PAGASA (no alerts) and PHIVOLCS (one small, distant quake), as the monitor reads them first. */
+    private static function official(): array
+    {
+        $feed = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><id>x</id></feed>';
+        $phv  = '<table><tr><td><a href="2026_Earthquake_Information\\x.html">' . date('d F Y - h:i A') . '</a></td><td>05.93</td><td>126.25</td><td>028</td><td>2.1</td><td>Far away</td></tr></table>';
+
+        return [new Response(200, [], $feed), new Response(200, [], $phv)];
+    }
+
     private static function typhoonFeed(float $lat, float $lon, string $alert = 'Orange', float $wind = 150): array
     {
         return ['features' => [[
@@ -102,9 +111,9 @@ class HazardMonitorTest extends TestCase
         $calm = ['daily' => ['time' => [date('Y-m-d')], 'precipitation_sum' => [1], 'wind_gusts_10m_max' => [10]]];
 
         $monitor = new HazardMonitor(new Client(['handler' => HandlerStack::create(new MockHandler([
+            ...self::official(),
             new Response(200, [], json_encode(self::typhoonFeed(9.3, 128.7))),
             new Response(200, [], json_encode($calm)),
-            new Response(200, [], json_encode(['features' => []])),
         ])), 'http_errors' => false]));
         $summary = $monitor->run();
 
@@ -132,13 +141,13 @@ class HazardMonitorTest extends TestCase
 
         // The storm leaves: the alert resolves and the automatic advisory clears.
         $after = new HazardMonitor(new Client(['handler' => HandlerStack::create(new MockHandler([
+            ...self::official(),
             new Response(200, [], json_encode(['features' => []])),
             new Response(200, [], json_encode($calm)),
-            new Response(200, [], json_encode(['features' => []])),
         ])), 'http_errors' => false]));
         $this->assertSame(1, $after->run()['resolved']);
         Setting::flush();
-        $this->assertSame('', (string) Setting::get('hazard_advisory_text'));
+        $this->assertStringNotContainsString('Testbagyo', (string) Setting::get('hazard_advisory_text'), 'the typhoon is gone from the advisory (another real alert may remain)');
     }
 
     public function testAFailedSourceDoesNotClearItsAlerts(): void
@@ -146,9 +155,9 @@ class HazardMonitorTest extends TestCase
         $calm = ['daily' => ['time' => [date('Y-m-d')], 'precipitation_sum' => [1], 'wind_gusts_10m_max' => [10]]];
         db()->exec("INSERT INTO hazard_alerts (source, external_id, level, title, summary, detected_at, updated_at) VALUES ('typhoon', 'zz-test-keep', 'info', 'T', 'S', NOW(), NOW())");
         $monitor = new HazardMonitor(new Client(['handler' => HandlerStack::create(new MockHandler([
+            ...self::official(),
             new Response(503, [], 'down'),
             new Response(200, [], json_encode($calm)),
-            new Response(200, [], json_encode(['features' => []])),
         ])), 'http_errors' => false]));
         $summary = $monitor->run();
 

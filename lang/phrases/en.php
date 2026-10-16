@@ -1621,4 +1621,12 @@ return [
     'The amount :amount is already in this QR.' => 'The amount :amount is already in this QR.',
     'Check that GCash shows :amount, then tap Pay.' => 'Check that GCash shows :amount, then tap Pay.',
     'Open GCash on your phone, tap QR, and scan this QR.' => 'Open GCash on your phone, tap QR, and scan this QR.',
+    'Notice' => 'Notice',
+    'Warning' => 'Warning',
+    'Danger' => 'Danger',
+    'Upcoming hazards' => 'Upcoming hazards',
+    'Official: :agency' => 'Official: :agency',
+    'Early warning (international data)' => 'Early warning (international data)',
+    'Until :when' => 'Until :when',
+    'Read the full alert' => 'Read the full alert',
 ];
