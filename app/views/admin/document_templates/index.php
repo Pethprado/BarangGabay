@@ -35,8 +35,9 @@ ob_start();
 <div class="admin-card mb-4" id="signatures">
     <h2 class="h6 fw-bold mb-1"><i class="bi bi-pen me-1" aria-hidden="true"></i>Authorized e-signatures</h2>
     <p class="text-muted small mb-3">
-        Upload a signature image that the officer has authorized for digital barangay documents (a PNG with a transparent
-        background looks best). Never use a signature cut from a scanned document. The Punong Barangay's signature is
+        Upload a signature image that the officer has authorized for digital barangay documents: a JPG, PNG or WEBP up
+        to 10 MB. A clear photo or scan of the signature in dark ink on white paper is fine; the white background and
+        empty edges are removed automatically. Never use a signature cut from a scanned document. The Punong Barangay's signature is
         required to release documents; the Secretary's and Treasurer's appear where their role signs (Clearance, Business Permit).
     </p>
     <div class="row g-3">
@@ -65,7 +66,7 @@ ob_start();
                 <form method="post" action="<?= e(route('admin/document-templates/signature')) ?>" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                     <input type="hidden" name="signer" value="<?= e($signer) ?>">
-                    <input type="file" name="signature" accept="image/png,image/jpeg" class="form-control form-control-sm mb-2" required aria-label="<?= e($sig['role']) ?> signature image">
+                    <input type="file" name="signature" accept="image/png,image/jpeg,image/webp" class="form-control form-control-sm mb-2" required aria-label="<?= e($sig['role']) ?> signature image">
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="checkbox" name="authorized" value="1" id="auth-<?= e($signer) ?>" required>
                         <label class="form-check-label small" for="auth-<?= e($signer) ?>">The officer authorized this e-signature for official barangay documents.</label>

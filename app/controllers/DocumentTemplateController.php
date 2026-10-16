@@ -78,8 +78,14 @@ class DocumentTemplateController
         check_csrf();
         $signer = (string) ($_POST['signer'] ?? '');
         $file   = $_FILES['signature'] ?? null;
-        if (!isset(DocumentTemplate::SIGNERS[$signer]) || !$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            flash('error', 'Choose the signature image to upload.');
+        $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        if (!isset(DocumentTemplate::SIGNERS[$signer]) || $uploadError !== UPLOAD_ERR_OK) {
+            flash('error', match ($uploadError) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'The signature image is too large to upload. Use a file under 10 MB.',
+                UPLOAD_ERR_PARTIAL                        => 'The upload was interrupted. Please try again.',
+                UPLOAD_ERR_NO_FILE                        => 'Choose the signature image to upload.',
+                default                                   => 'The signature could not be uploaded (error ' . $uploadError . '). Please try again.',
+            });
             redirect('/admin/document-templates#signatures');
         }
         if (empty($_POST['authorized'])) {

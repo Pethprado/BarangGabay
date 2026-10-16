@@ -24,6 +24,9 @@ final class DocumentTemplate
     public const TYPES = ['indigency', 'clearance', 'residency', 'business'];
 
     /** Signature images (PNG/JPEG, base64 in settings). Captain's is required to release a document. */
+    /** Largest signature upload (phone photos are often several MB; it is shrunk on upload). */
+    public const SIGNATURE_MAX_BYTES = 10 * 1024 * 1024;
+
     public const SIGNERS = [
         'captain'   => 'Punong Barangay',
         'secretary' => 'Barangay Secretary',
@@ -205,9 +208,25 @@ final class DocumentTemplate
         $data = (string) Setting::get('doc_sig_' . $signer, '');
         $mime = (string) Setting::get('doc_sig_' . $signer . '_mime', '');
         $raw  = $data !== '' ? base64_decode($data, true) : false;
+        if ($raw === false || $raw === '' || !in_array($mime, ['image/png', 'image/jpeg', 'image/webp'], true)) {
+            return null;
+        }
 
-        return $raw !== false && $raw !== '' && in_array($mime, ['image/png', 'image/jpeg'], true)
-            ? ['data' => $raw, 'mime' => $mime] : null;
+        // Signatures uploaded before cleaning existed are cleaned once, here.
+        if ((string) Setting::get('doc_sig_' . $signer . '_clean', '') !== '1') {
+            $png = \App\Services\SignatureImage::clean($raw);
+            if ($png !== null) {
+                Setting::setMany([
+                    'doc_sig_' . $signer           => base64_encode($png),
+                    'doc_sig_' . $signer . '_mime' => 'image/png',
+                    'doc_sig_' . $signer . '_clean' => '1',
+                ]);
+                Setting::flush();
+                return ['data' => $png, 'mime' => 'image/png'];
+            }
+        }
+
+        return ['data' => $raw, 'mime' => $mime];
     }
 
     public static function hasSignature(string $signer): bool
@@ -224,15 +243,25 @@ final class DocumentTemplate
         if (!isset(self::SIGNERS[$signer])) {
             return 'Unknown signer.';
         }
-        if (!in_array($mime, ['image/png', 'image/jpeg'], true)) {
-            return 'The signature must be a PNG or JPG image.';
+        if (!in_array($mime, ['image/png', 'image/jpeg', 'image/webp'], true)) {
+            return 'The signature must be a JPG, PNG or WEBP image (a photo or scan of the signature on white paper is fine).';
         }
-        if (strlen($bytes) > 1024 * 1024 || @getimagesizefromstring($bytes) === false) {
-            return 'The signature image is not valid or is larger than 1 MB.';
+        if (strlen($bytes) > self::SIGNATURE_MAX_BYTES) {
+            return 'The signature image is larger than 10 MB. Take the photo again at a lower resolution, or crop it.';
+        }
+        if (@getimagesizefromstring($bytes) === false) {
+            return 'That file is not a readable image.';
+        }
+
+        // Stored as a small transparent PNG of just the ink.
+        $png = \App\Services\SignatureImage::clean($bytes);
+        if ($png === null) {
+            return 'No signature was found in the image. Use dark ink on white paper, with the signature filling most of the photo.';
         }
         Setting::setMany([
-            'doc_sig_' . $signer           => base64_encode($bytes),
-            'doc_sig_' . $signer . '_mime' => $mime,
+            'doc_sig_' . $signer           => base64_encode($png),
+            'doc_sig_' . $signer . '_mime' => 'image/png',
+            'doc_sig_' . $signer . '_clean' => '1',
             'doc_sig_' . $signer . '_at'   => date('Y-m-d H:i:s'),
         ], $by > 0 ? $by : null);
         Setting::flush();
@@ -245,7 +274,7 @@ final class DocumentTemplate
         if (!isset(self::SIGNERS[$signer])) {
             return;
         }
-        Setting::setMany(['doc_sig_' . $signer => '', 'doc_sig_' . $signer . '_mime' => '', 'doc_sig_' . $signer . '_at' => ''], $by > 0 ? $by : null);
+        Setting::setMany(['doc_sig_' . $signer => '', 'doc_sig_' . $signer . '_mime' => '', 'doc_sig_' . $signer . '_at' => '', 'doc_sig_' . $signer . '_clean' => ''], $by > 0 ? $by : null);
         Setting::flush();
     }
 }

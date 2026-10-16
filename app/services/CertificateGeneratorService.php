@@ -298,7 +298,6 @@ class CertificateGeneratorService
     {
         $sig = DocumentTemplate::signature($signer);
         if ($sig !== null) {
-            $sig  = self::trimSignature($sig);
             $size = @getimagesizefromstring($sig['data']) ?: [400, 150];
             $ratio = $size[0] / max(1, $size[1]);
             $h    = 18.0;
@@ -372,57 +371,6 @@ class CertificateGeneratorService
         if (is_file(self::ASSETS . 'madrid-ato-palamboon.png')) {
             $pdf->Image(self::ASSETS . 'madrid-ato-palamboon.png', $right - 30, $top - 1, 30);
         }
-    }
-
-    /**
-     * The signature image without its empty margins, so it prints at full
-     * size however much blank canvas the uploaded file had.
-     *
-     * @param array{data:string, mime:string} $sig
-     * @return array{data:string, mime:string}
-     */
-    private static function trimSignature(array $sig): array
-    {
-        if (!function_exists('imagecreatefromstring')) {
-            return $sig;
-        }
-        $im = @imagecreatefromstring($sig['data']);
-        if ($im === false) {
-            return $sig;
-        }
-        imagesavealpha($im, true);
-        $cropped = @imagecropauto($im, IMG_CROP_TRANSPARENT);
-        if ($cropped === false || (imagesx($cropped) === imagesx($im) && imagesy($cropped) === imagesy($im))) {
-            $cropped = @imagecropauto($im, IMG_CROP_THRESHOLD, 0.3, 0xFFFFFF);   // white background
-        }
-        if ($cropped === false || imagesx($cropped) < 10 || imagesy($cropped) < 10) {
-            $cropped = $im;
-        }
-
-        // Paper-white background becomes transparent, so only the ink prints
-        // and nothing under the signature (like "Approved BY:") is covered.
-        $w   = imagesx($cropped);
-        $h   = imagesy($cropped);
-        $out = imagecreatetruecolor($w, $h);
-        imagealphablending($out, false);
-        imagesavealpha($out, true);
-        $clear = imagecolorallocatealpha($out, 255, 255, 255, 127);
-        for ($y = 0; $y < $h; $y++) {
-            for ($x = 0; $x < $w; $x++) {
-                $rgba = imagecolorsforindex($cropped, imagecolorat($cropped, $x, $y));
-                if ($rgba['alpha'] >= 120 || ($rgba['red'] > 225 && $rgba['green'] > 225 && $rgba['blue'] > 225)) {
-                    imagesetpixel($out, $x, $y, $clear);
-                } else {
-                    imagesetpixel($out, $x, $y, imagecolorallocatealpha($out, $rgba['red'], $rgba['green'], $rgba['blue'], $rgba['alpha']));
-                }
-            }
-        }
-        $cropped = $out;
-        ob_start();
-        imagepng($cropped);
-        $png = (string) ob_get_clean();
-
-        return $png !== '' ? ['data' => $png, 'mime' => 'image/png'] : $sig;
     }
 
     /** QR code drawn as vector squares (crisp when printed). */
