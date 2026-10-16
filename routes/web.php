@@ -48,6 +48,9 @@ return [
     // on purpose — whoever is on duty when a signal is raised must be able to
     // post it without hunting down an admin.
     ['POST', '/admin/advisory', 'AdminController@updateAdvisory', ['auth', 'role:admin,staff']],
+    // Automatic hazard monitoring (typhoon, rain, wind, earthquake)
+    ['POST', '/admin/hazards/check',    'AdminController@checkHazards',       ['auth', 'role:admin,staff']],
+    ['POST', '/admin/hazards/settings', 'AdminController@saveHazardSettings', ['auth', 'role:admin']],
     ['GET', '/admin/announcements', 'AnnouncementController@adminIndex', ['auth', 'role:admin,staff']],
     ['GET', '/admin/announcements/create', 'AnnouncementController@create', ['auth', 'role:admin,staff']],
     ['POST', '/admin/announcements', 'AnnouncementController@store', ['auth', 'role:admin,staff']],

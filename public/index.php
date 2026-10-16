@@ -184,6 +184,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (time() - $lastRetry >= App\Controllers\MaintenanceController::TRANSLATION_SWEEP_EVERY) {
         $GLOBALS['bg_translation_sweep_due'] = true;
     }
+
+    // ── Automatic hazard monitoring (typhoon, heavy rain, wind, earthquake) ──
+    // Same pattern: the page asks for it in the background after loading
+    // (MaintenanceController::hazardSweep), at most once per HAZARD_SWEEP_EVERY
+    // per session; HazardMonitor itself checks the sources once per 20 minutes
+    // for the whole site.
+    $lastHazard = (int) ($_SESSION['bg_hazard_sweep_at'] ?? 0);
+    if (time() - $lastHazard >= App\Controllers\MaintenanceController::HAZARD_SWEEP_EVERY) {
+        $GLOBALS['bg_hazard_sweep_due'] = true;
+    }
 }
 
 try {

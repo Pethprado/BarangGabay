@@ -58,6 +58,8 @@ return [
     // Background retry of unfinished translations, requested by the page after
     // it loads (shared/_background-sweep.php). Any visitor's traffic drives it.
     ['POST', '/api/translations/sweep', 'MaintenanceController@translationSweep', []],
+    // Automatic hazard monitoring, asked for by pages in the background.
+    ['POST', '/api/hazards/sweep', 'MaintenanceController@hazardSweep', []],
 
     ['POST', '/api/voice/translate-now', 'VoiceController@translateNow', ['auth', 'verified', 'rate-limit']],
 

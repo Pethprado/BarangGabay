@@ -14,6 +14,39 @@ class MaintenanceController
     /** Seconds between translation sweeps per session (see public/index.php). */
     public const TRANSLATION_SWEEP_EVERY = 900;
 
+    /** Seconds between hazard-check requests per session. */
+    public const HAZARD_SWEEP_EVERY = 600;
+
+    /**
+     * POST /api/hazards/sweep — run the automatic hazard check if it is due
+     * (HazardMonitor: once per 20 minutes for the whole site). Called in the
+     * background after a page has loaded, so nobody waits for it.
+     */
+    public function hazardSweep(): void
+    {
+        header('Content-Type: application/json');
+        check_csrf();
+
+        $last = (int) ($_SESSION['bg_hazard_sweep_at'] ?? 0);
+        if (time() - $last < self::HAZARD_SWEEP_EVERY) {
+            echo json_encode(['ran' => false]);
+            return;
+        }
+        $_SESSION['bg_hazard_sweep_at'] = time();
+
+        session_write_close();
+        ignore_user_abort(true);
+        @set_time_limit(120);
+
+        try {
+            $summary = (new \App\Services\HazardMonitor())->runIfDue();
+            echo json_encode(['ran' => $summary !== null, 'summary' => $summary]);
+        } catch (\Throwable $e) {
+            error_log('[hazard sweep] ' . $e->getMessage());
+            echo json_encode(['ran' => true, 'error' => true]);
+        }
+    }
+
     /**
      * POST /api/translations/sweep — retry translations that failed or came
      * back partial (Tagalog left in the Manobo because the free Bisaya

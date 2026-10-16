@@ -80,6 +80,12 @@ class ResidentController
         // A typhoon is the first kind; a one-off urgent notice is the second.
         $advisoryText  = trim((string) setting('hazard_advisory_text', ''));
         $advisoryLevel = (string) setting('hazard_advisory_level', 'warning');
+        // Automatic advisories (HazardMonitor) are written in English and
+        // Filipino; Filipino and Manobo readers get the Filipino one.
+        if ((string) setting('hazard_advisory_auto', '0') === '1' && current_locale() !== 'en') {
+            $advisoryFil  = trim((string) setting('hazard_advisory_fil', ''));
+            $advisoryText = $advisoryFil !== '' ? $advisoryFil : $advisoryText;
+        }
         if (!in_array($advisoryLevel, AdminController::ADVISORY_LEVELS, true)) {
             $advisoryLevel = 'warning';
         }

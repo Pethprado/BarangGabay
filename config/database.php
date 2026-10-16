@@ -556,6 +556,25 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_status VARCHAR(40) NOT NULL DEFAULT 'FREE'",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_id INT NULL",
 
+        // 18d. Automatic hazard monitoring (App\Services\HazardMonitor)
+        "CREATE TABLE IF NOT EXISTS hazard_alerts (
+            id SERIAL PRIMARY KEY,
+            source VARCHAR(20) NOT NULL,
+            external_id VARCHAR(120) NOT NULL,
+            level VARCHAR(10) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            summary TEXT NOT NULL,
+            summary_fil TEXT NULL,
+            data TEXT NULL,
+            announcement_id INT NULL,
+            detected_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            expires_at TIMESTAMP NULL,
+            resolved_at TIMESTAMP NULL,
+            UNIQUE (source, external_id)
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_hazard_active ON hazard_alerts(resolved_at, expires_at)",
+
         // 18c. PHP sessions in the database (App\Services\DbSessionHandler)
         "CREATE TABLE IF NOT EXISTS php_sessions (
             id VARCHAR(128) NOT NULL PRIMARY KEY,

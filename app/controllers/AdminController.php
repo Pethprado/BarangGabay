@@ -266,6 +266,9 @@ class AdminController
         try {
             Setting::set('hazard_advisory_text', $text, $userId ?: null);
             Setting::set('hazard_advisory_level', $level, $userId ?: null);
+            // Written by staff now: the automatic monitor must not clear it.
+            Setting::set('hazard_advisory_auto', '0', $userId ?: null);
+            Setting::set('hazard_advisory_fil', '', $userId ?: null);
         } catch (\Throwable $e) {
             error_log('[AdminController::updateAdvisory] ' . $e->getMessage());
             flash('error', t('superadmin.err_action_failed'));
@@ -282,6 +285,54 @@ class AdminController
 
         flash('success', $text === '' ? t('admin_advisory.cleared') : t('admin_advisory.saved'));
         redirect('/admin');
+    }
+
+    /**
+     * POST /admin/hazards/check — run the automatic hazard check now.
+     */
+    public function checkHazards(): void
+    {
+        check_csrf();
+        try {
+            $s = (new \App\Services\HazardMonitor())->run();
+            AuditLog::record((int) ($_SESSION['user_id'] ?? 0) ?: null, 'hazard.checked',
+                sprintf('Hazard check: %d new, %d updated, %d resolved, %d active', $s['new'], $s['updated'], $s['resolved'], $s['active']));
+            if ($s['errors'] !== []) {
+                flash('warning', 'Checked, but some sources did not answer: ' . implode('; ', $s['errors']));
+            } elseif ($s['active'] === 0) {
+                flash('success', 'Checked typhoons, rain, wind and earthquakes: no hazard near the barangay right now.');
+            } else {
+                flash('success', sprintf('Checked: %d active hazard(s), %d newly posted to residents.', $s['active'], $s['new'] + $s['updated']));
+            }
+        } catch (\Throwable $e) {
+            error_log('[AdminController::checkHazards] ' . $e->getMessage());
+            flash('error', 'The hazard check could not run: ' . $e->getMessage());
+        }
+        redirect('/admin#hazard-monitor');
+    }
+
+    /**
+     * POST /admin/hazards/settings — monitoring on/off, SMS, location (admin).
+     */
+    public function saveHazardSettings(): void
+    {
+        check_csrf();
+        $lat = (float) ($_POST['hazard_lat'] ?? \App\Services\HazardMonitor::DEFAULT_LAT);
+        $lon = (float) ($_POST['hazard_lon'] ?? \App\Services\HazardMonitor::DEFAULT_LON);
+        if ($lat < 4 || $lat > 22 || $lon < 115 || $lon > 128) {
+            flash('error', 'Enter the barangay\'s location in the Philippines (latitude 4 to 22, longitude 115 to 128).');
+            redirect('/admin#hazard-monitor');
+        }
+        Setting::setMany([
+            'hazard_auto_enabled' => !empty($_POST['hazard_auto_enabled']) ? '1' : '0',
+            'hazard_auto_sms'     => !empty($_POST['hazard_auto_sms']) ? '1' : '0',
+            'hazard_lat'          => (string) round($lat, 5),
+            'hazard_lon'          => (string) round($lon, 5),
+        ], (int) ($_SESSION['user_id'] ?? 0) ?: null);
+        Setting::flush();
+        AuditLog::record((int) ($_SESSION['user_id'] ?? 0) ?: null, 'hazard.settings', 'Automatic hazard monitoring settings updated');
+        flash('success', 'Hazard monitoring settings saved.');
+        redirect('/admin#hazard-monitor');
     }
 
     /**

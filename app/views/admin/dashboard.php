@@ -441,6 +441,94 @@ $advisoryOn    = $advisoryText !== '';
     </div>
 </div>
 
+<!-- ── Automatic hazard monitoring ────────────────────────────────── -->
+<?php
+$__hzActive  = \App\Services\HazardMonitor::active();
+$__hzOn      = \App\Services\HazardMonitor::enabled();
+$__hzSms     = (string) setting('hazard_auto_sms', '0') === '1';
+$__hzLast    = (int) setting('hazard_last_check_at', 0);
+$__hzError   = trim((string) setting('hazard_last_error', ''));
+$__hzAuto    = (string) setting('hazard_advisory_auto', '0') === '1' && $advisoryOn;
+[$__hzLat, $__hzLon] = \App\Services\HazardMonitor::location();
+$__hzIsAdmin = in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true);
+$__hzColors  = ['info' => 'var(--status-info, #0369a1)', 'warning' => 'var(--status-warning)', 'danger' => 'var(--status-danger)'];
+?>
+<div class="admin-card mb-4 fade-up" id="hazard-monitor">
+    <div class="admin-card-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div>
+            <h2 class="admin-card-title mb-0"><i class="bi bi-cloud-lightning-rain me-1" style="color:var(--brand-primary);"></i>Automatic hazard monitoring</h2>
+            <p class="text-muted mb-0 mt-1" style="font-size:.78rem;max-width:720px;">
+                Every 20 minutes BarangGabay checks for typhoons near the barangay (GDACS), heavy rain and strong wind in the
+                3-day forecast (Open-Meteo) and nearby earthquakes and tsunami flags (USGS). Warnings are posted automatically as
+                urgent announcements, residents are notified, and the advisory above is updated; it clears itself when the hazard passes.
+            </p>
+        </div>
+        <span class="badge <?= $__hzOn ? 'bg-success' : 'bg-secondary' ?>"><?= $__hzOn ? 'ON' : 'OFF' ?></span>
+    </div>
+    <div class="p-3">
+        <p class="mb-2" style="font-size:.8rem;color:var(--text-secondary);">
+            Last check: <strong><?= $__hzLast > 0 ? e(date('M j, g:i A', $__hzLast)) : 'not yet' ?></strong>
+            <?php if ($__hzAuto): ?> · <span class="badge bg-info">The advisory above was set automatically</span><?php endif; ?>
+            <?php if ($__hzError !== ''): ?><br><span class="text-danger">Some sources did not answer last time: <?= e($__hzError) ?></span><?php endif; ?>
+        </p>
+
+        <?php if ($__hzActive === []): ?>
+            <p class="mb-3" style="font-size:.85rem;"><i class="bi bi-check2-circle me-1" style="color:var(--status-success, #16a34a);"></i>No active hazard near the barangay.</p>
+        <?php else: ?>
+            <ul class="list-unstyled mb-3">
+            <?php foreach ($__hzActive as $hz): ?>
+                <li class="mb-2 p-2 rounded" style="border-left:4px solid <?= $__hzColors[$hz['level']] ?? 'var(--border)' ?>;background:var(--surface-muted, #f8fafc);font-size:.84rem;">
+                    <strong style="text-transform:uppercase;color:<?= $__hzColors[$hz['level']] ?? 'inherit' ?>;"><?= e((string) $hz['level']) ?></strong>
+                    · <?= e((string) $hz['title']) ?>
+                    <div class="text-muted" style="font-size:.76rem;"><?= e((string) $hz['summary']) ?>
+                        <?php if (!empty($hz['announcement_id'])): ?> · <a href="<?= e(route('admin/announcements/' . (int) $hz['announcement_id'] . '/edit')) ?>">View post</a><?php endif; ?>
+                    </div>
+                </li>
+            <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+
+        <div class="d-flex flex-wrap gap-2 align-items-start">
+            <form method="POST" action="<?= e(route('admin/hazards/check')) ?>">
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                <button type="submit" class="btn-barangay"><i class="bi bi-arrow-repeat"></i> Check now</button>
+            </form>
+        </div>
+
+        <?php if ($__hzIsAdmin): ?>
+        <form method="POST" action="<?= e(route('admin/hazards/settings')) ?>" class="mt-3 pt-3" style="border-top:1px solid var(--border);">
+            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="hzOn" name="hazard_auto_enabled" value="1" <?= $__hzOn ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="hzOn" style="font-size:.82rem;">Monitor automatically</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="hzSms" name="hazard_auto_sms" value="1" <?= $__hzSms ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="hzSms" style="font-size:.82rem;">Also text residents (uses SMS credits)</label>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="hzLat" class="form-label mb-1" style="font-size:.74rem;">Latitude</label>
+                    <input id="hzLat" name="hazard_lat" value="<?= e((string) $__hzLat) ?>" class="form-control form-control-sm" inputmode="decimal">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="hzLon" class="form-label mb-1" style="font-size:.74rem;">Longitude</label>
+                    <input id="hzLon" name="hazard_lon" value="<?= e((string) $__hzLon) ?>" class="form-control form-control-sm" inputmode="decimal">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-sm btn-outline-success w-100">Save</button>
+                </div>
+            </div>
+            <p class="text-muted mb-0 mt-2" style="font-size:.72rem;">Automatic alerts are early warnings from international data. Each post tells residents to follow the official PAGASA / PHIVOLCS bulletins.</p>
+        </form>
+        <?php endif; ?>
+    </div>
+</div>
+
 <!-- ── Pending verifications section ─────────────────────────────── -->
 <?php if ($pendingCount > 0): ?>
 <div class="admin-card mb-4 fade-up" style="border-color:var(--status-warning);">

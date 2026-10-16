@@ -6,6 +6,21 @@
  * Rendered only when public/index.php found a sweep due for this session.
  * See MaintenanceController::translationSweep().
  */
+$__hazardDue = !empty($GLOBALS['bg_hazard_sweep_due']);
+if ($__hazardDue): ?>
+<script>
+window.addEventListener('load', function () {
+    setTimeout(function () {
+        var bg = window.BarangGabay || {};
+        fetch((bg.baseUrl || '').replace(/\/$/, '') + '/api/hazards/sweep', {
+            method: 'POST', body: new URLSearchParams({ csrf_token: bg.csrfToken || '' }),
+            credentials: 'same-origin', keepalive: true
+        }).catch(function () {});
+    }, 2500);
+});
+</script>
+<?php endif;
+
 if (empty($GLOBALS['bg_translation_sweep_due'])) {
     return;
 }
