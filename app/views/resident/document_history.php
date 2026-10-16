@@ -138,7 +138,7 @@ ob_start();
                                title="<?= e(__('Document QR: details, payment and claiming')) ?>">
                                 <i class="bi bi-qr-code"></i> <?= e(__('QR')) ?>
                             </a>
-                            <?php if ($hasFile && $isVerified): ?>
+                            <?php if ($hasFile && $isVerified && empty($r['revoked_at'])): ?>
                             <a href="<?= e(route('documents/' . $reqId . '/preview')) ?>" target="_blank"
                                class="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                                title="<?= e(__('Tingnan (Preview)')) ?>">

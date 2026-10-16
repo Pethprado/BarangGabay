@@ -644,6 +644,8 @@ return [
         'manobo_tooltip'   => 'Manobo — :done of :total labels covered',
     ],
     'admin_nav' => [
+        'document_templates' => 'Document Templates',
+        'print_queue'        => 'Print Queue',
         'puroks'            => 'Puroks',
         'community' => 'Community',
         'language'  => 'Language',

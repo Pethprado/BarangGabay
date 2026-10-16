@@ -104,6 +104,10 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
         } catch (\Throwable) {}
     }
 
+    try {
+        $__printQueue = (int) db()->query('SELECT COUNT(*) FROM document_requests WHERE print_requested_at IS NOT NULL AND printed_at IS NULL AND revoked_at IS NULL')->fetchColumn();
+    } catch (\Throwable) { $__printQueue = 0; }
+
     // Trash badge: staff count their own deleted posts, admins everything.
     $__trashCount = \App\Models\PostTrash::count($__isStaff ? (int) ($_SESSION['user_id'] ?? 0) : null);
 
@@ -123,6 +127,7 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
             ['/admin/account',             'bi-person',            t('admin_nav.my_profile'),         [], 0],
         ];
         $__tools = [
+            ['/admin/documents/print-queue', 'bi-printer', t('admin_nav.print_queue'), [], $__printQueue],
             ['/admin/payments',   'bi-wallet2',           t('admin_nav.payments'),   [], $__payPending],
             ['/admin/evacuation', 'bi-house-exclamation', t('admin_nav.evacuation'), [], 0],
             ['/admin/safety',     'bi-shield-check',      t('admin_nav.safety'),     [], 0],
@@ -149,6 +154,8 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
         $__tools = [
             ['/admin/voice-training', 'bi-mic',               t('admin_nav.voice_training'), [], 0],
             ['/admin/manobo',         'bi-book',              t('admin_nav.manobo'),         ['/admin/dictionary', '/admin/bisaya'], 0],
+            ['/admin/document-templates', 'bi-file-earmark-ruled', t('admin_nav.document_templates'), [], 0],
+            ['/admin/documents/print-queue', 'bi-printer',     t('admin_nav.print_queue'),    [], $__printQueue],
             ['/admin/payments',       'bi-wallet2',           t('admin_nav.payments'),       [], $__payPending],
             ['/admin/feedback',       'bi-chat-left-text',    t('admin_nav.feedback'),       [], $__fbUnread],
             ['/admin/evacuation',     'bi-house-exclamation', t('admin_nav.evacuation'),     [], 0],

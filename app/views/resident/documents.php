@@ -298,6 +298,13 @@ ob_start();
 
                         <div class="mt-4 border-t border-emerald-200/60 pt-2 text-[11px] text-emerald-800 dark:text-emerald-300">
                             <?= e(__('* Ang mga impormasyong ito ay awtomatikong ilalagay sa opisyal na sertipiko. Hindi mo na kailangang mag-type muli.')) ?>
+                            <?php $__printedAs = !empty($userArr) ? $userArr : (array) $user; ?>
+                            <span class="mt-2 block rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+                                <?= e(__('Printed on your document as:')) ?>
+                                <strong><?= e(trim(\App\Services\DocumentFields::honorific($__printedAs) . ' ' . mb_strtoupper(\App\Services\DocumentFields::name($__printedAs)))) ?></strong>
+                                <?php if (\App\Services\DocumentFields::purok($__printedAs) !== ''): ?> · <?= e(\App\Services\DocumentFields::purok($__printedAs)) ?><?php endif; ?>
+                                <span class="block opacity-80"><?= e(__('Something wrong? Update your profile before requesting.')) ?> <a href="<?= e(route('profile')) ?>" class="font-bold underline"><?= e(__('Profile')) ?></a></span>
+                            </span>
                         </div>
                     </div>
 
@@ -350,6 +357,28 @@ ob_start();
                                 <input type="text" id="wizard_purpose_other" name="purpose_other" maxlength="150"
                                        placeholder="<?= e(__('Halimbawa: Police clearance requirement, scholarship application, atbp.')) ?>"
                                        class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                            </div>
+                        </div>
+
+                        <!-- Business Permit: what the permit is for -->
+                        <div id="businessFields" class="hidden rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                            <p class="mb-3 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300"><?= e(__('Business details')) ?></p>
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label for="wizard_business_type" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"><?= e(__('Kind of business')) ?> <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="wizard_business_type" name="business_type" maxlength="120" placeholder="<?= e(__('e.g. Sari-sari store')) ?>"
+                                           class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                </div>
+                                <div>
+                                    <label for="wizard_business_name" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"><?= e(__('Business name')) ?> <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="wizard_business_name" name="business_name" maxlength="200" placeholder="<?= e(__('e.g. Tagra Store')) ?>"
+                                           class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label for="wizard_business_address" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"><?= e(__('Business location (optional)')) ?></label>
+                                    <input type="text" id="wizard_business_address" name="business_address" maxlength="255" placeholder="<?= e(__('e.g. Purok 2, near the chapel')) ?>"
+                                           class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                                </div>
                             </div>
                         </div>
 
@@ -768,6 +797,10 @@ function switchMainTab(tab) {
 
 function onDocumentTypeChange() {
     var sel = document.getElementById('wizard_document_type');
+    var isBiz = sel.value === 'business';
+    document.getElementById('businessFields').classList.toggle('hidden', !isBiz);
+    document.getElementById('wizard_business_type').required = isBiz;
+    document.getElementById('wizard_business_name').required = isBiz;
     var opt = sel.options[sel.selectedIndex];
     var amt = parseFloat(opt.getAttribute('data-amount') || '50');
     var isFree = (opt.getAttribute('data-free') === '1' || amt <= 0);
@@ -823,6 +856,14 @@ function updateReceivingMethod(method) {
 
 function goToStep(step) {
     // Validate step transition
+    if (step === 4 && document.getElementById('wizard_document_type').value === 'business') {
+        var bt = document.getElementById('wizard_business_type'), bn = document.getElementById('wizard_business_name');
+        if (bt.value.trim().length < 2 || bn.value.trim().length < 2) {
+            alert(<?= json_encode(__('Enter the business name and the kind of business (e.g. Sari-sari store).')) ?>);
+            (bt.value.trim().length < 2 ? bt : bn).focus();
+            return;
+        }
+    }
     if (step === 4) {
         var pur = document.getElementById('wizard_purpose').value;
         if (pur === <?= json_encode(__('Other')) ?>) {

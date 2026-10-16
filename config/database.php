@@ -556,6 +556,20 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_status VARCHAR(40) NOT NULL DEFAULT 'FREE'",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_id INT NULL",
 
+        // 18b. Document templates: business permit, O.R./permit numbers, print queue, revocation
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS business_name VARCHAR(200) NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS business_type VARCHAR(120) NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS business_address VARCHAR(255) NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS or_number VARCHAR(40) NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS permit_no VARCHAR(40) NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS valid_until DATE NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS print_requested_at TIMESTAMP NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS printed_at TIMESTAMP NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS printed_by INT NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMP NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS revoked_by INT NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS revoke_reason VARCHAR(255) NULL",
+
         "CREATE TABLE IF NOT EXISTS document_fees (
             id SERIAL PRIMARY KEY,
             document_type VARCHAR(60) NOT NULL UNIQUE,

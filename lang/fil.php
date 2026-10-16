@@ -618,6 +618,8 @@ return [
         'manobo_tooltip'   => 'Manobo — :done sa :total na label ang saklaw',
     ],
     'admin_nav' => [
+        'document_templates' => 'Mga Template ng Dokumento',
+        'print_queue'        => 'Pila ng Pag-print',
         'puroks'            => 'Mga Purok',
         'community' => 'Komunidad',
         'language'  => 'Wika',

@@ -127,6 +127,22 @@ class DocumentRequestController
             redirect('/documents');
         }
 
+        // A Business Permit names the business; the rest comes from the profile.
+        $businessName = mb_substr(trim((string) ($_POST['business_name'] ?? '')), 0, 200);
+        $businessType = mb_substr(trim((string) ($_POST['business_type'] ?? '')), 0, 120);
+        $businessAddr = mb_substr(trim((string) ($_POST['business_address'] ?? '')), 0, 255);
+        if ($type === 'business' && (mb_strlen($businessName) < 2 || mb_strlen($businessType) < 2)) {
+            $bizMsg = __('Enter the business name and the kind of business (e.g. Sari-sari store).');
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => $bizMsg]);
+                return;
+            }
+            flash('error', $bizMsg);
+            redirect('/documents');
+        }
+
         // Prevent duplicate open request per document type
         foreach (DocumentRequest::forUser($userId) as $existing) {
             if ($existing['document_type'] === $type
@@ -207,6 +223,9 @@ class DocumentRequestController
 
         $newId     = (int) $created['id'];
         $reference = (string) $created['reference'];
+        if ($type === 'business') {
+            DocumentRequest::setBusinessDetails($newId, $businessName, $businessType, $businessAddr);
+        }
 
         // Tell back office there is work waiting
         $deliveryText = $deliveryMethod === 'digital' ? ' (Digital Soft Copy)' : ' (Personal Pickup)';
@@ -309,7 +328,12 @@ class DocumentRequestController
             exit('Access Denied.');
         }
 
-        // Locked until the fee is paid and approved, whatever the delivery method.
+        // Locked until the fee is paid and approved, whatever the delivery method,
+        // and closed for good once the barangay cancels the document.
+        if (!$isStaff && !empty($request['revoked_at'])) {
+            flash('error', __('This document was cancelled by the barangay.'));
+            redirect('/documents');
+        }
         if (!$isStaff && !DocumentRequest::isPaymentVerified($request)) {
             http_response_code(403);
             flash('error', __('Kailangan munang maberipika ang inyong bayad bago ma-download ang dokumento.'));
@@ -350,7 +374,12 @@ class DocumentRequestController
             exit('Access Denied.');
         }
 
-        // Locked until the fee is paid and approved, whatever the delivery method.
+        // Locked until the fee is paid and approved, whatever the delivery method,
+        // and closed for good once the barangay cancels the document.
+        if (!$isStaff && !empty($request['revoked_at'])) {
+            flash('error', __('This document was cancelled by the barangay.'));
+            redirect('/documents');
+        }
         if (!$isStaff && !DocumentRequest::isPaymentVerified($request)) {
             http_response_code(403);
             flash('error', __('Kailangan munang maberipika ang inyong bayad bago ma-preview ang dokumento.'));
@@ -758,7 +787,8 @@ class DocumentRequestController
         $staffId = (int) ($_SESSION['user_id'] ?? 0);
         $note    = trim($_POST['staff_note'] ?? '');
 
-        $res = DocumentRequest::approveAndGenerate($id, $staffId, $note);
+        $orNumber = mb_substr(trim((string) ($_POST['or_number'] ?? '')), 0, 40);
+        $res = DocumentRequest::approveAndGenerate($id, $staffId, $note, $orNumber !== '' ? $orNumber : null);
         if (!$res['success']) {
             flash('error', $res['error'] ?? 'Nabigong aprubahan ang kahilingan.');
         } else {
@@ -834,14 +864,16 @@ class DocumentRequestController
     {
         $ref = trim((string) ($params['ref'] ?? ''));
         $stmt = db()->prepare(
-            'SELECT r.*, u.full_name, u.zone, u.address, su.full_name AS issued_by_name
+            // Only issued documents (they have a control number) can be verified,
+            // and only the fields the page shows are read.
+            'SELECT r.document_type, r.certificate_no, r.issued_at, r.revoked_at, r.business_name, r.business_type,
+                    r.permit_no, r.valid_until, u.full_name
              FROM document_requests r
              JOIN users u ON u.id = r.user_id
-             LEFT JOIN users su ON su.id = r.issued_by
-             WHERE r.certificate_no = ? OR r.reference_no = ?
+             WHERE r.certificate_no = ? AND r.issued_at IS NOT NULL
              LIMIT 1'
         );
-        $stmt->execute([$ref, $ref]);
+        $stmt->execute([$ref]);
         $doc = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         view('public/verify_certificate', compact('doc', 'ref'));

@@ -247,10 +247,17 @@ class DocumentRequest
         ];
     }
 
+    /** What a Business Permit is for, as the resident typed it. */
+    public static function setBusinessDetails(int $id, string $name, string $type, string $address = ''): void
+    {
+        db()->prepare('UPDATE document_requests SET business_name = ?, business_type = ?, business_address = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$name, $type, $address !== '' ? $address : null, $id]);
+    }
+
     /**
      * Requirement 16 & 2: Automatically generate official certificate on approval.
      */
-    public static function approveAndGenerate(int $id, int $staffId, ?string $staffNote = null): array
+    public static function approveAndGenerate(int $id, int $staffId, ?string $staffNote = null, ?string $orNumber = null): array
     {
         $request = self::find($id);
         if (!$request) {
@@ -261,19 +268,49 @@ class DocumentRequest
             return ['success' => false, 'error' => $blocked];
         }
 
+        // A final document carries the Punong Barangay's authorized
+        // e-signature. Without it nothing is released.
+        if (!\App\Models\DocumentTemplate::hasSignature('captain')) {
+            return ['success' => false, 'error' => 'Signature Required: the Punong Barangay\'s authorized e-signature has not been uploaded yet (Admin → Document Templates). The request stays pending.'];
+        }
+
+        $type = (string) $request['document_type'];
+        if ($type === 'business' && (trim((string) ($request['business_name'] ?? '')) === '' || trim((string) ($request['business_type'] ?? '')) === '')) {
+            return ['success' => false, 'error' => 'This Business Permit has no business name or kind of business. Ask the resident for it (Request more info) before approving.'];
+        }
+
         $resident = User::find((int) $request['user_id']);
         if (!$resident) {
             return ['success' => false, 'error' => 'Hindi nahanap ang residente.'];
         }
 
-        // Generate sequential certificate number if not yet assigned
-        $certNo = !empty($request['certificate_no'])
-            ? (string) $request['certificate_no']
-            : \App\Services\CertificateGeneratorService::generateCertificateNumber((string) $request['document_type']);
+        try {
+            // Numbers are assigned once; approving again keeps them.
+            $certNo = !empty($request['certificate_no'])
+                ? (string) $request['certificate_no']
+                : \App\Services\CertificateGeneratorService::generateCertificateNumber($type);
+            $orNumber = trim((string) $orNumber);
+            if ($orNumber === '') {
+                $orNumber = !empty($request['or_number']) ? (string) $request['or_number']
+                    : ((float) ($request['fee_amount'] ?? 0) > 0 ? \App\Services\CertificateGeneratorService::nextOrNumber() : '');
+            }
+            $permitNo   = (string) ($request['permit_no'] ?? '');
+            $validUntil = (string) ($request['valid_until'] ?? '');
+            if ($type === 'business') {
+                $permitNo   = $permitNo !== '' ? $permitNo : \App\Services\CertificateGeneratorService::nextPermitNumber();
+                $validUntil = $validUntil !== '' ? $validUntil : date('Y-m-d', strtotime('+1 year'));
+            }
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
 
         $request['certificate_no'] = $certNo;
+        $request['or_number']      = $orNumber !== '' ? $orNumber : null;
+        $request['permit_no']      = $permitNo !== '' ? $permitNo : null;
+        $request['valid_until']    = $validUntil !== '' ? $validUntil : null;
+        $request['issued_at']      = date('Y-m-d H:i:s');
 
-        // Auto-generate official PDF certificate
+        // The official PDF from the barangay's template, filled from the profile
         $pdfBinary = \App\Services\CertificateGeneratorService::generatePdf($request, $resident);
 
         $docTitleSlug = str_replace([' ', '/'], '_', self::label((string) $request['document_type']));
@@ -290,7 +327,8 @@ class DocumentRequest
         $pdo = db();
         $stmt = $pdo->prepare(
             'UPDATE document_requests
-             SET status = ?, certificate_no = ?,
+             SET status = ?, certificate_no = ?, or_number = ?, permit_no = ?, valid_until = ?,
+                 revoked_at = NULL, revoked_by = NULL, revoke_reason = NULL,
                  document_file_url = ?, document_file_name = ?, document_file_type = ?, document_file_size = ?,
                  document_uploaded_at = NOW(), document_uploaded_by = ?,
                  issued_at = NOW(), issued_by = ?, handled_by = ?, ready_at = NOW(),
@@ -302,6 +340,9 @@ class DocumentRequest
         $stmt->execute([
             $newStatus,
             $certNo,
+            $request['or_number'],
+            $request['permit_no'],
+            $request['valid_until'],
             $stored['url'],
             $stored['clean_name'],
             $stored['mime'],
@@ -320,7 +361,10 @@ class DocumentRequest
             'approved_generated',
             (string) $request['status'],
             $newStatus,
-            sprintf('Approved request and automatically generated official certificate %s (%s)', $certNo, $stored['clean_name'])
+            sprintf('Approved and generated %s from the %s template (%s)%s%s, signed with the Punong Barangay\'s e-signature',
+                $certNo, $type, $stored['clean_name'],
+                $request['or_number'] ? ', O.R. ' . $request['or_number'] : '',
+                $request['permit_no'] ? ', permit ' . $request['permit_no'] : '')
         );
 
         // Tell resident
@@ -823,5 +867,126 @@ class DocumentRequest
         $i = (int) floor(log($bytes, 1024));
         $i = min($i, count($units) - 1);
         return round($bytes / pow(1024, $i), 1) . ' ' . $units[$i];
+    }
+
+    // ── Printed copies and revocation ───────────────────────────────────
+
+    /**
+     * The resident asks for the approved digital document on paper. The same
+     * generated PDF goes to the staff Print Queue; nobody retypes it.
+     *
+     * @return string|null Error, or null when queued.
+     */
+    public static function requestPrint(int $id, int $userId): ?string
+    {
+        $request = self::find($id);
+        if ($request === null || (int) $request['user_id'] !== $userId) {
+            return 'Request not found.';
+        }
+        if (empty($request['document_file_name']) || empty($request['certificate_no']) || !empty($request['revoked_at'])) {
+            return 'A printed copy can be requested once the document is approved.';
+        }
+        if (!self::isPaymentVerified($request)) {
+            return 'Pay the fee first; the printed copy is made after the payment is approved.';
+        }
+        if (!empty($request['print_requested_at']) && empty($request['printed_at'])) {
+            return 'A printed copy is already in the barangay\'s print queue.';
+        }
+
+        db()->prepare('UPDATE document_requests SET print_requested_at = NOW(), printed_at = NULL, printed_by = NULL, updated_at = NOW() WHERE id = ?')
+            ->execute([$id]);
+        self::logActivity($id, $userId, 'print_requested', (string) $request['status'], (string) $request['status'], 'Resident requested a printed copy of ' . $request['certificate_no']);
+
+        try {
+            (new \App\Services\NotificationService())->notifyBackOffice(
+                'notify_content', 'system',
+                'Printed copy requested — ' . $request['certificate_no'],
+                $request['full_name'] . ' asked for a printed ' . self::label((string) $request['document_type']) . '. It is in the Print Queue.',
+                0, 'document_request', $userId
+            );
+        } catch (\Throwable $e) {
+        }
+
+        return null;
+    }
+
+    /** Requests waiting to be printed, oldest first. */
+    public static function printQueue(): array
+    {
+        return db()->query(
+            "SELECT r.id, r.reference_no, r.certificate_no, r.document_type, r.print_requested_at, r.printed_at,
+                    r.status, r.delivery_method, u.full_name, u.zone, u.phone
+               FROM document_requests r
+               JOIN users u ON u.id = r.user_id
+              WHERE r.print_requested_at IS NOT NULL AND r.printed_at IS NULL AND r.revoked_at IS NULL
+              ORDER BY r.print_requested_at ASC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Staff printed it; the resident is told to claim it at the hall. */
+    public static function markPrinted(int $id, int $staffId): bool
+    {
+        $request = self::find($id);
+        if ($request === null || empty($request['print_requested_at']) || !empty($request['printed_at'])) {
+            return false;
+        }
+        db()->prepare('UPDATE document_requests SET printed_at = NOW(), printed_by = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$staffId, $id]);
+        self::logActivity($id, $staffId, 'printed', (string) $request['status'], (string) $request['status'], 'Printed copy of ' . $request['certificate_no'] . ' made from the approved PDF');
+
+        try {
+            (new \App\Services\NotificationService())->notifyUser(
+                (int) $request['user_id'], 'system',
+                'Printed copy ready — ' . $request['certificate_no'],
+                'Your printed ' . self::label((string) $request['document_type']) . ' is ready. Claim it at the Barangay Hall; show your document QR.',
+                0, 'document_request'
+            );
+        } catch (\Throwable $e) {
+        }
+
+        return true;
+    }
+
+    /**
+     * Cancel an issued document. Its verification page then says CANCELLED
+     * and the resident can no longer download it.
+     */
+    public static function revoke(int $id, int $staffId, string $reason): bool
+    {
+        $request = self::find($id);
+        if ($request === null || empty($request['certificate_no']) || !empty($request['revoked_at'])) {
+            return false;
+        }
+        db()->prepare('UPDATE document_requests SET revoked_at = NOW(), revoked_by = ?, revoke_reason = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$staffId, mb_substr($reason, 0, 255), $id]);
+        self::logActivity($id, $staffId, 'revoked', (string) $request['status'], (string) $request['status'], 'Cancelled ' . $request['certificate_no'] . ': ' . $reason);
+
+        try {
+            (new \App\Services\NotificationService())->notifyUser(
+                (int) $request['user_id'], 'system',
+                'Document cancelled — ' . $request['certificate_no'],
+                'The barangay cancelled your ' . self::label((string) $request['document_type']) . '. Reason: ' . $reason,
+                0, 'document_request'
+            );
+        } catch (\Throwable $e) {
+        }
+
+        return true;
+    }
+
+    /** Recent template-based generations and document actions, for the audit view. */
+    public static function generationLog(int $limit = 30): array
+    {
+        $limit = max(1, min(200, $limit));
+
+        return db()->query(
+            "SELECT l.created_at, l.action, l.details, r.certificate_no, r.document_type, u.full_name AS by_name
+               FROM document_request_logs l
+               JOIN document_requests r ON r.id = l.request_id
+          LEFT JOIN users u ON u.id = l.user_id
+              WHERE l.action IN ('approved_generated', 'printed', 'print_requested', 'revoked', 'claimed')
+              ORDER BY l.id DESC
+              LIMIT {$limit}"
+        )->fetchAll(PDO::FETCH_ASSOC);
     }
 }

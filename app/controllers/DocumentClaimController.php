@@ -41,7 +41,7 @@ class DocumentClaimController
         $payState = strtoupper((string) ($payment['payment_status'] ?? $request['payment_status'] ?? ''));
 
         // One word for where the request is, so the page can show one clear next step.
-        $closed = in_array((string) $request['status'], ['rejected', 'cancelled'], true);
+        $closed = in_array((string) $request['status'], ['rejected', 'cancelled'], true) || !empty($request['revoked_at']);
         $stage  = match (true) {
             $closed                                                    => 'closed',
             $unlocked                                                  => 'unlocked',

@@ -214,6 +214,7 @@ return [
     // A request's own QR: scan → details & fee → pay → proof → unlocked after staff approve.
     ['GET',  '/d/{token}',                        'DocumentClaimController@show',           ['auth', 'verified']],
     ['GET',  '/documents/{id}/qr',                'DocumentClaimController@qrImage',        ['auth']],
+    ['POST', '/documents/{id}/print-request',     'DocumentTemplateController@requestPrint', ['auth', 'verified']],
     ['GET',  '/admin/documents',                  'DocumentRequestController@adminIndex',   ['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/status',      'DocumentRequestController@updateStatus', ['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/approve',     'DocumentRequestController@approve',      ['auth', 'role:admin,staff']],
@@ -225,6 +226,20 @@ return [
     ['GET',  '/admin/documents/{id}/download',    'DocumentRequestController@adminDownload',['auth', 'role:admin,staff']],
     ['GET',  '/admin/documents/{id}/preview',     'DocumentRequestController@adminPreview', ['auth', 'role:admin,staff']],
     ['GET',  '/admin/documents/{id}/details',     'DocumentRequestController@details',      ['auth', 'role:admin,staff']],
+    // Digital documents: template preview before approval, print queue, cancelling
+    ['GET',  '/admin/documents/print-queue',      'DocumentTemplateController@printQueue',  ['auth', 'role:admin,staff']],
+    ['GET',  '/admin/documents/{id}/draft',       'DocumentTemplateController@draft',       ['auth', 'role:admin,staff']],
+    ['POST', '/admin/documents/{id}/printed',     'DocumentTemplateController@markPrinted', ['auth', 'role:admin,staff']],
+    ['POST', '/admin/documents/{id}/revoke',      'DocumentTemplateController@revoke',      ['auth', 'role:admin']],
+    // Admin → Document Templates
+    ['GET',  '/admin/document-templates',                    'DocumentTemplateController@index',           ['auth', 'role:admin']],
+    ['POST', '/admin/document-templates/settings',           'DocumentTemplateController@saveSettings',    ['auth', 'role:admin']],
+    ['POST', '/admin/document-templates/signature',          'DocumentTemplateController@saveSignature',   ['auth', 'role:admin']],
+    ['POST', '/admin/document-templates/signature/remove',   'DocumentTemplateController@removeSignature', ['auth', 'role:admin']],
+    ['GET',  '/admin/document-templates/signature/{signer}', 'DocumentTemplateController@signatureImage',  ['auth', 'role:admin']],
+    ['GET',  '/admin/document-templates/{type}/sample',      'DocumentTemplateController@sample',          ['auth', 'role:admin']],
+    ['POST', '/admin/document-templates/{type}/reset',       'DocumentTemplateController@resetTemplate',   ['auth', 'role:admin']],
+    ['POST', '/admin/document-templates/{type}',             'DocumentTemplateController@saveTemplate',    ['auth', 'role:admin']],
     ['POST', '/admin/documents/{id}/pickup-payment','PaymentController@markRequestPaidAtPickup',['auth', 'role:admin,staff']],
 
     // Profile Updates Management

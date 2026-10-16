@@ -3,20 +3,29 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\DocumentRequest;
-use App\Models\Setting;
-use App\Models\User;
+use App\Models\DocumentTemplate;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Encoder\Encoder;
-use Fpdf\Fpdf;
-use PDO;
 
+/**
+ * Barangay Bayogo documents as PDF, from DocumentTemplate + DocumentFields.
+ *
+ * Layouts follow the barangay's paper documents: seal and government header,
+ * office line, title, "TO WHOM IT MAY CONCERN:", the paragraphs, the
+ * signatories, the O.R. block, and the footer with the barangay's contact
+ * lines and logos. Every document also carries its control number and a
+ * QR code to BarangGabay's verification page.
+ *
+ * $preview = true draws the same document for staff to check before
+ * approving, watermarked PREVIEW and without any signature. A final document
+ * is only produced with the Punong Barangay's uploaded e-signature
+ * (approveAndGenerate refuses otherwise).
+ */
 class CertificateGeneratorService
 {
-    /**
-     * Concurrency-safe sequential reference number generator.
-     * Generates numbers like BGC-2026-000001, RES-2026-000001, IND-2026-000001.
-     */
+    private const ASSETS = __DIR__ . '/../../public/assets/images/documents/';
+
+    /** Next control number, e.g. RES-2026-000012 (concurrency-safe). */
     public static function generateCertificateNumber(string $docType): string
     {
         $prefix = match ($docType) {
@@ -26,395 +35,378 @@ class CertificateGeneratorService
             'business'  => 'BUS',
             default     => 'DOC',
         };
-
         $year = (int) date('Y');
-        $pdo  = db();
 
-        // Concurrency-safe atomic counter
+        return sprintf('%s-%d-%06d', $prefix, $year, self::nextSequence($prefix, $year));
+    }
+
+    /** Next official receipt number: the configured first number, then +1 each time. */
+    public static function nextOrNumber(): string
+    {
+        $start = max(1, (int) DocumentTemplate::setting('doc_or_start'));
+
+        return (string) ($start + self::nextSequence('OR', 0) - 1);
+    }
+
+    /** Next business permit number for the year, e.g. 2026-014. */
+    public static function nextPermitNumber(): string
+    {
+        $year  = (int) date('Y');
+        $start = max(1, (int) DocumentTemplate::setting('doc_permit_start'));
+
+        return sprintf('%d-%03d', $year, $start + self::nextSequence('BP', $year) - 1);
+    }
+
+    /** Atomic counter per (prefix, year) in document_sequences. */
+    public static function nextSequence(string $prefix, int $year): int
+    {
+        $pdo = db();
         for ($retry = 0; $retry < 5; $retry++) {
             try {
                 $pdo->beginTransaction();
-
-                // Select or insert row
                 $stmt = $pdo->prepare('SELECT last_number FROM document_sequences WHERE doc_prefix = ? AND doc_year = ? FOR UPDATE');
                 $stmt->execute([$prefix, $year]);
                 $current = $stmt->fetchColumn();
-
                 if ($current === false) {
-                    $insert = $pdo->prepare('INSERT INTO document_sequences (doc_prefix, doc_year, last_number, created_at, updated_at) VALUES (?, ?, 1, NOW(), NOW())');
-                    $insert->execute([$prefix, $year]);
-                    $nextNumber = 1;
+                    $pdo->prepare('INSERT INTO document_sequences (doc_prefix, doc_year, last_number, created_at, updated_at) VALUES (?, ?, 1, NOW(), NOW())')
+                        ->execute([$prefix, $year]);
+                    $next = 1;
                 } else {
-                    $nextNumber = (int) $current + 1;
-                    $update = $pdo->prepare('UPDATE document_sequences SET last_number = ?, updated_at = NOW() WHERE doc_prefix = ? AND doc_year = ?');
-                    $update->execute([$nextNumber, $prefix, $year]);
+                    $next = (int) $current + 1;
+                    $pdo->prepare('UPDATE document_sequences SET last_number = ?, updated_at = NOW() WHERE doc_prefix = ? AND doc_year = ?')
+                        ->execute([$next, $prefix, $year]);
                 }
-
                 $pdo->commit();
-                return sprintf('%s-%d-%06d', $prefix, $year, $nextNumber);
+
+                return $next;
             } catch (\Throwable $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                usleep(50000); // 50ms wait before retry
+                usleep(50000);
             }
         }
 
-        // Fallback if sequence table fails
-        return sprintf('%s-%d-%06d', $prefix, $year, random_int(100000, 999999));
+        throw new \RuntimeException('Could not reserve the next ' . $prefix . ' number. Please try again.');
     }
 
     /**
-     * Generate the official, printable certificate PDF binary.
+     * The document as PDF bytes.
+     *
+     * @param array<string,mixed> $request  document_requests row (with certificate_no, or_number, permit_no… when final)
+     * @param array<string,mixed> $resident users row
      */
-    public static function generatePdf(array $request, array $resident): string
+    public static function generatePdf(array $request, array $resident, bool $preview = false): string
     {
-        $docType       = (string) ($request['document_type'] ?? 'clearance');
-        $purpose       = (string) ($request['purpose'] ?? 'General Requirements');
-        $certNo        = (string) ($request['certificate_no'] ?? self::generateCertificateNumber($docType));
-        $referenceNo   = (string) ($request['reference_no'] ?? $certNo);
+        $type     = (string) ($request['document_type'] ?? 'clearance');
+        $template = DocumentTemplate::get(in_array($type, DocumentTemplate::TYPES, true) ? $type : 'clearance');
+        $values   = DocumentFields::for($request, $resident, $preview ? date('Y-m-d H:i:s') : null);
 
-        $fullName      = User::formatFullName($resident);
-        $dob           = $resident['date_of_birth'] ?? null;
-        $age           = User::getAge($dob);
-        $ageText       = $age !== null ? (string) $age : 'legal age';
-        $sex           = ucfirst((string) ($resident['sex'] ?? 'Unspecified'));
-        $civilStatus   = ucfirst((string) ($resident['civil_status'] ?? 'Single'));
-        $address       = User::formatAddress($resident);
-        $householdNo   = (string) ($resident['household_no'] ?? 'N/A');
-
-        $barangayName  = Setting::get('doc_barangay_name', 'Barangay Bayogo');
-        $municipality  = Setting::get('doc_municipality', 'Municipality of Madrid');
-        $province      = Setting::get('doc_province', 'Province of Surigao del Sur');
-        $captainName   = Setting::get('doc_punong_barangay', 'Hon. Nelson P. Prado');
-        $secretaryName = Setting::get('doc_barangay_secretary', 'Sec. Maria Elena Santos');
-
-        $issuedDay     = date('jS');
-        $issuedMonthYear = date('F Y');
-        $dateFormatted = date('F d, Y');
-
-        // Document Titles
-        $titles = [
-            'clearance' => 'BARANGAY CLEARANCE',
-            'residency' => 'CERTIFICATE OF RESIDENCY',
-            'indigency' => 'CERTIFICATE OF INDIGENCY',
-            'business'  => 'BARANGAY BUSINESS CLEARANCE',
-            'other'     => 'BARANGAY CERTIFICATION',
-        ];
-        $documentTitle = $titles[$docType] ?? 'BARANGAY CERTIFICATION';
-
-        // Initialize A4 Portrait
-        $pdf = new Fpdf('P', 'mm', 'A4');
-        $pdf->SetMargins(15, 12, 15);
-        $pdf->SetAutoPageBreak(false);
-        $pdf->AddPage();
-
-        // ── Outer Decorative Border ──────────────────────────────────────────
-        $pdf->SetDrawColor(24, 76, 42); // Barangay Dark Green
-        $pdf->SetLineWidth(0.8);
-        $pdf->Rect(10, 10, 190, 277);
-        $pdf->SetLineWidth(0.2);
-        $pdf->Rect(11.5, 11.5, 187, 274);
-
-        // ── Official Header ──────────────────────────────────────────────────
-        $logoPath = dirname(__DIR__, 2) . '/public/images/logo-lockup-light.png';
-        if (file_exists($logoPath)) {
-            $pdf->Image($logoPath, 16, 14, 26);
-        }
-
-        $pdf->SetFont('Arial', '', 9);
-        $pdf->SetTextColor(40, 40, 40);
-        $pdf->SetY(14);
-        $pdf->Cell(0, 4.5, 'Republic of the Philippines', 0, 1, 'C');
-        $pdf->Cell(0, 4.5, (string) $province, 0, 1, 'C');
-        $pdf->Cell(0, 4.5, (string) $municipality, 0, 1, 'C');
-        $pdf->SetFont('Arial', 'B', 12);
-        $pdf->SetTextColor(18, 70, 36);
-        $pdf->Cell(0, 5.5, strtoupper((string) $barangayName), 0, 1, 'C');
-        $pdf->SetFont('Arial', 'B', 10);
-        $pdf->SetTextColor(100, 30, 22);
-        $pdf->Cell(0, 5, 'OFFICE OF THE PUNONG BARANGAY', 0, 1, 'C');
-
-        // Header Divider Line
-        $pdf->SetY(41);
-        $pdf->SetDrawColor(18, 70, 36);
-        $pdf->SetLineWidth(0.6);
-        $pdf->Line(15, 41, 195, 41);
-        $pdf->SetLineWidth(0.2);
-        $pdf->Line(15, 42, 195, 42);
-
-        // ── Left Sidebar (Officials) & Right Body Layout ─────────────────────
-        $leftW = 54;
-        $rightX = 72;
-        $rightW = 123;
-
-        // Left Sidebar Background
-        $pdf->SetFillColor(246, 250, 246);
-        $pdf->SetDrawColor(215, 230, 218);
-        $pdf->Rect(14, 45, $leftW, 235, 'DF');
-
-        // Left Sidebar: Barangay Officials
-        $pdf->SetXY(14, 48);
-        $pdf->SetFont('Arial', 'B', 8.5);
-        $pdf->SetTextColor(18, 70, 36);
-        $pdf->Cell($leftW, 5, 'BARANGAY OFFICIALS', 0, 1, 'C');
-        $pdf->SetDrawColor(18, 70, 36);
-        $pdf->Line(20, 54, 14 + $leftW - 6, 54);
-
-        $pdf->Ln(2);
-        $officials = [
-            ['name' => $captainName, 'title' => 'Punong Barangay', 'bold' => true],
-            ['name' => 'Hon. Roberto M. Gomez', 'title' => 'Barangay Kagawad', 'bold' => false],
-            ['name' => 'Hon. Alicia D. Santos', 'title' => 'Barangay Kagawad', 'bold' => false],
-            ['name' => 'Hon. Danilo C. Perez', 'title' => 'Barangay Kagawad', 'bold' => false],
-            ['name' => 'Hon. Gloria F. Reyes', 'title' => 'Barangay Kagawad', 'bold' => false],
-            ['name' => 'Hon. Ernesto S. Cruz', 'title' => 'Barangay Kagawad', 'bold' => false],
-            ['name' => 'Hon. Marites L. Lim', 'title' => 'Barangay Kagawad', 'bold' => false],
-            ['name' => 'Hon. Jason K. Tan', 'title' => 'Barangay Kagawad', 'bold' => false],
-            ['name' => 'Hon. Joshua P. Ramos', 'title' => 'SK Chairperson', 'bold' => false],
-            ['name' => $secretaryName, 'title' => 'Barangay Secretary', 'bold' => true],
-            ['name' => 'Trea. Gina V. Dizon', 'title' => 'Barangay Treasurer', 'bold' => false],
-        ];
-
-        foreach ($officials as $off) {
-            $pdf->SetX(16);
-            $pdf->SetFont('Arial', $off['bold'] ? 'B' : '', 7.5);
-            $pdf->SetTextColor(20, 20, 20);
-            $pdf->Cell($leftW - 4, 3.8, $off['name'], 0, 1, 'C');
-
-            $pdf->SetX(16);
-            $pdf->SetFont('Arial', 'I', 6.8);
-            $pdf->SetTextColor(90, 90, 90);
-            $pdf->Cell($leftW - 4, 3.4, $off['title'], 0, 1, 'C');
-            $pdf->Ln(1.2);
-        }
-
-        // Left Sidebar: Resident Photo / Specimen Signature Box
-        $pdf->SetY(198);
-        $pdf->SetX(17);
-        $pdf->SetDrawColor(180, 190, 180);
-        $pdf->SetFillColor(255, 255, 255);
-        $pdf->Rect(18, 200, 46, 32, 'DF');
-
-        // If resident has an ID photo or avatar, attempt to render it
-        $photoRendered = false;
-        if (!empty($resident['avatar_url'])) {
-            $avatarFile = dirname(__DIR__, 2) . '/public/' . ltrim((string) $resident['avatar_url'], '/');
-            if (file_exists($avatarFile) && in_array(strtolower(pathinfo($avatarFile, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png'], true)) {
-                try {
-                    $pdf->Image($avatarFile, 20, 202, 42, 28);
-                    $photoRendered = true;
-                } catch (\Throwable $e) {}
-            }
-        }
-        if (!$photoRendered) {
-            $pdf->SetXY(18, 212);
-            $pdf->SetFont('Arial', 'I', 7.5);
-            $pdf->SetTextColor(140, 140, 140);
-            $pdf->Cell(46, 4, '2x2 Photo / Seal', 0, 1, 'C');
-        }
-
-        // Thumbmark / Signature line
-        $pdf->SetY(236);
-        $pdf->SetX(18);
-        $pdf->SetDrawColor(160, 160, 160);
-        $pdf->Line(20, 254, 62, 254);
-        $pdf->SetY(255);
-        $pdf->SetX(18);
-        $pdf->SetFont('Arial', '', 6.8);
-        $pdf->SetTextColor(80, 80, 80);
-        $pdf->Cell(46, 3, "Resident's Signature", 0, 1, 'C');
-
-        // ── Main Content Area ────────────────────────────────────────────────
-        $pdf->SetXY($rightX, 47);
-        $pdf->SetFont('Arial', 'B', 15);
-        $pdf->SetTextColor(18, 70, 36);
-        $pdf->Cell($rightW, 7, $documentTitle, 0, 1, 'C');
-
-        // Document Number & Date Issued
-        $pdf->SetXY($rightX, 55);
-        $pdf->SetFont('Arial', 'B', 8.5);
-        $pdf->SetTextColor(60, 60, 60);
-        $pdf->Cell($rightW / 2, 4, 'Control No: ' . $certNo, 0, 0, 'L');
-        $pdf->Cell($rightW / 2, 4, 'Date: ' . $dateFormatted, 0, 1, 'R');
-
-        $pdf->SetXY($rightX, 60);
-        $pdf->SetFont('Arial', '', 8);
-        $pdf->SetTextColor(100, 100, 100);
-        $pdf->Cell($rightW, 4, 'Ref. Track ID: ' . $referenceNo, 0, 1, 'L');
-
-        // Divider
-        $pdf->SetDrawColor(200, 215, 200);
-        $pdf->Line($rightX, 66, $rightX + $rightW, 66);
-
-        // Salutation
-        $pdf->SetXY($rightX, 71);
-        $pdf->SetFont('Arial', 'B', 10.5);
-        $pdf->SetTextColor(20, 20, 20);
-        $pdf->Cell($rightW, 6, 'TO WHOM IT MAY CONCERN:', 0, 1, 'L');
-
-        // Paragraph 1
-        $pdf->SetXY($rightX, 80);
-        $pdf->SetFont('Arial', '', 9.5);
-        $pdf->SetTextColor(30, 30, 30);
-
-        if ($docType === 'clearance') {
-            $p1 = "THIS IS TO CERTIFY that " . strtoupper($fullName) . ", {$ageText} years old, {$civilStatus}, Filipino citizen, whose specimen signature appears below, is a bona fide resident of " . $address . ", " . $barangayName . ", " . $municipality . ", " . $province . ".";
-            $p2 = "FURTHER CERTIFIES that based on the records and blotter of this office, the aforementioned individual is a person of GOOD MORAL CHARACTER, a peaceful and law-abiding citizen, and has NO DEROGATORY RECORD or criminal case filed against him/her in this Barangay as of this date.";
-            $p3 = "This Barangay Clearance is being issued upon the request of the interested party for the purpose of " . strtoupper($purpose) . " and for whatever legal intent it may serve.";
-        } elseif ($docType === 'residency') {
-            $p1 = "THIS IS TO CERTIFY that " . strtoupper($fullName) . ", {$ageText} years old, {$civilStatus}, Filipino citizen, is a permanent bona fide resident of " . $address . ", " . $barangayName . ", " . $municipality . ", " . $province . ".";
-            $p2 = "FURTHER CERTIFIES that the subject person has been continuously residing in this Barangay and is known to be of good community standing with a recognized household registration.";
-            $p3 = "This Certificate of Residency is being issued upon the request of the interested party for the purpose of " . strtoupper($purpose) . " and for whatever legal intent it may serve.";
-        } elseif ($docType === 'indigency') {
-            $p1 = "THIS IS TO CERTIFY that " . strtoupper($fullName) . ", {$ageText} years old, {$civilStatus}, Filipino citizen, is a bona fide resident of " . $address . ", " . $barangayName . ", " . $municipality . ", " . $province . ".";
-            $p2 = "FURTHER CERTIFIES that according to the assessment and socio-economic records of this Barangay, the above-named person belongs to an INDIGENT FAMILY whose household income is below poverty threshold and requires public welfare support.";
-            $p3 = "This Certificate of Indigency is being issued upon the request of the interested party for " . strtoupper($purpose) . " (e.g. Educational Assistance, Medical Aid, Social Welfare Support, Public Attorney's Office) and for whatever legal purpose it may serve.";
-        } else {
-            $p1 = "THIS IS TO CERTIFY that " . strtoupper($fullName) . ", {$ageText} years old, {$civilStatus}, Filipino citizen, is a resident of " . $address . ", " . $barangayName . ", " . $municipality . ", " . $province . ".";
-            $p2 = "FURTHER CERTIFIES that the above-named resident has complied with the standard documentary and verification requirements of the Barangay.";
-            $p3 = "This certification is issued upon the request of the above-named person for the purpose of " . strtoupper($purpose) . " and for whatever lawful intent it may serve.";
-        }
-
-        $pdf->MultiCell($rightW, 5.2, $p1, 0, 'J');
-        $pdf->Ln(3.5);
-        $pdf->SetX($rightX);
-        $pdf->MultiCell($rightW, 5.2, $p2, 0, 'J');
-        $pdf->Ln(3.5);
-        $pdf->SetX($rightX);
-        $pdf->MultiCell($rightW, 5.2, $p3, 0, 'J');
-
-        // Issuance statement
-        $pdf->Ln(4);
-        $pdf->SetX($rightX);
-        $pIssue = "ISSUED this {$issuedDay} day of {$issuedMonthYear} at the Office of the Punong Barangay, {$barangayName}, {$municipality}, {$province}, Philippines.";
-        $pdf->MultiCell($rightW, 5.2, $pIssue, 0, 'J');
-
-        // ── Resident Particulars Table ───────────────────────────────────────
-        $pdf->Ln(4);
-        $pdf->SetX($rightX);
-        $pdf->SetFont('Arial', 'B', 8);
-        $pdf->SetFillColor(240, 245, 240);
-        $pdf->SetDrawColor(210, 225, 210);
-        $pdf->Cell($rightW, 4.5, 'VERIFIED RESIDENT RECORD', 1, 1, 'L', true);
-
-        $pdf->SetFont('Arial', '', 7.5);
-        $pdf->SetX($rightX);
-        $pdf->Cell(25, 4, 'Full Name:', 'L', 0, 'L');
-        $pdf->SetFont('Arial', 'B', 7.5);
-        $pdf->Cell(50, 4, $fullName, 0, 0, 'L');
-        $pdf->SetFont('Arial', '', 7.5);
-        $pdf->Cell(22, 4, 'Civil Status:', 0, 0, 'L');
-        $pdf->Cell(26, 4, $civilStatus, 'R', 1, 'L');
-
-        $pdf->SetX($rightX);
-        $pdf->Cell(25, 4, 'Date of Birth:', 'L', 0, 'L');
-        $pdf->Cell(50, 4, $dob ? date('F d, Y', strtotime((string) $dob)) : 'N/A', 0, 0, 'L');
-        $pdf->Cell(22, 4, 'Dynamic Age:', 0, 0, 'L');
-        $pdf->SetFont('Arial', 'B', 7.5);
-        $pdf->Cell(26, 4, $ageText . ($age !== null ? ' yrs old' : ''), 'R', 1, 'L');
-
-        $pdf->SetFont('Arial', '', 7.5);
-        $pdf->SetX($rightX);
-        $pdf->Cell(25, 4, 'Household No:', 'LB', 0, 'L');
-        $pdf->Cell(50, 4, $householdNo, 'B', 0, 'L');
-        $pdf->Cell(22, 4, 'Sex:', 'B', 0, 'L');
-        $pdf->Cell(26, 4, $sex, 'RB', 1, 'L');
-
-        // ── Signatory Section ────────────────────────────────────────────────
-        $pdf->SetY(206);
-        $sigW = ($rightW / 2) - 4;
-
-        // Certified by (Secretary)
-        $pdf->SetX($rightX);
-        $pdf->SetFont('Arial', '', 7.8);
-        $pdf->SetTextColor(70, 70, 70);
-        $pdf->Cell($sigW, 4, 'Prepared & Certified by:', 0, 0, 'L');
-
-        // Approved by (Punong Barangay)
-        $pdf->SetX($rightX + $sigW + 8);
-        $pdf->Cell($sigW, 4, 'Approved & Issued by:', 0, 1, 'L');
-
-        $pdf->SetY(224);
-        $pdf->SetX($rightX);
-        $pdf->SetFont('Arial', 'B', 9);
-        $pdf->SetTextColor(20, 20, 20);
-        $pdf->Cell($sigW, 4.5, $secretaryName, 0, 0, 'L');
-
-        $pdf->SetX($rightX + $sigW + 8);
-        $pdf->Cell($sigW, 4.5, $captainName, 0, 1, 'L');
-
-        $pdf->SetX($rightX);
-        $pdf->SetFont('Arial', 'I', 7.5);
-        $pdf->SetTextColor(90, 90, 90);
-        $pdf->Cell($sigW, 4, 'Barangay Secretary', 0, 0, 'L');
-
-        $pdf->SetX($rightX + $sigW + 8);
-        $pdf->SetFont('Arial', 'B', 7.5);
-        $pdf->SetTextColor(18, 70, 36);
-        $pdf->Cell($sigW, 4, 'Punong Barangay', 0, 1, 'L');
-
-        // ── Native Vector QR Code & Footer Security ──────────────────────────
-        $verifyUrl = 'https://baranggabay.onrender.com/documents/' . urlencode($certNo) . '/verify';
-        self::drawVectorQr($pdf, $verifyUrl, $rightX, 238, 22);
-
-        $pdf->SetXY($rightX + 25, 239);
-        $pdf->SetFont('Arial', 'B', 7.5);
-        $pdf->SetTextColor(18, 70, 36);
-        $pdf->Cell($rightW - 25, 4, 'BARANGGABAY DIGITAL VERIFICATION QR', 0, 1, 'L');
-
-        $pdf->SetXY($rightX + 25, 243);
-        $pdf->SetFont('Arial', '', 6.8);
-        $pdf->SetTextColor(80, 80, 80);
-        $pdf->MultiCell($rightW - 25, 3.4, "Scan this QR code using any smartphone camera to verify the genuine authenticity of this official Barangay document on the secure portal.", 0, 'L');
-
-        $pdf->SetXY($rightX + 25, 253);
-        $pdf->SetFont('Arial', 'I', 6.8);
-        $pdf->SetTextColor(160, 40, 40);
-        $pdf->Cell($rightW - 25, 3.5, 'SECURITY NOTICE: NOT VALID WITHOUT OFFICIAL SEAL & SIGNATURE.', 0, 1, 'L');
-
-        // Bottom Footer Bar
-        $pdf->SetY(268);
-        $pdf->SetX(15);
-        $pdf->SetDrawColor(200, 200, 200);
-        $pdf->Line(15, 268, 195, 268);
-
-        $pdf->SetY(270);
-        $pdf->SetFont('Arial', '', 6.8);
-        $pdf->SetTextColor(100, 100, 100);
-        $pdf->Cell(0, 3.5, "Barangay Bayogo Hall, Purok 1, Bayogo, Madrid, Surigao del Sur | Official Portal: baranggabay.onrender.com", 0, 1, 'C');
+        $pdf = $type === 'business'
+            ? self::businessPermit($template, $values, $request, $preview)
+            : self::certificate($type, $template, $values, $request, $preview);
 
         return $pdf->Output('S');
     }
 
+    // ── Portrait certificates (Indigency, Clearance, Residency) ─────────
+
+    private static function certificate(string $type, array $tpl, array $v, array $request, bool $preview): BarangayPdf
+    {
+        $mono   = $type === 'indigency';               // the barangay types this one in Courier
+        $family = $mono ? 'Courier' : 'Times';
+        $size   = $mono ? 11.5 : 12.0;
+
+        $pdf = new BarangayPdf('P', 'mm', 'A4');
+        $pdf->SetAutoPageBreak(false);
+        $pdf->SetMargins(20, 15, 20);
+        $pdf->AddPage();
+        if ($preview) {
+            self::watermark($pdf, 105, 190);
+        }
+
+        self::header($pdf, 20, 190, 16, $family, $mono);
+
+        // Office line and title
+        $pdf->SetTextColor(20, 20, 20);
+        $pdf->SetFont($family, '', $mono ? 12.5 : 13);
+        $pdf->SetXY(20, 58);
+        $pdf->Cell(170, 7, BarangayPdf::enc(DocumentFields::fill($tpl['office'], $v)), 0, 1, 'C');
+
+        $title = DocumentFields::fill($tpl['title'], $v);
+        $pdf->SetFont($family, 'B', $mono ? 13 : 14);
+        if ($type === 'clearance') {
+            $pdf->SetTextColor(31, 56, 140);
+        }
+        $pdf->SetXY(20, 70);
+        $pdf->Cell(170, 7, BarangayPdf::enc($title), 0, 1, 'C');
+        $pdf->SetTextColor(20, 20, 20);
+        if ($type === 'residency') {
+            $pdf->SetLineWidth(0.5);
+            $pdf->Line(25, 78.5, 185, 78.5);
+            $pdf->SetLineWidth(0.2);
+        }
+
+        $pdf->SetFont($family, 'B', $size);
+        $pdf->SetXY(20, 86);
+        $pdf->Cell(170, 6, 'TO WHOM IT MAY CONCERN:', 0, 1, 'L');
+
+        $y = 100;
+        foreach ($tpl['paragraphs'] as $paragraph) {
+            $y = $pdf->richParagraph(DocumentFields::fill($paragraph, $v), 20, $y, 170, $family, $size, 6.4, 14);
+            $y += 3.5;
+        }
+
+        // Signatories, laid out from the bottom up so nothing reaches the
+        // O.R. block (y 234) or the footer (y 266), however long the text.
+        $base = $y + 6;
+        if ($type === 'clearance') {
+            $base = min($base, 168);
+            $pdf->SetFont($family, '', $size);
+            $pdf->SetXY(20, $base);
+            $pdf->Cell(60, 6, 'Prepared by:', 0, 1, 'L');
+            self::signatory($pdf, 'secretary', DocumentTemplate::setting('doc_barangay_secretary'), 'Brgy. Secretary', 22, $base + 18, 70, $family, $preview, 'C');
+            $captainY = min($base + 40, 216);
+        } else {
+            $captainY = min(max($base + 24, 196), 216);
+        }
+        self::signatory($pdf, 'captain', DocumentTemplate::setting('doc_punong_barangay'),
+            $type === 'indigency' ? 'Barangay Captain' : 'Punong Barangay', 112, $captainY, 78, $family, $preview, 'C');
+
+        // O.R. block (paid documents)
+        if ($type !== 'indigency' && ((float) ($request['fee_amount'] ?? 0) > 0 || $v['OR_NUMBER'] !== '')) {
+            $pdf->SetFont($family, '', 11);
+            $oy = 236;
+            foreach ([
+                'O.R No: ' . ($v['OR_NUMBER'] !== '' ? $v['OR_NUMBER'] : ($preview ? '(assigned on approval)' : '')),
+                'Issued on: ' . $v['ISSUE_DATE_LONG'],
+                'Issued at: Brgy. ' . preg_replace('/^Barangay\s+/i', '', $v['BARANGAY']) . ', ' . $v['MUNICIPALITY'] . ', SDS',
+                'Documentary Stamp: ' . $v['DOCUMENTARY_STAMP'],
+            ] as $i => $line) {
+                $pdf->SetXY(20, $oy + $i * 5.6);
+                $pdf->Cell(100, 5.6, BarangayPdf::enc($line), 0, 0, 'L');
+            }
+        }
+
+        self::verification($pdf, $request, 164, 232, 24, $preview);
+        self::footer($pdf, 20, 266, 190);
+
+        return $pdf;
+    }
+
+    // ── Business Permit (landscape, bordered) ───────────────────────────
+
+    private static function businessPermit(array $tpl, array $v, array $request, bool $preview): BarangayPdf
+    {
+        $pdf = new BarangayPdf('L', 'mm', 'A4');   // 297 x 210
+        $pdf->SetAutoPageBreak(false);
+        $pdf->AddPage();
+        if ($preview) {
+            self::watermark($pdf, 148, 120);
+        }
+
+        // Decorative double border with corner ornaments
+        $pdf->SetDrawColor(30, 30, 30);
+        $pdf->SetLineWidth(1.4);
+        $pdf->Rect(10, 10, 277, 190);
+        $pdf->SetLineWidth(0.35);
+        $pdf->Rect(14, 14, 269, 182);
+        // Corner ornaments: nested squares around a filled diamond
+        foreach ([[10, 10], [271, 10], [10, 184], [271, 184]] as [$cx, $cy]) {
+            $pdf->SetFillColor(255, 255, 255);
+            $pdf->Rect($cx, $cy, 16, 16, 'DF');
+            $pdf->SetLineWidth(0.8);
+            $pdf->Rect($cx + 2.5, $cy + 2.5, 11, 11);
+            $pdf->SetLineWidth(0.3);
+            $pdf->Rect($cx + 4.5, $cy + 4.5, 7, 7);
+            $pdf->SetFillColor(30, 30, 30);
+            $pdf->diamond($cx + 8, $cy + 8, 2.6);
+        }
+        $pdf->SetLineWidth(0.35);
+
+        self::header($pdf, 60, 237, 20, 'Times', false);
+
+        $pdf->SetTextColor(20, 20, 20);
+        $pdf->SetFont('Times', 'B', 15);
+        $pdf->SetXY(20, 56);
+        $pdf->Cell(257, 7, BarangayPdf::enc(DocumentFields::fill($tpl['office'], $v)), 0, 1, 'C');
+        $pdf->SetFont('Times', '', 11);
+        $pdf->SetXY(30, 62);
+        $pdf->Cell(80, 6, 'TO WHOM IT MAY CONCERN:', 0, 1, 'L');
+
+        $paragraphs = $tpl['paragraphs'];
+        $y = $pdf->richParagraph(DocumentFields::fill((string) array_shift($paragraphs), $v), 30, 75, 237, 'Times', 12.5, 6.2, 0);
+
+        // Big title
+        $pdf->SetFont('Times', 'B', 40);
+        $pdf->SetTextColor(70, 100, 180);
+        $pdf->SetXY(20, $y + 4);
+        $pdf->Cell(257, 18, BarangayPdf::enc(DocumentFields::fill($tpl['title'], $v)), 0, 1, 'C');
+        $pdf->SetTextColor(20, 20, 20);
+
+        $y += 30;
+        foreach ($paragraphs as $paragraph) {
+            $y = $pdf->richParagraph(DocumentFields::fill($paragraph, $v), 30, $y, 237, 'Times', 11, 5.4, 0);
+            $y += 2;
+        }
+
+        // Prepared / Noted / Approved
+        $sy = min(max($y + 8, 146), 150);
+        $cols = [
+            ['Prepared BY:', 'secretary', DocumentTemplate::setting('doc_barangay_secretary'), 'Brgy. Secretary', 32],
+            ['Noted BY:',    'treasurer', DocumentTemplate::setting('doc_barangay_treasurer'), 'Brgy. Treasurer', 113],
+            ['Approved BY:', 'captain',   DocumentTemplate::setting('doc_punong_barangay'),   'Brgy. Captain',   194],
+        ];
+        foreach ($cols as [$label, $signer, $name, $role, $x]) {
+            $pdf->SetFont('Times', '', 11);
+            $pdf->SetXY($x, $sy);
+            $pdf->Cell(72, 5, $label, 0, 1, 'C');
+            self::signatory($pdf, $signer, $name, $role, $x, $sy + 17, 72, 'Times', $preview, 'C', $signer === 'captain');
+        }
+
+        $pdf->SetFont('Times', 'B', 14);
+        $pdf->SetXY(20, 184);
+        $pdf->Cell(257, 7, BarangayPdf::enc($v['PERMIT_NUMBER'] !== '' ? $v['PERMIT_NUMBER'] : ($preview ? '(permit no. on approval)' : '')), 0, 1, 'C');
+
+        self::verification($pdf, $request, 240, 179, 13, $preview, true);
+
+        return $pdf;
+    }
+
+    // ── Shared pieces ───────────────────────────────────────────────────
+
+    /** Seal at the left, the four government lines centered. */
+    private static function header(BarangayPdf $pdf, float $left, float $right, float $top, string $family, bool $mono): void
+    {
+        if (is_file(self::ASSETS . 'seal.png')) {
+            $pdf->Image(self::ASSETS . 'seal.png', $left + 2, $top, 30);
+        }
+        $lines = [
+            ['REPUBLIC OF THE PHILIPPINES', ''],
+            [mb_strtoupper(DocumentTemplate::setting('doc_province')), ''],
+            [mb_strtoupper(DocumentTemplate::setting('doc_municipality')), ''],
+            [mb_strtoupper(DocumentTemplate::setting('doc_barangay_name')), 'B'],
+        ];
+        $pdf->SetTextColor(20, 20, 20);
+        foreach ($lines as $i => [$text, $style]) {
+            $pdf->SetFont($family, $style, $mono ? 12 : 12.5);
+            $pdf->SetXY($left, $top + 2 + $i * 5.6);
+            $pdf->Cell($right - $left, 5.6, BarangayPdf::enc($text), 0, 0, 'C');
+        }
+    }
+
     /**
-     * Draw native vector QR code directly onto FPDF canvas.
+     * Name (bold, underlined) over the role, with the officer's uploaded
+     * e-signature above the name on a final document. A preview never
+     * carries a signature.
      */
-    private static function drawVectorQr(Fpdf $pdf, string $text, float $startX, float $startY, float $size): void
+    private static function signatory(BarangayPdf $pdf, string $signer, string $name, string $role, float $x, float $nameY, float $width, string $family, bool $preview, string $align, bool $markMissing = true): void
+    {
+        $sig = $preview ? null : DocumentTemplate::signature($signer);
+        if ($sig !== null) {
+            $size = @getimagesizefromstring($sig['data']) ?: [400, 150];
+            $h    = 16.0;
+            $w    = min($width * 0.8, $h * $size[0] / max(1, $size[1]));
+            $pdf->imageFromBytes($sig['data'], $sig['mime'], $x + ($width - $w) / 2, $nameY - $h + 2, $w, $h);
+        } elseif ($preview && $markMissing) {
+            $pdf->SetFont('Helvetica', 'B', 8);
+            $pdf->SetTextColor(190, 30, 30);
+            $pdf->SetXY($x, $nameY - 8);
+            $pdf->Cell($width, 4, DocumentTemplate::hasSignature($signer) ? 'E-signature applied on approval' : 'SIGNATURE REQUIRED', 0, 0, 'C');
+            $pdf->SetTextColor(20, 20, 20);
+        }
+
+        $pdf->SetFont($family, 'B', 12);
+        $label = BarangayPdf::enc(mb_strtoupper($name));
+        $pdf->SetXY($x, $nameY);
+        $pdf->Cell($width, 6, $label, 0, 1, $align);
+        $textW = $pdf->GetStringWidth($label);
+        $lx    = $x + ($width - $textW) / 2;
+        $pdf->SetLineWidth(0.3);
+        $pdf->Line($lx, $nameY + 5.4, $lx + $textW, $nameY + 5.4);
+        $pdf->SetFont($family, '', 11.5);
+        $pdf->SetXY($x, $nameY + 6);
+        $pdf->Cell($width, 5.5, BarangayPdf::enc($role), 0, 1, $align);
+    }
+
+    /** Control number and QR to the public verification page. */
+    private static function verification(BarangayPdf $pdf, array $request, float $x, float $y, float $size, bool $preview, bool $compact = false): void
+    {
+        $control = (string) ($request['certificate_no'] ?? '');
+        if ($control === '' || $preview) {
+            $pdf->SetFont('Helvetica', '', 6.5);
+            $pdf->SetTextColor(120, 120, 120);
+            $pdf->SetXY($x - 6, $y + $size / 2 - 2);
+            $pdf->MultiCell($size + 12, 3, 'Verification QR is added on approval', 0, 'C');
+            $pdf->SetTextColor(20, 20, 20);
+            return;
+        }
+        self::qr($pdf, app_url('documents/' . rawurlencode($control) . '/verify'), $x, $y, $size);
+        $pdf->SetFont('Helvetica', '', $compact ? 5.5 : 6.5);
+        $pdf->SetTextColor(70, 70, 70);
+        $pdf->SetXY($x - 8, $y + $size + 0.8);
+        $pdf->Cell($size + 16, 3, BarangayPdf::enc($control), 0, 1, 'C');
+        if (!$compact) {
+            $pdf->SetX($x - 8);
+            $pdf->Cell($size + 16, 3, 'Scan to verify', 0, 1, 'C');
+        }
+        $pdf->SetTextColor(20, 20, 20);
+    }
+
+    /** Footer: contact lines (italic typewriter) and the two logos. */
+    private static function footer(BarangayPdf $pdf, float $left, float $top, float $right): void
+    {
+        $pdf->SetFont('Courier', 'I', 9.5);
+        $pdf->SetTextColor(30, 30, 30);
+        foreach ([
+            'Address: ' . DocumentTemplate::setting('doc_footer_address'),
+            'Mobile No.: ' . DocumentTemplate::setting('doc_footer_mobile'),
+            'Email Address: ' . DocumentTemplate::setting('doc_footer_email'),
+        ] as $i => $line) {
+            $pdf->SetXY($left, $top + $i * 4.6);
+            $pdf->Cell(120, 4.6, BarangayPdf::enc($line), 0, 0, 'L');
+        }
+        if (is_file(self::ASSETS . 'bagong-pilipinas.png')) {
+            $pdf->Image(self::ASSETS . 'bagong-pilipinas.png', $right - 50, $top - 4, 18);
+        }
+        if (is_file(self::ASSETS . 'madrid-ato-palamboon.png')) {
+            $pdf->Image(self::ASSETS . 'madrid-ato-palamboon.png', $right - 30, $top - 1, 30);
+        }
+    }
+
+    private static function watermark(BarangayPdf $pdf, float $cx, float $cy): void
+    {
+        $pdf->SetFont('Helvetica', 'B', 54);
+        $pdf->SetTextColor(235, 225, 225);
+        $text = 'PREVIEW - NOT VALID';
+        $w    = $pdf->GetStringWidth($text);
+        $pdf->rotatedText($cx - $w / 2 * cos(deg2rad(35)), $cy + $w / 2 * sin(deg2rad(35)), $text, 35);
+        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->SetTextColor(190, 30, 30);
+        $pdf->SetXY(10, 4);
+        $pdf->Cell(0, 5, 'PREVIEW FOR STAFF REVIEW - PENDING APPROVAL - NOT AN OFFICIAL DOCUMENT', 0, 0, 'C');
+        $pdf->SetTextColor(20, 20, 20);
+    }
+
+    /** QR code drawn as vector squares (crisp when printed). */
+    private static function qr(BarangayPdf $pdf, string $text, float $x, float $y, float $size): void
     {
         try {
-            $qrCode = Encoder::encode($text, ErrorCorrectionLevel::M());
-            $matrix = $qrCode->getMatrix();
-            $width  = $matrix->getWidth();
-            $height = $matrix->getHeight();
-
-            $cellSize = $size / $width;
-
-            // Background white box
+            $matrix = Encoder::encode($text, ErrorCorrectionLevel::M())->getMatrix();
+            $n      = $matrix->getWidth();
+            $cell   = $size / $n;
             $pdf->SetFillColor(255, 255, 255);
-            $pdf->Rect($startX - 1, $startY - 1, $size + 2, $size + 2, 'F');
-
-            // Draw QR modules
-            $pdf->SetFillColor(18, 70, 36);
-            for ($y = 0; $y < $height; $y++) {
-                for ($x = 0; $x < $width; $x++) {
-                    if ($matrix->get($x, $y) === 1) {
-                        $pdf->Rect($startX + ($x * $cellSize), $startY + ($y * $cellSize), $cellSize, $cellSize, 'F');
+            $pdf->Rect($x - 1, $y - 1, $size + 2, $size + 2, 'F');
+            $pdf->SetFillColor(0, 0, 0);
+            for ($row = 0; $row < $n; $row++) {
+                for ($col = 0; $col < $n; $col++) {
+                    if ($matrix->get($col, $row) === 1) {
+                        $pdf->Rect($x + $col * $cell, $y + $row * $cell, $cell, $cell, 'F');
                     }
                 }
             }
         } catch (\Throwable $e) {
-            error_log('[drawVectorQr] ' . $e->getMessage());
+            error_log('[CertificateGenerator::qr] ' . $e->getMessage());
         }
     }
 }

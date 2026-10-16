@@ -167,8 +167,26 @@ ob_start();
                 <i class="bi bi-eye" aria-hidden="true"></i> <?= e(__('View document')) ?>
             </a>
             <a href="<?= e(route('documents/' . $reqId . '/download')) ?>" class="dq-btn" style="background:var(--surface-card);color:var(--text-primary);border:1px solid var(--border-strong);">
-                <i class="bi bi-download" aria-hidden="true"></i> <?= e(__('Download')) ?>
+                <i class="bi bi-download" aria-hidden="true"></i> <?= e(__('Download PDF')) ?>
             </a>
+            <?php if (!empty($request['certificate_no'])): ?>
+            <div class="mt-3 pt-3" style="border-top:1px dashed var(--border);">
+                <?php if (!empty($request['printed_at'])): ?>
+                    <p class="mb-0" style="color:var(--text-primary);"><i class="bi bi-printer-fill mr-1" aria-hidden="true"></i><?= e(__('Your printed copy is ready. Claim it at the Barangay Hall and show this QR.')) ?></p>
+                <?php elseif (!empty($request['print_requested_at'])): ?>
+                    <p class="mb-0" style="color:var(--text-primary);"><i class="bi bi-hourglass-split mr-1" aria-hidden="true"></i><?= e(__('Printed copy requested. It is in the barangay\'s print queue; you will be notified when it is ready.')) ?></p>
+                <?php else: ?>
+                    <form method="post" action="<?= e(route('documents/' . $reqId . '/print-request')) ?>">
+                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                        <input type="hidden" name="back" value="<?= e($token) ?>">
+                        <button type="submit" class="dq-btn" style="background:var(--surface-card);color:var(--text-primary);border:1px solid var(--border-strong);">
+                            <i class="bi bi-printer" aria-hidden="true"></i> <?= e(__('Request Printed Copy')) ?>
+                        </button>
+                        <p class="dq-muted mt-1 mb-0"><?= e(__('The barangay prints this same approved document for you to claim at the hall.')) ?></p>
+                    </form>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
         <?php elseif (in_array($status, ['released', 'completed'], true)): ?>
             <p class="mb-0" style="color:var(--text-primary);"><?= e(__('This document has been released to you.')) ?></p>
         <?php else: ?>
@@ -180,8 +198,13 @@ ob_start();
 
     <?php else: ?>
     <section class="dq-card" aria-labelledby="dq-closed">
+        <?php if (!empty($request['revoked_at'])): ?>
+        <h2 class="dq-title" id="dq-closed"><i class="bi bi-x-octagon" aria-hidden="true"></i><?= e(__('This document was cancelled by the barangay')) ?></h2>
+        <?php if (!empty($request['revoke_reason'])): ?><p class="mb-0" style="color:var(--text-primary);"><?= e(__('Reason:')) ?> <?= e((string) $request['revoke_reason']) ?></p><?php endif; ?>
+        <?php else: ?>
         <h2 class="dq-title" id="dq-closed"><i class="bi bi-x-circle" aria-hidden="true"></i><?= e($status === 'rejected' ? __('This request was rejected') : __('This request was cancelled')) ?></h2>
         <?php if (!empty($request['rejection_reason'])): ?><p class="mb-0" style="color:var(--text-primary);"><?= e((string) $request['rejection_reason']) ?></p><?php endif; ?>
+        <?php endif; ?>
     </section>
     <?php endif; ?>
 

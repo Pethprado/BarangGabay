@@ -321,6 +321,9 @@ ob_start();
                                 <div class="mb-1"><span class="text-muted"><?= e(__('Layunin (Purpose):')) ?></span> <strong id="revPurpose" class="text-dark"></strong></div>
                                 <div class="mb-1"><span class="text-muted"><?= e(__('Paraan ng Pagtanggap:')) ?></span> <strong id="revReceiving" class="text-dark"></strong></div>
                                 <div class="mb-1"><span class="text-muted"><?= e(__('Petsa ng Kahilingan:')) ?></span> <span id="revDate" class="text-muted"></span></div>
+                                <div class="mb-1 d-none" id="revBizRow"><span class="text-muted">Business:</span> <strong id="revBiz" class="text-dark"></strong></div>
+                                <div class="mb-1 d-none" id="revNumbersRow"><span class="text-muted">O.R. / Permit:</span> <strong id="revNumbers" class="text-dark"></strong></div>
+                                <div class="mb-1 d-none" id="revRevokedRow"><span class="badge bg-danger">CANCELLED</span> <span id="revRevoked" class="text-danger" style="font-size:.76rem;"></span></div>
                             </div>
                         </div>
                     </div>
@@ -377,12 +380,25 @@ ob_start();
 
                             <!-- Form 1: Approve & Auto-Generate -->
                             <div id="actionApproveSection" class="mb-3 p-3 bg-white rounded-3 border">
+                                <?php if (!\App\Models\DocumentTemplate::hasSignature('captain')): ?>
+                                <div class="alert alert-danger py-2 px-3 mb-2" style="font-size:.78rem;" role="alert">
+                                    <strong>Signature Required.</strong> The Punong Barangay's authorized e-signature is not uploaded yet, so documents cannot be released.
+                                    <?php if (in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true)): ?><a href="<?= e(route('admin/document-templates')) ?>#signatures" class="fw-bold">Upload it</a><?php else: ?>Ask an admin to upload it.<?php endif; ?>
+                                </div>
+                                <?php endif; ?>
                                 <form method="post" id="formApprove" onsubmit="return confirm(<?= e(json_encode(__('Aprubahan at awtomatikong gumawa ng opisyal na sertipiko na may QR Code?'))) ?>);">
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                                         <div>
                                             <strong class="d-block text-dark" style="font-size:.85rem;"><?= e(__('Aprubahan ang Kahilingan (Approve & Auto-Generate)')) ?></strong>
-                                            <span class="text-muted" style="font-size:.75rem;"><?= e(__('Awtomatikong bubuuin ang opisyal na PDF certificate na may pirma at QR code.')) ?></span>
+                                            <span class="text-muted" style="font-size:.75rem;">The document is filled from the resident's verified profile. Check the preview first.</span>
+                                        </div>
+                                        <a href="#" id="revDraftBtn" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm fw-bold"><i class="bi bi-eye me-1"></i>Preview document</a>
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-end gap-2 mt-2">
+                                        <div style="flex:1;min-width:180px;">
+                                            <label for="approveOr" class="form-label mb-1" style="font-size:.74rem;">O.R. No. <span class="text-muted">(optional; blank = next number automatically)</span></label>
+                                            <input id="approveOr" name="or_number" maxlength="40" class="form-control form-control-sm" placeholder="e.g. 2513827">
                                         </div>
                                         <button type="submit" class="btn btn-success btn-sm px-4 fw-bold">
                                             <i class="bi bi-patch-check me-1"></i> <?= e(__('APPROVE & GENERATE')) ?>
@@ -390,6 +406,20 @@ ob_start();
                                     </div>
                                 </form>
                             </div>
+
+                            <?php if (in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true)): ?>
+                            <!-- Cancel an issued document (admin) -->
+                            <div id="actionRevokeSection" class="mb-3 p-3 bg-white rounded-3 border d-none">
+                                <form method="post" id="formRevoke" onsubmit="return confirm('Cancel this issued document? Its QR verification will show CANCELLED.');">
+                                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                    <label class="form-label mb-1 fw-bold text-danger" style="font-size:.78rem;" for="revokeReason">Cancel issued document: reason</label>
+                                    <div class="d-flex gap-2">
+                                        <input id="revokeReason" name="reason" class="form-control form-control-sm" required minlength="5" maxlength="255" placeholder="e.g. Issued with a wrong name">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm fw-bold text-nowrap"><i class="bi bi-x-octagon me-1"></i>Cancel document</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <?php endif; ?>
 
                             <!-- Form 2: Mark As Claimed (for Pickup only) -->
                             <div id="actionClaimSection" class="mb-3 p-3 bg-white rounded-3 border d-none">
@@ -526,6 +556,21 @@ function openReviewModal(r) {
     var formReject = document.getElementById('formReject');
 
     formApprove.action = '<?= e(route('admin/documents/')) ?>' + r.id + '/approve';
+    document.getElementById('revDraftBtn').href = '<?= e(route('admin/documents/')) ?>' + r.id + '/draft';
+    document.getElementById('approveOr').value = r.or_number || '';
+    var biz = r.document_type === 'business' || r.business_name;
+    document.getElementById('revBizRow').classList.toggle('d-none', !biz);
+    document.getElementById('revBiz').innerText = biz ? ((r.business_type || '-') + ' / ' + (r.business_name || '-') + (r.business_address ? ' / ' + r.business_address : '')) : '';
+    var nums = [r.or_number ? 'O.R. ' + r.or_number : '', r.permit_no ? 'Permit ' + r.permit_no : '', r.valid_until ? 'valid until ' + r.valid_until : ''].filter(Boolean).join(' / ');
+    document.getElementById('revNumbersRow').classList.toggle('d-none', !nums);
+    document.getElementById('revNumbers').innerText = nums;
+    document.getElementById('revRevokedRow').classList.toggle('d-none', !r.revoked_at);
+    document.getElementById('revRevoked').innerText = r.revoked_at ? (r.revoke_reason || '') : '';
+    var revokeSec = document.getElementById('actionRevokeSection');
+    if (revokeSec) {
+        revokeSec.classList.toggle('d-none', !(r.certificate_no && !r.revoked_at));
+        document.getElementById('formRevoke').action = '<?= e(route('admin/documents/')) ?>' + r.id + '/revoke';
+    }
     formClaim.action = '<?= e(route('admin/documents/')) ?>' + r.id + '/claim';
     formNeedInfo.action = '<?= e(route('admin/documents/')) ?>' + r.id + '/status';
     formReject.action = '<?= e(route('admin/documents/')) ?>' + r.id + '/status';
