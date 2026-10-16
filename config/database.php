@@ -845,6 +845,20 @@ function syncPostgresSchema(PDO $pdo): void
         } catch (\Throwable $e) {
             error_log('PgSQL seed_current_content note: ' . $e->getMessage());
         }
+
+        // Sample residents share one test mobile (2026-10-14) so SMS to
+        // "registered residents" can be checked on a real phone. Only the four
+        // demo @baranggabay.ph accounts — real sign-ups keep their own number.
+        try {
+            if (\App\Models\Setting::get('demo_sample_phones_v1') !== '1') {
+                $pdo->prepare("UPDATE users SET phone = ? WHERE role = 'resident' AND email IN (?, ?, ?, ?)")
+                    ->execute(['09530781211', 'michelle@baranggabay.ph', 'juan.delacruz@baranggabay.ph',
+                               'maria.clara@baranggabay.ph', 'pedro.penduko@baranggabay.ph']);
+                \App\Models\Setting::set('demo_sample_phones_v1', '1');
+            }
+        } catch (\Throwable $e) {
+            error_log('PgSQL sample phones note: ' . $e->getMessage());
+        }
     }
 }
 }
