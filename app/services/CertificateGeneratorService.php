@@ -298,15 +298,21 @@ class CertificateGeneratorService
     {
         $sig = DocumentTemplate::signature($signer);
         if ($sig !== null) {
-            $size = @getimagesizefromstring($sig['data']) ?: [400, 150];
+            // Sized and placed like the barangay's signed paper documents: the
+            // Punong Barangay's signature is about 34 mm tall and its stroke
+            // runs down through his name and title; the Secretary's and the
+            // Treasurer's sit across their names.
+            [$targetH, $below] = $signer === 'captain' ? [34.0, 12.0] : [16.0, 6.0];
+            $size  = @getimagesizefromstring($sig['data']) ?: [400, 150];
             $ratio = $size[0] / max(1, $size[1]);
-            $h    = 18.0;
-            $w    = $h * $ratio;
-            if ($w > $width * 0.8) {        // very wide signature: keep its shape
-                $w = $width * 0.8;
+            $h     = $targetH;
+            $w     = $h * $ratio;
+            if ($w > $width * 0.95) {       // wide signature: keep its shape
+                $w = $width * 0.95;
                 $h = $w / $ratio;
             }
-            $pdf->imageFromBytes($sig['data'], $sig['mime'], $x + ($width - $w) / 2, $nameY - $h + 3, $w, $h);
+            $bottom = $nameY + $below;
+            $pdf->imageFromBytes($sig['data'], $sig['mime'], $x + ($width - $w) / 2, $bottom - $h, $w, $h);
         } elseif ($preview && $markMissing) {
             $pdf->SetFont('Helvetica', 'B', 8);
             $pdf->SetTextColor(190, 30, 30);
