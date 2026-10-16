@@ -556,6 +556,14 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_status VARCHAR(40) NOT NULL DEFAULT 'FREE'",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_id INT NULL",
 
+        // 18c. PHP sessions in the database (App\Services\DbSessionHandler)
+        "CREATE TABLE IF NOT EXISTS php_sessions (
+            id VARCHAR(128) NOT NULL PRIMARY KEY,
+            data TEXT NOT NULL,
+            last_activity BIGINT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_php_sessions_activity ON php_sessions(last_activity)",
+
         // 18b. Document templates: business permit, O.R./permit numbers, print queue, revocation
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS business_name VARCHAR(200) NULL",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS business_type VARCHAR(120) NULL",

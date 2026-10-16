@@ -16,12 +16,15 @@ ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_secure', $isHttps ? '1' : '0');
 ini_set('session.cookie_samesite', 'Lax');
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 require __DIR__ . '/helpers.php';
 require __DIR__ . '/../config/database.php';
+
+// Sessions live in the database so a deploy or a sleeping Render instance
+// (both wipe the container's disk) no longer signs everyone out.
+if (session_status() === PHP_SESSION_NONE) {
+    \App\Services\DbSessionHandler::register();
+    session_start();
+}
 
 require __DIR__ . '/ErrorHandler.php';
 ErrorHandler::register();
