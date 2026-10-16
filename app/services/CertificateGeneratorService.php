@@ -17,9 +17,10 @@ use BaconQrCode\Encoder\Encoder;
  * QR code to BarangGabay's verification page.
  *
  * $preview = true draws the same document for staff to check before
- * approving, watermarked PREVIEW and without any signature. A final document
- * is only produced with the Punong Barangay's uploaded e-signature
- * (approveAndGenerate refuses otherwise).
+ * approving (and for the admin's Sample PDF), with the Punong Barangay's
+ * authorized e-signature. It has no control number or verification QR yet;
+ * those, the O.R. number and the record of who approved it are added when the
+ * request is approved (approveAndGenerate refuses without the signature).
  */
 class CertificateGeneratorService
 {
@@ -121,10 +122,6 @@ class CertificateGeneratorService
         $pdf->SetAutoPageBreak(false);
         $pdf->SetMargins(20, 15, 20);
         $pdf->AddPage();
-        if ($preview) {
-            self::watermark($pdf, 105, 190);
-        }
-
         self::header($pdf, 20, 190, 16, $family, $mono);
 
         // Office line and title
@@ -201,10 +198,6 @@ class CertificateGeneratorService
         $pdf = new BarangayPdf('L', 'mm', 'A4');   // 297 x 210
         $pdf->SetAutoPageBreak(false);
         $pdf->AddPage();
-        if ($preview) {
-            self::watermark($pdf, 148, 120);
-        }
-
         // Decorative double border with corner ornaments
         $pdf->SetDrawColor(30, 30, 30);
         $pdf->SetLineWidth(1.4);
@@ -296,23 +289,30 @@ class CertificateGeneratorService
     }
 
     /**
-     * Name (bold, underlined) over the role, with the officer's uploaded
-     * e-signature above the name on a final document. A preview never
-     * carries a signature.
+     * Name (bold, underlined) over the role, with the officer's authorized
+     * e-signature above the name (the Punong Barangay authorized its use on
+     * the barangay's documents, previews included). When the captain's
+     * signature is missing a preview says so, since approval needs it.
      */
     private static function signatory(BarangayPdf $pdf, string $signer, string $name, string $role, float $x, float $nameY, float $width, string $family, bool $preview, string $align, bool $markMissing = true): void
     {
-        $sig = $preview ? null : DocumentTemplate::signature($signer);
+        $sig = DocumentTemplate::signature($signer);
         if ($sig !== null) {
+            $sig  = self::trimSignature($sig);
             $size = @getimagesizefromstring($sig['data']) ?: [400, 150];
-            $h    = 16.0;
-            $w    = min($width * 0.8, $h * $size[0] / max(1, $size[1]));
-            $pdf->imageFromBytes($sig['data'], $sig['mime'], $x + ($width - $w) / 2, $nameY - $h + 2, $w, $h);
+            $ratio = $size[0] / max(1, $size[1]);
+            $h    = 18.0;
+            $w    = $h * $ratio;
+            if ($w > $width * 0.8) {        // very wide signature: keep its shape
+                $w = $width * 0.8;
+                $h = $w / $ratio;
+            }
+            $pdf->imageFromBytes($sig['data'], $sig['mime'], $x + ($width - $w) / 2, $nameY - $h + 3, $w, $h);
         } elseif ($preview && $markMissing) {
             $pdf->SetFont('Helvetica', 'B', 8);
             $pdf->SetTextColor(190, 30, 30);
             $pdf->SetXY($x, $nameY - 8);
-            $pdf->Cell($width, 4, DocumentTemplate::hasSignature($signer) ? 'E-signature applied on approval' : 'SIGNATURE REQUIRED', 0, 0, 'C');
+            $pdf->Cell($width, 4, 'SIGNATURE REQUIRED', 0, 0, 'C');
             $pdf->SetTextColor(20, 20, 20);
         }
 
@@ -374,18 +374,55 @@ class CertificateGeneratorService
         }
     }
 
-    private static function watermark(BarangayPdf $pdf, float $cx, float $cy): void
+    /**
+     * The signature image without its empty margins, so it prints at full
+     * size however much blank canvas the uploaded file had.
+     *
+     * @param array{data:string, mime:string} $sig
+     * @return array{data:string, mime:string}
+     */
+    private static function trimSignature(array $sig): array
     {
-        $pdf->SetFont('Helvetica', 'B', 54);
-        $pdf->SetTextColor(235, 225, 225);
-        $text = 'PREVIEW - NOT VALID';
-        $w    = $pdf->GetStringWidth($text);
-        $pdf->rotatedText($cx - $w / 2 * cos(deg2rad(35)), $cy + $w / 2 * sin(deg2rad(35)), $text, 35);
-        $pdf->SetFont('Helvetica', 'B', 9);
-        $pdf->SetTextColor(190, 30, 30);
-        $pdf->SetXY(10, 4);
-        $pdf->Cell(0, 5, 'PREVIEW FOR STAFF REVIEW - PENDING APPROVAL - NOT AN OFFICIAL DOCUMENT', 0, 0, 'C');
-        $pdf->SetTextColor(20, 20, 20);
+        if (!function_exists('imagecreatefromstring')) {
+            return $sig;
+        }
+        $im = @imagecreatefromstring($sig['data']);
+        if ($im === false) {
+            return $sig;
+        }
+        imagesavealpha($im, true);
+        $cropped = @imagecropauto($im, IMG_CROP_TRANSPARENT);
+        if ($cropped === false || (imagesx($cropped) === imagesx($im) && imagesy($cropped) === imagesy($im))) {
+            $cropped = @imagecropauto($im, IMG_CROP_THRESHOLD, 0.3, 0xFFFFFF);   // white background
+        }
+        if ($cropped === false || imagesx($cropped) < 10 || imagesy($cropped) < 10) {
+            $cropped = $im;
+        }
+
+        // Paper-white background becomes transparent, so only the ink prints
+        // and nothing under the signature (like "Approved BY:") is covered.
+        $w   = imagesx($cropped);
+        $h   = imagesy($cropped);
+        $out = imagecreatetruecolor($w, $h);
+        imagealphablending($out, false);
+        imagesavealpha($out, true);
+        $clear = imagecolorallocatealpha($out, 255, 255, 255, 127);
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $rgba = imagecolorsforindex($cropped, imagecolorat($cropped, $x, $y));
+                if ($rgba['alpha'] >= 120 || ($rgba['red'] > 225 && $rgba['green'] > 225 && $rgba['blue'] > 225)) {
+                    imagesetpixel($out, $x, $y, $clear);
+                } else {
+                    imagesetpixel($out, $x, $y, imagecolorallocatealpha($out, $rgba['red'], $rgba['green'], $rgba['blue'], $rgba['alpha']));
+                }
+            }
+        }
+        $cropped = $out;
+        ob_start();
+        imagepng($cropped);
+        $png = (string) ob_get_clean();
+
+        return $png !== '' ? ['data' => $png, 'mime' => 'image/png'] : $sig;
     }
 
     /** QR code drawn as vector squares (crisp when printed). */

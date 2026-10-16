@@ -162,7 +162,7 @@ class DocumentTemplateController
         redirect('/admin/document-templates#tpl-' . $type);
     }
 
-    /** GET /admin/document-templates/{type}/sample — the template with sample data (watermarked) */
+    /** GET /admin/document-templates/{type}/sample — the template with sample data and the authorized e-signature */
     public function sample(array $params): void
     {
         $type = (string) ($params['type'] ?? '');
@@ -179,7 +179,7 @@ class DocumentTemplateController
 
     // ── Staff: preview, print queue, cancel ─────────────────────────────
 
-    /** GET /admin/documents/{id}/draft — the auto-generated document before approval (watermarked, unsigned) */
+    /** GET /admin/documents/{id}/draft — the auto-generated document before approval */
     public function draft(array $params): void
     {
         $request  = DocumentRequest::find((int) ($params['id'] ?? 0));
