@@ -414,6 +414,7 @@ return [
     'Fee waived by the barangay' => 'Gi-waive sa barangay ang bayranan',
     'Feedback' => 'Komento',
     'Female' => 'bujag',
+    'File photo:' => 'Kudak nga panig-ingnan:',
     'Filipino' => 'Filipino',
     'Filipino (FIL)' => 'Filipino (FIL)',
     'Filter' => 'Pagsala',

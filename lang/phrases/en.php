@@ -1629,4 +1629,5 @@ return [
     'Early warning (international data)' => 'Early warning (international data)',
     'Until :when' => 'Until :when',
     'Read the full alert' => 'Read the full alert',
+    'File photo:' => 'File photo:',
 ];

@@ -17,8 +17,10 @@ declare(strict_types=1);
  * National facts are current as of October 2026 and attributed to their
  * source (PAGASA, DOST, DOH, COMELEC, Proclamation No. 1006 s. 2025,
  * RA 12326). Anything barangay-level — dates, venues, ordinance numbers in
- * Bayogo — is illustrative: every row is is_sample = 1, every cover carries a
- * SAMPLE tag, and every ordinance is [SAMPLE] in its title and number.
+ * Bayogo — is illustrative: every row is is_sample = 1 and every ordinance is
+ * [SAMPLE] in its title and number. Covers are real, openly licensed photos
+ * from Wikimedia Commons; the photographer and licence are in
+ * public/assets/images/posts/credits.json and shown under each photo.
  */
 
 return [
@@ -30,7 +32,7 @@ return [
 
     [
         'slug'     => 'el-nino-magtipid-ng-tubig-2026',
-        'cover'    => 'el-nino-water.png',
+        'cover'    => 'el-nino-water.jpg',
         'category' => 'safety',
         'urgency'  => 'important',
         'days_ago' => 1,
@@ -66,7 +68,7 @@ return [
 
     [
         'slug'     => 'balita-halalang-barangay-sk-2026',
-        'cover'    => 'bske-ballot.png',
+        'cover'    => 'bske-ballot.jpg',
         'category' => 'government',
         'urgency'  => 'important',
         'days_ago' => 3,
@@ -99,7 +101,7 @@ return [
 
     [
         'slug'     => 'undas-2026-walang-pasok-paalala',
-        'cover'    => 'undas-candles.png',
+        'cover'    => 'undas-candles.jpg',
         'category' => 'general',
         'urgency'  => 'normal',
         'days_ago' => 0,
@@ -135,7 +137,7 @@ return [
 
     [
         'slug'     => 'buwan-ng-mga-katutubo-oktubre-2026',
-        'cover'    => 'ip-month.png',
+        'cover'    => 'ip-month.jpg',
         'category' => 'social',
         'urgency'  => 'normal',
         'days_ago' => 7,
@@ -168,7 +170,7 @@ return [
 
     [
         'slug'     => 'ligtas-tigdas-bakuna-2026',
-        'cover'    => 'measles-vaccine.png',
+        'cover'    => 'measles-vaccine.jpg',
         'category' => 'health',
         'urgency'  => 'important',
         'days_ago' => 5,
@@ -207,7 +209,7 @@ return [
 
     [
         'slug'  => 'pagdiriwang-kulturang-manobo-2026',
-        'cover' => 'manobo-cultural-day.png',
+        'cover' => 'manobo-cultural-day.jpg',
         'start' => '2026-10-24 08:00:00',
         'end'   => '2026-10-24 16:00:00',
         'venue' => 'Barangay Plaza, Bayogo',
@@ -226,7 +228,7 @@ return [
 
     [
         'slug'  => 'pagsasanay-pag-iipon-tubig-ulan-2026',
-        'cover' => 'rainwater-workshop.png',
+        'cover' => 'rainwater-workshop.jpg',
         'start' => '2026-10-21 09:00:00',
         'end'   => '2026-10-21 12:00:00',
         'venue' => 'Bayogo Barangay Hall',
@@ -245,7 +247,7 @@ return [
 
     [
         'slug'  => 'pahabol-na-bakuna-mga-bata-2026',
-        'cover' => 'catch-up-vaccination.png',
+        'cover' => 'catch-up-vaccination.jpg',
         'start' => '2026-10-28 08:00:00',
         'end'   => '2026-10-28 15:00:00',
         'venue' => 'Bayogo Barangay Health Station',
@@ -264,7 +266,7 @@ return [
 
     [
         'slug'  => 'paglilinis-sementeryo-bago-undas-2026',
-        'cover' => 'cemetery-cleanup.png',
+        'cover' => 'cemetery-cleanup.jpg',
         'start' => '2026-10-30 06:00:00',
         'end'   => '2026-10-30 11:00:00',
         'venue' => 'Bayogo Public Cemetery',
@@ -283,7 +285,7 @@ return [
 
     [
         'slug'  => 'pagsasanay-paglikas-lindol-tsunami-2026',
-        'cover' => 'evacuation-drill.png',
+        'cover' => 'evacuation-drill.jpg',
         'start' => '2026-11-07 09:00:00',
         'end'   => '2026-11-07 11:00:00',
         'venue' => 'Bayogo Elementary School',

@@ -1629,4 +1629,5 @@ return [
     'Early warning (international data)' => 'Maagang babala (pandaigdigang datos)',
     'Until :when' => 'Hanggang :when',
     'Read the full alert' => 'Basahin ang buong abiso',
+    'File photo:' => 'Larawang panghalimbawa:',
 ];

@@ -137,6 +137,30 @@ function pull_intended_url(): ?string
     return is_string($path) && preg_match('~^/(announcements|events|ordinances|d)/[A-Za-z0-9_-]+$~', $path) === 1 ? $path : null;
 }
 
+/**
+ * Credit for a cover photo taken from Wikimedia Commons (licences such as
+ * CC BY-SA require naming the author and licence). Read from
+ * public/assets/images/posts/credits.json, keyed by file name; null for
+ * the barangay's own photos.
+ *
+ * @return array{by:string, license:string, license_url:string, source:string, note?:string}|null
+ */
+function image_credit(string $path): ?array
+{
+    static $credits = null;
+    if ($credits === null) {
+        $file    = __DIR__ . '/../public/assets/images/posts/credits.json';
+        $credits = is_file($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
+    }
+    // Only the bundled photos: a staff upload never inherits a credit by name.
+    if (!str_starts_with(ltrim(str_replace('\\', '/', $path), '/'), 'assets/images/posts/')) {
+        return null;
+    }
+    $credit = $credits[basename($path)] ?? null;
+
+    return is_array($credit) && !empty($credit['by']) ? $credit : null;
+}
+
 function redirect(string $path): void
 {
     if (strpos($path, '://') === false) {

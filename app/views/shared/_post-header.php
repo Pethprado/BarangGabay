@@ -107,6 +107,14 @@ $__pRelative = relative_time($__pStamp);
     <?php if ($__pImage !== null && trim((string) $__pImage) !== ''): ?>
     <figure class="post-hero">
         <img src="<?= e(asset($__pImage)) ?>" alt="<?= e($__pTitle) ?>" loading="lazy" onerror="this.closest('figure').remove()">
+        <?php if (($__credit = image_credit((string) $__pImage)) !== null): ?>
+        <figcaption>
+            <?= e(__('File photo:')) ?> <?= e($__credit['by']) ?> /
+            <a href="<?= e($__credit['source']) ?>" target="_blank" rel="noopener">Wikimedia Commons</a>,
+            <?php if (!empty($__credit['license_url'])): ?><a href="<?= e($__credit['license_url']) ?>" target="_blank" rel="noopener license"><?= e($__credit['license']) ?></a><?php else: ?><?= e($__credit['license']) ?><?php endif; ?>
+            <?= !empty($__credit['note']) ? ' · ' . e($__credit['note']) : '' ?>
+        </figcaption>
+        <?php endif; ?>
     </figure>
     <?php endif; ?>
 </article>

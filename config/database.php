@@ -886,6 +886,19 @@ function syncPostgresSchema(PDO $pdo): void
         } catch (\Throwable $e) {
             error_log('PgSQL sample phones note: ' . $e->getMessage());
         }
+
+        // Sample post covers became real, credited Commons photos (2026-10-17):
+        // the drawn .png covers were replaced by .jpg files of the same name.
+        // Matches only is_sample rows still on the old bundled .png, so it is a
+        // no-op after the first run and never touches a staff upload.
+        try {
+            foreach (['announcements', 'events'] as $table) {
+                $pdo->exec("UPDATE {$table} SET cover_image_url = REPLACE(cover_image_url, '.png', '.jpg')
+                            WHERE is_sample = 1 AND cover_image_url LIKE 'assets/images/posts/%.png'");
+            }
+        } catch (\Throwable $e) {
+            error_log('PgSQL sample covers note: ' . $e->getMessage());
+        }
     }
 }
 }

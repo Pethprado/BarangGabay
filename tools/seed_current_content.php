@@ -13,8 +13,8 @@ declare(strict_types=1);
  * touched by an automatic step.
  *
  * Content: tools/current-content/content.php (EN, FIL and MN written by
- * hand). Covers: public/assets/images/posts/*.png (sources in
- * tools/current-content/covers/*.svg). Ordinance PDFs:
+ * hand). Covers: public/assets/images/posts/*.jpg (openly licensed Wikimedia
+ * Commons photos, credited from credits.json). Ordinance PDFs:
  * public/assets/samples/ordinances/*.pdf. All three are committed files, so
  * they survive Render restarts, unlike public/uploads.
  *

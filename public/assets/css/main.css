@@ -1647,6 +1647,9 @@ textarea:focus {
     background: var(--surface-muted);
 }
 .post-hero img { display: block; width: 100%; height: auto; }
+/* Photographer + licence for openly licensed cover photos (credits.json). */
+.post-hero figcaption { font-size: .72rem; color: var(--text-muted); padding: .4rem .75rem .5rem; }
+.post-hero figcaption a { color: inherit; text-decoration: underline; }
 
 /* ── Article body ───────────────────────────────────────────────────── */
 /* A measure, not the full column: long lines are the single biggest thing
