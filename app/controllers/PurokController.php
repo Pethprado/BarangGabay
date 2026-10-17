@@ -18,7 +18,7 @@ class PurokController
     public const NONE = 'none';
 
     /**
-     * GET /admin/puroks
+     * GET /admin/residents?view=puroks (Residents → By purok)
      * Totals, one row per purok, and the members of the selected purok.
      */
     public function index(): void
@@ -46,12 +46,20 @@ class PurokController
         unset($_SESSION['purok_new_login']);
 
         $pendingCount = User::countByStatus('pending');
-        $pageTitle    = 'Puroks & Residents';
+        $pageTitle    = t('residents.title');
 
         view('admin/puroks/index', compact(
             'totals', 'puroks', 'selected', 'search', 'find',
             'members', 'candidates', 'newLogin', 'pendingCount', 'pageTitle'
         ));
+    }
+
+    /** GET /admin/puroks — old address: Puroks now live in Residents. */
+    public function legacy(): void
+    {
+        $query = $_GET;
+        $query['view'] = 'puroks';
+        redirect('/admin/residents?' . http_build_query($query));
     }
 
     /**
@@ -65,19 +73,19 @@ class PurokController
         $purok = trim((string) ($_POST['purok'] ?? ''));
         if (!Purok::isKnown($purok)) {
             flash('error', 'Choose a valid purok.');
-            redirect('/admin/puroks');
+            redirect('/admin/residents?view=puroks');
         }
 
         $ids = (array) ($_POST['user_ids'] ?? []);
         $n   = Purok::assign($ids, $purok);
         if ($n === 0) {
             flash('error', 'Tick at least one resident to add.');
-            redirect('/admin/puroks?purok=' . rawurlencode($purok));
+            redirect('/admin/residents?view=puroks&purok=' . rawurlencode($purok) . '#members');
         }
 
         AuditLog::record((int) $_SESSION['user_id'], 'purok.assigned', "{$n} resident(s) added to {$purok} (IDs " . implode(', ', array_map('intval', $ids)) . ')');
         flash('success', "{$n} resident(s) added to {$purok}.");
-        redirect('/admin/puroks?purok=' . rawurlencode($purok));
+        redirect('/admin/residents?view=puroks&purok=' . rawurlencode($purok) . '#members');
     }
 
     /**
@@ -94,13 +102,13 @@ class PurokController
 
         if ($user === null || ($user['role'] ?? '') !== 'resident') {
             flash('error', 'Resident not found.');
-            redirect('/admin/puroks');
+            redirect('/admin/residents?view=puroks');
         }
 
         Purok::assign([$id], '');
         AuditLog::record((int) $_SESSION['user_id'], 'purok.removed', "{$user['full_name']} (ID #{$id}) removed from {$purok}");
         flash('success', "{$user['full_name']} was removed from {$purok}. The account was not deleted.");
-        redirect('/admin/puroks?purok=' . rawurlencode($purok));
+        redirect('/admin/residents?view=puroks&purok=' . rawurlencode($purok) . '#members');
     }
 
     /**
@@ -116,7 +124,7 @@ class PurokController
         $phone   = trim((string) ($_POST['phone'] ?? ''));
         $address = trim((string) ($_POST['address'] ?? ''));
         $email   = trim((string) ($_POST['email'] ?? ''));
-        $back    = '/admin/puroks?purok=' . rawurlencode($purok);
+        $back    = '/admin/residents?view=puroks&purok=' . rawurlencode($purok) . '#members';
 
         $errors = [];
         if ($name === '' || mb_strlen($name) > 150) {
@@ -124,7 +132,7 @@ class PurokController
         }
         if (!Purok::isKnown($purok)) {
             $errors[] = 'Choose a valid purok.';
-            $back     = '/admin/puroks';
+            $back     = '/admin/residents?view=puroks';
         }
         if ($phone !== '' && preg_match('/^(\+?63|0)?9\d{9}$/', preg_replace('/[\s\-()]/', '', $phone) ?? '') !== 1) {
             $errors[] = 'Enter a Philippine mobile number like 09171234567, or leave it blank.';

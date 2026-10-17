@@ -517,7 +517,7 @@ class User
     /**
      * All residents with optional status and name/email search.
      */
-    public static function allResidents(string $status = '', string $search = ''): array
+    public static function allResidents(string $status = '', string $search = '', string $purok = ''): array
     {
         $where  = ["role = 'resident'"];
         $params = [];
@@ -527,9 +527,16 @@ class User
             $params[] = $status;
         }
         if ($search !== '') {
-            $where[] = '(full_name LIKE ? OR email LIKE ?)';
-            $like = '%' . $search . '%';
-            array_push($params, $like, $like);
+            $where[] = '(LOWER(full_name) LIKE ? OR LOWER(email) LIKE ? OR phone LIKE ?)';
+            $like = '%' . mb_strtolower($search) . '%';
+            array_push($params, $like, $like, '%' . $search . '%');
+        }
+        // Purok filter: a purok name, or 'none' for residents without one.
+        if ($purok === 'none') {
+            $where[] = "(zone IS NULL OR TRIM(zone) = '')";
+        } elseif ($purok !== '') {
+            $where[] = 'TRIM(zone) = ?';
+            $params[] = $purok;
         }
 
         $sql  = 'SELECT * FROM users WHERE ' . implode(' AND ', $where) . ' ORDER BY created_at DESC';

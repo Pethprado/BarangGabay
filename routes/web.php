@@ -127,7 +127,7 @@ return [
     ['POST', '/admin/staff',        'ResidentController@storeStaff',  ['auth', 'role:admin,superadmin']],
     ['GET', '/admin/residents', 'ResidentController@adminIndex', ['auth', 'role:admin,staff']],
     // Puroks: residents per purok, add residents to a purok, register in person.
-    ['GET',  '/admin/puroks',           'PurokController@index',         ['auth', 'role:admin,staff']],
+    ['GET',  '/admin/puroks',           'PurokController@legacy',        ['auth', 'role:admin,staff']],   // → /admin/residents?view=puroks
     ['POST', '/admin/puroks/assign',    'PurokController@assign',        ['auth', 'role:admin,staff']],
     ['POST', '/admin/puroks/remove',    'PurokController@remove',        ['auth', 'role:admin,staff']],
     ['POST', '/admin/puroks/residents', 'PurokController@storeResident', ['auth', 'role:admin,staff']],

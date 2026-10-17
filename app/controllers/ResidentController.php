@@ -570,14 +570,26 @@ class ResidentController
      */
     public function adminIndex(): void
     {
+        // Puroks live inside Residents: /admin/residents?view=puroks
+        if (($_GET['view'] ?? '') === 'puroks') {
+            (new PurokController())->index();
+            return;
+        }
+
         $status = trim($_GET['status'] ?? '');
         $search = trim($_GET['search'] ?? '');
+        $purok  = trim((string) ($_GET['purok'] ?? ''));
 
         if (!in_array($status, ['', 'pending', 'verified', 'suspended'], true)) {
             $status = '';
         }
+        $purokSummary = \App\Models\Purok::summary();
+        $noPurok      = \App\Models\Purok::totals()['no_purok'];
+        if ($purok !== '' && $purok !== 'none' && !in_array($purok, array_column($purokSummary, 'name'), true)) {
+            $purok = '';
+        }
 
-        $residents = User::allResidents($status, $search);
+        $residents = User::allResidents($status, $search, $purok);
 
         $counts = [
             'all'       => User::countByStatus(''),
@@ -590,7 +602,7 @@ class ResidentController
         $pageTitle    = t('residents.title');
 
         view('admin/residents/index', compact(
-            'residents', 'counts', 'status', 'search', 'pendingCount', 'pageTitle'
+            'residents', 'counts', 'status', 'search', 'pendingCount', 'pageTitle', 'purok', 'purokSummary', 'noPurok'
         ));
     }
 

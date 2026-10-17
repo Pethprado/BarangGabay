@@ -7,6 +7,9 @@ $residents = $residents ?? [];
 $counts    = $counts    ?? ['all' => 0, 'pending' => 0, 'verified' => 0, 'suspended' => 0];
 $status    = $status    ?? '';
 $search    = $search    ?? '';
+$purok     = $purok     ?? '';
+$purokSummary = $purokSummary ?? [];
+$noPurok   = (int) ($noPurok ?? 0);
 
 $statusMeta = [
     'pending'   => ['cls' => 'background:#fff3cd;color:#856404;border:1px solid #ffc107;',  'label' => t('residents.status_pending')],
@@ -14,11 +17,12 @@ $statusMeta = [
     'suspended' => ['cls' => 'background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;',  'label' => t('residents.status_suspended')],
 ];
 
-/** Build a filter URL preserving the other active param. */
-$tabUrl = static function (string $tabStatus, string $search): string {
+/** Build a filter URL preserving the other active params (status, search, purok). */
+$tabUrl = static function (string $tabStatus, string $search, string $purokFilter = ''): string {
     $p = [];
-    if ($tabStatus !== '') $p['status'] = $tabStatus;
-    if ($search !== '')    $p['search'] = $search;
+    if ($tabStatus !== '')   $p['status'] = $tabStatus;
+    if ($search !== '')      $p['search'] = $search;
+    if ($purokFilter !== '') $p['purok']  = $purokFilter;
     return route('admin/residents') . ($p ? '?' . http_build_query($p) : '');
 };
 
@@ -69,6 +73,27 @@ ob_start();
     <?php endif; ?>
 </div>
 
+<?php $residentsView = 'list'; require __DIR__ . '/_switch.php'; ?>
+
+<!-- ── Purok filter ──────────────────────────────────────────────── -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3" aria-label="Filter by purok">
+    <span class="text-muted me-1" style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;"><i class="bi bi-houses me-1" aria-hidden="true"></i>Purok</span>
+    <a href="<?= e($tabUrl($status, $search, '')) ?>" class="tab-pill<?= $purok === '' ? ' active' : '' ?>" style="padding:4px 12px;font-size:.78rem;">All</a>
+    <?php foreach ($purokSummary as $pk): ?>
+    <a href="<?= e($tabUrl($status, $search, $pk['name'])) ?>" class="tab-pill<?= $purok === $pk['name'] ? ' active' : '' ?>" style="padding:4px 12px;font-size:.78rem;">
+        <?= e($pk['name']) ?> <span class="tab-count">(<?= (int) $pk['total'] ?>)</span>
+    </a>
+    <?php endforeach; ?>
+    <?php if ($noPurok > 0): ?>
+    <a href="<?= e($tabUrl($status, $search, 'none')) ?>" class="tab-pill<?= $purok === 'none' ? ' active' : '' ?>" style="padding:4px 12px;font-size:.78rem;">
+        No purok <span class="tab-count">(<?= $noPurok ?>)</span>
+    </a>
+    <?php endif; ?>
+    <?php if ($purok !== '' && $purok !== 'none'): ?>
+    <a href="<?= e(route('admin/residents') . '?view=puroks&purok=' . rawurlencode($purok)) ?>#members" class="ms-1" style="font-size:.78rem;">Manage <?= e($purok) ?> &rarr;</a>
+    <?php endif; ?>
+</div>
+
 <!-- ── Tab filter ────────────────────────────────────────────────── -->
 <div class="d-flex flex-wrap gap-2 mb-4">
     <?php
@@ -80,7 +105,7 @@ ob_start();
     ];
     foreach ($tabs as $tabStatus => [$tabLabel, $tabCount, $tabCls]):
         $isActive = ($status === $tabStatus);
-        $url = $tabUrl($tabStatus, $search);
+        $url = $tabUrl($tabStatus, $search, $purok);
     ?>
     <a href="<?= e($url) ?>"
        class="tab-pill <?= $tabCls ?><?= $isActive ? ' active' : '' ?>">
@@ -98,6 +123,9 @@ ob_start();
         <?php if ($status): ?>
         <input type="hidden" name="status" value="<?= e($status) ?>">
         <?php endif; ?>
+        <?php if ($purok !== ''): ?>
+        <input type="hidden" name="purok" value="<?= e($purok) ?>">
+        <?php endif; ?>
         <div class="input-group" style="max-width:360px;">
             <span class="input-group-text" style="background:#f8fbf9;border-color:#dee2e6;">
                 <i class="bi bi-search" style="font-size:.8rem;color:var(--text-muted);"></i>
@@ -110,7 +138,7 @@ ob_start();
                 <?= e(t('residents.search_btn')) ?>
             </button>
         </div>
-        <?php if ($search || $status): ?>
+        <?php if ($search || $status || $purok): ?>
         <a href="<?= e(route('admin/residents')) ?>"
            class="d-inline-flex align-items-center gap-1 text-muted text-decoration-none"
            style="font-size:.82rem;padding:6px 10px;">

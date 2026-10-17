@@ -18,20 +18,21 @@ $statusStyle = [
     'pending'   => 'background:#fef9c3;color:#92400e;',
     'suspended' => 'background:#fee2e2;color:#991b1b;',
 ];
-$purokUrl = static fn (string $name): string => route('admin/puroks') . '?purok=' . rawurlencode($name);
+$purokUrl = static fn (string $name): string => route('admin/residents') . '?view=puroks&purok=' . rawurlencode($name);
 
 ob_start();
 ?>
 
-<!-- ── Header ──────────────────────────────────────────────────────────── -->
-<div class="mb-4">
-    <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">Management</p>
-    <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;">Puroks &amp; Residents</h1>
+<!-- ── Header (Residents → By purok) ───────────────────────────────────── -->
+<div class="mb-3">
+    <p class="mb-0" style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);"><?= e(t('residents.eyebrow')) ?></p>
+    <h1 class="mb-0 mt-1" style="font-size:1.55rem;font-weight:800;color:var(--text-primary);line-height:1.1;"><?= e(t('residents.title')) ?></h1>
     <p class="text-muted mt-1 mb-0" style="font-size:.82rem;max-width:760px;">
-        See how many residents are registered in Barangay Bayogo and in each purok. Open a purok to see its members,
+        How many residents are registered in Barangay Bayogo and in each purok. Open a purok to see its members,
         add residents who are already registered, or register a new resident directly into that purok.
     </p>
 </div>
+<?php $residentsView = 'puroks'; require __DIR__ . '/../residents/_switch.php'; ?>
 
 <?php if (is_array($newLogin)): ?>
 <div class="alert alert-warning" role="alert">
@@ -131,7 +132,8 @@ ob_start();
                     <?= $isPurok ? e($selected) . ' members' : 'Residents with no purok' ?>
                     <span class="badge bg-secondary ms-1"><?= count($members) ?></span>
                 </h2>
-                <form method="get" action="<?= e(route('admin/puroks')) ?>" class="d-flex gap-2">
+                <form method="get" action="<?= e(route('admin/residents')) ?>#members" class="d-flex gap-2">
+                    <input type="hidden" name="view" value="puroks">
                     <input type="hidden" name="purok" value="<?= e($selected) ?>">
                     <input type="search" name="q" value="<?= e($search) ?>" class="form-control form-control-sm" placeholder="Search name, email or phone" aria-label="Search members">
                     <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Search</span></button>
@@ -183,7 +185,8 @@ ob_start();
         <div class="admin-card mb-4">
             <h2 class="h6 fw-bold mb-1"><i class="bi bi-person-plus me-1" aria-hidden="true"></i>Add registered residents to <?= e($selected) ?></h2>
             <p class="text-muted small mb-2">Tick residents who already have an account. Residents in another purok are moved here.</p>
-            <form method="get" action="<?= e(route('admin/puroks')) ?>" class="d-flex gap-2 mb-2">
+            <form method="get" action="<?= e(route('admin/residents')) ?>#members" class="d-flex gap-2 mb-2">
+                <input type="hidden" name="view" value="puroks">
                 <input type="hidden" name="purok" value="<?= e($selected) ?>">
                 <input type="search" name="find" value="<?= e($find) ?>" class="form-control form-control-sm" placeholder="Find a resident by name, email or phone" aria-label="Find a resident">
                 <button class="btn btn-sm btn-outline-secondary" type="submit">Find</button>
@@ -248,6 +251,6 @@ ob_start();
 
 <?php
 $content   = ob_get_clean();
-$pageTitle ??= 'Puroks & Residents';
+$pageTitle ??= t('residents.title');
 require __DIR__ . '/../../layouts/admin.php';
 ?>
