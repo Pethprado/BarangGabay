@@ -3,8 +3,9 @@
  * Residents management: the two views under one menu item.
  *   Residents list  /admin/residents
  *   By purok        /admin/residents?view=puroks
+ *   Import          /admin/residents/import
  *
- * Expects $residentsView ('list' | 'puroks').
+ * Expects $residentsView ('list' | 'puroks' | 'import').
  */
 $residentsView ??= 'list';
 try {
@@ -31,5 +32,12 @@ $__swPuroks = count(barangay_subdivisions());
         <?php if ((int) $__swTotals['no_purok'] > 0): ?>
         <span class="badge rounded-pill bg-warning text-dark" title="Residents with no purok yet"><?= (int) $__swTotals['no_purok'] ?> unassigned</span>
         <?php endif; ?>
+    </a>
+    <a href="<?= e(route('admin/residents/import')) ?>"
+       class="d-inline-flex align-items-center gap-2 text-decoration-none px-3 py-2 rounded-3 fw-semibold"
+       style="font-size:.86rem;<?= $residentsView === 'import' ? 'background:var(--action-solid);color:#fff;' : 'background:var(--surface-card);color:var(--text-secondary);border:1px solid var(--border);' ?>"
+       <?= $residentsView === 'import' ? 'aria-current="page"' : '' ?>>
+        <i class="bi bi-upload" aria-hidden="true"></i> Import list
+        <span class="badge rounded-pill" style="background:rgba(0,0,0,.12);color:inherit;">CSV · Excel · PDF</span>
     </a>
 </nav>

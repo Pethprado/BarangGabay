@@ -12,7 +12,8 @@
     "intervention/image": "^2.7",
     "pragmarx/google2fa": "^8.0",
     "bacon/bacon-qr-code": "^3.0",
-    "fpdf/fpdf": "^1.90"
+    "fpdf/fpdf": "^1.90",
+    "smalot/pdfparser": "^2.11"
   },
   "autoload": {
     "psr-4": {

@@ -126,6 +126,12 @@ return [
 ['GET',  '/admin/staff/create', 'ResidentController@createStaff', ['auth', 'role:admin,superadmin']],
     ['POST', '/admin/staff',        'ResidentController@storeStaff',  ['auth', 'role:admin,superadmin']],
     ['GET', '/admin/residents', 'ResidentController@adminIndex', ['auth', 'role:admin,staff']],
+    // Residents → Import (CSV / Excel / PDF list → preview → import). Before /admin/residents/{id}.
+    ['GET',  '/admin/residents/import',          'ResidentImportController@show',     ['auth', 'role:admin,staff']],
+    ['POST', '/admin/residents/import',          'ResidentImportController@upload',   ['auth', 'role:admin,staff']],
+    ['POST', '/admin/residents/import/confirm',  'ResidentImportController@confirm',  ['auth', 'role:admin,staff']],
+    ['POST', '/admin/residents/import/cancel',   'ResidentImportController@cancel',   ['auth', 'role:admin,staff']],
+    ['GET',  '/admin/residents/import/template', 'ResidentImportController@template', ['auth', 'role:admin,staff']],
     // Puroks: residents per purok, add residents to a purok, register in person.
     ['GET',  '/admin/puroks',           'PurokController@legacy',        ['auth', 'role:admin,staff']],   // → /admin/residents?view=puroks
     ['POST', '/admin/puroks/assign',    'PurokController@assign',        ['auth', 'role:admin,staff']],
