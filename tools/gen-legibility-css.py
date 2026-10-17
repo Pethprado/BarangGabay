@@ -19,11 +19,11 @@ white = ['.bg-white', '.bg-light', '.card', '.list-group-item',
          '[style*="background:#fff;"]', '[style*="background: #fff;"]', '[style$="background:#fff"]',
          '[style*="background:#ffffff"]', '[style*="background: #ffffff"]', '[style*="background:white"]',
          '[style*="background-color:#fff;"]', '[style*="background:#fcfdfc"]', '[style*="background:#fffdf8"]']
-grey  = bg('#f8f9fa', '#f9fafb', '#f1f5f9', '#e9ecef', '#f8fafc', '#e2e8f0', '#f8fbf9', '#f3f4f6', '#f5f5f5', '#f0f0f0')
-green = bg('#f0faf4', '#dcfce7', '#d1fae5', '#e3ede4', '#ecfdf5', '#f0fdf4', '#e6f4ea', '#e8f6ee', '#e2f2e8') + ['.bg-success-subtle']
-amber = bg('#fef3c7', '#fffbeb', '#fff3cd', '#fefce8', '#fef9c3', '#fdf1d8', '#fff7ed', '#ffedd5', '#fcebd9', '#f8eed6')
-blue  = bg('#e0f2fe', '#eef2ff', '#cfe2ff', '#dbeafe', '#eff6ff', '#e0e7ff', '#e3ecfb', '#e5f0fd') + ['.bg-primary-subtle', '.bg-info-subtle']
-red   = bg('#fee2e2', '#fef2f2', '#fce7e3', '#ffe4e6', '#f8e1e1', '#fde8e8') + ['.bg-danger-subtle']
+grey  = bg('#ece7dd', '#f8f9fa', '#f9fafb', '#f1f5f9', '#e9ecef', '#f8fafc', '#e2e8f0', '#f8fbf9', '#f3f4f6', '#f5f5f5', '#f0f0f0')
+green = bg('#ccfbf1', '#a7f3d0', '#d1e7dd', '#f0faf4', '#dcfce7', '#d1fae5', '#e3ede4', '#ecfdf5', '#f0fdf4', '#e6f4ea', '#e8f6ee', '#e2f2e8') + ['.bg-success-subtle']
+amber = bg('#f5e8d0', '#fef3c7', '#fffbeb', '#fff3cd', '#fefce8', '#fef9c3', '#fdf1d8', '#fff7ed', '#ffedd5', '#fcebd9', '#f8eed6')
+blue  = bg('#eaf3ff', '#e0f2fe', '#eef2ff', '#cfe2ff', '#dbeafe', '#eff6ff', '#e0e7ff', '#e3ecfb', '#e5f0fd') + ['.bg-primary-subtle', '.bg-info-subtle']
+red   = bg('#f6ded7', '#fee2e2', '#fef2f2', '#fce7e3', '#ffe4e6', '#f8e1e1', '#fde8e8') + ['.bg-danger-subtle']
 ink_dark  = [f'[style*="color:{h}"]' for h in ('#374151', '#1f2937', '#111827', '#2d3748', '#334155', '#475569', '#1e293b', '#212529')]
 ink_muted = [f'[style*="color:{h}"]' for h in ('#6b7280', '#64748b', '#6c757d')]
 
@@ -62,13 +62,56 @@ rules = [
     ('.input-group-text', 'background: var(--surface-muted) !important; color: var(--text-secondary) !important; border-color: var(--border-strong) !important;'),
     ('.table', '--bs-table-color: var(--text-primary); --bs-table-bg: transparent; --bs-table-striped-color: var(--text-primary); --bs-table-hover-color: var(--text-primary); color: var(--text-primary);'),
     ('input[type="date"], input[type="time"], input[type="datetime-local"], select', 'color-scheme: dark;'),
+
+    # ── 2026-10-17 sweep (143 failures, ~15 causes) ──────────────────────
+    # The gold "ink" (links on resident names, gold labels) had no dark value: 2.6:1.
+    # Set on the root: --role-resident is computed there from --motif-gold-ink.
+    ('&', '--motif-gold-ink: #e8c46a; --role-resident: #e8c46a; --bs-link-color-rgb: 232, 196, 106; --bs-link-hover-color-rgb: 245, 215, 140;'),
+    # Light Bootstrap fills that carry white text by default.
+    ('.badge.bg-info, .badge.text-bg-info', 'background-color: #0e7490 !important; color: #fff !important;'),
+    # GCash blue under white text (payment page buttons): 3.9:1 -> a deeper GCash blue.
+    ('.gc-blue', 'background-color: #0062cc !important; color: #fff !important;'),
+    # Bootstrap's <code> pink (placeholders on Document Templates, settings): 3.6:1.
+    ('code', 'color: #ff9fcf !important;'),
+    # Inline sky/teal/emerald inks used by newer views (Manobo dictionary, SMS, payments).
+    ('[style*="color:#0284c7"], [style*="color:#0369a1"], [style*="color:#0ea5e9"], [style*="color:#0b4ea2"], [style*="color:#007dfe"], [style*="color:#1e3a8a"]', 'color: var(--status-info) !important;'),
+    ('[style*="color:#065f46"], [style*="color:#064e3b"], [style*="color:#087a4b"], [style*="color:#16a36d"]', 'color: var(--status-success) !important;'),
+    # White numbers on light badge fills: darken the fill, keep the white text.
+    ('.sidebar-badge, .filter-chip-count, .nav-badge', 'background: #0f6e4a !important; color: #fff !important;'),
+    ('.bell-badge, .bg-red-500, .bg-red-600, .badge.bg-danger, .text-bg-danger', 'background-color: #b91c1c !important; color: #fff !important;'),
+    ('.bg-amber-500, .bg-amber-600, .bg-orange-500, .bg-orange-600', 'background-color: #b45309 !important; color: #fff !important;'),
+    ('.btn-outline-danger', 'color: var(--status-danger) !important; border-color: rgba(255,157,157,.55) !important; background: transparent !important;'),
+    # Gold fills keep dark ink (gold stays gold in dark mode).
+    ('[style*="background:var(--motif-gold)"], [style*="background: var(--motif-gold)"], [style*="background:var(--brand-gradient-gold)"], [style*="background: var(--brand-gradient-gold)"]', 'color: #2a1d00 !important;'),
+    # Tailwind light fills with an opacity suffix (table headers, row hover) and light tints.
+    ('.bg-slate-50\\/80, .bg-slate-50\\/60, .bg-slate-50\\/50, .bg-slate-100\\/80, .bg-gray-50, .bg-gray-100', 'background-color: var(--surface-muted) !important; color: var(--text-secondary) !important;'),
+    ('.hover\\:bg-slate-50\\/60:hover, .hover\\:bg-slate-50:hover, .hover\\:bg-slate-100:hover', 'background-color: var(--surface-muted) !important;'),
+    ('.bg-indigo-50, .bg-blue-50, .bg-sky-50, .bg-violet-50, .bg-purple-50', 'background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.3) !important;'),
+    ('.bg-emerald-50, .bg-green-50, .bg-teal-50', 'background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.3) !important;'),
+    ('.bg-amber-50, .bg-yellow-50, .bg-orange-50', 'background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.3) !important;'),
+    ('.bg-rose-50, .bg-red-50, .bg-pink-50', 'background-color: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(255,157,157,.3) !important;'),
+    # Hazard advisory strip: its colours arrive as inline custom properties per level.
+    ('.advisory-strip[style*="--advisory-bar:#a3311c"]', '--advisory-bg: var(--status-danger-bg) !important; --advisory-ink: var(--status-danger) !important; --advisory-bar: #ff6b6b !important;'),
+    ('.advisory-strip[style*="--advisory-bar:#8a5a12"]', '--advisory-bg: var(--status-warning-bg) !important; --advisory-ink: var(--status-warning) !important; --advisory-bar: #f59e0b !important;'),
+    ('.advisory-strip[style*="--advisory-bar:#5b5240"]', '--advisory-bg: var(--surface-muted) !important; --advisory-ink: var(--text-primary) !important; --advisory-bar: #94a3b8 !important;'),
+    # Bootstrap alert boxes keep their pastel fill otherwise (a bright slab on a dark page).
+    ('.alert-danger', 'background-color: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(255,157,157,.35) !important;'),
+    ('.alert-warning', 'background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.35) !important;'),
+    ('.alert-success', 'background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.35) !important;'),
+    ('.alert-info, .alert-primary', 'background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.35) !important;'),
+    ('.alert-secondary, .alert-light', 'background-color: var(--surface-muted) !important; color: var(--text-primary) !important; border-color: var(--border) !important;'),
+    ('.alert a, .alert .alert-link', 'color: inherit !important; text-decoration: underline;'),
+    # Bootstrap contextual table rows (selected purok row etc.).
+    ('.table-success, .table-warning, .table-info, .table-danger, .table-active', '--bs-table-bg: rgba(255,255,255,.06) !important; --bs-table-color: var(--text-primary) !important; color: var(--text-primary) !important;'),
+    ('.table-success > td, .table-success > th', 'background-color: var(--status-success-bg) !important; color: var(--text-primary) !important;'),
+    ('.table-warning > td, .table-warning > th', 'background-color: var(--status-warning-bg) !important; color: var(--text-primary) !important;'),
 ]
 
 def block(prefix, indent=''):
     lines = []
     for sel, decl in rules:
         parts = [x.strip() for x in sel.split(', ')]
-        joined = (',\n' + indent).join(f'{prefix} {x}' for x in parts)
+        joined = (',\n' + indent).join(prefix if x == '&' else f'{prefix} {x}' for x in parts)
         lines.append(f'{indent}{joined} {{ {decl} }}')
     return '\n'.join(lines)
 

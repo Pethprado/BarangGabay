@@ -1232,6 +1232,9 @@ table.table thead th.text-muted { color: #ffffff !important; }
 :root[data-theme="dark"] [style*="background-color:#fff;"],
 :root[data-theme="dark"] [style*="background:#fcfdfc"],
 :root[data-theme="dark"] [style*="background:#fffdf8"] { background-color: var(--surface-card) !important; color: var(--text-primary); border-color: var(--border) !important; }
+:root[data-theme="dark"] [style*="background:#ece7dd"],
+:root[data-theme="dark"] [style*="background: #ece7dd"],
+:root[data-theme="dark"] [style*="background-color:#ece7dd"],
 :root[data-theme="dark"] [style*="background:#f8f9fa"],
 :root[data-theme="dark"] [style*="background: #f8f9fa"],
 :root[data-theme="dark"] [style*="background-color:#f8f9fa"],
@@ -1262,6 +1265,15 @@ table.table thead th.text-muted { color: #ffffff !important; }
 :root[data-theme="dark"] [style*="background:#f0f0f0"],
 :root[data-theme="dark"] [style*="background: #f0f0f0"],
 :root[data-theme="dark"] [style*="background-color:#f0f0f0"] { background: var(--surface-muted) !important; color: var(--text-secondary) !important; border-color: var(--border) !important; }
+:root[data-theme="dark"] [style*="background:#ccfbf1"],
+:root[data-theme="dark"] [style*="background: #ccfbf1"],
+:root[data-theme="dark"] [style*="background-color:#ccfbf1"],
+:root[data-theme="dark"] [style*="background:#a7f3d0"],
+:root[data-theme="dark"] [style*="background: #a7f3d0"],
+:root[data-theme="dark"] [style*="background-color:#a7f3d0"],
+:root[data-theme="dark"] [style*="background:#d1e7dd"],
+:root[data-theme="dark"] [style*="background: #d1e7dd"],
+:root[data-theme="dark"] [style*="background-color:#d1e7dd"],
 :root[data-theme="dark"] [style*="background:#f0faf4"],
 :root[data-theme="dark"] [style*="background: #f0faf4"],
 :root[data-theme="dark"] [style*="background-color:#f0faf4"],
@@ -1290,6 +1302,9 @@ table.table thead th.text-muted { color: #ffffff !important; }
 :root[data-theme="dark"] [style*="background: #e2f2e8"],
 :root[data-theme="dark"] [style*="background-color:#e2f2e8"],
 :root[data-theme="dark"] .bg-success-subtle { background: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(22,163,109,.3) !important; }
+:root[data-theme="dark"] [style*="background:#f5e8d0"],
+:root[data-theme="dark"] [style*="background: #f5e8d0"],
+:root[data-theme="dark"] [style*="background-color:#f5e8d0"],
 :root[data-theme="dark"] [style*="background:#fef3c7"],
 :root[data-theme="dark"] [style*="background: #fef3c7"],
 :root[data-theme="dark"] [style*="background-color:#fef3c7"],
@@ -1320,6 +1335,9 @@ table.table thead th.text-muted { color: #ffffff !important; }
 :root[data-theme="dark"] [style*="background:#f8eed6"],
 :root[data-theme="dark"] [style*="background: #f8eed6"],
 :root[data-theme="dark"] [style*="background-color:#f8eed6"] { background: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(224,178,92,.3) !important; }
+:root[data-theme="dark"] [style*="background:#eaf3ff"],
+:root[data-theme="dark"] [style*="background: #eaf3ff"],
+:root[data-theme="dark"] [style*="background-color:#eaf3ff"],
 :root[data-theme="dark"] [style*="background:#e0f2fe"],
 :root[data-theme="dark"] [style*="background: #e0f2fe"],
 :root[data-theme="dark"] [style*="background-color:#e0f2fe"],
@@ -1346,6 +1364,9 @@ table.table thead th.text-muted { color: #ffffff !important; }
 :root[data-theme="dark"] [style*="background-color:#e5f0fd"],
 :root[data-theme="dark"] .bg-primary-subtle,
 :root[data-theme="dark"] .bg-info-subtle { background: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(140,192,245,.3) !important; }
+:root[data-theme="dark"] [style*="background:#f6ded7"],
+:root[data-theme="dark"] [style*="background: #f6ded7"],
+:root[data-theme="dark"] [style*="background-color:#f6ded7"],
 :root[data-theme="dark"] [style*="background:#fee2e2"],
 :root[data-theme="dark"] [style*="background: #fee2e2"],
 :root[data-theme="dark"] [style*="background-color:#fee2e2"],
@@ -1427,6 +1448,82 @@ table.table thead th.text-muted { color: #ffffff !important; }
 :root[data-theme="dark"] input[type="time"],
 :root[data-theme="dark"] input[type="datetime-local"],
 :root[data-theme="dark"] select { color-scheme: dark; }
+:root[data-theme="dark"] { --motif-gold-ink: #e8c46a; --role-resident: #e8c46a; --bs-link-color-rgb: 232, 196, 106; --bs-link-hover-color-rgb: 245, 215, 140; }
+:root[data-theme="dark"] .badge.bg-info,
+:root[data-theme="dark"] .badge.text-bg-info { background-color: #0e7490 !important; color: #fff !important; }
+:root[data-theme="dark"] .gc-blue { background-color: #0062cc !important; color: #fff !important; }
+:root[data-theme="dark"] code { color: #ff9fcf !important; }
+:root[data-theme="dark"] [style*="color:#0284c7"],
+:root[data-theme="dark"] [style*="color:#0369a1"],
+:root[data-theme="dark"] [style*="color:#0ea5e9"],
+:root[data-theme="dark"] [style*="color:#0b4ea2"],
+:root[data-theme="dark"] [style*="color:#007dfe"],
+:root[data-theme="dark"] [style*="color:#1e3a8a"] { color: var(--status-info) !important; }
+:root[data-theme="dark"] [style*="color:#065f46"],
+:root[data-theme="dark"] [style*="color:#064e3b"],
+:root[data-theme="dark"] [style*="color:#087a4b"],
+:root[data-theme="dark"] [style*="color:#16a36d"] { color: var(--status-success) !important; }
+:root[data-theme="dark"] .sidebar-badge,
+:root[data-theme="dark"] .filter-chip-count,
+:root[data-theme="dark"] .nav-badge { background: #0f6e4a !important; color: #fff !important; }
+:root[data-theme="dark"] .bell-badge,
+:root[data-theme="dark"] .bg-red-500,
+:root[data-theme="dark"] .bg-red-600,
+:root[data-theme="dark"] .badge.bg-danger,
+:root[data-theme="dark"] .text-bg-danger { background-color: #b91c1c !important; color: #fff !important; }
+:root[data-theme="dark"] .bg-amber-500,
+:root[data-theme="dark"] .bg-amber-600,
+:root[data-theme="dark"] .bg-orange-500,
+:root[data-theme="dark"] .bg-orange-600 { background-color: #b45309 !important; color: #fff !important; }
+:root[data-theme="dark"] .btn-outline-danger { color: var(--status-danger) !important; border-color: rgba(255,157,157,.55) !important; background: transparent !important; }
+:root[data-theme="dark"] [style*="background:var(--motif-gold)"],
+:root[data-theme="dark"] [style*="background: var(--motif-gold)"],
+:root[data-theme="dark"] [style*="background:var(--brand-gradient-gold)"],
+:root[data-theme="dark"] [style*="background: var(--brand-gradient-gold)"] { color: #2a1d00 !important; }
+:root[data-theme="dark"] .bg-slate-50\/80,
+:root[data-theme="dark"] .bg-slate-50\/60,
+:root[data-theme="dark"] .bg-slate-50\/50,
+:root[data-theme="dark"] .bg-slate-100\/80,
+:root[data-theme="dark"] .bg-gray-50,
+:root[data-theme="dark"] .bg-gray-100 { background-color: var(--surface-muted) !important; color: var(--text-secondary) !important; }
+:root[data-theme="dark"] .hover\:bg-slate-50\/60:hover,
+:root[data-theme="dark"] .hover\:bg-slate-50:hover,
+:root[data-theme="dark"] .hover\:bg-slate-100:hover { background-color: var(--surface-muted) !important; }
+:root[data-theme="dark"] .bg-indigo-50,
+:root[data-theme="dark"] .bg-blue-50,
+:root[data-theme="dark"] .bg-sky-50,
+:root[data-theme="dark"] .bg-violet-50,
+:root[data-theme="dark"] .bg-purple-50 { background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.3) !important; }
+:root[data-theme="dark"] .bg-emerald-50,
+:root[data-theme="dark"] .bg-green-50,
+:root[data-theme="dark"] .bg-teal-50 { background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.3) !important; }
+:root[data-theme="dark"] .bg-amber-50,
+:root[data-theme="dark"] .bg-yellow-50,
+:root[data-theme="dark"] .bg-orange-50 { background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.3) !important; }
+:root[data-theme="dark"] .bg-rose-50,
+:root[data-theme="dark"] .bg-red-50,
+:root[data-theme="dark"] .bg-pink-50 { background-color: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(255,157,157,.3) !important; }
+:root[data-theme="dark"] .advisory-strip[style*="--advisory-bar:#a3311c"] { --advisory-bg: var(--status-danger-bg) !important; --advisory-ink: var(--status-danger) !important; --advisory-bar: #ff6b6b !important; }
+:root[data-theme="dark"] .advisory-strip[style*="--advisory-bar:#8a5a12"] { --advisory-bg: var(--status-warning-bg) !important; --advisory-ink: var(--status-warning) !important; --advisory-bar: #f59e0b !important; }
+:root[data-theme="dark"] .advisory-strip[style*="--advisory-bar:#5b5240"] { --advisory-bg: var(--surface-muted) !important; --advisory-ink: var(--text-primary) !important; --advisory-bar: #94a3b8 !important; }
+:root[data-theme="dark"] .alert-danger { background-color: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(255,157,157,.35) !important; }
+:root[data-theme="dark"] .alert-warning { background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.35) !important; }
+:root[data-theme="dark"] .alert-success { background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.35) !important; }
+:root[data-theme="dark"] .alert-info,
+:root[data-theme="dark"] .alert-primary { background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.35) !important; }
+:root[data-theme="dark"] .alert-secondary,
+:root[data-theme="dark"] .alert-light { background-color: var(--surface-muted) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }
+:root[data-theme="dark"] .alert a,
+:root[data-theme="dark"] .alert .alert-link { color: inherit !important; text-decoration: underline; }
+:root[data-theme="dark"] .table-success,
+:root[data-theme="dark"] .table-warning,
+:root[data-theme="dark"] .table-info,
+:root[data-theme="dark"] .table-danger,
+:root[data-theme="dark"] .table-active { --bs-table-bg: rgba(255,255,255,.06) !important; --bs-table-color: var(--text-primary) !important; color: var(--text-primary) !important; }
+:root[data-theme="dark"] .table-success > td,
+:root[data-theme="dark"] .table-success > th { background-color: var(--status-success-bg) !important; color: var(--text-primary) !important; }
+:root[data-theme="dark"] .table-warning > td,
+:root[data-theme="dark"] .table-warning > th { background-color: var(--status-warning-bg) !important; color: var(--text-primary) !important; }
 
 /* ── DARK MODE (OS preference, no explicit choice) — identical rules ── */
 @media (prefers-color-scheme: dark) {
@@ -1453,6 +1550,9 @@ table.table thead th.text-muted { color: #ffffff !important; }
     :root:not([data-theme="light"]) [style*="background-color:#fff;"],
     :root:not([data-theme="light"]) [style*="background:#fcfdfc"],
     :root:not([data-theme="light"]) [style*="background:#fffdf8"] { background-color: var(--surface-card) !important; color: var(--text-primary); border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) [style*="background:#ece7dd"],
+    :root:not([data-theme="light"]) [style*="background: #ece7dd"],
+    :root:not([data-theme="light"]) [style*="background-color:#ece7dd"],
     :root:not([data-theme="light"]) [style*="background:#f8f9fa"],
     :root:not([data-theme="light"]) [style*="background: #f8f9fa"],
     :root:not([data-theme="light"]) [style*="background-color:#f8f9fa"],
@@ -1483,6 +1583,15 @@ table.table thead th.text-muted { color: #ffffff !important; }
     :root:not([data-theme="light"]) [style*="background:#f0f0f0"],
     :root:not([data-theme="light"]) [style*="background: #f0f0f0"],
     :root:not([data-theme="light"]) [style*="background-color:#f0f0f0"] { background: var(--surface-muted) !important; color: var(--text-secondary) !important; border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) [style*="background:#ccfbf1"],
+    :root:not([data-theme="light"]) [style*="background: #ccfbf1"],
+    :root:not([data-theme="light"]) [style*="background-color:#ccfbf1"],
+    :root:not([data-theme="light"]) [style*="background:#a7f3d0"],
+    :root:not([data-theme="light"]) [style*="background: #a7f3d0"],
+    :root:not([data-theme="light"]) [style*="background-color:#a7f3d0"],
+    :root:not([data-theme="light"]) [style*="background:#d1e7dd"],
+    :root:not([data-theme="light"]) [style*="background: #d1e7dd"],
+    :root:not([data-theme="light"]) [style*="background-color:#d1e7dd"],
     :root:not([data-theme="light"]) [style*="background:#f0faf4"],
     :root:not([data-theme="light"]) [style*="background: #f0faf4"],
     :root:not([data-theme="light"]) [style*="background-color:#f0faf4"],
@@ -1511,6 +1620,9 @@ table.table thead th.text-muted { color: #ffffff !important; }
     :root:not([data-theme="light"]) [style*="background: #e2f2e8"],
     :root:not([data-theme="light"]) [style*="background-color:#e2f2e8"],
     :root:not([data-theme="light"]) .bg-success-subtle { background: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(22,163,109,.3) !important; }
+    :root:not([data-theme="light"]) [style*="background:#f5e8d0"],
+    :root:not([data-theme="light"]) [style*="background: #f5e8d0"],
+    :root:not([data-theme="light"]) [style*="background-color:#f5e8d0"],
     :root:not([data-theme="light"]) [style*="background:#fef3c7"],
     :root:not([data-theme="light"]) [style*="background: #fef3c7"],
     :root:not([data-theme="light"]) [style*="background-color:#fef3c7"],
@@ -1541,6 +1653,9 @@ table.table thead th.text-muted { color: #ffffff !important; }
     :root:not([data-theme="light"]) [style*="background:#f8eed6"],
     :root:not([data-theme="light"]) [style*="background: #f8eed6"],
     :root:not([data-theme="light"]) [style*="background-color:#f8eed6"] { background: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(224,178,92,.3) !important; }
+    :root:not([data-theme="light"]) [style*="background:#eaf3ff"],
+    :root:not([data-theme="light"]) [style*="background: #eaf3ff"],
+    :root:not([data-theme="light"]) [style*="background-color:#eaf3ff"],
     :root:not([data-theme="light"]) [style*="background:#e0f2fe"],
     :root:not([data-theme="light"]) [style*="background: #e0f2fe"],
     :root:not([data-theme="light"]) [style*="background-color:#e0f2fe"],
@@ -1567,6 +1682,9 @@ table.table thead th.text-muted { color: #ffffff !important; }
     :root:not([data-theme="light"]) [style*="background-color:#e5f0fd"],
     :root:not([data-theme="light"]) .bg-primary-subtle,
     :root:not([data-theme="light"]) .bg-info-subtle { background: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(140,192,245,.3) !important; }
+    :root:not([data-theme="light"]) [style*="background:#f6ded7"],
+    :root:not([data-theme="light"]) [style*="background: #f6ded7"],
+    :root:not([data-theme="light"]) [style*="background-color:#f6ded7"],
     :root:not([data-theme="light"]) [style*="background:#fee2e2"],
     :root:not([data-theme="light"]) [style*="background: #fee2e2"],
     :root:not([data-theme="light"]) [style*="background-color:#fee2e2"],
@@ -1648,4 +1766,80 @@ table.table thead th.text-muted { color: #ffffff !important; }
     :root:not([data-theme="light"]) input[type="time"],
     :root:not([data-theme="light"]) input[type="datetime-local"],
     :root:not([data-theme="light"]) select { color-scheme: dark; }
+    :root:not([data-theme="light"]) { --motif-gold-ink: #e8c46a; --role-resident: #e8c46a; --bs-link-color-rgb: 232, 196, 106; --bs-link-hover-color-rgb: 245, 215, 140; }
+    :root:not([data-theme="light"]) .badge.bg-info,
+    :root:not([data-theme="light"]) .badge.text-bg-info { background-color: #0e7490 !important; color: #fff !important; }
+    :root:not([data-theme="light"]) .gc-blue { background-color: #0062cc !important; color: #fff !important; }
+    :root:not([data-theme="light"]) code { color: #ff9fcf !important; }
+    :root:not([data-theme="light"]) [style*="color:#0284c7"],
+    :root:not([data-theme="light"]) [style*="color:#0369a1"],
+    :root:not([data-theme="light"]) [style*="color:#0ea5e9"],
+    :root:not([data-theme="light"]) [style*="color:#0b4ea2"],
+    :root:not([data-theme="light"]) [style*="color:#007dfe"],
+    :root:not([data-theme="light"]) [style*="color:#1e3a8a"] { color: var(--status-info) !important; }
+    :root:not([data-theme="light"]) [style*="color:#065f46"],
+    :root:not([data-theme="light"]) [style*="color:#064e3b"],
+    :root:not([data-theme="light"]) [style*="color:#087a4b"],
+    :root:not([data-theme="light"]) [style*="color:#16a36d"] { color: var(--status-success) !important; }
+    :root:not([data-theme="light"]) .sidebar-badge,
+    :root:not([data-theme="light"]) .filter-chip-count,
+    :root:not([data-theme="light"]) .nav-badge { background: #0f6e4a !important; color: #fff !important; }
+    :root:not([data-theme="light"]) .bell-badge,
+    :root:not([data-theme="light"]) .bg-red-500,
+    :root:not([data-theme="light"]) .bg-red-600,
+    :root:not([data-theme="light"]) .badge.bg-danger,
+    :root:not([data-theme="light"]) .text-bg-danger { background-color: #b91c1c !important; color: #fff !important; }
+    :root:not([data-theme="light"]) .bg-amber-500,
+    :root:not([data-theme="light"]) .bg-amber-600,
+    :root:not([data-theme="light"]) .bg-orange-500,
+    :root:not([data-theme="light"]) .bg-orange-600 { background-color: #b45309 !important; color: #fff !important; }
+    :root:not([data-theme="light"]) .btn-outline-danger { color: var(--status-danger) !important; border-color: rgba(255,157,157,.55) !important; background: transparent !important; }
+    :root:not([data-theme="light"]) [style*="background:var(--motif-gold)"],
+    :root:not([data-theme="light"]) [style*="background: var(--motif-gold)"],
+    :root:not([data-theme="light"]) [style*="background:var(--brand-gradient-gold)"],
+    :root:not([data-theme="light"]) [style*="background: var(--brand-gradient-gold)"] { color: #2a1d00 !important; }
+    :root:not([data-theme="light"]) .bg-slate-50\/80,
+    :root:not([data-theme="light"]) .bg-slate-50\/60,
+    :root:not([data-theme="light"]) .bg-slate-50\/50,
+    :root:not([data-theme="light"]) .bg-slate-100\/80,
+    :root:not([data-theme="light"]) .bg-gray-50,
+    :root:not([data-theme="light"]) .bg-gray-100 { background-color: var(--surface-muted) !important; color: var(--text-secondary) !important; }
+    :root:not([data-theme="light"]) .hover\:bg-slate-50\/60:hover,
+    :root:not([data-theme="light"]) .hover\:bg-slate-50:hover,
+    :root:not([data-theme="light"]) .hover\:bg-slate-100:hover { background-color: var(--surface-muted) !important; }
+    :root:not([data-theme="light"]) .bg-indigo-50,
+    :root:not([data-theme="light"]) .bg-blue-50,
+    :root:not([data-theme="light"]) .bg-sky-50,
+    :root:not([data-theme="light"]) .bg-violet-50,
+    :root:not([data-theme="light"]) .bg-purple-50 { background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.3) !important; }
+    :root:not([data-theme="light"]) .bg-emerald-50,
+    :root:not([data-theme="light"]) .bg-green-50,
+    :root:not([data-theme="light"]) .bg-teal-50 { background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.3) !important; }
+    :root:not([data-theme="light"]) .bg-amber-50,
+    :root:not([data-theme="light"]) .bg-yellow-50,
+    :root:not([data-theme="light"]) .bg-orange-50 { background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.3) !important; }
+    :root:not([data-theme="light"]) .bg-rose-50,
+    :root:not([data-theme="light"]) .bg-red-50,
+    :root:not([data-theme="light"]) .bg-pink-50 { background-color: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(255,157,157,.3) !important; }
+    :root:not([data-theme="light"]) .advisory-strip[style*="--advisory-bar:#a3311c"] { --advisory-bg: var(--status-danger-bg) !important; --advisory-ink: var(--status-danger) !important; --advisory-bar: #ff6b6b !important; }
+    :root:not([data-theme="light"]) .advisory-strip[style*="--advisory-bar:#8a5a12"] { --advisory-bg: var(--status-warning-bg) !important; --advisory-ink: var(--status-warning) !important; --advisory-bar: #f59e0b !important; }
+    :root:not([data-theme="light"]) .advisory-strip[style*="--advisory-bar:#5b5240"] { --advisory-bg: var(--surface-muted) !important; --advisory-ink: var(--text-primary) !important; --advisory-bar: #94a3b8 !important; }
+    :root:not([data-theme="light"]) .alert-danger { background-color: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(255,157,157,.35) !important; }
+    :root:not([data-theme="light"]) .alert-warning { background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.35) !important; }
+    :root:not([data-theme="light"]) .alert-success { background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.35) !important; }
+    :root:not([data-theme="light"]) .alert-info,
+    :root:not([data-theme="light"]) .alert-primary { background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.35) !important; }
+    :root:not([data-theme="light"]) .alert-secondary,
+    :root:not([data-theme="light"]) .alert-light { background-color: var(--surface-muted) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }
+    :root:not([data-theme="light"]) .alert a,
+    :root:not([data-theme="light"]) .alert .alert-link { color: inherit !important; text-decoration: underline; }
+    :root:not([data-theme="light"]) .table-success,
+    :root:not([data-theme="light"]) .table-warning,
+    :root:not([data-theme="light"]) .table-info,
+    :root:not([data-theme="light"]) .table-danger,
+    :root:not([data-theme="light"]) .table-active { --bs-table-bg: rgba(255,255,255,.06) !important; --bs-table-color: var(--text-primary) !important; color: var(--text-primary) !important; }
+    :root:not([data-theme="light"]) .table-success > td,
+    :root:not([data-theme="light"]) .table-success > th { background-color: var(--status-success-bg) !important; color: var(--text-primary) !important; }
+    :root:not([data-theme="light"]) .table-warning > td,
+    :root:not([data-theme="light"]) .table-warning > th { background-color: var(--status-warning-bg) !important; color: var(--text-primary) !important; }
 }
