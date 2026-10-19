@@ -583,6 +583,16 @@ function syncPostgresSchema(PDO $pdo): void
         )",
         "CREATE INDEX IF NOT EXISTS idx_php_sessions_activity ON php_sessions(last_activity)",
 
+        // 18e. Database copy of uploads (App\Services\UploadStore): the disk is wiped on deploy
+        "CREATE TABLE IF NOT EXISTS uploaded_files (
+            id SERIAL PRIMARY KEY,
+            path VARCHAR(255) NOT NULL UNIQUE,
+            mime VARCHAR(100) NOT NULL,
+            size INT NOT NULL,
+            data TEXT NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+
         // 18b. Document templates: business permit, O.R./permit numbers, print queue, revocation
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS business_name VARCHAR(200) NULL",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS business_type VARCHAR(120) NULL",

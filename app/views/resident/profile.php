@@ -110,6 +110,25 @@ ob_start();
             </div>
         </div>
 
+        <!-- Valid ID: re-upload when the file is missing or unclear -->
+        <?php $idOnFile = !empty($user['id_photo_url']) && \App\Services\UploadStore::exists((string) $user['id_photo_url']); ?>
+        <div class="rounded-2xl border <?= $idOnFile ? 'border-slate-200 bg-white' : 'border-amber-300 bg-amber-50' ?> p-5 shadow-sm">
+            <h4 class="text-sm font-bold text-slate-900"><i class="bi bi-person-vcard me-1"></i><?= e(__('Valid ID')) ?></h4>
+            <p class="mt-1 text-xs <?= $idOnFile ? 'text-slate-500' : 'text-amber-800' ?>">
+                <?= e($idOnFile ? __('Your ID is on file.') : __('Your ID file is missing. Please upload it again so the barangay can check it.')) ?>
+            </p>
+            <form method="post" action="<?= e(route('profile')) ?>" enctype="multipart/form-data" class="mt-3">
+                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                <input type="hidden" name="_action" value="upload_id">
+                <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-800 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-900">
+                    <i class="bi bi-upload"></i> <?= e(__('Upload valid ID')) ?>
+                    <input type="file" name="id_photo" accept="image/jpeg,image/png,application/pdf" class="hidden"
+                           onchange="this.form.submit()">
+                </label>
+                <p class="mt-2 text-[11px] text-slate-500"><?= e(__('JPG, PNG or PDF, up to 10 MB.')) ?></p>
+            </form>
+        </div>
+
         <!-- Verified Protection Card -->
         <?php if ($isVerified): ?>
         <div class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">

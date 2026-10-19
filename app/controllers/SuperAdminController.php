@@ -436,6 +436,7 @@ class SuperAdminController
             redirect('/superadmin/settings');
         }
         @chmod($target, 0644);
+        \App\Services\UploadStore::keep('/uploads/branding/' . $filename, $target);
 
         // Remove the previous upload so the folder does not accumulate logos.
         $previous = trim((string) Setting::get('system_logo', ''));

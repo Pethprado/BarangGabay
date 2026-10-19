@@ -1630,4 +1630,10 @@ return [
     'Until :when' => 'Until :when',
     'Read the full alert' => 'Read the full alert',
     'File photo:' => 'File photo:',
+    'Your ID is on file.' => 'Your ID is on file.',
+    'Your ID file is missing. Please upload it again so the barangay can check it.' => 'Your ID file is missing. Please upload it again so the barangay can check it.',
+    'Upload valid ID' => 'Upload valid ID',
+    'JPG, PNG or PDF, up to 10 MB.' => 'JPG, PNG or PDF, up to 10 MB.',
+    'Your valid ID was uploaded.' => 'Your valid ID was uploaded.',
+    'Could not upload your ID. Use a JPG, PNG or PDF up to 10 MB.' => 'Could not upload your ID. Use a JPG, PNG or PDF up to 10 MB.',
 ];

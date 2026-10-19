@@ -410,14 +410,25 @@ ob_start();
              :class="{ zoomed: idZoomed }"
              @click="idZoomed = !idZoomed"
              style="margin:0;">
-            <img :src="idPhoto" :alt="idName" style="">
+            <template x-if="!idMissing && !idIsPdf">
+                <img :src="idPhoto" :alt="idName" @error="idMissing = true">
+            </template>
+            <template x-if="!idMissing && idIsPdf">
+                <iframe :src="idPhoto" title="Valid ID" style="width:100%;height:60vh;border:0;" @click.stop></iframe>
+            </template>
+            <div x-show="idMissing" style="padding:28px 22px;text-align:center;color:var(--text-secondary);font-size:.85rem;">
+                <i class="bi bi-file-earmark-x" style="font-size:2rem;color:var(--status-warning);"></i>
+                <p style="margin:.5rem 0 0;font-weight:600;color:var(--text-primary);">This ID file is no longer on the server.</p>
+                <p style="margin:.35rem 0 0;">It was lost in a system update before uploads were kept in the database.
+                    Ask the resident to open <strong>My Profile &rarr; Valid ID &rarr; Upload valid ID</strong>.</p>
+            </div>
         </div>
         <!-- Footer hint -->
         <div style="padding:10px 16px;background:#f8fbf9;border-top:1px solid #e4ece6;text-align:center;">
             <p style="margin:0;font-size:.75rem;color:var(--text-muted);">
                 <i class="bi bi-zoom-in me-1"></i><?= e(t('residents.zoom_hint')) ?>
                 &nbsp;&middot;&nbsp;
-                <a :href="idPhoto" target="_blank" rel="noopener"
+                <a :href="idPhoto" target="_blank" rel="noopener" x-show="!idMissing"
                    style="color:var(--brand-primary);text-decoration:none;font-weight:600;">
                     <i class="bi bi-box-arrow-up-right"></i> <?= e(t('residents.open_new_tab')) ?>
                 </a>
@@ -497,6 +508,8 @@ function residentManager() {
 
         /* ID modal */
         idModal:     false,
+        idMissing:   false,
+        idIsPdf:     false,
         idPhoto:     '',
         idName:      '',
         idZoomed:    false,
@@ -565,6 +578,8 @@ function residentManager() {
             this.idPhoto   = photo;
             this.idName    = name;
             this.idZoomed  = false;
+            this.idMissing = false;
+            this.idIsPdf   = /\.pdf($|\?)/i.test(photo);
             this.idModal   = true;
         },
 

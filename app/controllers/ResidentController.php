@@ -353,6 +353,11 @@ class ResidentController
             return;
         }
 
+        if ($action === 'upload_id') {
+            $this->handleIdUpload($userId);
+            return;
+        }
+
         // Requirement 12: Backend protection for verified resident fields
         if (User::isVerified($user)) {
             $submittedName    = trim($_POST['full_name'] ?? '');
@@ -428,6 +433,33 @@ class ResidentController
         redirect('/profile');
     }
 
+    /**
+     * Replace the resident's valid ID photo. Needed when the file was lost
+     * (uploads saved before UploadStore were wiped by a Render deploy) or
+     * the barangay asks for a clearer copy. Verification status is unchanged.
+     */
+    private function handleIdUpload(int $userId): void
+    {
+        if (empty($_FILES['id_photo']['tmp_name'])) {
+            flash('error', __('Could not upload your ID. Use a JPG, PNG or PDF up to 10 MB.'));
+            redirect('/profile');
+        }
+
+        try {
+            $url = (new \App\Services\FileService())->upload($_FILES['id_photo'], 'id-photos');
+        } catch (\RuntimeException $e) {
+            flash('error', __('Could not upload your ID. Use a JPG, PNG or PDF up to 10 MB.'));
+            redirect('/profile');
+        }
+
+        db()->prepare('UPDATE users SET id_photo_url = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$url, $userId]);
+        AuditLog::record($userId, 'user.id_photo.update', 'Valid ID uploaded again');
+
+        flash('success', __('Your valid ID was uploaded.'));
+        redirect('/profile');
+    }
+
     private function handleAvatarUpload(int $userId): void
     {
         if (empty($_FILES['avatar']['tmp_name'])) {
@@ -459,6 +491,7 @@ class ResidentController
         \move_uploaded_file($file['tmp_name'], $destDir . '/' . $filename);
 
         $url = '/uploads/avatars/' . $filename;
+        \App\Services\UploadStore::keep($url);
         db()->prepare('UPDATE users SET avatar_url = ?, updated_at = NOW() WHERE id = ?')
             ->execute([$url, $userId]);
 

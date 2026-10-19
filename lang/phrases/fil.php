@@ -1630,4 +1630,10 @@ return [
     'Until :when' => 'Hanggang :when',
     'Read the full alert' => 'Basahin ang buong abiso',
     'File photo:' => 'Larawang panghalimbawa:',
+    'Your ID is on file.' => 'Nasa talaan na ang inyong ID.',
+    'Your ID file is missing. Please upload it again so the barangay can check it.' => 'Nawawala ang file ng inyong ID. Paki-upload muli para masuri ito ng barangay.',
+    'Upload valid ID' => 'Mag-upload ng valid ID',
+    'JPG, PNG or PDF, up to 10 MB.' => 'JPG, PNG o PDF, hanggang 10 MB.',
+    'Your valid ID was uploaded.' => 'Na-upload na ang inyong valid ID.',
+    'Could not upload your ID. Use a JPG, PNG or PDF up to 10 MB.' => 'Hindi ma-upload ang inyong ID. Gumamit ng JPG, PNG o PDF na hanggang 10 MB.',
 ];

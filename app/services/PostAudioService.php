@@ -582,6 +582,7 @@ class PostAudioService
         if (@file_put_contents($dir . DIRECTORY_SEPARATOR . $name, $bytes) === false) {
             throw new \RuntimeException('Could not write the generated audio file.');
         }
+        UploadStore::keep('/uploads/' . self::DIR . '/' . $name);
 
         return '/uploads/' . self::DIR . '/' . $name;
     }

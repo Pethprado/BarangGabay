@@ -119,7 +119,10 @@ class FileService
             throw new \RuntimeException('Nabigong ilipat ang na-upload na file.');
         }
 
-        // 9. Return the relative public URL
+        // 9. Database copy: Render wipes public/uploads/ on every deploy
+        UploadStore::keep('/uploads/' . $type . '/' . $filename, $target);
+
+        // 10. Return the relative public URL
         return '/uploads/' . $type . '/' . $filename;
     }
 
@@ -135,6 +138,8 @@ class FileService
         $uploadsRoot = realpath($publicRoot . '/uploads');
         $absolute    = $publicRoot . '/' . ltrim($filePath, '/');
         $realTarget  = realpath($absolute);
+
+        UploadStore::forget($filePath);
 
         if ($realTarget === false) {
             return; // File doesn't exist — nothing to do
@@ -214,6 +219,7 @@ class FileService
         if (!move_uploaded_file($file['tmp_name'], $target)) {
             throw new \RuntimeException('Nabigong ilipat ang na-upload na audio file.');
         }
+        UploadStore::keep('/uploads/' . $type . '/' . $filename, $target);
 
         return '/uploads/' . $type . '/' . $filename;
     }
@@ -278,6 +284,7 @@ class FileService
         if (@file_put_contents($uploadDir . DIRECTORY_SEPARATOR . $filename, $bytes) === false) {
             throw new \RuntimeException('Nabigong i-save ang file mula sa link.');
         }
+        UploadStore::keep('/uploads/' . $type . '/' . $filename);
 
         return '/uploads/' . $type . '/' . $filename;
     }

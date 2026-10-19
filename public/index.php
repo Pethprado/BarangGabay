@@ -21,6 +21,12 @@ if ($basePath !== '' && stripos($uri, $basePath) === 0) {
 }
 $uri = '/' . trim($uri, '/');
 
+// A missing /uploads/ file (Render wipes the disk on deploy) is answered from
+// its database copy before routing — see App\Services\UploadStore.
+if (str_starts_with($uri, '/uploads/') && App\Services\UploadStore::serve($uri)) {
+    exit;
+}
+
 // Maintenance mode gate — runs before routing so it covers every page.
 // Super admins, /login, /logout and /set-locale are exempt so the switch can
 // always be turned back off from the UI. See MaintenanceMiddleware.
