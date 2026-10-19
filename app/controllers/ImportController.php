@@ -261,7 +261,7 @@ class ImportController
     private function withinRateLimit(): bool
     {
         try {
-            $isPgsql = (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql');
+            $isPgsql = (db()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql');
             $dateCond = $isPgsql ? "created_at > NOW() - INTERVAL '1 hour'" : "created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)";
             $stmt = db()->prepare(
                 "SELECT COUNT(*) FROM audit_logs

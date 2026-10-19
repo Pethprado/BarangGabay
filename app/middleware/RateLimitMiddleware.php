@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Middleware;
 
+use PDO;
+
 use function db;
 
 class RateLimitMiddleware
