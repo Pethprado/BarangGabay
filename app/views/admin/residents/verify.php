@@ -18,10 +18,11 @@ ob_start();
 ?>
 
 <style>
-.id-photo-wrap { cursor:zoom-in; overflow:hidden; border-radius:10px; background:#f1f5f2; }
-.id-photo-wrap.zoomed { cursor:zoom-out; }
-.id-photo-wrap img { display:block; width:100%; transition:transform .35s ease; }
-.id-photo-wrap.zoomed img { transform:scale(2.5); transform-origin:center center; }
+/* The whole ID fits the box; a click shows it at double size with scrolling. */
+.id-photo-wrap { cursor:zoom-in; overflow:hidden; border-radius:10px; background:var(--surface-muted); text-align:center; }
+.id-photo-wrap img { display:block; margin:0 auto; max-width:100%; max-height:476px; width:auto; height:auto; object-fit:contain; }
+.id-photo-wrap.zoomed { cursor:zoom-out; overflow:auto; text-align:left; }
+.id-photo-wrap.zoomed img { width:200%; max-width:none; max-height:none; }
 .info-row { display:flex; gap:10px; padding:10px 0; border-bottom:1px solid #f0f4f1; font-size:.875rem; }
 .info-row:last-child { border-bottom:none; padding-bottom:0; }
 .info-label { color:var(--text-muted); font-weight:600; min-width:140px; flex-shrink:0; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; }

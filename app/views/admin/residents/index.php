@@ -42,12 +42,16 @@ ob_start();
 .row-pending:hover td { background:rgba(255,193,7,.10) !important; }
 /* Overlay modals */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(3px); z-index:9050; display:flex; align-items:center; justify-content:center; padding:1rem; }
-.modal-box { background:var(--surface-card); border-radius:14px; box-shadow:0 24px 64px rgba(0,0,0,.22); width:100%; overflow:hidden; color:var(--text-primary); }
-/* ID photo zoom */
-.id-photo-wrap { cursor:zoom-in; overflow:hidden; border-radius:8px; background:var(--surface-muted); }
-.id-photo-wrap.zoomed { cursor:zoom-out; }
-.id-photo-wrap img { display:block; width:100%; transition:transform .3s ease; }
-.id-photo-wrap.zoomed img { transform:scale(2.2); transform-origin:center center; }
+.modal-box { background:var(--surface-card); border-radius:14px; box-shadow:0 24px 64px rgba(0,0,0,.22); width:100%; overflow:hidden; color:var(--text-primary);
+             max-height:calc(100vh - 2rem); display:flex; flex-direction:column; }
+.modal-box > * { flex-shrink:0; }
+/* ID photo: the whole ID always fits on screen (header and close button stay
+   visible); a click shows it at double size with scrolling to read details. */
+.id-photo-wrap { cursor:zoom-in; overflow:hidden; border-radius:8px; background:var(--surface-muted);
+                 flex:1 1 auto; flex-shrink:1; min-height:0; display:flex; align-items:center; justify-content:center; }
+.id-photo-wrap img { display:block; max-width:100%; max-height:calc(100vh - 11rem); width:auto; height:auto; object-fit:contain; }
+.id-photo-wrap.zoomed { cursor:zoom-out; overflow:auto; display:block; }
+.id-photo-wrap.zoomed img { width:200%; max-width:none; max-height:none; }
 </style>
 
 <div x-data="residentManager()" x-init="init()">
