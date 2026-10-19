@@ -1636,4 +1636,5 @@ return [
     'JPG, PNG or PDF, up to 10 MB.' => 'JPG, PNG or PDF, up to 10 MB.',
     'Your valid ID was uploaded.' => 'Your valid ID was uploaded.',
     'Could not upload your ID. Use a JPG, PNG or PDF up to 10 MB.' => 'Could not upload your ID. Use a JPG, PNG or PDF up to 10 MB.',
+    'Back to events' => 'Back to events',
 ];
