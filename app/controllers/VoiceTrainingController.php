@@ -64,6 +64,13 @@ class VoiceTrainingController
 
         $reports  = VoiceUsageIndex::reports();
         $usage    = $reports['msm'];
+        // Coverage residents actually hear: every word and sentence of the
+        // visible posts in the Manobo reader text (Bisaya words included).
+        try {
+            $scriptTotals = \App\Services\VoiceScript::build('msm')['totals'];
+        } catch (\Throwable $e) {
+            $scriptTotals = null;
+        }
         $coverage = VoiceSample::getManoboCoverageStats();
         $missing  = VoiceSample::missingDictionaryEntries(15, $usage['words']);
         $health   = VoiceSample::health();
@@ -115,6 +122,7 @@ class VoiceTrainingController
             'activeProfileCount' => $activeProfileCount,
             'coverage'           => $coverage,
             'usage'              => $usage,
+            'scriptTotals'       => $scriptTotals,
             'reports'            => $reports,
             'queues'             => $queues,
             'fallbackMode'       => VoiceResolver::fallbackMode(),

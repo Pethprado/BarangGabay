@@ -38,7 +38,7 @@
     </div>
 
     <div id="scriptBody" class="p-3">
-        <p class="text-xs vt-text-muted mb-0">Choose a language and press <strong>Load script</strong>.</p>
+        <p class="text-xs vt-text-muted mb-0"><span class="spinner-border spinner-border-sm me-1"></span> Reading every post…</p>
     </div>
 </div>
 
@@ -197,12 +197,17 @@
 
     document.getElementById('scriptLoad').addEventListener('click', load);
     document.getElementById('scriptLang').addEventListener('change', load);
-    // Saving a recording reloads the hub page: reopen the script where it was.
+    /** Card buttons: open the script in a language and scroll to it. */
+    window.openScript = function (lang) {
+        document.getElementById('scriptLang').value = lang;
+        load();
+        document.getElementById('script').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // Opens by itself (Manobo first); after a save it reopens where it was.
     var saved = null;
     try { saved = sessionStorage.getItem('vt_script_lang'); } catch (e) {}
-    if (saved) {
-        document.getElementById('scriptLang').value = saved;
-        load();
-    }
+    document.getElementById('scriptLang').value = saved || 'msm';
+    load();
 })();
 </script>

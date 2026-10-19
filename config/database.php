@@ -993,6 +993,18 @@ function syncPostgresSchema(PDO $pdo): void
             error_log('PgSQL tz shift note: ' . $e->getMessage());
         }
 
+        // Rebuild the voice word index once: PostScript now reads translations
+        // stored as HTML as clean sentences, and the Bisaya word list grew, so
+        // the hub's per-language word counts were stale.
+        try {
+            if (\App\Models\Setting::get('voice_usage_rebuild_v2') !== '1') {
+                \App\Models\Setting::set('voice_usage_rebuild_v2', '1');   // first, so two boots never both run it
+                \App\Services\VoiceUsageIndex::rebuild();
+            }
+        } catch (\Throwable $e) {
+            error_log('PgSQL voice usage rebuild note: ' . $e->getMessage());
+        }
+
         // Bisaya word list from Wiktionary (2026-10-19): ~6,500 Cebuano words
         // for the MN translator and voice trainer. Skips headwords already
         // present, so it never duplicates or overwrites an edited word. Once.

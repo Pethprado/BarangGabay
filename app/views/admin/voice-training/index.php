@@ -910,7 +910,20 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 <div class="vt-stat-pill"><span class="vt-stat-pill-label"><?= e(__('Pending')) ?></span><span class="vt-stat-pill-val vt-stat-pill-val-warning"><?= (int) $stats[$lk]['pending'] ?></span></div>
             </div>
 
-            <?php if ($lk === 'msm'): ?>
+            <?php if ($lk === 'msm' && !empty($scriptTotals) && $scriptTotals['words'] > 0):
+                $stPct = round($scriptTotals['words_recorded'] / $scriptTotals['words'] * 100, 1); ?>
+            <div class="vt-coverage-block">
+                <div class="vt-coverage-top">
+                    <span>Words in posts recorded</span>
+                    <span style="color: var(--status-warning);"><?= number_format($stPct, 1) ?>%</span>
+                </div>
+                <div class="vt-progress-track"><div class="vt-progress-fill" style="width: <?= $stPct ?>%;"></div></div>
+                <span class="vt-coverage-sub">
+                    <?= (int) $scriptTotals['words_recorded'] ?> of <?= (int) $scriptTotals['words'] ?> words (Manobo + Bisaya, numbers included) ·
+                    <?= (int) $scriptTotals['sentences_covered'] ?> of <?= (int) $scriptTotals['sentences'] ?> sentences ready to read in full
+                </span>
+            </div>
+            <?php elseif ($lk === 'msm'): ?>
             <div class="vt-coverage-block">
                 <div class="vt-coverage-top">
                     <span><?= e(__('Used-in-posts coverage')) ?></span>
@@ -931,10 +944,16 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 <button type="button" onclick="quickTestLanguage('<?= $lk ?>')" class="btn-vt-action" style="flex: 0 1 auto;">
                     <i class="bi bi-volume-up-fill me-1"></i> <?= e(__('Test')) ?>
                 </button>
+                <button type="button" onclick="openScript('<?= $lk === 'ceb' ? 'msm' : $lk ?>')" class="btn-vt-gold" style="flex: 1 1 100%;justify-content:center;">
+                    <i class="bi bi-journal-text me-1"></i> Record post sentences &amp; words
+                </button>
             </div>
         </div>
         <?php endforeach; ?>
     </div>
+
+    <!-- ── 3b. Recording Script: every word and sentence in the posts ────── -->
+    <?php require __DIR__ . '/_script.php'; ?>
 
     <!-- ── 4. Tester + missing dictionary entries ─────────────────────────── -->
     <div class="vt-split-grid">
@@ -1147,9 +1166,6 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
             <?php if ($usageTruncated): ?><p class="text-xs vt-text-muted p-3 mb-0"><?= e(__('Showing the 25 most-used missing words per language. The full lists are in Missing Pronunciations above (search and Batch Record).')) ?></p><?php endif; ?>
         <?php endif; ?>
     </div>
-
-    <!-- ── 5b. Recording Script: every word and sentence in the posts ────── -->
-    <?php require __DIR__ . '/_script.php'; ?>
 
     <!-- ── 6. Samples management ──────────────────────────────────────────── -->
     <div class="vt-explorer-card" id="samples">
