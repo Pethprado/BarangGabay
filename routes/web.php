@@ -66,6 +66,7 @@ return [
     ['GET', '/admin/events/create', 'EventController@create', ['auth', 'role:admin,staff']],
     ['POST', '/admin/events', 'EventController@store', ['auth', 'role:admin,staff']],
     ['GET', '/admin/events/{id}/edit', 'EventController@edit', ['auth', 'role:admin,staff']],
+    ['GET', '/admin/events/{id}/view', 'EventController@adminView', ['auth', 'role:admin,staff']],
     ['POST', '/admin/events/{id}', 'EventController@update', ['auth', 'role:admin,staff']],
     ['POST', '/admin/events/{id}/delete', 'EventController@destroy', ['auth', 'role:admin,staff']],   // → Trash; staff: own posts only
     ['GET', '/admin/ordinances', 'OrdinanceController@adminIndex', ['auth', 'role:admin,staff']],

@@ -339,6 +339,22 @@ class EventController
     /**
      * GET /admin/events/{id}/edit
      */
+    /**
+     * GET /admin/events/{id}/view
+     * The event as residents see it, inside the admin panel (sidebar stays).
+     */
+    public function adminView(array $params): void
+    {
+        $event = Event::find((int) $params['id']);
+        if (!$event) {
+            flash('error', __('Event not found.'));
+            redirect('/admin/events');
+        }
+        $pageTitle    = t('nav.events');
+        $pendingCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn();
+        view('admin/events/view', compact('event', 'pageTitle', 'pendingCount'));
+    }
+
     public function edit(array $params): void
     {
         $event = Event::find((int) $params['id']);

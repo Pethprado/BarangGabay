@@ -70,7 +70,10 @@
     </style>
 </head>
 <?php
-$__rsShell = !empty($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'resident' && ($_SESSION['status'] ?? '') === 'verified';
+// Embed mode: the admin panel shows a post inside its own page (sidebar stays),
+// so only the post is drawn — no resident menu, header, footer or chat.
+$__embed   = !empty($_GET['embed']) && in_array($_SESSION['role'] ?? '', ['staff', 'admin', 'superadmin'], true);
+$__rsShell = !$__embed && !empty($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'resident' && ($_SESSION['status'] ?? '') === 'verified';
 $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '?'), strlen(rtrim((string) parse_url(base_url(), PHP_URL_PATH), '/'))), '/');
 ?>
 <body class="text-slate-900 antialiased<?= $__rsShell ? ' has-rs-side' : '' ?><?= $__rsShell && !empty($bareContent) ? ' rs-bare' : '' ?>">
@@ -107,6 +110,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
 <?php endif; ?>
 
     <!-- ── PREMIUM NAVBAR ─────────────────────────────────────────── -->
+    <?php if (!$__embed): ?>
     <header id="mainNav" class="navbar-premium">
         <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
 
@@ -324,6 +328,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
             </details>
         </div>
     </header>
+    <?php endif; ?>
 
     <!-- ── OPTIONAL HERO ──────────────────────────────────────────── -->
     <?php if (!empty($showHero)): ?>
@@ -346,7 +351,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
     <?php endif; ?>
 
     <!-- ── MAIN CONTENT ───────────────────────────────────────────── -->
-    <main class="mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+    <main class="mx-auto max-w-7xl <?= $__embed ? 'px-3 py-4 sm:px-5' : 'px-4 pb-16 pt-10 sm:px-6 lg:px-8' ?>">
         <div class="<?= !empty($showHero) ? '-mt-10' : 'mt-0' ?> rounded-[2rem] bg-white p-6 shadow-2xl shadow-slate-900/5 ring-1 ring-slate-200 sm:p-10 content-card">
             <?php require __DIR__ . '/../shared/_flash.php'; ?>
             <?= $content ?? '' ?>
@@ -354,6 +359,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
     </main>
 
     <!-- ── PREMIUM FOOTER ─────────────────────────────────────────── -->
+    <?php if (!$__embed): ?>
     <footer class="footer-premium">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="grid gap-10 lg:grid-cols-3">
@@ -389,6 +395,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
             </div>
         </div>
     </footer>
+    <?php endif; ?>
 
     <!-- Scroll to top button -->
     <button id="scrollTop" onclick="scrollToTop()" title="<?= e(t('common.back')) ?>">↑</button>
@@ -419,7 +426,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
     </div>
 
     <!-- ── AI CHAT WIDGET ─────────────────────────────────────────── -->
-    <?php if (!empty($_SESSION['user_id'])): ?>
+    <?php if (!empty($_SESSION['user_id']) && !$__embed): ?>
         <?php require __DIR__ . '/../shared/_ai-chat-widget.php'; ?>
     <?php endif; ?>
 

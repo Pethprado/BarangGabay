@@ -37,7 +37,9 @@ if ($hasMap) {
 ob_start();
 ?>
 
+<?php $__isEmbed = !empty($_GET['embed']) && in_array($_SESSION['role'] ?? '', ['staff', 'admin', 'superadmin'], true); ?>
 <!-- ── Breadcrumb ───────────────────────────────────────────────────────── -->
+<?php if (!$__isEmbed): ?>
 <nav class="mb-5 flex items-center gap-2 text-xs text-slate-400" aria-label="<?= e(__('Breadcrumb')) ?>">
     <a href="<?= e(route('')) ?>" class="hover:text-blue-700 transition-colors"><?= e(t('nav.home')) ?></a>
     <i class="bi bi-chevron-right" style="font-size:.65rem;"></i>
@@ -45,6 +47,7 @@ ob_start();
     <i class="bi bi-chevron-right" style="font-size:.65rem;"></i>
     <span class="line-clamp-1 max-w-[200px] text-slate-600"><?= e($evTitle) ?></span>
 </nav>
+<?php endif; ?>
 
 <!-- ── Two-column body ──────────────────────────────────────────────────── -->
 <div class="grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -105,12 +108,14 @@ $evTitlePick  = localised_content($event, 'title');
 
 
         <!-- Back link -->
+        <?php if (!$__isEmbed): ?>
         <div class="mt-8 border-t border-slate-100 pt-6">
             <a href="<?= e(route('events')) ?>"
                class="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-700">
                 <i class="bi bi-arrow-left"></i> <?= e(t('res_event_detail.back_to_list')) ?>
             </a>
         </div>
+        <?php endif; ?>
     </div>
 
     <!-- ── Right: info card + map + calendar ────────────────────────────── -->
