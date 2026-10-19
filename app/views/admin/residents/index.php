@@ -372,6 +372,20 @@ ob_start();
                             </button>
                             <?php endif; ?>
 
+                            <!-- Delete → Trash (admins; can be restored) -->
+                            <?php if (in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true)): ?>
+                            <form method="post"
+                                  action="<?= e(route('admin/residents/' . (int) $res['id'] . '/delete')) ?>"
+                                  style="display:inline;"
+                                  onsubmit="return confirm(<?= e(json_encode('Move ' . $res['full_name'] . ' to the Trash? They will be signed out and cannot log in. You can restore them from Residents > Trash.')) ?>)">
+                                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                <button type="submit" title="Delete (move to Trash)" aria-label="Delete <?= e($res['full_name']) ?>"
+                                        style="padding:4px 9px;font-size:.75rem;background:var(--surface-card);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--status-danger);display:inline-flex;align-items:center;gap:4px;">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                            <?php endif; ?>
+
                         </div>
                     </td>
 

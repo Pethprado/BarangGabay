@@ -140,6 +140,11 @@ return [
     ['POST', '/admin/puroks/remove',    'PurokController@remove',        ['auth', 'role:admin,staff']],
     ['POST', '/admin/puroks/residents', 'PurokController@storeResident', ['auth', 'role:admin,staff']],
     ['POST', '/admin/residents/bulk', 'ResidentController@bulk', ['auth', 'role:admin,staff']],
+    // Resident Trash: delete is reversible; grouped by purok. Admins only.
+    ['GET',  '/admin/residents/trash',               'ResidentController@trashIndex',   ['auth', 'role:admin']],
+    ['POST', '/admin/residents/trash/{id}/restore',  'ResidentController@trashRestore', ['auth', 'role:admin']],
+    ['POST', '/admin/residents/trash/{id}/purge',    'ResidentController@trashPurge',   ['auth', 'role:admin']],
+    ['POST', '/admin/residents/{id}/delete',         'ResidentController@trash',        ['auth', 'role:admin']],
     ['GET', '/admin/residents/{id}', 'ResidentController@show', ['auth', 'role:admin,staff']],
     ['POST', '/admin/residents/{id}/verify', 'ResidentController@verify', ['auth', 'role:admin,staff']],
     ['POST', '/admin/residents/{id}/suspend', 'ResidentController@suspend', ['auth', 'role:admin,staff']],

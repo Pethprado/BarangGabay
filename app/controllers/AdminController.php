@@ -179,7 +179,7 @@ class AdminController
         $recentTasks    = [];
         $viewerId       = (int) ($_SESSION['user_id'] ?? 0);
         try {
-            $totalResidents = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'resident'")->fetchColumn();
+            $totalResidents = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'resident' AND deleted_at IS NULL")->fetchColumn();
             $mine = $pdo->prepare('SELECT COUNT(*) FROM announcements WHERE author_id = ?');
             $mine->execute([$viewerId]);
             $staffKpi['announcements'] = (int) $mine->fetchColumn();
@@ -363,7 +363,7 @@ class AdminController
         $residentStats = [
             'verified'  => (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'resident' AND status = 'verified'")->fetchColumn(),
             'pending'   => (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'resident' AND status = 'pending'")->fetchColumn(),
-            'suspended' => (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'resident' AND status = 'suspended'")->fetchColumn(),
+            'suspended' => (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'resident' AND status = 'suspended' AND deleted_at IS NULL")->fetchColumn(),
         ];
         $residentStats['total'] = array_sum($residentStats);
 

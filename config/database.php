@@ -751,6 +751,10 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS household_no VARCHAR(50) NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_household_head SMALLINT NOT NULL DEFAULT 0",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS head_relationship VARCHAR(50) NULL",
+        // Resident Trash (App\Models\ResidentTrash)
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_by INT NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_prev_status VARCHAR(20) NULL",
 
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS certificate_no VARCHAR(50) NULL",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS issued_at TIMESTAMP NULL",

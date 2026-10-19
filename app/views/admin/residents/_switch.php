@@ -40,4 +40,13 @@ $__swPuroks = count(barangay_subdivisions());
         <i class="bi bi-upload" aria-hidden="true"></i> Import list
         <span class="badge rounded-pill" style="background:rgba(0,0,0,.12);color:inherit;">CSV · Excel · PDF</span>
     </a>
+    <?php if (in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true)): ?>
+    <a href="<?= e(route('admin/residents/trash')) ?>"
+       class="d-inline-flex align-items-center gap-2 text-decoration-none px-3 py-2 rounded-3 fw-semibold"
+       style="font-size:.86rem;<?= $residentsView === 'trash' ? 'background:var(--action-solid);color:#fff;' : 'background:var(--surface-card);color:var(--text-secondary);border:1px solid var(--border);' ?>"
+       <?= $residentsView === 'trash' ? 'aria-current="page"' : '' ?>>
+        <i class="bi bi-trash3" aria-hidden="true"></i> Trash
+        <span class="badge rounded-pill" style="background:rgba(0,0,0,.12);color:inherit;"><?= \App\Models\ResidentTrash::count() ?></span>
+    </a>
+    <?php endif; ?>
 </nav>

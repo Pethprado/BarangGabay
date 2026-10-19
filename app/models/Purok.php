@@ -35,7 +35,7 @@ final class Purok
                     SUM(CASE WHEN zone IS NULL OR TRIM(zone) = '' THEN 1 ELSE 0 END) AS no_purok,
                     SUM(CASE WHEN phone IS NOT NULL AND TRIM(phone) <> '' THEN 1 ELSE 0 END) AS with_phone
                FROM users
-              WHERE role = 'resident'"
+              WHERE role = 'resident' AND deleted_at IS NULL"
         )->fetch(PDO::FETCH_ASSOC) ?: [];
 
         $out = [];
@@ -62,7 +62,7 @@ final class Purok
                     SUM(CASE WHEN status = 'suspended' THEN 1 ELSE 0 END) AS suspended,
                     SUM(CASE WHEN phone IS NOT NULL AND TRIM(phone) <> '' THEN 1 ELSE 0 END) AS with_phone
                FROM users
-              WHERE role = 'resident' AND zone IS NOT NULL AND TRIM(zone) <> ''
+              WHERE role = 'resident' AND deleted_at IS NULL AND zone IS NOT NULL AND TRIM(zone) <> ''
               GROUP BY TRIM(zone)"
         )->fetchAll(PDO::FETCH_ASSOC);
 
@@ -236,7 +236,7 @@ final class Purok
     private static function purokWhere(string $purok, bool $inside): array
     {
         $purok = trim($purok);
-        $where = ["role = 'resident'"];
+        $where = ["role = 'resident'", 'deleted_at IS NULL'];
 
         if ($purok === '') {
             $where[] = $inside ? "(zone IS NULL OR TRIM(zone) = '')" : "(zone IS NOT NULL AND TRIM(zone) <> '')";

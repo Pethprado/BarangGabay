@@ -897,6 +897,69 @@ class ResidentController
      * POST /admin/residents/bulk
      * Bulk verify or suspend multiple residents at once.
      */
+    /** POST /admin/residents/{id}/delete — move a resident to the Trash. */
+    public function trash(array $params): void
+    {
+        check_csrf();
+        $userId   = (int) $params['id'];
+        $resident = User::find($userId);
+        if (!$resident || !\App\Models\ResidentTrash::trash($userId, (int) $_SESSION['user_id'])) {
+            flash('error', t('flash.resident_not_found'));
+            redirect('/admin/residents');
+        }
+        AuditLog::record((int) $_SESSION['user_id'], 'resident.trashed',
+            'Moved to Trash: Resident #' . $userId . ' (' . $resident['full_name'] . ')');
+        flash('success', $resident['full_name'] . ' was moved to the Trash. You can restore them from Residents > Trash.');
+        redirect('/admin/residents');
+    }
+
+    /** GET /admin/residents/trash — deleted residents, grouped by purok. */
+    public function trashIndex(array $params = []): void
+    {
+        $groups       = \App\Models\ResidentTrash::byPurok();
+        $pageTitle    = 'Resident Trash';
+        $pendingCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE status = 'pending' AND deleted_at IS NULL")->fetchColumn();
+        view('admin/residents/trash', compact('groups', 'pageTitle', 'pendingCount'));
+    }
+
+    /** POST /admin/residents/trash/{id}/restore */
+    public function trashRestore(array $params): void
+    {
+        check_csrf();
+        $userId   = (int) $params['id'];
+        $resident = User::find($userId);
+        if (!$resident || !\App\Models\ResidentTrash::restore($userId)) {
+            flash('error', t('flash.resident_not_found'));
+            redirect('/admin/residents/trash');
+        }
+        AuditLog::record((int) $_SESSION['user_id'], 'resident.restored',
+            'Restored from Trash: Resident #' . $userId . ' (' . $resident['full_name'] . ')');
+        flash('success', $resident['full_name'] . ' was restored.');
+        redirect('/admin/residents/trash');
+    }
+
+    /** POST /admin/residents/trash/{id}/purge — delete forever (cannot be undone). */
+    public function trashPurge(array $params): void
+    {
+        check_csrf();
+        $userId   = (int) $params['id'];
+        $resident = User::find($userId);
+        try {
+            $ok = $resident && \App\Models\ResidentTrash::purge($userId);
+        } catch (\Throwable $e) {
+            error_log('[ResidentTrash::purge] ' . $e->getMessage());
+            $ok = false;
+        }
+        if (!$ok) {
+            flash('error', 'Could not delete this account permanently. Please try again.');
+            redirect('/admin/residents/trash');
+        }
+        AuditLog::record((int) $_SESSION['user_id'], 'resident.purged',
+            'Deleted forever: Resident #' . $userId . ' (' . $resident['full_name'] . ', ' . $resident['email'] . ')');
+        flash('success', $resident['full_name'] . ' was deleted permanently.');
+        redirect('/admin/residents/trash');
+    }
+
     public function bulk(array $params): void
     {
         check_csrf();

@@ -120,9 +120,34 @@ final class DemoCleanup
         );
     }
 
-    private function execute(bool $commit): array
+    /**
+     * Permanently delete specific accounts the same safe way (their requests
+     * and payments go; authored posts move to the superadmin). Used by the
+     * resident Trash's "Delete forever". Superadmins are never deleted.
+     *
+     * @param list<int> $ids
+     * @return array{accounts: list<array{id:int,email:string,role:string}>, counts: array<string,int>, kept_owner: ?int}
+     */
+    public function purgeAccounts(array $ids): array
     {
-        $accounts = $this->demoAccounts();
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if ($ids === []) {
+            return ['accounts' => [], 'counts' => [], 'kept_owner' => null];
+        }
+        $stmt = $this->pdo->prepare(
+            "SELECT id, email, role FROM users WHERE id IN ({$this->marks($ids)}) AND role <> 'superadmin'"
+        );
+        $stmt->execute($ids);
+        $accounts = array_map(
+            static fn (array $row): array => ['id' => (int) $row['id'], 'email' => (string) $row['email'], 'role' => (string) $row['role']],
+            $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []
+        );
+        return $this->execute(true, $accounts);
+    }
+
+    private function execute(bool $commit, ?array $accounts = null): array
+    {
+        $accounts ??= $this->demoAccounts();
         $ids      = array_column($accounts, 'id');
         $counts   = [];
         if ($ids === []) {

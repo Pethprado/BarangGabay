@@ -519,7 +519,7 @@ class User
      */
     public static function allResidents(string $status = '', string $search = '', string $purok = ''): array
     {
-        $where  = ["role = 'resident'"];
+        $where  = ["role = 'resident'", 'deleted_at IS NULL'];
         $params = [];
 
         if ($status !== '') {
@@ -551,9 +551,9 @@ class User
     public static function countByStatus(string $status = ''): int
     {
         if ($status === '') {
-            return (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'resident'")->fetchColumn();
+            return (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'resident' AND deleted_at IS NULL")->fetchColumn();
         }
-        $stmt = db()->prepare("SELECT COUNT(*) FROM users WHERE role = 'resident' AND status = ?");
+        $stmt = db()->prepare("SELECT COUNT(*) FROM users WHERE role = 'resident' AND deleted_at IS NULL AND status = ?");
         $stmt->execute([$status]);
         return (int) $stmt->fetchColumn();
     }
