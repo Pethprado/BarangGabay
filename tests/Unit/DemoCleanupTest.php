@@ -42,6 +42,28 @@ class DemoCleanupTest extends TestCase
         $this->assertNotContains('admin@baranggabay.ph', $emails, 'the owner superadmin is never removed');
     }
 
+    public function testRemovesOnlyTheNewerCopyOfADuplicatedSamplePost(): void
+    {
+        $pdo   = db();
+        $owner = (int) $pdo->query("SELECT id FROM users WHERE role = 'superadmin' ORDER BY id LIMIT 1")->fetchColumn();
+        $add   = $pdo->prepare(
+            "INSERT INTO events (title, slug, description, event_date, created_by, status, is_sample)
+             VALUES (?, ?, 'x', '2026-12-01 09:00:00', ?, 'upcoming', ?)"
+        );
+        $add->execute(['zz dedupe sample', 'zz-dedupe-sample', $owner, 1]);
+        $add->execute(['zz dedupe sample', 'zz-dedupe-sample-2', $owner, 1]);
+        $add->execute(['zz dedupe real', 'zz-dedupe-real', $owner, 0]);
+        $add->execute(['zz dedupe real', 'zz-dedupe-real-2', $owner, 0]);
+
+        try {
+            (new DemoCleanup($pdo))->removeDuplicateSamples();
+            $slugs = $pdo->query("SELECT slug FROM events WHERE slug LIKE 'zz-dedupe-%' ORDER BY slug")->fetchAll(\PDO::FETCH_COLUMN);
+            $this->assertSame(['zz-dedupe-real', 'zz-dedupe-real-2', 'zz-dedupe-sample'], $slugs, 'real posts are never deduplicated');
+        } finally {
+            $pdo->exec("DELETE FROM events WHERE slug LIKE 'zz-dedupe-%'");
+        }
+    }
+
     public function testPreviewChangesNothing(): void
     {
         $count  = static fn (): int => (int) db()->query('SELECT COUNT(*) FROM users')->fetchColumn();

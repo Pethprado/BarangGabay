@@ -917,6 +917,17 @@ function syncPostgresSchema(PDO $pdo): void
             error_log('PgSQL demo cleanup note: ' . $e->getMessage());
         }
 
+        // Sample posts doubled when two instances booted together and both ran
+        // the sample seeder. Every boot: drop the newer copy (is_sample only).
+        try {
+            $dupes = (new \App\Services\DemoCleanup($pdo))->removeDuplicateSamples();
+            if ($dupes) {
+                error_log('[sample dedupe] ' . json_encode($dupes));
+            }
+        } catch (\Throwable $e) {
+            error_log('PgSQL sample dedupe note: ' . $e->getMessage());
+        }
+
         // Bisaya word list from Wiktionary (2026-10-19): ~6,500 Cebuano words
         // for the MN translator and voice trainer. Skips headwords already
         // present, so it never duplicates or overwrites an edited word. Once.

@@ -68,6 +68,37 @@ final class DemoCleanup
         return $this->execute(true);
     }
 
+    /**
+     * Remove duplicate SAMPLE posts. Two Render instances booting together
+     * both ran the sample seeder, so every sample announcement/event/ordinance
+     * existed twice (the copy got a "-2" slug). Keeps the oldest copy of each
+     * title; only is_sample = 1 rows are ever touched. Safe to run on every boot.
+     *
+     * @return array<string,int> rows removed per table
+     */
+    public function removeDuplicateSamples(): array
+    {
+        $removed = [];
+        foreach (['announcements' => 'announcement', 'events' => 'event', 'ordinances' => 'ordinance'] as $table => $type) {
+            $ids = $this->ids(
+                "SELECT dup.id FROM {$table} dup
+                   JOIN {$table} kept ON kept.title = dup.title AND kept.is_sample = 1 AND kept.id < dup.id
+                  WHERE dup.is_sample = 1",
+                []
+            );
+            $ids = array_values(array_unique($ids));
+            if ($ids === []) {
+                continue;
+            }
+            $this->exec(
+                'DELETE FROM notifications WHERE related_type = ? AND related_id IN (' . $this->marks($ids) . ')',
+                [$type, ...$ids]
+            );
+            $removed[$table] = $this->exec("DELETE FROM {$table} WHERE id IN (" . $this->marks($ids) . ')', $ids);
+        }
+        return $removed;
+    }
+
     /** @return list<array{id:int,email:string,role:string}> */
     public function demoAccounts(): array
     {

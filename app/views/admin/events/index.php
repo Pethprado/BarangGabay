@@ -35,6 +35,9 @@ ob_start();
 $__msPath = 'admin/events'; $__msMine = (bool) ($mine ?? false); $__msFellBack = (bool) ($mineEmpty ?? false);
 $__msMineLabel = 'My events'; $__msAllLabel = 'All events';
 require __DIR__ . '/../../shared/_mine-switch.php';
+
+// Super Admin opens an event's page in the same tab; staff keep a new tab.
+$viewTarget = (($_SESSION['role'] ?? '') === 'superadmin') ? '' : 'target="_blank"';
 ?>
 
 <!-- Page header -->
@@ -247,7 +250,7 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('event');
                 <td class="align-middle text-end" style="padding-right:16px;">
                     <div class="d-flex justify-content-end gap-1">
                         <a href="<?= e(route('events/' . $ev['slug'])) ?>"
-                           target="_blank"
+                           <?= $viewTarget ?>
                            class="btn btn-sm btn-outline-secondary"
                            title="<?= e(__('View on site')) ?>">
                             <i class="bi bi-eye"></i>
@@ -344,7 +347,7 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('event');
 
                 <!-- Footer Actions -->
                 <div class="pt-2 border-top d-flex align-items-center justify-content-between mt-auto">
-                    <a href="<?= e(route('events/' . $ev['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <a href="<?= e(route('events/' . $ev['slug'])) ?>" <?= $viewTarget ?> class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-eye"></i> <?= e(__('View')) ?>
                     </a>
                     <div class="d-flex gap-1">
