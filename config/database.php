@@ -887,6 +887,26 @@ function syncPostgresSchema(PDO $pdo): void
             error_log('PgSQL sample phones note: ' . $e->getMessage());
         }
 
+        // Go-live cleanup (2026-10-19, owner's request): remove the seeded demo
+        // accounts and THEIR document requests/payments. Matches only the fixed
+        // seeder emails and test domains (App\Services\DemoCleanup) — real
+        // residents, requests and payments are never matched. Sample posts the
+        // demo staff authored move to the superadmin. Once; result in audit_logs.
+        try {
+            if (\App\Models\Setting::get('demo_accounts_removed_v1') !== '1') {
+                $removed = (new \App\Services\DemoCleanup($pdo))->run();
+                $summary = count($removed['accounts']) . ' demo account(s) removed: '
+                    . implode(', ', array_column($removed['accounts'], 'email'))
+                    . ' | ' . json_encode($removed['counts']);
+                $pdo->prepare('INSERT INTO audit_logs (user_id, action, description) VALUES (NULL, ?, ?)')
+                    ->execute(['system.demo_cleanup', mb_substr($summary, 0, 4000)]);
+                error_log('[demo cleanup] ' . $summary);
+                \App\Models\Setting::set('demo_accounts_removed_v1', '1');
+            }
+        } catch (\Throwable $e) {
+            error_log('PgSQL demo cleanup note: ' . $e->getMessage());
+        }
+
         // Bisaya word list from Wiktionary (2026-10-19): ~6,500 Cebuano words
         // for the MN translator and voice trainer. Skips headwords already
         // present, so it never duplicates or overwrites an edited word. Once.
