@@ -115,6 +115,146 @@
     /** 0.1 s of silence — played inside the user's tap so iOS lets the clip element play later. */
     var SILENCE = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
 
+    /* ── Voice enhancement (Web Audio) ─────────────────────────────────────
+     *
+     * Recorded words used to play one <audio> clip after another: every clip
+     * kept the silence the speaker left before and after the word, and each
+     * had its own loudness, so a sentence came out choppy and uneven.
+     *
+     * Now each recording is decoded once and cleaned up in the browser:
+     *   - DC offset removed, silence trimmed off both ends (a little breath of
+     *     room is kept so words do not clip),
+     *   - levelled to the same loudness as every other recording,
+     *   - 8 ms fades so joins never click.
+     * The clips of a sentence are then scheduled back to back on one clock
+     * with a short natural gap between words and a longer pause after each
+     * sentence, through one chain: low-cut (mic rumble/handling noise) →
+     * presence lift (consonants, clarity) → compressor → make-up gain →
+     * limiter (loud, never distorted). Existing recordings benefit with no
+     * re-recording, and the admin tester hears exactly what residents hear.
+     */
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var WORD_GAP     = 0.07;   // seconds between recorded words/phrases
+    var SENTENCE_GAP = 0.32;   // extra pause after the last clip of a sentence
+    var TARGET_RMS   = 0.14;   // ≈ -17 dBFS speech level for every clip
+    var MAX_GAIN     = 10;     // never boost a near-silent clip into hiss
+    var fx = { ctx: null, input: null, master: null, buffers: {}, elements: [] };
+
+    function fxContext() {
+        if (!AC) { return null; }
+        if (fx.ctx) { return fx.ctx; }
+        try {
+            var ctx = new AC();
+            var lowCut = ctx.createBiquadFilter();
+            lowCut.type = 'highpass'; lowCut.frequency.value = 85; lowCut.Q.value = 0.7;
+            var presence = ctx.createBiquadFilter();
+            presence.type = 'peaking'; presence.frequency.value = 3000; presence.Q.value = 0.9; presence.gain.value = 3;
+            var comp = ctx.createDynamicsCompressor();
+            comp.threshold.value = -22; comp.knee.value = 8; comp.ratio.value = 3.5;
+            comp.attack.value = 0.004; comp.release.value = 0.2;
+            var makeUp = ctx.createGain();
+            makeUp.gain.value = 1.7;
+            var limiter = ctx.createDynamicsCompressor();
+            limiter.threshold.value = -1.5; limiter.knee.value = 0; limiter.ratio.value = 20;
+            limiter.attack.value = 0.001; limiter.release.value = 0.06;
+            var master = ctx.createGain();
+            master.gain.value = 1;
+            lowCut.connect(presence); presence.connect(comp); comp.connect(makeUp);
+            makeUp.connect(limiter); limiter.connect(master); master.connect(ctx.destination);
+            fx.ctx = ctx; fx.input = lowCut; fx.master = master;
+        } catch (e) {
+            fx.ctx = null;
+        }
+        return fx.ctx;
+    }
+
+    /** Resume the shared context — call inside the user's tap (iOS / autoplay rules). */
+    function fxWake() {
+        var ctx = fxContext();
+        if (ctx && ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
+        return ctx;
+    }
+
+    function decode(ctx, data) {
+        return new Promise(function (resolve, reject) {
+            var p = ctx.decodeAudioData(data, resolve, reject);   // old Safari: callbacks only
+            if (p && p.then) { p.then(resolve, reject); }
+        });
+    }
+
+    /** Trim, level and fade one decoded recording. Returns a new mono buffer. */
+    function enhance(ctx, buf) {
+        var n = buf.length, sr = buf.sampleRate, ch = buf.numberOfChannels;
+        var x = new Float32Array(n);
+        for (var c = 0; c < ch; c++) {
+            var d = buf.getChannelData(c);
+            for (var i = 0; i < n; i++) { x[i] += d[i] / ch; }
+        }
+        var mean = 0;
+        for (i = 0; i < n; i++) { mean += x[i]; }
+        mean /= n || 1;
+        var peak = 0;
+        for (i = 0; i < n; i++) { x[i] -= mean; var a = Math.abs(x[i]); if (a > peak) { peak = a; } }
+        if (peak < 1e-4) { return buf; }   // silent clip: leave as is
+
+        // Voiced region from 10 ms frame energy: anything 30 dB under the
+        // loudest frame (or plain room noise) is silence to trim.
+        var frame = Math.max(1, Math.round(sr * 0.01)), frames = Math.ceil(n / frame), rms = new Float32Array(frames), loud = 0;
+        for (var f = 0; f < frames; f++) {
+            var s = 0, end = Math.min(n, (f + 1) * frame);
+            for (i = f * frame; i < end; i++) { s += x[i] * x[i]; }
+            rms[f] = Math.sqrt(s / Math.max(1, end - f * frame));
+            if (rms[f] > loud) { loud = rms[f]; }
+        }
+        var gate = Math.max(loud * 0.032, 0.003), first = 0, last = frames - 1;
+        while (first < frames && rms[first] < gate) { first++; }
+        while (last > first && rms[last] < gate) { last--; }
+        var from = Math.max(0, first * frame - Math.round(sr * 0.035));
+        var to   = Math.min(n, (last + 1) * frame + Math.round(sr * 0.06));
+        if (to - from < sr * 0.08) { from = 0; to = n; }
+
+        var voiced = 0, cnt = 0;
+        for (f = first; f <= last; f++) { if (rms[f] >= gate) { voiced += rms[f] * rms[f]; cnt++; } }
+        voiced = Math.sqrt(voiced / Math.max(1, cnt));
+        var gain = Math.min(MAX_GAIN, TARGET_RMS / Math.max(voiced, 1e-4), 0.97 / peak);
+
+        var len = to - from, out = ctx.createBuffer(1, len, sr), y = out.getChannelData(0);
+        var fade = Math.min(Math.round(sr * 0.008), Math.floor(len / 4));
+        for (i = 0; i < len; i++) {
+            var env = 1;
+            if (i < fade) { env = i / fade; } else if (i > len - fade) { env = (len - i) / fade; }
+            y[i] = x[from + i] * gain * env;
+        }
+        return out;
+    }
+
+    /** Decoded + enhanced buffer for a clip URL, cached for the page's life. */
+    function fxBuffer(url) {
+        var ctx = fxContext();
+        if (!ctx) { return Promise.reject(new Error('no audio context')); }
+        if (!fx.buffers[url]) {
+            fx.buffers[url] = fetch(url, { credentials: 'same-origin' })
+                .then(function (r) { if (!r.ok) { throw new Error('HTTP ' + r.status); } return r.arrayBuffer(); })
+                .then(function (data) { return decode(ctx, data); })
+                .then(function (buf) { return enhance(ctx, buf); });
+            fx.buffers[url].catch(function () { delete fx.buffers[url]; });   // allow a retry later
+        }
+        return fx.buffers[url];
+    }
+
+    /**
+     * Send a whole-post narration <audio> element through the same chain so it
+     * is as loud and clear as the word clips. Once per element; must run in a tap.
+     */
+    function fxAttachElement(el) {
+        var ctx = fxWake();
+        if (!ctx || !el || fx.elements.indexOf(el) !== -1) { return; }
+        try {
+            ctx.createMediaElementSource(el).connect(fx.input);
+            fx.elements.push(el);
+        } catch (e) { /* already routed elsewhere, or not allowed: plays as before */ }
+    }
+
     /**
      * Plays a voice-dataset segment plan: recorded clips of native speakers in
      * order, with the device voice reading the words nobody has recorded yet.
@@ -125,6 +265,8 @@
      *
      * Only one segment ever sounds at a time: every play() or stop() bumps a
      * token, and callbacks from an older run see the stale token and do nothing.
+     * Consecutive recorded segments play as one seamless Web Audio run; the
+     * old one-<audio>-per-clip path remains for browsers without Web Audio.
      */
     function VoiceSegmentPlayer() {
         this.clip     = null;
@@ -132,20 +274,31 @@
         this.active   = false;
         this.paused   = false;
         this._preload = null;
+        this._run_    = null;   // current Web Audio run: {sources, timer}
     }
 
     VoiceSegmentPlayer.prototype = {
         /** Call from inside the click handler that starts playback (iOS). */
         unlock: function () {
+            if (fxWake()) { return; }
             if (!this.clip) { this.clip = new Audio(); this.clip.preload = 'auto'; }
             if (!this.clip.src) {
                 try { this.clip.src = SILENCE; var p = this.clip.play(); if (p && p.catch) { p.catch(function () {}); } } catch (e) {}
             }
         },
 
+        /** Start loading (and enhancing) the clips of a plan before it plays. */
+        prefetch: function (segments) {
+            if (!fxContext()) { return; }
+            (segments || []).forEach(function (sg) {
+                if (sg.type === 'recorded' && sg.audio_url) { fxBuffer(sg.audio_url).catch(function () {}); }
+            });
+        },
+
         /**
          * @param {Array}  segments  [{type:'recorded', text, audio_url} | {type:'missing', text}]
-         * @param {Object} opts      lang, voice, rate, onSegment(i, seg), onDone(), onSpeechError(event)
+         * @param {Object} opts      lang, voice, rate, volume, fallback, sentenceGap,
+         *                           onSegment(i, seg), onDone(), onSpeechError(event)
          */
         play: function (segments, opts) {
             this.stop();
@@ -170,6 +323,15 @@
 
             var seg  = segments[i];
             var next = function () { self._run(segments, opts, i + 1, token); };
+
+            // Web Audio: every recorded segment from here to the next gap plays as one run.
+            if (seg.type === 'recorded' && seg.audio_url && fxContext()) {
+                var j = i;
+                while (j < segments.length && segments[j].type === 'recorded' && segments[j].audio_url) { j++; }
+                this._playRun(segments, opts, i, j, token);
+                return;
+            }
+
             if (opts.onSegment) { opts.onSegment(i, seg); }
 
             // Warm the cache for the next clip so recorded words follow each other without a gap.
@@ -207,6 +369,65 @@
             this._say(seg.text, opts, next, token);
         },
 
+        /** Segments [from, to) are all recorded: decode, then schedule them gap-free. */
+        _playRun: function (segments, opts, from, to, token) {
+            var self = this, ctx = fxWake();
+            var urls = segments.slice(from, to).map(function (sg) { return sg.audio_url; });
+            this._loading = true;
+            Promise.all(urls.map(function (u) { return fxBuffer(u).catch(function () { return null; }); }))
+                .then(function (buffers) {
+                    if (token !== self.token) { return; }
+                    self._loading = false;
+                    if (self.paused) {   // paused while the clips loaded: start the run on resume()
+                        self._pendingRun = function () { self._playRun(segments, opts, from, to, token); };
+                        return;
+                    }
+                    var rate   = opts.rate || 1;
+                    var isLast = to >= segments.length;
+                    var t      = ctx.currentTime + 0.04;
+                    var marks  = [], sources = [], failed = [];
+                    if (fx.master) { fx.master.gain.value = typeof opts.volume === 'number' ? Math.max(0, Math.min(1, opts.volume)) : 1; }
+
+                    buffers.forEach(function (buf, k) {
+                        if (!buf) { failed.push(from + k); return; }
+                        var src = ctx.createBufferSource();
+                        src.buffer = buf;
+                        src.playbackRate.value = rate;
+                        src.connect(fx.input);
+                        src.start(t);
+                        sources.push(src);
+                        marks.push({ at: t, index: from + k });
+                        t += buf.duration / rate + WORD_GAP / rate;
+                    });
+                    // A clip that would not load: in recorded-only mode it is
+                    // skipped; otherwise the device voice reads it after the run.
+                    var endAt = t + (isLast ? (typeof opts.sentenceGap === 'number' ? opts.sentenceGap : SENTENCE_GAP) : 0);
+
+                    var run = { sources: sources, timer: null };
+                    self._run_ = run;
+                    var fired = -1;
+                    run.timer = setInterval(function () {
+                        if (token !== self.token) { clearInterval(run.timer); return; }
+                        var now = ctx.currentTime;
+                        while (fired + 1 < marks.length && marks[fired + 1].at <= now + 0.01) {
+                            fired++;
+                            if (opts.onSegment) { opts.onSegment(marks[fired].index, segments[marks[fired].index]); }
+                        }
+                        if (now >= endAt) {
+                            clearInterval(run.timer);
+                            self._run_ = null;
+                            var after = function () { self._run(segments, opts, to, token); };
+                            if (failed.length && opts.fallback !== 'recorded_only') {
+                                var words = failed.map(function (n) { return segments[n].text; }).join(' ');
+                                self._say(words, opts, after, token);
+                            } else {
+                                after();
+                            }
+                        }
+                    }, 30);
+                });
+        },
+
         _say: function (text, opts, next, token) {
             var self = this;
             if (!SPEECH || !text) { next(); return; }
@@ -227,12 +448,15 @@
 
         /** True while a recorded clip (not the device voice) is sounding. */
         clipPlaying: function () {
+            if (this._run_ || this._loading) { return !this.paused; }
             return !!(this.clip && !this.clip.paused && !this.clip.ended && this.clip.src !== SILENCE);
         },
 
         pause: function () {
             if (!this.active) { return; }
             this.paused = true;
+            if (this._run_ && fx.ctx) { try { fx.ctx.suspend(); } catch (e) {} this._ctxPaused = true; return; }
+            this._ctxPaused = false;
             if (this.clip && !this.clip.paused) { this.clip.pause(); this._clipPaused = true; return; }
             this._clipPaused = false;
             if (SPEECH) { window.speechSynthesis.pause(); }
@@ -241,6 +465,7 @@
         resume: function () {
             if (!this.active || !this.paused) { return; }
             this.paused = false;
+            if (this._ctxPaused && fx.ctx) { this._ctxPaused = false; try { fx.ctx.resume(); } catch (e) {} return; }
             if (this._pendingRun) { var run = this._pendingRun; this._pendingRun = null; run(); return; }
             if (this._clipPaused && this.clip) { this.clip.play(); return; }
             if (SPEECH) { window.speechSynthesis.resume(); }
@@ -251,6 +476,13 @@
             this.active = false;
             this.paused = false;
             this._pendingRun = null;
+            this._loading = false;
+            if (this._run_) {
+                clearInterval(this._run_.timer);
+                this._run_.sources.forEach(function (s) { try { s.stop(); } catch (e) {} });
+                this._run_ = null;
+            }
+            if (this._ctxPaused && fx.ctx) { this._ctxPaused = false; try { fx.ctx.resume(); } catch (e) {} }
             if (this.clip) {
                 this.clip.onended = this.clip.onerror = null;
                 try { this.clip.pause(); } catch (e) {}
@@ -260,6 +492,7 @@
     };
 
     window.VoiceSegmentPlayer = VoiceSegmentPlayer;
+    window.voiceFxAttach      = fxAttachElement;
     window.voicePickVoice     = pickVoice;
     window.voiceWhenReady     = whenVoicesReady;
 
@@ -621,6 +854,7 @@
                     var el = this._audioEl();
                     if (!el) { return; }
                     if (el.getAttribute('src') !== this.activeUrl) { el.src = this.activeUrl; }
+                    if (window.voiceFxAttach) { window.voiceFxAttach(el); }   // same loud, clear chain
                     el.playbackRate = this.rate;
                     el.currentTime  = 0;
                     el.play();
@@ -631,6 +865,8 @@
                 // Inside the tap: let the dataset clip element play later on iOS.
                 if (this.chunks.some(function (c) { return c.segments && c.segments.length; })) {
                     this._segments().unlock();
+                    this._segments().prefetch((this.chunks[0] || {}).segments);
+                    this._segments().prefetch((this.chunks[1] || {}).segments);
                 }
 
                 this._setStatus('playing');
@@ -681,7 +917,7 @@
                 this._setStatus('playing');
 
                 if (this._seg && this._seg.active && this._seg.paused
-                    && (this._seg._clipPaused || this._seg._pendingRun || (this.track && this.track.fallback === 'recorded_only'))) {
+                    && (this._seg._clipPaused || this._seg._ctxPaused || this._seg._pendingRun || (this.track && this.track.fallback === 'recorded_only'))) {
                     this._seg.resume();
                     this._startTimers();
                     return;
@@ -842,6 +1078,8 @@
                     this._spokenAt = Date.now();
                     this._highlight(chunk.find);
                     this._progressAt(index, 0);
+                    // Load the next sentence's clips while this one plays: no wait between sentences.
+                    this._segments().prefetch((this.chunks[index + 1] || {}).segments);
 
                     this._segments().play(chunk.segments, {
                         fallback: track && track.fallback,
