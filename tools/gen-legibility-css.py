@@ -84,11 +84,13 @@ rules = [
     # Gold fills keep dark ink (gold stays gold in dark mode).
     ('[style*="background:var(--motif-gold)"], [style*="background: var(--motif-gold)"], [style*="background:var(--brand-gradient-gold)"], [style*="background: var(--brand-gradient-gold)"]', 'color: #2a1d00 !important;'),
     # Tailwind light fills with an opacity suffix (table headers, row hover) and light tints.
-    ('.bg-slate-50\\/80, .bg-slate-50\\/60, .bg-slate-50\\/50, .bg-slate-100\\/80, .bg-gray-50, .bg-gray-100', 'background-color: var(--surface-muted) !important; color: var(--text-secondary) !important;'),
+    # Every "/NN" variant in use: a missing one (bg-slate-50/70 on the resident
+    # Request Details modal) left a light card under light text.
+    ('.bg-slate-50\\/90, .bg-slate-50\\/80, .bg-slate-50\\/70, .bg-slate-50\\/60, .bg-slate-50\\/50, .bg-slate-50\\/40, .bg-slate-50\\/30, .bg-slate-100\\/80, .bg-slate-100\\/70, .bg-slate-100\\/50, .bg-gray-50, .bg-gray-100', 'background-color: var(--surface-muted) !important; color: var(--text-secondary) !important;'),
     ('.hover\\:bg-slate-50\\/60:hover, .hover\\:bg-slate-50:hover, .hover\\:bg-slate-100:hover', 'background-color: var(--surface-muted) !important;'),
-    ('.bg-indigo-50, .bg-blue-50, .bg-sky-50, .bg-violet-50, .bg-purple-50', 'background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.3) !important;'),
-    ('.bg-emerald-50, .bg-green-50, .bg-teal-50', 'background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.3) !important;'),
-    ('.bg-amber-50, .bg-yellow-50, .bg-orange-50', 'background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.3) !important;'),
+    ('.bg-indigo-50, .bg-blue-50, .bg-sky-50, .bg-violet-50, .bg-purple-50, .bg-blue-50\\/50, .bg-blue-50\\/30','background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.3) !important;'),
+    ('.bg-emerald-50, .bg-green-50, .bg-teal-50, .bg-emerald-50\\/50, .bg-emerald-50\\/40','background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.3) !important;'),
+    ('.bg-amber-50, .bg-yellow-50, .bg-orange-50, .bg-amber-50\\/90','background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.3) !important;'),
     ('.bg-rose-50, .bg-red-50, .bg-pink-50', 'background-color: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(255,157,157,.3) !important;'),
     # Hazard advisory strip: its colours arrive as inline custom properties per level.
     ('.advisory-strip[style*="--advisory-bar:#a3311c"]', '--advisory-bg: var(--status-danger-bg) !important; --advisory-ink: var(--status-danger) !important; --advisory-bar: #ff6b6b !important;'),

@@ -1480,10 +1480,16 @@ table.table thead th.text-muted { color: #ffffff !important; }
 :root[data-theme="dark"] [style*="background: var(--motif-gold)"],
 :root[data-theme="dark"] [style*="background:var(--brand-gradient-gold)"],
 :root[data-theme="dark"] [style*="background: var(--brand-gradient-gold)"] { color: #2a1d00 !important; }
+:root[data-theme="dark"] .bg-slate-50\/90,
 :root[data-theme="dark"] .bg-slate-50\/80,
+:root[data-theme="dark"] .bg-slate-50\/70,
 :root[data-theme="dark"] .bg-slate-50\/60,
 :root[data-theme="dark"] .bg-slate-50\/50,
+:root[data-theme="dark"] .bg-slate-50\/40,
+:root[data-theme="dark"] .bg-slate-50\/30,
 :root[data-theme="dark"] .bg-slate-100\/80,
+:root[data-theme="dark"] .bg-slate-100\/70,
+:root[data-theme="dark"] .bg-slate-100\/50,
 :root[data-theme="dark"] .bg-gray-50,
 :root[data-theme="dark"] .bg-gray-100 { background-color: var(--surface-muted) !important; color: var(--text-secondary) !important; }
 :root[data-theme="dark"] .hover\:bg-slate-50\/60:hover,
@@ -1493,13 +1499,18 @@ table.table thead th.text-muted { color: #ffffff !important; }
 :root[data-theme="dark"] .bg-blue-50,
 :root[data-theme="dark"] .bg-sky-50,
 :root[data-theme="dark"] .bg-violet-50,
-:root[data-theme="dark"] .bg-purple-50 { background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.3) !important; }
+:root[data-theme="dark"] .bg-purple-50,
+:root[data-theme="dark"] .bg-blue-50\/50,
+:root[data-theme="dark"] .bg-blue-50\/30 { background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.3) !important; }
 :root[data-theme="dark"] .bg-emerald-50,
 :root[data-theme="dark"] .bg-green-50,
-:root[data-theme="dark"] .bg-teal-50 { background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.3) !important; }
+:root[data-theme="dark"] .bg-teal-50,
+:root[data-theme="dark"] .bg-emerald-50\/50,
+:root[data-theme="dark"] .bg-emerald-50\/40 { background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.3) !important; }
 :root[data-theme="dark"] .bg-amber-50,
 :root[data-theme="dark"] .bg-yellow-50,
-:root[data-theme="dark"] .bg-orange-50 { background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.3) !important; }
+:root[data-theme="dark"] .bg-orange-50,
+:root[data-theme="dark"] .bg-amber-50\/90 { background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.3) !important; }
 :root[data-theme="dark"] .bg-rose-50,
 :root[data-theme="dark"] .bg-red-50,
 :root[data-theme="dark"] .bg-pink-50 { background-color: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(255,157,157,.3) !important; }
@@ -1798,10 +1809,16 @@ table.table thead th.text-muted { color: #ffffff !important; }
     :root:not([data-theme="light"]) [style*="background: var(--motif-gold)"],
     :root:not([data-theme="light"]) [style*="background:var(--brand-gradient-gold)"],
     :root:not([data-theme="light"]) [style*="background: var(--brand-gradient-gold)"] { color: #2a1d00 !important; }
+    :root:not([data-theme="light"]) .bg-slate-50\/90,
     :root:not([data-theme="light"]) .bg-slate-50\/80,
+    :root:not([data-theme="light"]) .bg-slate-50\/70,
     :root:not([data-theme="light"]) .bg-slate-50\/60,
     :root:not([data-theme="light"]) .bg-slate-50\/50,
+    :root:not([data-theme="light"]) .bg-slate-50\/40,
+    :root:not([data-theme="light"]) .bg-slate-50\/30,
     :root:not([data-theme="light"]) .bg-slate-100\/80,
+    :root:not([data-theme="light"]) .bg-slate-100\/70,
+    :root:not([data-theme="light"]) .bg-slate-100\/50,
     :root:not([data-theme="light"]) .bg-gray-50,
     :root:not([data-theme="light"]) .bg-gray-100 { background-color: var(--surface-muted) !important; color: var(--text-secondary) !important; }
     :root:not([data-theme="light"]) .hover\:bg-slate-50\/60:hover,
@@ -1811,13 +1828,18 @@ table.table thead th.text-muted { color: #ffffff !important; }
     :root:not([data-theme="light"]) .bg-blue-50,
     :root:not([data-theme="light"]) .bg-sky-50,
     :root:not([data-theme="light"]) .bg-violet-50,
-    :root:not([data-theme="light"]) .bg-purple-50 { background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.3) !important; }
+    :root:not([data-theme="light"]) .bg-purple-50,
+    :root:not([data-theme="light"]) .bg-blue-50\/50,
+    :root:not([data-theme="light"]) .bg-blue-50\/30 { background-color: var(--status-info-bg) !important; color: var(--status-info) !important; border-color: rgba(125,211,252,.3) !important; }
     :root:not([data-theme="light"]) .bg-emerald-50,
     :root:not([data-theme="light"]) .bg-green-50,
-    :root:not([data-theme="light"]) .bg-teal-50 { background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.3) !important; }
+    :root:not([data-theme="light"]) .bg-teal-50,
+    :root:not([data-theme="light"]) .bg-emerald-50\/50,
+    :root:not([data-theme="light"]) .bg-emerald-50\/40 { background-color: var(--status-success-bg) !important; color: var(--status-success) !important; border-color: rgba(110,231,168,.3) !important; }
     :root:not([data-theme="light"]) .bg-amber-50,
     :root:not([data-theme="light"]) .bg-yellow-50,
-    :root:not([data-theme="light"]) .bg-orange-50 { background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.3) !important; }
+    :root:not([data-theme="light"]) .bg-orange-50,
+    :root:not([data-theme="light"]) .bg-amber-50\/90 { background-color: var(--status-warning-bg) !important; color: var(--status-warning) !important; border-color: rgba(252,211,77,.3) !important; }
     :root:not([data-theme="light"]) .bg-rose-50,
     :root:not([data-theme="light"]) .bg-red-50,
     :root:not([data-theme="light"]) .bg-pink-50 { background-color: var(--status-danger-bg) !important; color: var(--status-danger) !important; border-color: rgba(255,157,157,.3) !important; }

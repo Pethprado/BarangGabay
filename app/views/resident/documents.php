@@ -678,8 +678,11 @@ ob_start();
 <!-- ========================================================================= -->
 <!-- REQUEST DETAILS MODAL (Requirement 26)                                     -->
 <!-- ========================================================================= -->
-<div id="detailsModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-900/60 p-4 sm:p-6 flex items-center justify-center backdrop-blur-xs transition-opacity">
-    <div class="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-800 transition-all">
+<div id="detailsModal" class="fixed inset-0 hidden bg-slate-900/60 p-3 sm:p-6 flex items-center justify-center backdrop-blur-xs transition-opacity" style="z-index:9000;">
+    <?php /* Compact and always on screen: the box scrolls inside instead of
+             growing past the window (it used to sit under the page header). */ ?>
+    <div class="relative w-full max-w-md rounded-2xl bg-white p-4 sm:p-5 shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-800 transition-all"
+         style="max-height:calc(100vh - 2rem);overflow-y:auto;">
         
         <!-- Modal Header -->
         <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 dark:border-slate-800">
@@ -1076,7 +1079,14 @@ function openDetailsModal(r) {
         `;
     }
 
-    document.getElementById('detailsModal').classList.remove('hidden');
+    // The page card it is written inside has a transform/blur, which makes
+    // "position: fixed" relative to that card (the modal sat under the header
+    // with no dimmed backdrop). On <body> it covers and centres on the screen.
+    const modal = document.getElementById('detailsModal');
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+    modal.classList.remove('hidden');
 }
 
 function closeDetailsModal() {
