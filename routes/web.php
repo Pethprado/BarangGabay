@@ -55,6 +55,7 @@ return [
     ['GET', '/admin/announcements/create', 'AnnouncementController@create', ['auth', 'role:admin,staff']],
     ['POST', '/admin/announcements', 'AnnouncementController@store', ['auth', 'role:admin,staff']],
     ['GET', '/admin/announcements/{id}/edit', 'AnnouncementController@edit', ['auth', 'role:admin,staff']],
+    ['GET', '/admin/announcements/{id}/view', 'AnnouncementController@adminView', ['auth', 'role:admin,staff']],
     // Re-run the machine translation for one post. Needed because the free
     // translation service has a daily per-IP allowance: when it is spent, a
     // save succeeds with no translation attached, and without this the only

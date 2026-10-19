@@ -169,6 +169,7 @@ return [
     'BROKEN' => 'NABUAK',
     'Babae (Female)' => 'bujag',
     'Back to Residents' => 'Balik ngadto ha Mga residente',
+    'Back to announcements' => 'Balik sa mga pahinomdom',
     'Back to events' => 'Balik sa mga panghitabo',
     'Backup Tool' => 'Himan sa Pag-backup',
     'Backups require the PostgreSQL dump utility (' => 'Ang mga backup nagkinahanglan sa PostgreSQL dump utility (',

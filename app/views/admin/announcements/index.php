@@ -40,6 +40,14 @@ ob_start();
 $__msPath = 'admin/announcements'; $__msMine = (bool) ($mine ?? false); $__msFellBack = (bool) ($mineEmpty ?? false);
 $__msMineLabel = 'My announcements'; $__msAllLabel = 'All announcements';
 require __DIR__ . '/../../shared/_mine-switch.php';
+
+// Super Admin views an announcement inside the admin panel (same tab, sidebar
+// stays); staff keep opening the resident page in a new tab.
+$isSuper    = ($_SESSION['role'] ?? '') === 'superadmin';
+$viewTarget = $isSuper ? '' : 'target="_blank"';
+$viewUrl    = static fn (array $ann): string => $isSuper
+    ? route('admin/announcements/' . (int) $ann['id'] . '/view')
+    : route('announcements/' . $ann['slug']);
 ?>
 
 <!-- Page header -->
@@ -330,8 +338,8 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
                 <!-- Actions -->
                 <td style="text-align:right;padding-right:14px;">
                     <div class="btn-group-action">
-                        <a href="<?= e(route('announcements/' . $ann['slug'])) ?>"
-                           target="_blank"
+                        <a href="<?= e($viewUrl($ann)) ?>"
+                           <?= $viewTarget ?>
                            class="btn-action"
                            title="<?= e(__('View on site')) ?>">
                             <i class="bi bi-eye-fill"></i>
@@ -421,7 +429,7 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
 
                 <!-- Footer / Action Buttons -->
                 <div class="pt-2 border-top d-flex align-items-center justify-content-between mt-auto">
-                    <a href="<?= e(route('announcements/' . $ann['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <a href="<?= e($viewUrl($ann)) ?>" <?= $viewTarget ?> class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-eye"></i> <?= e(__('View')) ?>
                     </a>
                     <div class="d-flex gap-1">

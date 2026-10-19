@@ -27,7 +27,9 @@ $fbUrl     = 'https://www.facebook.com/sharer/sharer.php?u=' . urlencode($pageUr
 ob_start();
 ?>
 
+<?php $__isEmbed = !empty($_GET['embed']) && in_array($_SESSION['role'] ?? '', ['staff', 'admin', 'superadmin'], true); ?>
 <!-- ── Breadcrumb ─────────────────────────────────────────────── -->
+<?php if (!$__isEmbed): ?>
 <nav class="mb-5 flex items-center gap-2 text-xs text-slate-400" aria-label="<?= e(__('Breadcrumb')) ?>">
     <a href="<?= e(route('')) ?>" class="hover:text-blue-700 transition-colors"><?= e(t('nav.home')) ?></a>
     <i class="bi bi-chevron-right" style="font-size:.65rem;"></i>
@@ -35,6 +37,7 @@ ob_start();
     <i class="bi bi-chevron-right" style="font-size:.65rem;"></i>
     <span class="text-slate-600 line-clamp-1 max-w-[200px]"><?= e(localised_text($announcement, 'title')) ?></span>
 </nav>
+<?php endif; ?>
 
 <div class="grid gap-8 lg:grid-cols-[1fr_300px]">
 
@@ -278,10 +281,12 @@ ob_start();
         </div><!-- /post-card -->
 
         <!-- Back link -->
+        <?php if (!$__isEmbed): ?>
         <a href="<?= e(route('announcements')) ?>"
            class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:border-slate-300">
             <i class="bi bi-arrow-left"></i> <?= e(t('res_announcement_detail.back_to_list')) ?>
         </a>
+        <?php endif; ?>
 
     </aside>
 

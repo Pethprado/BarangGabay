@@ -1637,4 +1637,5 @@ return [
     'Your valid ID was uploaded.' => 'Na-upload na ang inyong valid ID.',
     'Could not upload your ID. Use a JPG, PNG or PDF up to 10 MB.' => 'Hindi ma-upload ang inyong ID. Gumamit ng JPG, PNG o PDF na hanggang 10 MB.',
     'Back to events' => 'Bumalik sa mga kaganapan',
+    'Back to announcements' => 'Bumalik sa mga anunsyo',
 ];

@@ -467,6 +467,22 @@ class AnnouncementController
         redirect('/admin/announcements');
     }
 
+    /**
+     * GET /admin/announcements/{id}/view
+     * The announcement as residents see it, inside the admin panel (sidebar stays).
+     */
+    public function adminView(array $params): void
+    {
+        $announcement = Announcement::find((int) ($params['id'] ?? 0));
+        if (!$announcement) {
+            flash('error', t('flash.not_found'));
+            redirect('/admin/announcements');
+        }
+        $pageTitle    = t('nav.announcements');
+        $pendingCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn();
+        view('admin/announcements/view', compact('announcement', 'pageTitle', 'pendingCount'));
+    }
+
     public function edit(array $params): void
     {
         $announcement = Announcement::find((int) ($params['id'] ?? 0));
