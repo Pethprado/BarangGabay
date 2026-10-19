@@ -65,16 +65,7 @@ ob_start();
             <?= e(t('residents.summary', ['all' => number_format($counts['all']), 'pending' => number_format($counts['pending'])])) ?>
         </p>
     </div>
-    <!-- Create Staff button — visible to admin/superadmin only -->
-    <?php if (in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true)): ?>
-    <a href="<?= e(route('admin/staff/create')) ?>"
-       style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;background:linear-gradient(135deg,#1652f0,#1041c4);color:#fff;border-radius:8px;font-size:.845rem;font-weight:700;text-decoration:none;box-shadow:0 2px 8px rgba(22,82,240,.25);transition:all .2s;white-space:nowrap;"
-       onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(22,82,240,.35)';"
-       onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(22,82,240,.25)';">
-        <i class="bi bi-person-plus-fill"></i>
-        <?= e(t('residents.create_staff_btn')) ?>
-    </a>
-    <?php endif; ?>
+    <?php /* Staff accounts are created from Staff Accounts in the sidebar, not here. */ ?>
 </div>
 
 <?php $residentsView = 'list'; require __DIR__ . '/_switch.php'; ?>
