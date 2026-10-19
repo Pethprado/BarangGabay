@@ -40,3 +40,30 @@ Edit the CSV in Excel or any text editor, keeping the header:
 Comma-separated values in `english`/`tagalog` are alternative meanings. Use
 one sense per row when a word is ambiguous (e.g. Tagalog "bago" = new *and*
 before, so it is intentionally not mapped).
+
+## Wiktionary word list (`bisaya_wiktionary.csv`)
+
+About 6,500 more Cebuano Bisaya words (5,772 new headwords after skipping words
+already above), added 2026-10-19 so the MN translator and the voice trainer
+recognise far more Bisaya.
+
+- **Source:** English Wiktionary's Cebuano and Tagalog entries, via the
+  kaikki.org machine-readable extracts. Wiktionary text is licensed
+  **CC BY-SA 4.0** (https://creativecommons.org/licenses/by-sa/4.0/); the
+  `english` meanings come from it, so this file is shared under the same
+  licence. Credit: Wiktionary contributors.
+- **Filtered:** only nouns, verbs, adjectives, adverbs, numbers and common
+  function words; no names, slang, vulgar, obsolete, rare or alternative
+  spellings; no species or definition-style meanings.
+- **Tagalog column:** paired automatically. A Tagalog word is filled in only
+  when its *main* English meaning matches the Bisaya word's main meaning
+  (1–3 synonyms). Otherwise it is blank and the word still works for English
+  and for recognising Bisaya. Rows with an automatic pairing say so in `notes`.
+- **False friends left out:** words spelled like a Tagalog word with a
+  different meaning (Bisaya *damo* = many, Tagalog *damo* = grass).
+- **Loaded by:** `php tools/import-bisaya-wiktionary.php` (MariaDB), and once
+  automatically on Render (setting `bisaya_wiktionary_v1`). Rows get
+  `source = WIKTIONARY-CEB`. A headword already in the table is skipped, so
+  the hand-written words above keep priority and nothing is overwritten.
+- **Still Cebuano, not Surigaonon:** where the local form differs, correct
+  the word at `/admin/bisaya` and set source to `LOCAL`.

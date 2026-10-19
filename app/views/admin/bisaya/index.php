@@ -352,6 +352,7 @@ ob_start();
         <p class="mb-0 text-muted" style="font-size:.78rem;">
             <?= e(t('admin_manobo.showing', ['shown' => count($entries), 'total' => $totalEntries])) ?>
         </p>
+        <?php include __DIR__ . '/../../shared/_pagination.php'; ?>
     </div>
 </div>
 

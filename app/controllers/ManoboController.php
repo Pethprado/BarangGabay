@@ -917,8 +917,18 @@ class ManoboController
             }
         }
 
+        // Thousands of words since the Wiktionary import: one page of the
+        // table at a time, or the page (with an edit form per row) gets huge.
+        $matches = $this->bisaya->search($search, $category);
+        $perPage = 100;
+        $page    = min(max(1, (int) ($_GET['page'] ?? 1)), max(1, (int) ceil(count($matches) / $perPage)));
+
         view('admin/bisaya/index', [
-            'entries'           => $this->bisaya->search($search, $category),
+            'entries'           => array_slice($matches, ($page - 1) * $perPage, $perPage),
+            'page'              => $page,
+            'perPage'           => $perPage,
+            'total'             => count($matches),
+            'query'             => array_filter(['q' => $search, 'category' => $category], static fn ($v) => $v !== ''),
             'totalEntries'      => $this->bisaya->count(),
             'categories'        => $this->bisaya->categories(),
             'partsOfSpeech'     => $this->bisaya->partsOfSpeech(),
@@ -927,7 +937,12 @@ class ManoboController
             'tryTerm'           => $tryTerm,
             'tryTo'             => $tryTo,
             'tryResult'         => $tryResult,
-            'needsVerification' => $this->bisaya->needsVerification(),
+            // Wiktionary rows only carry an attribution note; the review list
+            // stays for the hand-written words a local speaker should check.
+            'needsVerification' => array_values(array_filter(
+                $this->bisaya->needsVerification(),
+                static fn (array $entry): bool => $entry['source'] !== 'WIKTIONARY-CEB'
+            )),
             'trash'             => $this->bisaya->trash(),
             'canRestore'        => in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true),
             'canDelete'         => in_array($_SESSION['role'] ?? '', ['admin', 'staff', 'superadmin'], true),

@@ -809,7 +809,7 @@ class ManoboHybridTranslator
             $map = [];
             self::$bisayaWords = [];
             try {
-                $stmt = $this->db->query("SELECT bisaya, tagalog, english FROM bisaya_dictionary WHERE deleted_at IS NULL LIMIT 2500");
+                $stmt = $this->db->query("SELECT bisaya, tagalog, english FROM bisaya_dictionary WHERE deleted_at IS NULL ORDER BY id");
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $b = trim((string)$row['bisaya']);
                     if ($b === '') continue;

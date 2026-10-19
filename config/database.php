@@ -887,6 +887,19 @@ function syncPostgresSchema(PDO $pdo): void
             error_log('PgSQL sample phones note: ' . $e->getMessage());
         }
 
+        // Bisaya word list from Wiktionary (2026-10-19): ~6,500 Cebuano words
+        // for the MN translator and voice trainer. Skips headwords already
+        // present, so it never duplicates or overwrites an edited word. Once.
+        try {
+            if (\App\Models\Setting::get('bisaya_wiktionary_v1') !== '1') {
+                require_once __DIR__ . '/../tools/import-bisaya-wiktionary.php';
+                bg_import_bisaya_wiktionary($pdo);
+                \App\Models\Setting::set('bisaya_wiktionary_v1', '1');
+            }
+        } catch (\Throwable $e) {
+            error_log('PgSQL bisaya wiktionary note: ' . $e->getMessage());
+        }
+
         // Sample post covers became real, credited Commons photos (2026-10-17):
         // the drawn .png covers were replaced by .jpg files of the same name.
         // Matches only is_sample rows still on the old bundled .png, so it is a
