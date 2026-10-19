@@ -72,7 +72,11 @@ final class PostScript
         // The source-language copy is the Quill HTML original; every
         // translation is stored as plain text.
         $isOriginal = $locale === (string) ($row['source_lang'] ?? 'fil');
-        $bodyIsHtml = $isOriginal && $type === 'announcement';
+        // ...except when a translation does carry markup (the trilingual
+        // sample posts store their Manobo body as HTML): read as text, the
+        // tags were spoken aloud and whole paragraphs became one "sentence".
+        $bodyIsHtml = ($isOriginal && $type === 'announcement')
+            || (bool) preg_match('/<\/?(?:p|br|h[1-6]|ul|ol|li|strong|em|b|i|div|span|a)\b[^>]*>/i', (string) $body);
 
         $parts = match ($type) {
             'event'     => self::eventParts($row, $locale, $title, $body),
@@ -89,7 +93,7 @@ final class PostScript
             'title'        => $parts['title'],
             'lead'         => $parts['lead'],
             'body'         => $parts['body'],
-            'body_is_html' => $parts['body_is_html'] ?? $bodyIsHtml,
+            'body_is_html' => !empty($parts['body_is_html']) || $bodyIsHtml,
             'tail'         => $parts['tail'],
             'label'        => $type . ' #' . ($row['id'] ?? '?') . ' (' . $locale . ')',
         ]);

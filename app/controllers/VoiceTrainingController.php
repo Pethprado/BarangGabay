@@ -700,6 +700,17 @@ class VoiceTrainingController
     }
 
     /**
+     * GET /admin/voice-training/script?lang=msm — the Recording Script: every
+     * visible post sentence by sentence and word by word (numbers included),
+     * with what is already recorded. JSON for the hub's Recording Script card.
+     */
+    public function script(): void
+    {
+        $this->ensureAdmin();
+        $this->json(\App\Services\VoiceScript::build((string) ($_GET['lang'] ?? 'msm')));
+    }
+
+    /**
      * GET /admin/voice-training/export — dataset metadata as CSV or JSON.
      */
     public function exportDataset(): void

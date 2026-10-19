@@ -116,6 +116,7 @@ return [
 ['POST', '/admin/voice-training/profile',   'VoiceTrainingController@updateProfile', ['auth', 'role:admin,superadmin']],
 ['POST', '/admin/voice-training/test',      'VoiceTrainingController@testVoice',     ['auth', 'role:admin,superadmin']],
 ['GET',  '/admin/voice-training/export',    'VoiceTrainingController@exportDataset', ['auth', 'role:admin,superadmin']],
+['GET',  '/admin/voice-training/script',    'VoiceTrainingController@script',        ['auth', 'role:admin,superadmin']],
 ['POST', '/admin/voice-training/rescan',    'VoiceTrainingController@rescan',        ['auth', 'role:admin,superadmin']],
 ['POST', '/admin/voice-training/settings',  'VoiceTrainingController@settings',      ['auth', 'role:admin,superadmin']],
 ['POST', '/admin/voice-training/diagnostics', 'VoiceTrainingController@diagnostics', ['auth', 'role:superadmin']],

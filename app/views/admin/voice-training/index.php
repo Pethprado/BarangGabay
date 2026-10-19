@@ -1148,6 +1148,9 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         <?php endif; ?>
     </div>
 
+    <!-- ── 5b. Recording Script: every word and sentence in the posts ────── -->
+    <?php require __DIR__ . '/_script.php'; ?>
+
     <!-- ── 6. Samples management ──────────────────────────────────────────── -->
     <div class="vt-explorer-card" id="samples">
         <div class="vt-explorer-header">
@@ -1882,6 +1885,13 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
         loadQueueItem();
     };
 
+    /** Record a Recording Script list (one post, or every missing word) one by one. */
+    window.recordScriptQueue = function (lang, items) {
+        if (!items || !items.length) { return; }
+        queue = { lang: lang, items: items.slice(), pos: 0, done: 0, total: items.length };
+        loadQueueItem();
+    };
+
     window.startBatch = function () {
         var lang = currentTab();
         var items = QUEUES[lang] || [];
@@ -1892,12 +1902,13 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
 
     function loadQueueItem() {
         var it = queue.items[queue.pos];
-        window.openRecorder({ language: queue.lang, text: it.text, translation: it.translation, dictionary_entry_id: it.dictionary_entry_id }, true);
+        var itLang = it.language || queue.lang;   // a script queue mixes Manobo and Bisaya words
+        window.openRecorder({ language: itLang, text: it.text, translation: it.translation, dictionary_entry_id: it.dictionary_entry_id }, true);
         var info = $('queueInfo');
         info.innerHTML = '';
         var strong = document.createElement('strong');
         strong.textContent = (queue.done + 1) + ' of ' + queue.total;
-        info.append(strong, document.createTextNode(' · Language: ' + LANG_NAMES[queue.lang] + ' · Text: ' + it.text + ' · Status: Missing recording'));
+        info.append(strong, document.createTextNode(' · Language: ' + LANG_NAMES[itLang] + ' · Text: ' + it.text + ' · Status: Missing recording'));
         info.classList.remove('d-none');
         $('btnSaveNext').classList.remove('d-none');
     }
