@@ -228,7 +228,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
                                         <div class="min-w-0 flex-1">
                                             <p class="text-xs font-semibold text-slate-900 line-clamp-1" x-text="n.title"></p>
                                             <p class="text-xs text-slate-500 line-clamp-2 mt-0.5" x-text="n.message"></p>
-                                            <p class="text-[10px] text-slate-400 mt-1" x-text="n.time_ago"></p>
+                                            <p class="text-[10px] text-slate-400 mt-1" x-text="(n.time_at ? n.time_at + ' · ' : '') + n.time_ago"></p>
                                         </div>
                                     </div>
                                 </button>

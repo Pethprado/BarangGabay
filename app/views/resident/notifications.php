@@ -179,7 +179,7 @@ $__typeNames = ['announcement' => __('Announcements'), 'event' => __('Events'), 
         $urlJson    = json_encode($notif['url'], $jsonFlags);
         $msgPreview = mb_substr(strip_tags($notif['message']), 0, 90, 'UTF-8');
         if (mb_strlen($notif['message'], 'UTF-8') > 90) $msgPreview .= '…';
-        $fullTime   = date('F j, Y \a\t g:i A', strtotime($notif['created_at']));
+        $fullTime   = date('M j, Y · g:i A', strtotime($notif['created_at']));
     ?>
     <?php // e() around the JSON, NOT the raw value: json_encode() emits real
           // double quotes, and those close a double-quoted HTML attribute the
@@ -211,10 +211,9 @@ $__typeNames = ['announcement' => __('Announcements'), 'event' => __('Events'), 
                    :class="{ 'font-normal text-slate-500': isMarked(<?= (int)$notif['id'] ?>) }">
                     <?= e($notif['title']) ?>
                 </p>
-                <!-- Timestamp: shows relative text; tooltip shows exact datetime -->
-                <span class="text-xs text-slate-400 shrink-0 whitespace-nowrap"
-                      title="<?= e($fullTime) ?>">
-                    <?= e($timeAgo($notif['created_at'])) ?>
+                <!-- Timestamp: the actual date and time, then how long ago -->
+                <span class="text-xs text-slate-400 shrink-0 whitespace-nowrap">
+                    <?= e($fullTime) ?> · <?= e($timeAgo($notif['created_at'])) ?>
                 </span>
             </div>
             <p class="mt-0.5 text-xs leading-relaxed text-slate-500 line-clamp-2">

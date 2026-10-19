@@ -67,7 +67,10 @@ ob_start();
                     <?php if ($plain !== ''): ?>
                     <span class="d-block small text-muted text-truncate"><?= e($plain) ?></span>
                     <?php endif; ?>
-                    <span class="d-block small text-muted"><?= e(relative_time((string) ($n['created_at'] ?? ''))) ?></span>
+                    <?php $__at = strtotime((string) ($n['created_at'] ?? '')); ?>
+                    <span class="d-block small text-muted">
+                        <?php if ($__at): ?><i class="bi bi-clock me-1"></i><?= e(date('M j, Y · g:i A', $__at)) ?> · <?php endif; ?><?= e(relative_time((string) ($n['created_at'] ?? ''))) ?>
+                    </span>
                 </span>
             </a>
         </li>

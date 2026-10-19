@@ -78,6 +78,21 @@ function db(?PDO $setInstance = null): PDO
             }
         }
 
+        // The database clock must read Philippine time like PHP does. Render's
+        // PostgreSQL runs in UTC, so NOW() / DEFAULT CURRENT_TIMESTAMP were
+        // stored 8 hours behind and every "x ago" read 8 hours too old (and
+        // scheduled posts went out 8 hours late).
+        try {
+            $appTz = date_default_timezone_get();
+            if ($driver === 'pgsql') {
+                $pdo->exec('SET TIME ZONE ' . $pdo->quote($appTz));
+            } else {
+                $pdo->exec("SET time_zone = '" . (new \DateTime('now', new \DateTimeZone($appTz)))->format('P') . "'");
+            }
+        } catch (\Throwable $e) {
+            error_log('Database time zone note: ' . $e->getMessage());
+        }
+
         // Check if schema needs to be loaded (empty database)
         try {
             if ($driver === 'pgsql') {
@@ -930,6 +945,52 @@ function syncPostgresSchema(PDO $pdo): void
             }
         } catch (\Throwable $e) {
             error_log('PgSQL sample dedupe note: ' . $e->getMessage());
+        }
+
+        // One-time fix for times stored while the session ran in UTC: every
+        // timestamp the DATABASE stamped (column default NOW/CURRENT_TIMESTAMP,
+        // or a column only ever set with NOW() in SQL: verified_at, paid_at, ...)
+        // moves to Philippine time. Values PHP wrote (event dates, published_at,
+        // schedules) were already local and are untouched.
+        // An advisory lock + the setting make it run exactly once even when
+        // two instances boot together.
+        try {
+            if (\App\Models\Setting::get('pg_tz_shift_v1') !== '1') {
+                $offset = (new \DateTimeZone(date_default_timezone_get()))->getOffset(new \DateTime('now', new \DateTimeZone('UTC')));
+                $pdo->beginTransaction();
+                $pdo->query('SELECT pg_advisory_xact_lock(724001)');
+                $done = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'pg_tz_shift_v1'")->fetchColumn();
+                if ($done !== '1' && $offset !== 0) {
+                    $cols = $pdo->query(
+                        "SELECT table_name, column_name FROM information_schema.columns
+                          WHERE table_schema = current_schema()
+                            AND data_type = 'timestamp without time zone'
+                            AND (column_default ILIKE '%now()%' OR column_default ILIKE '%current_timestamp%'
+                                 OR column_name IN ('last_seen_at','verified_at','revoked_at','resolved_at','released_at',
+                                    'deleted_at','completed_at','used_at','reviewed_at','ready_at','paid_at','login_at',
+                                    'document_uploaded_at','checked_in_at','undone_at','totp_confirmed_at','printed_at',
+                                    'print_requested_at','orphaned_at','notified_at','logout_at','last_login_at','issued_at',
+                                    'dispatched_at','delivered_at','claimed_at','checkout_created_at','archived_at','ai_summary_at'))"
+                    )->fetchAll(PDO::FETCH_NUM);
+                    foreach ($cols as [$table, $column]) {
+                        if (preg_match('/^\w+$/', $table . $column)) {
+                            $pdo->exec("UPDATE \"{$table}\" SET \"{$column}\" = \"{$column}\" + INTERVAL '{$offset} seconds' WHERE \"{$column}\" IS NOT NULL");
+                        }
+                    }
+                    error_log('[tz shift] moved ' . count($cols) . ' timestamp column(s) by ' . $offset . 's');
+                }
+                // Marked done inside the locked transaction, so an instance
+                // waiting on the lock sees it and never shifts twice.
+                $pdo->exec("INSERT INTO settings (setting_key, setting_value, value_type, updated_at)
+                            VALUES ('pg_tz_shift_v1', '1', 'string', NOW())
+                            ON CONFLICT (setting_key) DO UPDATE SET setting_value = '1'");
+                $pdo->commit();
+            }
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('PgSQL tz shift note: ' . $e->getMessage());
         }
 
         // Bisaya word list from Wiktionary (2026-10-19): ~6,500 Cebuano words

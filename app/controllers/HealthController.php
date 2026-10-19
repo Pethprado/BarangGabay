@@ -48,6 +48,10 @@ class HealthController
             $pdo = db();
             $pdo->query('SELECT 1');
             $result['database'] = 'ok';
+            // The database clock, which must match 'timestamp' (Philippine
+            // time). A gap of hours means the session time zone is wrong and
+            // every "x ago" would be off by that much.
+            $result['db_time'] = (string) $pdo->query('SELECT CAST(NOW() AS CHAR(19))')->fetchColumn();
 
             if ($isSuperadmin && isset($_GET['tables'])) {
                 $tblStmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name");
