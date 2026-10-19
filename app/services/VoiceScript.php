@@ -19,7 +19,7 @@ use PDO;
  */
 final class VoiceScript
 {
-    public const LOCALES = ['msm', 'fil', 'en'];
+    public const LOCALES = ['msm', 'ceb', 'fil', 'en'];
 
     private const TYPES = [
         'announcement' => "SELECT * FROM announcements WHERE status = 'published' AND (published_at IS NULL OR published_at <= NOW()) ORDER BY published_at DESC, id DESC",
@@ -38,6 +38,9 @@ final class VoiceScript
     public static function build(string $locale): array
     {
         $locale = in_array($locale, self::LOCALES, true) ? $locale : 'msm';
+        if ($locale === 'ceb') {
+            return self::bisaya(self::build('msm'));
+        }
         $maps   = ['msm' => [], 'ceb' => [], 'fil' => [], 'en' => []];
         foreach (array_keys($maps) as $lang) {
             $maps[$lang] = VoiceResolver::index($lang)['map'];
@@ -124,6 +127,47 @@ final class VoiceScript
                 'sentences'          => count($sentenceList),
                 'sentences_whole'    => count(array_filter($sentenceList, static fn (array $s): bool => $s['whole'])),
                 'sentences_covered'  => count(array_filter($sentenceList, static fn (array $s): bool => $s['covered'])),
+            ],
+        ];
+    }
+
+    /**
+     * Bisaya view. Posts have no Bisaya version: Bisaya words live inside the
+     * Manobo reader text where the translator used Bisaya, and the reader
+     * plays them from Bisaya recordings. So this lists those words (each
+     * recorded as Bisaya), with the Manobo sentences they appear in for
+     * context. Whole sentences are recorded in the Manobo tab.
+     *
+     * @param array<string,mixed> $msm
+     * @return array<string,mixed>
+     */
+    private static function bisaya(array $msm): array
+    {
+        $isCeb = static fn (array $w): bool => $w['language'] === 'ceb';
+        $posts = [];
+        foreach ($msm['posts'] as $post) {
+            $words = array_values(array_filter($post['words'], $isCeb));
+            if ($words === []) {
+                continue;
+            }
+            $post['words']   = $words;
+            $post['missing'] = count(array_filter($words, static fn (array $w): bool => !$w['recorded']));
+            $posts[] = $post;
+        }
+        $all = array_values(array_filter($msm['words'], $isCeb));
+        return [
+            'locale'      => 'ceb',
+            'words_only'  => true,
+            'posts'       => $posts,
+            'words'       => $all,
+            'totals'      => [
+                'posts'             => count($posts),
+                'words'             => count($all),
+                'words_recorded'    => count(array_filter($all, static fn (array $w): bool => $w['recorded'])),
+                'numbers'           => 0,
+                'sentences'         => array_sum(array_map(static fn (array $p): int => count($p['sentences']), $posts)),
+                'sentences_whole'   => 0,
+                'sentences_covered' => 0,
             ],
         ];
     }

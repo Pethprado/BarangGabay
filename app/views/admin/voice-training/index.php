@@ -944,7 +944,7 @@ $pageUrl = static fn (array $extra): string => route('admin/voice-training?' . h
                 <button type="button" onclick="quickTestLanguage('<?= $lk ?>')" class="btn-vt-action" style="flex: 0 1 auto;">
                     <i class="bi bi-volume-up-fill me-1"></i> <?= e(__('Test')) ?>
                 </button>
-                <button type="button" onclick="openScript('<?= $lk === 'ceb' ? 'msm' : $lk ?>')" class="btn-vt-gold" style="flex: 1 1 100%;justify-content:center;">
+                <button type="button" onclick="openScript('<?= $lk ?>')" class="btn-vt-gold" style="flex: 1 1 100%;justify-content:center;">
                     <i class="bi bi-journal-text me-1"></i> Record post sentences &amp; words
                 </button>
             </div>

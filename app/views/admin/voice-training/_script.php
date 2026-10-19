@@ -26,13 +26,14 @@
                 </p>
             </div>
             <div class="d-flex gap-2 align-items-start flex-wrap">
-                <label for="scriptLang" class="visually-hidden">Language</label>
-                <select id="scriptLang" class="form-select form-select-sm vt-select" style="width:auto;">
-                    <option value="msm">Manobo (+ Bisaya words)</option>
-                    <option value="fil">Filipino</option>
-                    <option value="en">English</option>
-                </select>
-                <button type="button" class="btn-vt-gold" id="scriptLoad"><i class="bi bi-arrow-repeat me-1"></i> Load script</button>
+                <input type="hidden" id="scriptLang" value="msm">
+                <div class="d-flex gap-1 flex-wrap" role="tablist" aria-label="Recording Script language" id="scriptTabs">
+                    <button type="button" role="tab" class="btn-vt-outline" data-lang="msm">Manobo</button>
+                    <button type="button" role="tab" class="btn-vt-outline" data-lang="ceb">Bisaya</button>
+                    <button type="button" role="tab" class="btn-vt-outline" data-lang="fil">Filipino</button>
+                    <button type="button" role="tab" class="btn-vt-outline" data-lang="en">English</button>
+                </div>
+                <button type="button" class="btn-vt-outline" id="scriptLoad" title="Reload"><i class="bi bi-arrow-repeat"></i><span class="visually-hidden">Reload</span></button>
             </div>
         </div>
     </div>
@@ -83,9 +84,9 @@
         return c;
     }
 
-    function missingItems(post, lang) {
+    function missingItems(post, lang, wordsOnly) {
         var items = [];
-        post.sentences.forEach(function (s) { if (!s.covered) { items.push({ text: s.text, language: lang }); } });
+        if (!wordsOnly) post.sentences.forEach(function (s) { if (!s.covered) { items.push({ text: s.text, language: lang }); } });
         post.words.forEach(function (w) { if (!w.recorded) { items.push({ text: w.word, language: w.language }); } });
         return items;
     }
@@ -96,12 +97,12 @@
             var sum = el('summary');
             sum.appendChild(el('i', 'bi ' + (TYPE_ICON[post.type] || 'bi-file-text')));
             sum.appendChild(el('strong', 'vt-text-primary', post.title));
-            sum.appendChild(el('span', 'text-xs vt-text-muted', post.type + ' · ' + post.sentences.length + ' sentences · ' + post.words.length + ' words'));
+            sum.appendChild(el('span', 'text-xs vt-text-muted', post.type + (d.words_only ? '' : ' · ' + post.sentences.length + ' sentences') + ' · ' + post.words.length + ' words'));
             sum.appendChild(el('span', 'vs-badge ' + (post.missing ? 'vs-part' : 'vs-ok'), post.missing ? post.missing + ' words missing' : 'All words recorded'));
             det.appendChild(sum);
 
             var body = el('div', 'vs-post-body');
-            var items = missingItems(post, d.locale);
+            var items = missingItems(post, d.locale, d.words_only);
             if (items.length) {
                 var all = el('button', 'btn-vt-gold mb-2');
                 all.type = 'button';
@@ -110,8 +111,12 @@
                 body.appendChild(all);
             }
 
-            body.appendChild(el('div', 'text-xs font-bold vt-text-muted mt-1 mb-1', 'SENTENCES'));
-            post.sentences.forEach(function (s) {
+            if (d.words_only) {
+                body.appendChild(el('p', 'text-xs vt-text-muted mb-1',
+                    "Bisaya words the reader uses inside this post's Manobo text. Record each one in Bisaya; whole sentences are recorded in the Manobo tab."));
+            }
+            if (!d.words_only) body.appendChild(el('div', 'text-xs font-bold vt-text-muted mt-1 mb-1', 'SENTENCES'));
+            if (!d.words_only) post.sentences.forEach(function (s) {
                 if (state.missingOnly && s.covered) { return; }
                 var row = el('div', 'vs-sent');
                 row.appendChild(el('div', 'vs-sent-text', s.text));
@@ -128,7 +133,7 @@
                 body.appendChild(row);
             });
 
-            body.appendChild(el('div', 'text-xs font-bold vt-text-muted mt-3 mb-1', 'WORDS AND NUMBERS'));
+            body.appendChild(el('div', 'text-xs font-bold vt-text-muted mt-3 mb-1', d.words_only ? 'BISAYA WORDS' : 'WORDS AND NUMBERS'));
             var wrap = el('div');
             post.words.forEach(function (w) { if (!(state.missingOnly && w.recorded)) { wrap.appendChild(chip(w)); } });
             if (!wrap.childNodes.length) { wrap.appendChild(el('span', 'text-xs vt-text-muted', 'Every word in this post is recorded.')); }
@@ -161,8 +166,11 @@
         if (!d) { return; }
         var t = d.totals;
         var stats = el('div', 'd-flex flex-wrap gap-2 mb-3');
-        [['Posts', t.posts], ['Sentences', t.sentences], ['Sentences ready', t.sentences_covered + ' / ' + t.sentences],
-         ['Words', t.words], ['Words recorded', t.words_recorded + ' / ' + t.words], ['Numbers', t.numbers]].forEach(function (s) {
+        var stat = d.words_only
+            ? [['Posts', t.posts], ['Bisaya words', t.words], ['Recorded', t.words_recorded + ' / ' + t.words]]
+            : [['Posts', t.posts], ['Sentences', t.sentences], ['Sentences ready', t.sentences_covered + ' / ' + t.sentences],
+               ['Words', t.words], ['Words recorded', t.words_recorded + ' / ' + t.words], ['Numbers', t.numbers]];
+        stat.forEach(function (s) {
             var c = el('span', 'vt-badge vt-badge-neutral'); c.textContent = s[0] + ': ' + s[1]; stats.appendChild(c);
         });
         box.appendChild(stats);
@@ -180,12 +188,21 @@
         bar.appendChild(lab);
         box.appendChild(bar);
 
-        if (!d.posts.length) { box.appendChild(el('p', 'text-xs vt-text-muted', 'No published posts have ' + NAMES[d.locale] + ' text yet.')); return; }
+        if (!d.posts.length) { box.appendChild(el('p', 'text-xs vt-text-muted', d.words_only ? "No Bisaya words in the posts' Manobo text." : 'No published posts have ' + NAMES[d.locale] + ' text yet.')); return; }
         (state.view === 'words' ? renderWords : renderPosts)(box, d);
+    }
+
+    function markTab(lang) {
+        document.querySelectorAll('#scriptTabs [data-lang]').forEach(function (b) {
+            var on = b.dataset.lang === lang;
+            b.className = on ? 'btn-vt-gold' : 'btn-vt-outline';
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
     }
 
     function load() {
         var lang = document.getElementById('scriptLang').value;
+        markTab(lang);
         try { sessionStorage.setItem('vt_script_lang', lang); } catch (e) {}
         var box = document.getElementById('scriptBody');
         box.innerHTML = '<p class="text-xs vt-text-muted mb-0"><span class="spinner-border spinner-border-sm me-1"></span> Reading every post…</p>';
@@ -196,7 +213,9 @@
     }
 
     document.getElementById('scriptLoad').addEventListener('click', load);
-    document.getElementById('scriptLang').addEventListener('change', load);
+    document.querySelectorAll('#scriptTabs [data-lang]').forEach(function (b) {
+        b.addEventListener('click', function () { document.getElementById('scriptLang').value = b.dataset.lang; load(); });
+    });
     /** Card buttons: open the script in a language and scroll to it. */
     window.openScript = function (lang) {
         document.getElementById('scriptLang').value = lang;
