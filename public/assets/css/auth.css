@@ -18,7 +18,7 @@
     position: sticky; top: 0; height: 100vh; overflow: hidden; color: #fff;
     background:
         linear-gradient(180deg, rgba(6,78,59,.30) 0%, rgba(6,78,59,.50) 45%, rgba(4,40,30,.92) 100%),
-        url('../images/ui/hero-landscape.jpg') center / cover no-repeat;
+        url('../images/ui/hero-landscape.jpg?v=20261021') center / cover no-repeat;
 }
 .auth-hero__inner { position: relative; z-index: 1; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding: 2.5rem 3rem; }
 .auth-hero__brand { align-self: flex-start; display: inline-flex; padding: .55rem .8rem; border-radius: 14px; background: rgba(4,30,24,.5); backdrop-filter: blur(6px); }

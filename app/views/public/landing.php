@@ -75,14 +75,14 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
     @media (min-width: 640px) { .mk-hide-sm { display: inline-flex; } }
     /* Hero */
     .mk-hero { position: relative; overflow: hidden; background-color: var(--surface-page);
-        background-image: linear-gradient(90deg, var(--surface-page) 0%, var(--surface-page) 34%, rgba(250,244,232,.55) 50%, rgba(250,244,232,0) 64%), url('<?= e(asset('assets/images/ui/hero-landscape.jpg')) ?>');
-        background-image: linear-gradient(90deg, var(--surface-page) 0%, var(--surface-page) 34%, rgba(250,244,232,.55) 50%, rgba(250,244,232,0) 64%), image-set(url('<?= e(asset('assets/images/ui/hero-landscape.webp')) ?>') type('image/webp'), url('<?= e(asset('assets/images/ui/hero-landscape.jpg')) ?>') type('image/jpeg'));
-        background-repeat: no-repeat; background-size: auto, auto 100%; background-position: 0 0, right center; }
-    :root[data-theme="dark"] .mk-hero { background-image: linear-gradient(90deg, var(--surface-page) 0%, var(--surface-page) 34%, rgba(13,21,17,.55) 50%, rgba(13,21,17,0) 64%), url('<?= e(asset('assets/images/ui/hero-landscape.jpg')) ?>'); }
-    :root[data-theme="dark"] .mk-hero { background-image: linear-gradient(90deg, var(--surface-page) 0%, var(--surface-page) 34%, rgba(13,21,17,.55) 50%, rgba(13,21,17,0) 64%), image-set(url('<?= e(asset('assets/images/ui/hero-landscape.webp')) ?>') type('image/webp'), url('<?= e(asset('assets/images/ui/hero-landscape.jpg')) ?>') type('image/jpeg')); }
+        background-image: linear-gradient(90deg, var(--surface-page) 0%, var(--surface-page) 34%, rgba(250,244,232,.55) 50%, rgba(250,244,232,0) 64%), url('<?= e(asset_v('assets/images/ui/hero-landscape.jpg')) ?>');
+        background-image: linear-gradient(90deg, var(--surface-page) 0%, var(--surface-page) 34%, rgba(250,244,232,.55) 50%, rgba(250,244,232,0) 64%), image-set(url('<?= e(asset_v('assets/images/ui/hero-landscape.webp')) ?>') type('image/webp'), url('<?= e(asset_v('assets/images/ui/hero-landscape.jpg')) ?>') type('image/jpeg'));
+        background-repeat: no-repeat; background-size: auto, cover; background-position: 0 0, 62% 62%; }   /* photo fills the hero; focus on the BRGY BAYOGO sign */
+    :root[data-theme="dark"] .mk-hero { background-image: linear-gradient(90deg, var(--surface-page) 0%, var(--surface-page) 34%, rgba(13,21,17,.55) 50%, rgba(13,21,17,0) 64%), url('<?= e(asset_v('assets/images/ui/hero-landscape.jpg')) ?>'); }
+    :root[data-theme="dark"] .mk-hero { background-image: linear-gradient(90deg, var(--surface-page) 0%, var(--surface-page) 34%, rgba(13,21,17,.55) 50%, rgba(13,21,17,0) 64%), image-set(url('<?= e(asset_v('assets/images/ui/hero-landscape.webp')) ?>') type('image/webp'), url('<?= e(asset_v('assets/images/ui/hero-landscape.jpg')) ?>') type('image/jpeg')); }
     .mk-hero__grid { position: relative; display: grid; gap: 1.5rem; align-items: start; padding: 3.5rem 0 7.5rem; }
     @media (min-width: 900px) { .mk-hero__grid { grid-template-columns: 1fr 1fr; padding: 4.5rem 0 8.5rem; } }
-    @media (max-width: 899px) { .mk-hero { background-size: auto, cover; background-image: linear-gradient(180deg, rgba(250,244,232,.92) 0%, rgba(250,244,232,.86) 60%, rgba(250,244,232,.6) 100%), url('<?= e(asset('assets/images/ui/hero-landscape.jpg')) ?>'); } }
+    @media (max-width: 899px) { .mk-hero { background-size: auto, cover; background-image: linear-gradient(180deg, rgba(250,244,232,.92) 0%, rgba(250,244,232,.86) 60%, rgba(250,244,232,.6) 100%), url('<?= e(asset_v('assets/images/ui/hero-landscape.jpg')) ?>'); } }
     .mk-hero h1 { margin: 0 0 1.1rem; font-weight: 900; line-height: 1.04; letter-spacing: -.02em; font-size: clamp(2.3rem, 5.2vw, 3.6rem); color: #10241a; }
     :root[data-theme="dark"] .mk-hero h1 { color: #f3f7f4; }
     .mk-hero h1 .mk-g { color: var(--action-solid); }

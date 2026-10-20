@@ -93,7 +93,7 @@ ob_start();
 ?>
 <style>
 .rd-welcome { position: relative; overflow: hidden; min-height: 150px; padding: 1.6rem 1.75rem; border-radius: 1.1rem; display: flex; flex-direction: column; justify-content: center;
-    background: linear-gradient(90deg, rgba(14,58,34,.92) 0%, rgba(14,58,34,.70) 45%, rgba(14,58,34,.05) 80%), url('<?= e(asset('assets/images/ui/welcome-banner.jpg')) ?>') right center / cover no-repeat; box-shadow: var(--shadow-card); }
+    background: linear-gradient(90deg, rgba(14,58,34,.92) 0%, rgba(14,58,34,.70) 45%, rgba(14,58,34,.05) 80%), url('<?= e(asset_v('assets/images/ui/welcome-banner.jpg')) ?>') right center / cover no-repeat; box-shadow: var(--shadow-card); }
 .rd-welcome__name { margin: 0; font-weight: 900; font-size: clamp(1.5rem, 3.2vw, 2rem); line-height: 1.15; color: #fff; }
 .rd-welcome__tag { margin: .35rem 0 0; font-size: .95rem; font-weight: 500; color: rgba(255,255,255,.92); }
 .rd-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .6rem; border-radius: 999px; font-size: .72rem; font-weight: 700; background: rgba(255,255,255,.18); color: #fff; }
