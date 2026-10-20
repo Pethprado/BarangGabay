@@ -134,9 +134,9 @@
      * re-recording, and the admin tester hears exactly what residents hear.
      */
     var AC = window.AudioContext || window.webkitAudioContext;
-    var WORD_GAP     = 0.07;   // seconds between recorded words/phrases
-    var SENTENCE_GAP = 0.32;   // extra pause after the last clip of a sentence
-    var TARGET_RMS   = 0.14;   // ≈ -17 dBFS speech level for every clip
+    var WORD_GAP     = 0.05;   // seconds between recorded words/phrases (natural flow)
+    var SENTENCE_GAP = 0.35;   // extra pause after the last clip of a sentence
+    var TARGET_RMS   = 0.16;   // ≈ -16 dBFS speech level for every clip
     var MAX_GAIN     = 10;     // never boost a near-silent clip into hiss
     var fx = { ctx: null, input: null, master: null, buffers: {}, elements: [] };
 
@@ -150,12 +150,12 @@
             var presence = ctx.createBiquadFilter();
             presence.type = 'peaking'; presence.frequency.value = 3000; presence.Q.value = 0.9; presence.gain.value = 3;
             var comp = ctx.createDynamicsCompressor();
-            comp.threshold.value = -22; comp.knee.value = 8; comp.ratio.value = 3.5;
+            comp.threshold.value = -24; comp.knee.value = 8; comp.ratio.value = 4;
             comp.attack.value = 0.004; comp.release.value = 0.2;
             var makeUp = ctx.createGain();
-            makeUp.gain.value = 1.7;
+            makeUp.gain.value = 1.85;
             var limiter = ctx.createDynamicsCompressor();
-            limiter.threshold.value = -1.5; limiter.knee.value = 0; limiter.ratio.value = 20;
+            limiter.threshold.value = -1; limiter.knee.value = 0; limiter.ratio.value = 20;
             limiter.attack.value = 0.001; limiter.release.value = 0.06;
             var master = ctx.createGain();
             master.gain.value = 1;
@@ -206,7 +206,13 @@
             rms[f] = Math.sqrt(s / Math.max(1, end - f * frame));
             if (rms[f] > loud) { loud = rms[f]; }
         }
-        var gate = Math.max(loud * 0.032, 0.003), first = 0, last = frames - 1;
+        // Silence threshold adapts to the recording: 30 dB under its loudest
+        // frame, or just above its own noise floor (quietest 15% of frames)
+        // when the room was noisy — never so high that soft syllables count
+        // as silence.
+        var sorted = Array.prototype.slice.call(rms).sort(function (p, q) { return p - q; });
+        var floor  = sorted[Math.floor(frames * 0.15)] || 0;
+        var gate   = Math.min(Math.max(loud * 0.032, floor * 2.2, 0.003), loud * 0.25), first = 0, last = frames - 1;
         while (first < frames && rms[first] < gate) { first++; }
         while (last > first && rms[last] < gate) { last--; }
         var from = Math.max(0, first * frame - Math.round(sr * 0.035));
@@ -218,12 +224,29 @@
         voiced = Math.sqrt(voiced / Math.max(1, cnt));
         var gain = Math.min(MAX_GAIN, TARGET_RMS / Math.max(voiced, 1e-4), 0.97 / peak);
 
+        // Noise reduction: frames well under the speech level (room hiss, hum,
+        // mic handling between syllables) are turned down. Two frames of
+        // look-ahead open the gate before a word starts and a slow release
+        // keeps word endings, so no sound of the voice itself is cut.
+        var open = gate * 1.6, fg = new Float32Array(frames);
+        for (f = 0; f < frames; f++) {
+            fg[f] = rms[f] >= open ? 1 : Math.max(0.15, Math.pow(rms[f] / open, 1.5));
+        }
+        var held = new Float32Array(frames), prev = 0.15;
+        for (f = 0; f < frames; f++) {
+            var want = Math.max(fg[f], fg[Math.min(frames - 1, f + 1)], fg[Math.min(frames - 1, f + 2)]);
+            prev = Math.max(want, prev * 0.88);
+            held[f] = prev;
+        }
+
         var len = to - from, out = ctx.createBuffer(1, len, sr), y = out.getChannelData(0);
         var fade = Math.min(Math.round(sr * 0.008), Math.floor(len / 4));
         for (i = 0; i < len; i++) {
             var env = 1;
             if (i < fade) { env = i / fade; } else if (i > len - fade) { env = (len - i) / fade; }
-            y[i] = x[from + i] * gain * env;
+            var pos = (from + i) / frame, f0 = Math.min(frames - 1, Math.floor(pos)), f1 = Math.min(frames - 1, f0 + 1);
+            var nr = held[f0] + (held[f1] - held[f0]) * (pos - f0);
+            y[i] = x[from + i] * gain * env * nr;
         }
         return out;
     }
@@ -383,6 +406,11 @@
                         return;
                     }
                     var rate   = opts.rate || 1;
+                    // Slowing a recording also deepens the voice and blurs it, so
+                    // recordings keep their natural speed and pitch; a slower
+                    // setting only lengthens the pauses. A clear speed-up
+                    // (1.15x and above) still plays them faster.
+                    var play   = rate >= 1.15 ? Math.min(rate, 1.5) : 1;
                     var isLast = to >= segments.length;
                     var t      = ctx.currentTime + 0.04;
                     var marks  = [], sources = [], failed = [];
@@ -392,12 +420,12 @@
                         if (!buf) { failed.push(from + k); return; }
                         var src = ctx.createBufferSource();
                         src.buffer = buf;
-                        src.playbackRate.value = rate;
+                        src.playbackRate.value = play;
                         src.connect(fx.input);
                         src.start(t);
                         sources.push(src);
                         marks.push({ at: t, index: from + k });
-                        t += buf.duration / rate + WORD_GAP / rate;
+                        t += buf.duration / play + WORD_GAP / rate;
                     });
                     // A clip that would not load: in recorded-only mode it is
                     // skipped; otherwise the device voice reads it after the run.
@@ -493,6 +521,7 @@
 
     window.VoiceSegmentPlayer = VoiceSegmentPlayer;
     window.voiceFxAttach      = fxAttachElement;
+    window.voiceFxEnhance     = function (buf) { var c = fxContext(); return c ? enhance(c, buf) : buf; };   // diagnostics / admin tester
     window.voicePickVoice     = pickVoice;
     window.voiceWhenReady     = whenVoicesReady;
 
