@@ -80,10 +80,10 @@ $__myEv  = (int) $staffKpi['events'];
 $__unread = (int) $staffKpi['feedback'];
 $__kpis = $__isStaffView ? [
     $__myAnn > 0
-        ? [__('My Announcements'), $__myAnn, route('admin/announcements') . '?mine=1', 'bi-megaphone-fill', 'green']
+        ? [__('Announcements'), $__myAnn, route('admin/announcements') . '?mine=1', 'bi-megaphone-fill', 'green']
         : [__('Announcements'), (int) ($staffKpi['announcements_all'] ?? 0), route('admin/announcements'), 'bi-megaphone-fill', 'green'],
     $__myEv > 0
-        ? [__('My Events'), $__myEv, route('admin/events') . '?mine=1', 'bi-calendar-event-fill', 'orange']
+        ? [__('Events'), $__myEv, route('admin/events') . '?mine=1', 'bi-calendar-event-fill', 'orange']
         : [__('Events'), (int) ($staffKpi['events_all'] ?? 0), route('admin/events'), 'bi-calendar-event-fill', 'orange'],
     $__unread > 0
         ? [__('Unread Feedback'), $__unread, route('admin/feedback'), 'bi-chat-square-text-fill', 'blue']
