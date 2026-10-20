@@ -233,6 +233,7 @@ class OrdinanceController
 
         AuditLog::record((int) $_SESSION['user_id'], 'ordinance.upload', 'Uploaded ordinance: ' . $title);
         flash('success', $successMsg);
+        voice_coverage_flash('ordinance', (int) $ordinanceId);
         redirect('/admin/ordinances');
     }
 
@@ -367,6 +368,7 @@ class OrdinanceController
 
         AuditLog::record((int) $_SESSION['user_id'], 'ordinance.update', 'Updated ordinance: ' . $title);
         flash('success', $successMsg);
+        voice_coverage_flash('ordinance', (int) $id);
         redirect('/admin/ordinances');
     }
 

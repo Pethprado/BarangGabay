@@ -94,6 +94,7 @@
     function renderPosts(box, d) {
         d.posts.forEach(function (post) {
             var det = el('details', 'vs-post');
+            det.dataset.post = post.type + '-' + post.id;
             var sum = el('summary');
             sum.appendChild(el('i', 'bi ' + (TYPE_ICON[post.type] || 'bi-file-text')));
             sum.appendChild(el('strong', 'vt-text-primary', post.title));
@@ -190,6 +191,17 @@
 
         if (!d.posts.length) { box.appendChild(el('p', 'text-xs vt-text-muted', d.words_only ? "No Bisaya words in the posts' Manobo text." : 'No published posts have ' + NAMES[d.locale] + ' text yet.')); return; }
         (state.view === 'words' ? renderWords : renderPosts)(box, d);
+
+        // Opened from "Record the missing words" after posting: show that post.
+        if (state.focusPost && state.view === 'posts') {
+            var target = box.querySelector('details[data-post="' + state.focusPost + '"]');
+            if (target) {
+                target.open = true;
+                target.style.outline = '2px solid #c8992e';
+                setTimeout(function () { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
+            }
+            state.focusPost = '';
+        }
     }
 
     function markTab(lang) {
@@ -224,9 +236,13 @@
     };
 
     // Opens by itself (Manobo first); after a save it reopens where it was.
+    // ?script=msm&post=announcement-12 (the link after posting) opens that post.
+    var params = new URLSearchParams(location.search);
     var saved = null;
     try { saved = sessionStorage.getItem('vt_script_lang'); } catch (e) {}
-    document.getElementById('scriptLang').value = saved || 'msm';
+    state.focusPost = params.get('post') || '';
+    if (state.focusPost) { state.missingOnly = true; }
+    document.getElementById('scriptLang').value = params.get('script') || saved || 'msm';
     load();
 })();
 </script>

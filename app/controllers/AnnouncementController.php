@@ -464,6 +464,7 @@ class AnnouncementController
                 : "Created: {$title}"
         );
         flash('success', $successMsg);
+        voice_coverage_flash('announcement', (int) $id);
         redirect('/admin/announcements');
     }
 
@@ -685,6 +686,7 @@ class AnnouncementController
                 : "Updated ID {$id}: {$title}"
         );
         flash('success', $successMsg);
+        voice_coverage_flash('announcement', (int) $id);
         redirect('/admin/announcements');
     }
 

@@ -56,57 +56,10 @@ final class VoiceScript
                 continue;
             }
             foreach ($rows as $row) {
-                try {
-                    $script = PostScript::build($type, $row, $locale);
-                } catch (\Throwable $e) {
-                    continue;
+                $entry = self::postEntry($type, $row, $locale, $maps, $all);
+                if ($entry !== null) {
+                    $posts[] = $entry;
                 }
-                if (empty($script['available'])) {
-                    continue;
-                }
-
-                $sentences = [];
-                $words     = [];
-                foreach ($script['chunks'] as $chunk) {
-                    $say    = trim((string) ($chunk['say'] ?? ''));
-                    $tokens = array_values(array_filter(VoiceText::tokens($say), [self::class, 'speakable']));
-                    if ($tokens === []) {
-                        continue;
-                    }
-                    $key     = implode(' ', $tokens);
-                    $whole   = isset($maps[$locale][$key]);
-                    $have    = 0;
-                    foreach ($tokens as $token) {
-                        $lang     = self::wordLanguage($locale, $token);
-                        $recorded = isset($maps[$lang][$token]) || ($locale === 'msm' && isset($maps['msm'][$token]));
-                        $have    += $recorded ? 1 : 0;
-                        $words[$lang . '|' . $token] ??= ['word' => $token, 'language' => $lang, 'recorded' => $recorded, 'is_number' => ctype_digit($token)];
-                        $all[$lang . '|' . $token] ??= ['word' => $token, 'language' => $lang, 'count' => 0, 'recorded' => $recorded, 'is_number' => ctype_digit($token)];
-                        $all[$lang . '|' . $token]['count']++;
-                    }
-                    // The plan the reader would make: covered when every word
-                    // (or a longer recorded phrase) has a recording.
-                    $covered = $whole || self::covered($locale, $tokens);
-                    $sentences[] = [
-                        'text'     => $say,
-                        'words'    => count($tokens),
-                        'recorded' => $have,
-                        'whole'    => $whole,
-                        'covered'  => $covered,
-                    ];
-                }
-                if ($sentences === []) {
-                    continue;
-                }
-                $words = array_values($words);
-                $posts[] = [
-                    'type'      => $type,
-                    'id'        => (int) $row['id'],
-                    'title'     => (string) ($script['title'] ?: ($row['title'] ?? '')),
-                    'sentences' => $sentences,
-                    'words'     => $words,
-                    'missing'   => count(array_filter($words, static fn (array $w): bool => !$w['recorded'])),
-                ];
             }
         }
 
@@ -128,6 +81,109 @@ final class VoiceScript
                 'sentences_whole'    => count(array_filter($sentenceList, static fn (array $s): bool => $s['whole'])),
                 'sentences_covered'  => count(array_filter($sentenceList, static fn (array $s): bool => $s['covered'])),
             ],
+        ];
+    }
+
+    /**
+     * Voice coverage of ONE post, for the note shown right after it is saved.
+     * Null when the post has no text in that language yet (the Manobo
+     * translation is still being prepared).
+     *
+     * @return array{type:string,id:int,title:string,words:int,recorded:int,missing:int,sentences:int,sentences_ready:int}|null
+     */
+    public static function forPost(string $type, int $id, string $locale = 'msm'): ?array
+    {
+        $tables = ['announcement' => 'announcements', 'event' => 'events', 'ordinance' => 'ordinances'];
+        if (!isset($tables[$type])) {
+            return null;
+        }
+        $stmt = db()->prepare("SELECT * FROM {$tables[$type]} WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        $maps = [];
+        foreach (['msm', 'ceb', 'fil', 'en'] as $lang) {
+            $maps[$lang] = VoiceResolver::index($lang)['map'];
+        }
+        $all   = [];
+        $entry = self::postEntry($type, $row, $locale, $maps, $all);
+        if ($entry === null) {
+            return null;
+        }
+        return [
+            'type'            => $type,
+            'id'              => $id,
+            'title'           => $entry['title'],
+            'words'           => count($entry['words']),
+            'recorded'        => count($entry['words']) - $entry['missing'],
+            'missing'         => $entry['missing'],
+            'sentences'       => count($entry['sentences']),
+            'sentences_ready' => count(array_filter($entry['sentences'], static fn (array $x): bool => $x['covered'])),
+        ];
+    }
+
+    /**
+     * One post's sentences and words with what is recorded; adds its words
+     * to $all (the cross-post word list). Null when it has no text in $locale.
+     *
+     * @param array<string,array<string,array<string,mixed>>> $maps
+     * @param array<string,array<string,mixed>>               $all
+     * @return array<string,mixed>|null
+     */
+    private static function postEntry(string $type, array $row, string $locale, array $maps, array &$all): ?array
+    {
+        try {
+            $script = PostScript::build($type, $row, $locale);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        if (empty($script['available'])) {
+            return null;
+        }
+
+        $sentences = [];
+        $words     = [];
+        foreach ($script['chunks'] as $chunk) {
+            $say    = trim((string) ($chunk['say'] ?? ''));
+            $tokens = array_values(array_filter(VoiceText::tokens($say), [self::class, 'speakable']));
+            if ($tokens === []) {
+                continue;
+            }
+            $key     = implode(' ', $tokens);
+            $whole   = isset($maps[$locale][$key]);
+            $have    = 0;
+            foreach ($tokens as $token) {
+                $lang     = self::wordLanguage($locale, $token);
+                $recorded = isset($maps[$lang][$token]) || ($locale === 'msm' && isset($maps['msm'][$token]));
+                $have    += $recorded ? 1 : 0;
+                $words[$lang . '|' . $token] ??= ['word' => $token, 'language' => $lang, 'recorded' => $recorded, 'is_number' => ctype_digit($token)];
+                $all[$lang . '|' . $token] ??= ['word' => $token, 'language' => $lang, 'count' => 0, 'recorded' => $recorded, 'is_number' => ctype_digit($token)];
+                $all[$lang . '|' . $token]['count']++;
+            }
+            // The plan the reader would make: covered when every word
+            // (or a longer recorded phrase) has a recording.
+            $covered = $whole || self::covered($locale, $tokens);
+            $sentences[] = [
+                'text'     => $say,
+                'words'    => count($tokens),
+                'recorded' => $have,
+                'whole'    => $whole,
+                'covered'  => $covered,
+            ];
+        }
+        if ($sentences === []) {
+            return null;
+        }
+        $words = array_values($words);
+        return [
+            'type'      => $type,
+            'id'        => (int) $row['id'],
+            'title'     => (string) ($script['title'] ?: ($row['title'] ?? '')),
+            'sentences' => $sentences,
+            'words'     => $words,
+            'missing'   => count(array_filter($words, static fn (array $w): bool => !$w['recorded'])),
         ];
     }
 

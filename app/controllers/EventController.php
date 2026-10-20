@@ -333,6 +333,7 @@ class EventController
 
         AuditLog::record((int) $_SESSION['user_id'], 'event.create', 'Created event: ' . $evTitle);
         flash('success', $successMsg);
+        voice_coverage_flash('event', (int) $id);
         redirect('/admin/events');
     }
 
@@ -490,6 +491,7 @@ class EventController
 
         AuditLog::record((int) $_SESSION['user_id'], 'event.update', "Updated event #{$id}: {$upTitle}");
         flash('success', $successMsg);
+        voice_coverage_flash('event', (int) $id);
         redirect('/admin/events');
     }
 
