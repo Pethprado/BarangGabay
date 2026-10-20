@@ -476,7 +476,7 @@ class ManoboController
 
         try {
             $this->dictionary->restore($id);
-            ManoboAutoTranslator::flushCache();
+            \App\Services\DictionarySync::changed([]);
         } catch (\InvalidArgumentException $e) {
             flash('error', $e->getMessage());
             redirect('/admin/manobo');
@@ -529,7 +529,7 @@ class ManoboController
             'CSV-IMPORT-' . date('Y-m-d'),
             (int) ($_SESSION['user_id'] ?? 0) ?: null
         );
-        ManoboAutoTranslator::flushCache();
+        \App\Services\DictionarySync::changed([]);   // translator + cached texts pick up the imported words now
 
         AuditLog::record(
             (int) $_SESSION['user_id'],
@@ -790,7 +790,7 @@ class ManoboController
 
         try {
             $this->dictionary->addEntry($this->input(), $userId);
-            ManoboAutoTranslator::flushCache();
+            $synced = $this->syncDictionary([$_POST['english'] ?? '', $_POST['tagalog'] ?? '']);
         } catch (\InvalidArgumentException $e) {
             flash('error', $e->getMessage());
             redirect('/admin/manobo');
@@ -808,7 +808,7 @@ class ManoboController
             'Added Manobo word: ' . $headword
         );
 
-        flash('success', __('Added ":word" to the dictionary.', ['word' => $headword]));
+        flash('success', __('Added ":word" to the dictionary.', ['word' => $headword]) . ($synced ?? ''));
         redirect('/admin/manobo');
     }
 
@@ -820,8 +820,9 @@ class ManoboController
         $userId   = (int) ($_SESSION['user_id'] ?? 0) ?: null;
 
         try {
+            $before = $this->dictionary->find($original) ?? [];
             $this->dictionary->updateEntry($original, $this->input(), $userId);
-            ManoboAutoTranslator::flushCache();
+            $synced = $this->syncDictionary([$_POST['english'] ?? '', $_POST['tagalog'] ?? '', $before['english'] ?? '', $before['tagalog'] ?? '']);
         } catch (\InvalidArgumentException $e) {
             flash('error', $e->getMessage());
             redirect('/admin/manobo');
@@ -837,7 +838,7 @@ class ManoboController
             'Updated Manobo word: ' . $original
         );
 
-        flash('success', __('Updated ":word".', ['word' => $original]));
+        flash('success', __('Updated ":word".', ['word' => $original]) . ($synced ?? ''));
         redirect('/admin/manobo');
     }
 
@@ -853,8 +854,9 @@ class ManoboController
         $headword = trim($_POST['manobo'] ?? '');
 
         try {
+            $before = $this->dictionary->find($headword) ?? [];
             $this->dictionary->deleteEntry($headword);
-            ManoboAutoTranslator::flushCache();
+            $this->syncDictionary([$before['english'] ?? '', $before['tagalog'] ?? '']);
         } catch (\InvalidArgumentException $e) {
             flash('error', $e->getMessage());
             redirect('/admin/manobo');
@@ -957,7 +959,7 @@ class ManoboController
 
         try {
             $this->bisaya->addEntry($this->bisayaInput(), $userId);
-            ManoboAutoTranslator::flushCache();
+            $synced = $this->syncDictionary([$_POST['english'] ?? '', $_POST['tagalog'] ?? '']);
         } catch (\InvalidArgumentException $e) {
             flash('error', $e->getMessage());
             redirect('/admin/bisaya');
@@ -969,7 +971,7 @@ class ManoboController
 
         $headword = trim($_POST['bisaya'] ?? '');
         AuditLog::record((int) $_SESSION['user_id'], 'bisaya.entry_added', 'Added Bisaya word: ' . $headword);
-        flash('success', __('Added ":word" to the dictionary.', ['word' => $headword]));
+        flash('success', __('Added ":word" to the dictionary.', ['word' => $headword]) . ($synced ?? ''));
         redirect('/admin/bisaya');
     }
 
@@ -981,8 +983,9 @@ class ManoboController
         $userId   = (int) ($_SESSION['user_id'] ?? 0) ?: null;
 
         try {
+            $before = $this->bisaya->find($original) ?? [];
             $this->bisaya->updateEntry($original, $this->bisayaInput(), $userId);
-            ManoboAutoTranslator::flushCache();
+            $synced = $this->syncDictionary([$_POST['english'] ?? '', $_POST['tagalog'] ?? '', $before['english'] ?? '', $before['tagalog'] ?? '']);
         } catch (\InvalidArgumentException $e) {
             flash('error', $e->getMessage());
             redirect('/admin/bisaya');
@@ -993,7 +996,7 @@ class ManoboController
         }
 
         AuditLog::record((int) $_SESSION['user_id'], 'bisaya.entry_updated', 'Updated Bisaya word: ' . $original);
-        flash('success', __('Updated ":word".', ['word' => $original]));
+        flash('success', __('Updated ":word".', ['word' => $original]) . ($synced ?? ''));
         redirect('/admin/bisaya');
     }
 
@@ -1004,8 +1007,9 @@ class ManoboController
         $headword = trim($_POST['bisaya'] ?? '');
 
         try {
+            $before = $this->bisaya->find($headword) ?? [];
             $this->bisaya->deleteEntry($headword);
-            ManoboAutoTranslator::flushCache();
+            $this->syncDictionary([$before['english'] ?? '', $before['tagalog'] ?? '']);
         } catch (\InvalidArgumentException $e) {
             flash('error', $e->getMessage());
             redirect('/admin/bisaya');
@@ -1028,7 +1032,7 @@ class ManoboController
 
         try {
             $this->bisaya->restore($id);
-            ManoboAutoTranslator::flushCache();
+            \App\Services\DictionarySync::changed([]);
         } catch (\InvalidArgumentException $e) {
             flash('error', $e->getMessage());
             redirect('/admin/bisaya');
@@ -1081,7 +1085,7 @@ class ManoboController
             'CSV-IMPORT-' . date('Y-m-d'),
             (int) ($_SESSION['user_id'] ?? 0) ?: null
         );
-        ManoboAutoTranslator::flushCache();
+        \App\Services\DictionarySync::changed([]);   // translator + cached texts pick up the imported words now
 
         AuditLog::record(
             (int) $_SESSION['user_id'],
@@ -1123,6 +1127,28 @@ class ManoboController
     }
 
     /** @return array<string,string> */
+    /**
+     * Push a dictionary change to residents right away (DictionarySync):
+     * translator uses it now, display texts re-translate, and posts that
+     * contain the word get their Manobo redone. Returns a note for the flash.
+     */
+    private function syncDictionary(array $terms): string
+    {
+        try {
+            $r = \App\Services\DictionarySync::changed($terms);
+        } catch (\Throwable $e) {
+            error_log('[ManoboController::syncDictionary] ' . $e->getMessage());
+            ManoboAutoTranslator::flushCache();
+            return '';
+        }
+        $note = ' The translator uses it now.';
+        if ($r['affected'] > 0) {
+            $note .= ' ' . $r['updated'] . ' post(s) re-translated in Manobo'
+                . ($r['queued'] > 0 ? '; ' . $r['queued'] . ' more will update in a moment.' : '.');
+        }
+        return $note;
+    }
+
     private function bisayaInput(): array
     {
         $data = [];
