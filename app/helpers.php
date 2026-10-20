@@ -161,6 +161,56 @@ function image_credit(string $path): ?array
     return is_array($credit) && !empty($credit['by']) ? $credit : null;
 }
 
+/**
+ * Run slow outside work (email, SMS) AFTER the browser has its response.
+ *
+ * Registering or verifying a resident used to wait on the mail server and
+ * the SMS gateway before the page came back, so the button spun for minutes
+ * when either was slow or unreachable — even though the account was already
+ * saved. Jobs queued here run in a shutdown function that first finishes the
+ * HTTP response (Content-Length + Connection: close, session saved), then
+ * does the work. In the CLI (tests, tools) they simply run at exit.
+ */
+function after_response(callable $job): void
+{
+    static $jobs = null;
+    if ($jobs === null) {
+        $jobs = new \ArrayObject();
+        register_shutdown_function(static function () use ($jobs): void {
+            if (PHP_SAPI !== 'cli') {
+                ignore_user_abort(true);
+                if (session_status() === PHP_SESSION_ACTIVE) {
+                    session_write_close();      // flash messages saved; next page not blocked
+                }
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                } else {
+                    $out = '';
+                    while (ob_get_level() > 0) {
+                        $out = (string) ob_get_clean() . $out;
+                    }
+                    if (!headers_sent()) {
+                        header('Connection: close');
+                        header('Content-Encoding: none');
+                        header('Content-Length: ' . strlen($out));
+                    }
+                    echo $out;
+                    flush();
+                }
+            }
+            @set_time_limit(90);
+            foreach ($jobs as $run) {
+                try {
+                    $run();
+                } catch (\Throwable $e) {
+                    error_log('[after_response] ' . $e->getMessage());
+                }
+            }
+        });
+    }
+    $jobs->append($job);
+}
+
 function redirect(string $path): void
 {
     if (strpos($path, '://') === false) {

@@ -160,10 +160,22 @@ class MailService
      */
     public function send(string $toEmail, string $toName, string $subject, string $body): bool
     {
+        // The mail server was unreachable a moment ago (Render blocks SMTP on
+        // some plans): skip at once instead of making every registration and
+        // verification wait for the same timeout again.
+        $downUntil = (int) \App\Models\Setting::get('mail_unreachable_until', 0);
+        if ($downUntil > time()) {
+            error_log('[MailService] skipped (mail server unreachable until ' . date('H:i', $downUntil) . ') to ' . $toEmail);
+            return false;
+        }
+
         $mail = new PHPMailer(true);
 
         try {
             $mail->isSMTP();
+            // PHPMailer waits 300 s by default when the server does not answer,
+            // which left the Register / Verify buttons spinning. Fail fast.
+            $mail->Timeout    = max(3, (int) env('MAIL_TIMEOUT', 8));
             $mail->Host       = (string) env('MAIL_HOST', 'smtp.gmail.com');
             $mail->SMTPAuth   = true;
             $mail->Username   = (string) env('MAIL_USERNAME', '');
@@ -187,6 +199,13 @@ class MailService
 
         } catch (\Throwable $e) {
             error_log('[MailService] Failed to send to ' . $toEmail . ': ' . $e->getMessage());
+            // Could not even connect: pause email for 30 minutes.
+            if (preg_match('/connect|timed out|timeout|unreachable|refused/i', $e->getMessage() . ' ' . $mail->ErrorInfo)) {
+                try {
+                    \App\Models\Setting::set('mail_unreachable_until', time() + 1800);
+                } catch (\Throwable) {
+                }
+            }
             return false;
         }
     }

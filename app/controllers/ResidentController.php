@@ -694,28 +694,28 @@ class ResidentController
             'related_type' => null,
         ]);
 
-        // 3. Welcome email via MailService template (non-blocking)
-        try {
-            (new MailService())->sendApprovalEmail($resident);
-        } catch (\Throwable $e) {
-            error_log('Approval email failed for user #' . $userId . ': ' . $e->getMessage());
-        }
+        // 3. Welcome email — after the response, so Verify never waits on the mail server
+        after_response(static function () use ($resident, $userId): void {
+            try {
+                (new MailService())->sendApprovalEmail($resident);
+            } catch (\Throwable $e) {
+                error_log('Approval email failed for user #' . $userId . ': ' . $e->getMessage());
+            }
+        });
 
         // 4. Welcome SMS if the resident registered a phone number
         if (!empty($resident['phone'])) {
-            try {
-                $firstName = explode(' ', $resident['full_name'])[0];
-                $message   = "[BarangGabay] Kumusta {$firstName}! Ang iyong account ay na-verify na. "
-                           . "Maaari ka nang mag-login sa portal. - Brgy. Bayogo, Madrid";
-                (new SemaphoreSmsService())->send(
-                    $resident['phone'],
-                    $message,
-                    'verification',
-                    $userId
-                );
-            } catch (\Throwable $e) {
-                error_log('Verification SMS failed for user #' . $userId . ': ' . $e->getMessage());
-            }
+            $firstName = explode(' ', $resident['full_name'])[0];
+            $message   = "[BarangGabay] Kumusta {$firstName}! Ang iyong account ay na-verify na. "
+                       . "Maaari ka nang mag-login sa portal. - Brgy. Bayogo, Madrid";
+            $phone     = (string) $resident['phone'];
+            after_response(static function () use ($phone, $message, $userId): void {
+                try {
+                    (new SemaphoreSmsService())->send($phone, $message, 'verification', $userId);
+                } catch (\Throwable $e) {
+                    error_log('Verification SMS failed for user #' . $userId . ': ' . $e->getMessage());
+                }
+            });
         }
 
         // 4. Audit log

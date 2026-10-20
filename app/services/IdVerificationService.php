@@ -38,7 +38,10 @@ class IdVerificationService
                 'anthropic-version' => '2023-06-01',
                 'Content-Type'      => 'application/json',
             ],
-            'timeout' => 45,
+            // Runs inside the Register request: keep the wait short. On a
+            // timeout the check is simply skipped and staff review the ID.
+            'timeout'         => 20,
+            'connect_timeout' => 5,
         ]);
     }
 

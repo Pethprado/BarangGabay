@@ -717,11 +717,13 @@ class AuthController
         }
 
         // Send email-verification link via the MailService template method.
-        $token = self::emailVerificationToken($userId, (string) $email);
-        (new MailService())->sendVerificationEmail(
-            ['email' => (string) $email, 'full_name' => $fullName],
-            $token
-        );
+        // After the response: a slow or blocked mail server must not keep the
+        // Register button spinning (the account is already saved).
+        $token     = self::emailVerificationToken($userId, (string) $email);
+        $mailEmail = (string) $email;
+        after_response(static function () use ($mailEmail, $fullName, $token): void {
+            (new MailService())->sendVerificationEmail(['email' => $mailEmail, 'full_name' => $fullName], $token);
+        });
 
         unset($_SESSION['oauth_prefill']);
         flash('success', __('Matagumpay na nairehistro! Suriin ang iyong email para ma-verify ang iyong account.'));
