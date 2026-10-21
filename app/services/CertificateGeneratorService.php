@@ -271,8 +271,13 @@ class CertificateGeneratorService
     /** Seal at the left, the four government lines centered. */
     private static function header(BarangayPdf $pdf, float $left, float $right, float $top, string $family, bool $mono): void
     {
-        if (is_file(self::ASSETS . 'seal.png')) {
-            $pdf->Image(self::ASSETS . 'seal.png', $left + 2, $top, 30);
+        // seal.jpg is the print copy: 1000px (~850 dpi at 30 mm) on white,
+        // which is what the paper is. A PNG of the same detail would add
+        // about a megabyte to every document; seal.png (transparent, small)
+        // is the web copy used by the verify page.
+        $seal = is_file(self::ASSETS . 'seal.jpg') ? 'seal.jpg' : 'seal.png';
+        if (is_file(self::ASSETS . $seal)) {
+            $pdf->Image(self::ASSETS . $seal, $left + 2, $top, 30);
         }
         $lines = [
             ['REPUBLIC OF THE PHILIPPINES', ''],
