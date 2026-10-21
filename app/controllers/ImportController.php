@@ -42,6 +42,83 @@ class ImportController
     private const MAX_PDF_BYTES = 10_485_760;
 
     /**
+     * Link previews per staff member per hour. Higher than imports: the form
+     * previews as staff paste, and most previews make no request at all.
+     */
+    private const PREVIEWS_PER_HOUR = 120;
+
+    /**
+     * POST /api/admin/import/preview
+     *
+     * What residents will see for a pasted social media link, before the post
+     * is saved: the platform, the embed drawn exactly as the resident page
+     * draws it, and any caption the platform offered, so the form can fill an
+     * empty title and body. Accepts a link or a platform's "Embed" code.
+     *
+     * Nothing is saved. The same preparation runs again on save — this is a
+     * look, not a commitment.
+     */
+    public function preview(): void
+    {
+        header('Content-Type: application/json');
+        check_csrf();
+
+        $raw = (string) ($_POST['url'] ?? '');
+        if (SourceLink::extractUrl($raw) === '') {
+            $this->say(false, t('import.err_bad_url'));
+        }
+
+        if (!$this->withinRateLimit('import.preview', self::PREVIEWS_PER_HOUR)) {
+            http_response_code(429);
+            $this->say(false, t('import.err_rate_limited'));
+        }
+
+        $source = SourceLink::prepare($raw);
+        if ($source['url'] === '') {
+            $this->say(false, t('import.err_bad_scheme'));
+        }
+
+        $this->log('import.preview', $source['url'], (string) $source['platform']);
+
+        $spec = SourceLink::detect($source['url']);
+
+        // The very partial the resident page uses, so the preview cannot drift
+        // from what residents get.
+        $__seRow = [
+            'source_url'      => $source['url'],
+            'source_platform' => $source['platform'],
+            'source_meta'     => $source['meta'] !== [] ? json_encode($source['meta']) : null,
+        ];
+        $__seNoAssets = true;
+        ob_start();
+        require __DIR__ . '/../views/shared/_source-embed.php';
+        $html = (string) ob_get_clean();
+
+        // A Facebook link the plugin cannot render is almost always a share
+        // stub that could not be followed. Say how to get one that works.
+        $warning = null;
+        if (!$spec['embeddable']) {
+            $warning = match ($spec['platform']) {
+                SourceLink::FACEBOOK => t('source.warn_facebook'),
+                SourceLink::OTHER    => t('source.warn_other'),
+                default              => t('source.warn_unrecognised', ['platform' => $spec['label']]),
+            };
+        }
+
+        echo json_encode([
+            'success'    => true,
+            'url'        => $source['url'],
+            'platform'   => $spec['platform'],
+            'label'      => $spec['label'],
+            'embeddable' => $spec['embeddable'],
+            'warning'    => $warning,
+            'title'      => SourceLink::fallbackTitle($source),
+            'text'       => $source['meta']['description'] ?? ($source['meta']['title'] ?? ''),
+            'html'       => $html,
+        ]);
+    }
+
+    /**
      * POST /api/admin/import/link
      *
      * Fetch a URL and return an editable draft: title, body, cover image and
@@ -258,20 +335,22 @@ class ImportController
      * already written there for attribution, so the count is a by-product of a
      * record that has to exist anyway.
      */
-    private function withinRateLimit(): bool
+    private function withinRateLimit(string $action = 'import', int $cap = self::FETCHES_PER_HOUR): bool
     {
+        $actions = $action === 'import.preview' ? "('import.preview')" : "('import.link', 'import.file')";
+
         try {
             $isPgsql = (db()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql');
             $dateCond = $isPgsql ? "created_at > NOW() - INTERVAL '1 hour'" : "created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)";
             $stmt = db()->prepare(
                 "SELECT COUNT(*) FROM audit_logs
                   WHERE user_id = ?
-                    AND action IN ('import.link', 'import.file')
+                    AND action IN {$actions}
                     AND {$dateCond}"
             );
             $stmt->execute([(int) ($_SESSION['user_id'] ?? 0)]);
 
-            return (int) $stmt->fetchColumn() < self::FETCHES_PER_HOUR;
+            return (int) $stmt->fetchColumn() < $cap;
         } catch (\Throwable $e) {
             // Never block staff from working because the counter is unavailable.
             error_log('[ImportController] rate limit check: ' . $e->getMessage());

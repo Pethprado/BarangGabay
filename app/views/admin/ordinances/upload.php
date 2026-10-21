@@ -222,7 +222,6 @@ ob_start();
                        id="pdf_file"
                        name="file"
                        accept="application/pdf"
-                       required
                        class="d-none"
                        @change="handleFile($event)">
             </label>

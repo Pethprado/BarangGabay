@@ -78,7 +78,8 @@ CREATE TABLE announcements (
     -- Where this came from, when it came from somewhere. NULL is the ordinary
     -- case: written here. See migration 022 and SourceLink::detect().
     source_url VARCHAR(500) NULL,
-    source_platform ENUM('facebook','youtube','drive','docs','other') NULL,
+    source_platform VARCHAR(20) NULL,
+    source_meta TEXT NULL,
     status ENUM('draft','published','archived') NOT NULL DEFAULT 'draft',
     published_at DATETIME NULL,
     -- Seeded demo content, never something a staff member wrote. Lets
@@ -112,7 +113,8 @@ CREATE TABLE events (
     cover_image_url VARCHAR(500) NULL,
     -- See the note on announcements.source_url.
     source_url VARCHAR(500) NULL,
-    source_platform ENUM('facebook','youtube','drive','docs','other') NULL,
+    source_platform VARCHAR(20) NULL,
+    source_meta TEXT NULL,
     created_by INT UNSIGNED NOT NULL,
     status ENUM('upcoming','ongoing','completed','cancelled') NOT NULL DEFAULT 'upcoming',
     -- See the note on announcements.is_sample.
@@ -143,7 +145,8 @@ CREATE TABLE ordinances (
     -- See the note on announcements.source_url. For an ordinance this is
     -- typically the Drive link the PDF was pulled from.
     source_url VARCHAR(500) NULL,
-    source_platform ENUM('facebook','youtube','drive','docs','other') NULL,
+    source_platform VARCHAR(20) NULL,
+    source_meta TEXT NULL,
     uploaded_by INT UNSIGNED NOT NULL,
     status ENUM('active','repealed','draft') NOT NULL DEFAULT 'active',
     -- See the note on announcements.is_sample. Especially load-bearing here:

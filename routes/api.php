@@ -71,6 +71,8 @@ return [
     // SSRF guards live — read that before changing any of this.
     ['POST', '/api/admin/import/link',  'ImportController@fromLink',  ['auth', 'role:admin,staff']],
     ['POST', '/api/admin/import/file',  'ImportController@fromFile',  ['auth', 'role:admin,staff']],
+    // Preview of a pasted social media link, drawn as residents will see it.
+    ['POST', '/api/admin/import/preview', 'ImportController@preview', ['auth', 'role:admin,staff']],
     // Paste cleanup makes no network call at all.
     ['POST', '/api/admin/import/paste', 'ImportController@fromPaste', ['auth', 'role:admin,staff']],
 

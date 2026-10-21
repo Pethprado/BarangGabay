@@ -89,6 +89,12 @@ require __DIR__ . '/../shared/_voice-reader.php';
 <!-- ── Two-column layout ─────────────────────────────────────────────────── -->
 <div class="grid gap-6 lg:grid-cols-[1fr_340px]">
 
+    <?php if ($pdfUrl === ''): ?>
+    <!-- ── LEFT: no PDF — the post this ordinance was shared as ─────── -->
+    <div class="min-w-0">
+        <?php $__seRow = $ordinance; require __DIR__ . '/../shared/_source-embed.php'; ?>
+    </div>
+    <?php else: ?>
     <!-- ── LEFT: PDF.js viewer ──────────────────────────────────────── -->
     <div class="min-w-0"
          x-data="pdfViewer(<?= json_encode($pdfUrl, JSON_HEX_TAG) ?>)"
@@ -176,6 +182,7 @@ require __DIR__ . '/../shared/_voice-reader.php';
         </div>
 
     </div><!-- /PDF viewer -->
+    <?php endif; ?>
 
     <!-- ── RIGHT: metadata + AI summarize ───────────────────────────── -->
     <aside class="space-y-4">
@@ -321,8 +328,10 @@ require __DIR__ . '/../shared/_voice-reader.php';
         <?php
         // Where the PDF came from, when it was pulled from a link. See the
         // note in the announcement detail view.
-        $__seRow = $ordinance;
-        require __DIR__ . '/../shared/_source-embed.php';
+        if ($pdfUrl !== '') {
+            $__seRow = $ordinance;
+            require __DIR__ . '/../shared/_source-embed.php';
+        }
         ?>
 
 

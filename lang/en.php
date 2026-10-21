@@ -2460,7 +2460,7 @@ return [
         'intro'     => 'Bring in a Facebook caption, or pull the title and photo from a link. Everything lands here as a draft for you to edit — nothing is published until you save.',
         'tab_paste' => 'Paste text',
         'tab_link'  => 'Paste link',
-        'tab_attach'=> 'Attach original',
+        'tab_attach'=> 'Social media link',
         'working'   => 'Working…',
 
         'paste_label' => 'Caption copied from Facebook',
@@ -2474,9 +2474,9 @@ return [
         'link_help_pdf'  => 'The file must be shared as “anyone with the link”. It is downloaded and stored here, so it keeps working if the Drive file is later removed.',
         'link_btn'       => 'Fetch',
 
-        'attach_label' => 'Original post link',
-        'attach_help'  => 'Shown on the post as “from Facebook” with the original embedded. Use this when the words are not the barangay’s to copy.',
-        'attach_note'  => 'The original will be embedded on the post, with a link to it.',
+        'attach_label' => 'Link to the post (Facebook, TikTok, YouTube, Instagram, X, Threads, Vimeo…)',
+        'attach_help'  => 'Copy the post\'s link and paste it here. Residents will see the post itself, laid out the way it looks on the platform — photos, caption, and videos that play right on the page. A link and a title are enough: the caption fills an empty body. Facebook posts must be Public.',
+        'attach_note'  => 'This is how residents will see it under the post. If it does not show here, it will not show for them either.',
 
         'cleaned'     => 'Cleaned up and filled into the form.',
         'imported'    => 'Imported. Please read it through before saving.',
@@ -2509,6 +2509,10 @@ return [
         'err_too_many_redirects' => 'That link redirects too many times.',
         'err_login_wall'    => 'Facebook does not let a website read its posts — it returns a login page instead. Attach the original post so it is embedded here, or paste the caption into the text box.',
         'err_drive_not_public' => 'That Drive file is not shared publicly, so it could not be downloaded. In Drive, set sharing to “anyone with the link”, or upload the PDF directly.',
+        'preview_heading' => 'What residents will see',
+        'previewing' => 'Loading preview…',
+        'filled_from_link' => 'Filled the empty title/text from the post. Check it before saving.',
+        'clear_link' => 'Remove link',
     ],
 
     'source' => [
@@ -2521,6 +2525,18 @@ return [
         'platform_drive'    => 'Google Drive',
         'platform_docs'     => 'Google Docs',
         'platform_other'    => 'another website',
+        'platform_tiktok' => 'TikTok',
+        'platform_instagram' => 'Instagram',
+        'platform_x' => 'X (Twitter)',
+        'platform_threads' => 'Threads',
+        'platform_vimeo' => 'Vimeo',
+        'platform_dailymotion' => 'Dailymotion',
+        'platform_video' => 'a video file',
+        'platform_image' => 'an image',
+        'see_original_below' => 'See the full post from :platform below.',
+        'warn_facebook' => 'Facebook will not show this link inside another website — usually because it is a share link (facebook.com/share/…). On Facebook, open the post, tap ⋯ → Embed → Copy code, and paste that here instead. Or tap the post\'s date and copy the address from the browser. The post must be Public.',
+        'warn_other' => 'This website has no embed, so residents will see a preview card that opens the page.',
+        'warn_unrecognised' => 'This :platform link is not a post or video address we can play. Open the post itself and copy its link.',
     ],
 
     'manobo_state' => [

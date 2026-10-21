@@ -128,6 +128,29 @@ final class LinkImporter
     }
 
     /**
+     * Fetch a platform's public oEmbed endpoint and decode it.
+     *
+     * Skips the social-wall refusal in request() on purpose: that refusal is
+     * about pages that answer a server with a login shell. An oEmbed endpoint
+     * (publish.twitter.com, tiktok.com/oembed) is an API built to be called
+     * by servers, and answers with JSON or not at all. Every other check —
+     * scheme, resolved address, pinned connection, size cap — still applies.
+     *
+     * @return array<string,mixed>|null The decoded object, or null on any failure.
+     */
+    public function fetchJson(string $url): ?array
+    {
+        $result = $this->request($url, [], 262_144, true);
+        if (!$result['ok']) {
+            return null;
+        }
+
+        $data = json_decode($result['body'], true);
+
+        return is_array($data) ? $data : null;
+    }
+
+    /**
      * Where does this link end up? The address only — never the page.
      *
      * Exists for one narrow job: a Facebook share link
@@ -190,7 +213,7 @@ final class LinkImporter
      * @param list<string> $allowMime
      * @return array{ok:bool, error:string|null, code:string|null, url:string, body:string, mime:string}
      */
-    private function request(string $url, array $allowMime, int $maxBytes): array
+    private function request(string $url, array $allowMime, int $maxBytes, bool $isApi = false): array
     {
         $current = trim($url);
 
@@ -205,7 +228,7 @@ final class LinkImporter
          * token, so the honest answer is to say so up front and point at the
          * embed and the paste box, both of which do work.
          */
-        if ($this->isSocialWall($current, 200)) {
+        if (!$isApi && $this->isSocialWall($current, 200)) {
             return $this->fail('login_wall', null);
         }
 

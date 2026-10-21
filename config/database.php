@@ -246,6 +246,18 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS en_is_auto SMALLINT NOT NULL DEFAULT 0",
         "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS manobo_is_auto SMALLINT NOT NULL DEFAULT 0",
 
+        // Social media links on posts (SourceLink). source_meta is the stored
+        // preview, so a resident's page never fetches one.
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS source_url VARCHAR(500) NULL",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS source_platform VARCHAR(20) NULL",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS source_meta TEXT NULL",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS source_url VARCHAR(500) NULL",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS source_platform VARCHAR(20) NULL",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS source_meta TEXT NULL",
+        "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS source_url VARCHAR(500) NULL",
+        "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS source_platform VARCHAR(20) NULL",
+        "ALTER TABLE ordinances ADD COLUMN IF NOT EXISTS source_meta TEXT NULL",
+
         // 9. Disable 2FA system-wide
         "UPDATE users SET totp_enabled = 0, totp_secret = NULL, totp_confirmed_at = NULL",
         "CREATE TABLE IF NOT EXISTS settings (

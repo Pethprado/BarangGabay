@@ -8,13 +8,16 @@
  *
  * Three ways in, in the order staff will reach for them:
  *
+ *   Social link — paste a Facebook/TikTok/YouTube/Instagram/X… link (or the
+ *                 platform's "Embed" code). Residents see the post itself,
+ *                 laid out the way the platform lays it out, videos playing
+ *                 in place. Previewed here as it will appear. A link alone is
+ *                 enough to publish: the caption fills empty fields.
  *   Paste text  — copy the caption out of Facebook. No API, no key, nothing
- *                 to break. This is the tab that opens first, because it is
- *                 the one that works every day.
+ *                 to break.
  *   Paste link  — we fetch the page and read its Open Graph tags. Good for
  *                 news sites, YouTube, published Google Docs. Facebook will
  *                 refuse, and says so specifically rather than failing.
- *   Attach      — keep the original post beside ours, embedded.
  *
  * Nothing here saves anything. Everything lands in the form fields for a staff
  * member to read and edit before they press Publish — an official barangay
@@ -43,9 +46,18 @@ $__ipConfig = [
         'imported'    => t('import.imported'),
         'file_ok'     => t('import.file_ok'),
         'tags_found'  => t('import.tags_found'),
+        'previewing'  => t('import.previewing'),
+        'filled'      => t('import.filled_from_link'),
     ],
 ];
+
+// The preview draws the same embed residents get, so it needs the same
+// stylesheet and script; marking them done stops the partial adding them twice.
+$GLOBALS['__seAssetsDone'] = true;
 ?>
+
+<link rel="stylesheet" href="<?= e(asset_v('assets/css/source-embed.css')) ?>">
+<script src="<?= e(asset_v('assets/js/source-embed.js')) ?>" defer data-fb-locale="en_US"></script>
 
 <div class="admin-card mb-4" x-data="importPanel()">
 
@@ -83,12 +95,13 @@ $__ipConfig = [
         <input type="hidden" name="imported_cover" value="">
         <?php endif; ?>
 
-        <!-- Tabs. Paste-text first: it is the one that always works. -->
+        <!-- Tabs. The social link first: it is what staff reach for — copy
+             the link of the barangay's Facebook post and publish it here. -->
         <div class="d-flex gap-2 mb-3 flex-wrap">
             <?php foreach ([
-                ['paste', 'bi-clipboard', t('import.tab_paste')],
+                ['attach','bi-share',      t('import.tab_attach')],
+                ['paste', 'bi-clipboard',  t('import.tab_paste')],
                 ['link',  'bi-link-45deg', t('import.tab_link')],
-                ['attach','bi-paperclip',  t('import.tab_attach')],
             ] as [$__tab, $__icon, $__label]): ?>
             <button type="button"
                     @click="tab = '<?= $__tab ?>'"
@@ -101,7 +114,7 @@ $__ipConfig = [
         </div>
 
         <!-- ══ Tier 3: paste the caption ══════════════════════════════════ -->
-        <div x-show="tab === 'paste'">
+        <div x-show="tab === 'paste'" x-cloak>
             <label class="form-label fw-semibold" style="font-size:.845rem;">
                 <?= e(t('import.paste_label')) ?>
             </label>
@@ -138,29 +151,56 @@ $__ipConfig = [
             </div>
         </div>
 
-        <!-- ══ Tier 2: attach the original ════════════════════════════════ -->
-        <div x-show="tab === 'attach'" x-cloak>
+        <!-- ══ Tier 2: the social media post itself ═══════════════════════ -->
+        <div x-show="tab === 'attach'">
             <label class="form-label fw-semibold" style="font-size:.845rem;">
                 <?= e(t('import.attach_label')) ?>
             </label>
             <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-paperclip"></i></span>
+                <span class="input-group-text"><i class="bi bi-share"></i></span>
                 <?php /* The one field on this panel that is actually submitted
                          with the form — everything else only fills in other
-                         fields. See SourceLink::store(). */ ?>
-                <input type="url"
+                         fields. Plain text rather than type="url" because a
+                         platform's "Embed" code is accepted too; the server
+                         keeps only the post address. See SourceLink::prepare(). */ ?>
+                <input type="text"
                        name="source_url"
                        x-model="sourceUrl"
+                       @input.debounce.700ms="previewLink()"
                        class="form-control"
-                       placeholder="https://www.facebook.com/..."
-                       maxlength="500"
+                       placeholder="https://www.facebook.com/…  ·  https://www.tiktok.com/…  ·  https://youtu.be/…"
+                       autocomplete="off"
+                       spellcheck="false"
                        style="font-size:.875rem;">
+                <button type="button" class="btn btn-outline-secondary" x-show="sourceUrl" x-cloak
+                        @click="clearLink()" title="<?= e(t('import.clear_link')) ?>">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
             <div class="form-text"><?= e(t('import.attach_help')) ?></div>
 
-            <p class="mt-2 mb-0" style="font-size:.76rem;color:var(--text-secondary);" x-show="sourceUrl" x-cloak>
-                <i class="bi bi-info-circle me-1"></i><?= e(t('import.attach_note')) ?>
-            </p>
+            <?php /* What residents will see: the same partial, drawn by the
+                     same script, as on the resident page. */ ?>
+            <div x-show="sourceUrl" x-cloak class="mt-3">
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-2" style="font-size:.78rem;">
+                    <span class="fw-semibold" style="color:var(--text-secondary);">
+                        <i class="bi bi-eye me-1"></i><?= e(t('import.preview_heading')) ?>
+                    </span>
+                    <span x-show="previewBusy" class="text-muted">
+                        <span class="spinner-border spinner-border-sm me-1" style="width:.8rem;height:.8rem;"></span>
+                        <span x-text="cfg.strings.previewing"></span>
+                    </span>
+                    <span x-show="!previewBusy && previewLabel" class="badge rounded-pill"
+                          :style="previewOk ? 'background:#dcfce7;color:#166534;' : 'background:#fef3c7;color:#92400e;'"
+                          x-text="previewLabel"></span>
+                </div>
+                <p x-show="previewWarning" x-text="previewWarning" class="mb-2 rounded-3 p-2"
+                   style="font-size:.76rem;background:#fef3c7;border:1px solid #fcd34d;color:#78350f;"></p>
+                <div x-ref="previewBox"></div>
+                <p class="mt-2 mb-0" style="font-size:.76rem;color:var(--text-secondary);">
+                    <i class="bi bi-info-circle me-1"></i><?= e(t('import.attach_note')) ?>
+                </p>
+            </div>
         </div>
 
         <!-- ══ Result ═════════════════════════════════════════════════════ -->
@@ -209,9 +249,14 @@ $__ipConfig = [
 if (typeof window.importPanel === 'undefined') {
     window.importPanel = function () {
         return {
-            tab:       'paste',
+            tab:       'attach',
             url:       '',
             sourceUrl: <?= json_encode($__ipSource) ?>,
+            previewBusy:    false,
+            previewOk:      false,
+            previewLabel:   '',
+            previewWarning: '',
+            _previewed:     '',
             pasted:    '',
             busy:      false,
             ok:        false,
@@ -227,6 +272,104 @@ if (typeof window.importPanel === 'undefined') {
                     try { this.cfg = JSON.parse(raw.textContent || '{}'); } catch (e) {}
                 }
                 this.cfg.strings = this.cfg.strings || {};
+
+                // An edit form opens with its existing link already drawn.
+                if (this.sourceUrl) { this.previewLink(); }
+                this.$watch('sourceUrl', () => this._toggleBodyRequired());
+                this._toggleBodyRequired();
+            },
+
+            /* A post that is only a link needs no body of its own — the server
+               fills one in from the post (SourceLink::fillLinkOnly). So the
+               browser's own "please fill in this field" must not stop it. */
+            _toggleBodyRequired() {
+                const form = this._form();
+                if (!form) { return; }
+                const field = form.querySelector('textarea[name="description"], textarea[name="body"]');
+                if (!field) { return; }
+                if (field.dataset.wasRequired === undefined) {
+                    field.dataset.wasRequired = field.required ? '1' : '0';
+                }
+                field.required = !(this.sourceUrl || '').trim() && field.dataset.wasRequired === '1';
+            },
+
+            _quill() {
+                if (window.quillEditor) { return window.quillEditor; }
+                /* The create/edit pages declare it with a top-level `let`,
+                   which is visible by name but is not a window property. */
+                try { return typeof quillEditor !== 'undefined' ? quillEditor : null; } catch (e) { return null; }
+            },
+
+            _isEmpty(names) {
+                const form = this._form();
+                if (!form) { return false; }
+                for (const name of names) {
+                    const field = form.querySelector('[name="' + name + '"]');
+                    if (field) { return field.value.replace(/<[^>]*>/g, '').trim() === ''; }
+                }
+                return false;
+            },
+
+            clearLink() {
+                this.sourceUrl = '';
+                this._previewed = '';
+                this.previewLabel = '';
+                this.previewWarning = '';
+                if (this.$refs.previewBox) { this.$refs.previewBox.innerHTML = ''; }
+            },
+
+            /* Show the post as residents will see it, and fill an empty title
+               and body from whatever caption the platform offered. Never
+               overwrites anything staff typed. */
+            async previewLink() {
+                const value = (this.sourceUrl || '').trim();
+                if (!value) { this.clearLink(); return; }
+                if (value === this._previewed || this.previewBusy) { return; }
+                this._previewed = value;
+
+                this.previewBusy = true;
+                this.previewWarning = '';
+                try {
+                    const data = await this._post('/api/admin/import/preview', { url: value });
+                    if (!data.success) {
+                        this.previewOk = false;
+                        this.previewLabel = '';
+                        this.previewWarning = data.error || this.cfg.strings.failed;
+                        this.$refs.previewBox.innerHTML = '';
+                        return;
+                    }
+
+                    // The server pulled the post address out of pasted embed
+                    // code, or followed a share link: show what will be saved.
+                    if (data.url && data.url !== value) {
+                        this._previewed = data.url;
+                        this.sourceUrl  = data.url;
+                    }
+
+                    this.previewOk      = !!data.embeddable;
+                    this.previewLabel   = data.label || '';
+                    this.previewWarning = data.warning || '';
+                    this.$refs.previewBox.innerHTML = data.html || '';
+                    if (window.SourceEmbed) { window.SourceEmbed.mount(this.$refs.previewBox); }
+
+                    let filled = false;
+                    if (data.title && this._isEmpty(['title'])) {
+                        filled = this._set(['title'], data.title) || filled;
+                    }
+                    if (data.text && this._isEmpty(['body', 'description'])) {
+                        filled = this._setBody('', data.text) || filled;
+                    }
+                    if (filled) {
+                        this.ok = true;
+                        this.message = this.cfg.strings.filled;
+                        this.hint = '';
+                    }
+                } catch (e) {
+                    this.previewOk = false;
+                    this.previewWarning = this.cfg.strings.failed;
+                } finally {
+                    this.previewBusy = false;
+                }
             },
 
             _form() { return this.$el.closest('form'); },
@@ -279,10 +422,15 @@ if (typeof window.importPanel === 'undefined') {
                of truth — writing only to the hidden textarea would be silently
                overwritten on the next keystroke. */
             _setBody(html, plain) {
-                if (window.quillEditor && html) {
-                    window.quillEditor.root.innerHTML = html;
-                    window.quillEditor.update();
-                    this._set(['body'], html);
+                const quill = this._quill();
+                if (quill && (html || plain)) {
+                    if (html) {
+                        quill.root.innerHTML = html;
+                        quill.update();
+                    } else {
+                        quill.setText(plain);
+                    }
+                    this._set(['body'], quill.root.innerHTML);
                     return true;
                 }
                 return this._set(['body', 'description'], plain || html);

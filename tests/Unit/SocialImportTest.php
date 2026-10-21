@@ -326,4 +326,169 @@ final class SocialImportTest extends TestCase
             $this->assertSame($url, SourceLink::canonicalise($url), $url);
         }
     }
+
+    // ── Every platform staff paste from ──────────────────────────────────────
+
+    /**
+     * Each platform gets its own official player, built from an id this class
+     * extracted — the shape of the frame follows what it holds.
+     */
+    public function testEachSocialPlatformGetsItsOwnOfficialEmbed(): void
+    {
+        $cases = [
+            ['https://www.tiktok.com/@brgybayogo/video/7301234567890123456?lang=en', SourceLink::TIKTOK, 'https://www.tiktok.com/embed/v2/7301234567890123456', 'tiktok'],
+            ['https://www.instagram.com/p/C1aBcDeFgHi/', SourceLink::INSTAGRAM, 'https://www.instagram.com/p/C1aBcDeFgHi/embed/captioned/', 'post'],
+            ['https://www.instagram.com/reel/C1aBcDeFgHi/?igsh=xyz', SourceLink::INSTAGRAM, 'https://www.instagram.com/reel/C1aBcDeFgHi/embed/captioned/', 'post'],
+            ['https://x.com/pagasa/status/1712345678901234567', SourceLink::TWITTER, 'https://platform.twitter.com/embed/Tweet.html?dnt=true&id=1712345678901234567', 'post'],
+            ['https://twitter.com/pagasa/status/1712345678901234567?s=20', SourceLink::TWITTER, 'https://platform.twitter.com/embed/Tweet.html?dnt=true&id=1712345678901234567', 'post'],
+            ['https://www.threads.net/@brgy.bayogo/post/C1aBcDeFgHi', SourceLink::THREADS, 'https://www.threads.net/@brgy.bayogo/post/C1aBcDeFgHi/embed', 'post'],
+            ['https://vimeo.com/123456789', SourceLink::VIMEO, 'https://player.vimeo.com/video/123456789?dnt=1', 'landscape'],
+            ['https://www.dailymotion.com/video/x8abcd1', SourceLink::DAILYMOTION, 'https://geo.dailymotion.com/player.html?video=x8abcd1', 'landscape'],
+            ['https://www.youtube.com/shorts/dQw4w9WgXcQ', SourceLink::YOUTUBE, 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&playsinline=1', 'portrait'],
+        ];
+
+        foreach ($cases as [$url, $platform, $embed, $shape]) {
+            $link = SourceLink::detect($url);
+
+            $this->assertSame($platform, $link['platform'], $url);
+            $this->assertTrue($link['embeddable'], $url);
+            $this->assertSame($embed, $link['embed'], $url);
+            $this->assertSame($shape, $link['shape'], $url);
+            $this->assertSame(SourceLink::RENDER_IFRAME, $link['render'], $url);
+        }
+    }
+
+    /** A Facebook post is drawn by the SDK; a Facebook video by its video player. */
+    public function testFacebookPostsAndVideosAreDrawnByTheSdk(): void
+    {
+        $post = SourceLink::detect('https://www.facebook.com/BarangayBayogo/posts/pfbid02AbC?rdid=XYZ');
+        $this->assertSame(SourceLink::RENDER_FACEBOOK, $post['render']);
+        $this->assertSame('post', $post['fb_type']);
+        $this->assertSame('https://www.facebook.com/BarangayBayogo/posts/pfbid02AbC', $post['href']);
+
+        foreach ([
+            'https://www.facebook.com/BarangayBayogo/videos/987654321',
+            'https://www.facebook.com/reel/112233445566',
+            'https://www.facebook.com/watch/?v=112233445566',
+        ] as $url) {
+            $video = SourceLink::detect($url);
+            $this->assertSame('video', $video['fb_type'], $url);
+            $this->assertStringContainsString('plugins/video.php', (string) $video['embed'], $url);
+        }
+
+        $this->assertTrue(SourceLink::detect('https://www.facebook.com/photo/?fbid=123456&set=a.789')['embeddable']);
+        $this->assertTrue(SourceLink::detect('https://www.facebook.com/groups/bayogo/permalink/55667788/')['embeddable']);
+    }
+
+    /** A direct video file plays in a <video> tag, never in a frame. */
+    public function testADirectVideoFilePlaysInPlace(): void
+    {
+        $link = SourceLink::detect('https://example.org/media/clean-up-drive.mp4');
+
+        $this->assertSame(SourceLink::VIDEO, $link['platform']);
+        $this->assertSame(SourceLink::RENDER_VIDEO, $link['render']);
+    }
+
+    /** Short share links carry no id yet, so they are not embedded unresolved. */
+    public function testShortShareLinksAreRecognisedButNotEmbeddedUnresolved(): void
+    {
+        $this->assertTrue(SourceLink::isTikTokShortLink('https://vm.tiktok.com/ZSabc123/'));
+        $this->assertTrue(SourceLink::isTikTokShortLink('https://www.tiktok.com/t/ZTabc123/'));
+        $this->assertFalse(SourceLink::isTikTokShortLink('https://www.tiktok.com/@a/video/7301234567890123456'));
+
+        $link = SourceLink::detect('https://vm.tiktok.com/ZSabc123/');
+        $this->assertSame(SourceLink::TIKTOK, $link['platform']);
+        $this->assertFalse($link['embeddable']);
+    }
+
+    // ── What staff paste ─────────────────────────────────────────────────────
+
+    /**
+     * Facebook's "Embed" menu is the reliable way to a link the SDK renders,
+     * so its code is accepted and unwrapped to the post it names.
+     */
+    public function testFacebookEmbedCodeIsUnwrappedToThePost(): void
+    {
+        $code = '<iframe src="https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2FBarangayBayogo%2Fposts%2Fpfbid0ABC&show_text=true&width=500" width="500" height="591" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true"></iframe>';
+
+        $this->assertSame('https://www.facebook.com/BarangayBayogo/posts/pfbid0ABC', SourceLink::extractUrl($code));
+    }
+
+    /** An embed snippet carries several links; the post is the one kept. */
+    public function testTheEmbeddablePostIsPickedOutOfASnippet(): void
+    {
+        $tweet = '<blockquote class="twitter-tweet"><p>Walang pasok</p>&mdash; PAGASA (@dost_pagasa) <a href="https://twitter.com/dost_pagasa/status/1712345678901234567?ref_src=twsrc%5Etfw">Oct 1</a></blockquote> <script async src="https://platform.twitter.com/widgets.js"></script>';
+        $this->assertStringContainsString('/status/1712345678901234567', SourceLink::extractUrl($tweet));
+
+        $tiktok = '<blockquote class="tiktok-embed" cite="https://www.tiktok.com/@brgy/video/7301234567890123456" data-video-id="7301234567890123456"><section><a href="https://www.tiktok.com/@brgy">@brgy</a></section></blockquote>';
+        $this->assertSame('https://www.tiktok.com/@brgy/video/7301234567890123456', SourceLink::extractUrl($tiktok));
+    }
+
+    /** A link pasted with a sentence around it, as chat apps copy it. */
+    public function testALinkIsLiftedOutOfSurroundingText(): void
+    {
+        $this->assertSame(
+            'https://youtu.be/dQw4w9WgXcQ',
+            SourceLink::extractUrl('Panoorin ninyo: https://youtu.be/dQw4w9WgXcQ salamat!')
+        );
+        $this->assertSame('', SourceLink::extractUrl('<a href="javascript:alert(1)">x</a>'));
+        $this->assertSame('', SourceLink::prepare('javascript:alert(1)')['url']);
+    }
+
+    // ── A post that is only a link ───────────────────────────────────────────
+
+    /** The platform's caption fills an empty body; staff's own words always win. */
+    public function testALinkOnlyPostGetsItsBodyFromTheCaption(): void
+    {
+        $source = [
+            'url'      => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            'platform' => SourceLink::YOUTUBE,
+            'meta'     => ['title' => 'Clean-up drive sa Purok 3'],
+        ];
+
+        [$title, $body] = SourceLink::fillLinkOnly($source, '', '<p><br></p>', true);
+        $this->assertSame('Clean-up drive sa Purok 3', $title);
+        $this->assertStringContainsString('Clean-up drive sa Purok 3', $body);
+
+        [$title, $body] = SourceLink::fillLinkOnly($source, 'Sariling pamagat', 'Sariling teksto', false);
+        $this->assertSame('Sariling pamagat', $title);
+        $this->assertSame('Sariling teksto', $body);
+    }
+
+    /** No caption (Facebook gives none): a line pointing at the post below. */
+    public function testALinkOnlyPostWithoutACaptionPointsAtThePost(): void
+    {
+        $source = ['url' => 'https://www.facebook.com/BarangayBayogo/posts/1', 'platform' => SourceLink::FACEBOOK, 'meta' => []];
+
+        [$title, $body] = SourceLink::fillLinkOnly($source, 'Pulong', '', false);
+        $this->assertSame('Pulong', $title);
+        $this->assertStringContainsString('Facebook', $body);
+    }
+
+    /** No link, nothing filled: an empty post is still refused by validation. */
+    public function testNothingIsFilledWithoutALink(): void
+    {
+        [$title, $body] = SourceLink::fillLinkOnly(['url' => '', 'platform' => null, 'meta' => []], '', '', true);
+
+        $this->assertSame('', $title);
+        $this->assertSame('', $body);
+    }
+
+    /** The resident view puts the player it built in the frame, never the pasted value. */
+    public function testTheEmbedPartialRendersTheBuiltPlayerOnly(): void
+    {
+        $__seRow = [
+            'source_url'      => 'https://www.tiktok.com/@brgy/video/7301234567890123456',
+            'source_platform' => 'tiktok',
+            'source_meta'     => null,
+        ];
+        $__seNoAssets = true;
+        ob_start();
+        require __DIR__ . '/../../app/views/shared/_source-embed.php';
+        $html = (string) ob_get_clean();
+
+        $this->assertStringContainsString('src="https://www.tiktok.com/embed/v2/7301234567890123456"', $html);
+        $this->assertStringContainsString('allow-same-origin', $html, 'players refuse to start without their own storage');
+        $this->assertStringNotContainsString('allow-top-navigation', $html);
+    }
 }

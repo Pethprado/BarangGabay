@@ -210,6 +210,9 @@ class EventController
     {
         check_csrf();
 
+        // A social media link alone is enough — see linkOnly().
+        $source = $this->linkOnly();
+
         $errors = $this->validate($_POST);
         if ($errors) {
             flash('error', implode('<br>', $errors));
@@ -283,7 +286,7 @@ class EventController
         // own voice for anything that failed.
         // Where this came from, if it came from somewhere. See the note in
         // AnnouncementController.
-        SourceLink::store('event', $id, (string) ($_POST['source_url'] ?? ''));
+        SourceLink::store('event', $id, $source);
 
         PostAudioService::refresh('event', $id, (int) $_SESSION['user_id']);
 
@@ -383,6 +386,8 @@ class EventController
             redirect('/admin/events');
         }
 
+        $source = $this->linkOnly($event);
+
         $errors = $this->validate($_POST);
         if ($errors) {
             flash('error', implode('<br>', $errors));
@@ -465,7 +470,7 @@ class EventController
         // hash per language, so an unchanged language costs nothing.
         // Where this came from, if it came from somewhere. See the note in
         // AnnouncementController.
-        SourceLink::store('event', $id, (string) ($_POST['source_url'] ?? ''));
+        SourceLink::store('event', $id, $source);
 
         PostAudioService::refresh('event', $id, (int) $_SESSION['user_id']);
 
@@ -508,6 +513,35 @@ class EventController
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Read the attached social media link, and let it stand in for an empty
+     * title or description.
+     *
+     * An event copied from Facebook is often just the link: the post already
+     * has the poster, the time and the place. The platform's caption, when it
+     * gives one, fills whatever staff left blank so validation and the rest
+     * of the save path see a complete event. Anything staff typed is kept.
+     *
+     * @param array<string,mixed>|null $existing The event being edited.
+     * @return array{url:string, platform:string|null, meta:array<string,string>}
+     */
+    private function linkOnly(?array $existing = null): array
+    {
+        $source = SourceLink::prepare((string) ($_POST['source_url'] ?? ''), $existing);
+
+        [$title, $description] = SourceLink::fillLinkOnly(
+            $source,
+            \trim((string) ($_POST['title'] ?? '')),
+            \trim((string) ($_POST['description'] ?? '')),
+            false,
+            ($_POST['source_lang'] ?? '') === 'en' ? 'en' : 'fil'
+        );
+        $_POST['title']       = $title;
+        $_POST['description'] = $description;
+
+        return $source;
+    }
 
     /** Validate POSTed event fields; returns array of error strings. */
     private function validate(array $post): array

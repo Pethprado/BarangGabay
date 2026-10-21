@@ -2410,7 +2410,7 @@ return [
         'intro'     => 'Kunin ang caption mula sa Facebook, o hilahin ang pamagat at larawan mula sa link. Draft ang lahat ng darating dito — walang mapa-publish hangga’t hindi ninyo sini-save.',
         'tab_paste' => 'I-paste ang teksto',
         'tab_link'  => 'I-paste ang link',
-        'tab_attach'=> 'Ilakip ang orihinal',
+        'tab_attach'=> 'Link ng social media',
         'working'   => 'Ginagawa…',
 
         'paste_label' => 'Caption na kinopya sa Facebook',
@@ -2424,9 +2424,9 @@ return [
         'link_help_pdf'  => 'Dapat naka-share bilang “anyone with the link”. Ida-download at itatago dito, kaya gagana pa rin kahit maalis na ang file sa Drive.',
         'link_btn'       => 'Kunin',
 
-        'attach_label' => 'Link ng orihinal na post',
-        'attach_help'  => 'Ipapakita sa post bilang “mula sa Facebook” kasama ang naka-embed na orihinal. Gamitin kapag hindi sa barangay ang mga salita.',
-        'attach_note'  => 'Ie-embed ang orihinal sa post, may link papunta rito.',
+        'attach_label' => 'Link ng post (Facebook, TikTok, YouTube, Instagram, X, Threads, Vimeo…)',
+        'attach_help'  => 'Kopyahin ang link ng post at i-paste dito. Makikita ng mga residente ang mismong post, kung paano ito nakaayos sa platform — mga larawan, caption, at mga video na napapanood mismo sa pahina. Sapat na ang link at pamagat: ang caption ang ilalagay kapag walang laman ang body. Dapat Public ang mga post sa Facebook.',
+        'attach_note'  => 'Ganito ito makikita ng mga residente sa ilalim ng post. Kung hindi ito lumabas dito, hindi rin ito lalabas sa kanila.',
 
         'cleaned'     => 'Nalinis at nailagay na sa form.',
         'imported'    => 'Na-import na. Pakibasa muna bago i-save.',
@@ -2459,6 +2459,10 @@ return [
         'err_too_many_redirects' => 'Masyadong maraming redirect ang link na iyon.',
         'err_login_wall'    => 'Hindi pinapayagan ng Facebook na basahin ng website ang mga post nito — login page ang isinasagot. Ilakip na lang ang orihinal na post para ma-embed dito, o i-paste ang caption sa text box.',
         'err_drive_not_public' => 'Hindi publikong naka-share ang Drive file na iyon, kaya hindi ma-download. Sa Drive, gawing “anyone with the link”, o i-upload na lang ang PDF nang direkta.',
+        'preview_heading' => 'Ang makikita ng mga residente',
+        'previewing' => 'Nilo-load ang preview…',
+        'filled_from_link' => 'Nilagyan ang walang lamang pamagat/teksto mula sa post. Suriin muna bago i-save.',
+        'clear_link' => 'Alisin ang link',
     ],
 
     'source' => [
@@ -2471,6 +2475,18 @@ return [
         'platform_drive'    => 'Google Drive',
         'platform_docs'     => 'Google Docs',
         'platform_other'    => 'ibang website',
+        'platform_tiktok' => 'TikTok',
+        'platform_instagram' => 'Instagram',
+        'platform_x' => 'X (Twitter)',
+        'platform_threads' => 'Threads',
+        'platform_vimeo' => 'Vimeo',
+        'platform_dailymotion' => 'Dailymotion',
+        'platform_video' => 'isang video file',
+        'platform_image' => 'isang larawan',
+        'see_original_below' => 'Tingnan sa ibaba ang buong post mula sa :platform.',
+        'warn_facebook' => 'Hindi ipinapakita ng Facebook ang link na ito sa ibang website — kadalasan dahil share link ito (facebook.com/share/…). Sa Facebook, buksan ang post, pindutin ang ⋯ → Embed → Copy code, at iyon ang i-paste dito. O pindutin ang petsa ng post at kopyahin ang address sa browser. Dapat Public ang post.',
+        'warn_other' => 'Walang embed ang website na ito, kaya preview card na nagbubukas ng pahina ang makikita ng mga residente.',
+        'warn_unrecognised' => 'Hindi post o video address na kayang i-play ang link na ito ng :platform. Buksan ang mismong post at kopyahin ang link nito.',
     ],
 
     'manobo_state' => [

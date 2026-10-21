@@ -30,6 +30,12 @@ class AnnouncementController
      */
     private const MAX_SCHEDULE_DAYS = 365;
 
+    /** The language staff wrote this post in, for text filled in on their behalf. */
+    private static function postLang(): string
+    {
+        return ($_POST['source_lang'] ?? '') === 'en' ? 'en' : 'fil';
+    }
+
     /**
      * Does this rich-text body actually contain anything?
      *
@@ -292,6 +298,12 @@ class AnnouncementController
         $urgency  = trim($_POST['urgency']  ?? 'normal');
         $status   = trim($_POST['status']   ?? 'draft');
 
+        // A post can be nothing but a social media link: the embed is the
+        // content. The platform's caption (when it gives one) fills whatever
+        // staff left empty, so a link and a title are enough to publish.
+        $source = SourceLink::prepare((string) ($_POST['source_url'] ?? ''));
+        [$title, $body] = SourceLink::fillLinkOnly($source, $title, $body, true, self::postLang());
+
         $validCategories = ['general','health','safety','government','infrastructure','social'];
         $validUrgencies  = ['normal','important','urgent'];
         $validStatuses   = ['draft','published','archived'];
@@ -420,7 +432,7 @@ class AnnouncementController
         // Where this came from, if it came from somewhere. Stored whether or
         // not the import panel was used — staff may simply paste the Facebook
         // link of a post they retyped by hand, and that is still attribution.
-        SourceLink::store('announcement', $id, (string) ($_POST['source_url'] ?? ''));
+        SourceLink::store('announcement', $id, $source);
 
         PostAudioService::refresh('announcement', $id, (int) $_SESSION['user_id']);
 
@@ -514,6 +526,10 @@ class AnnouncementController
         $category = trim($_POST['category'] ?? 'general');
         $urgency  = trim($_POST['urgency']  ?? 'normal');
         $status   = trim($_POST['status']   ?? 'draft');
+
+        // See store(): a link alone is enough.
+        $source = SourceLink::prepare((string) ($_POST['source_url'] ?? ''), $existing);
+        [$title, $body] = SourceLink::fillLinkOnly($source, $title, $body, true, self::postLang());
 
         // Same rule as create: both must be present, neither has a length
         // floor. See the note in store().
@@ -634,7 +650,7 @@ class AnnouncementController
         // Where this came from, if it came from somewhere. Stored whether or
         // not the import panel was used — staff may simply paste the Facebook
         // link of a post they retyped by hand, and that is still attribution.
-        SourceLink::store('announcement', $id, (string) ($_POST['source_url'] ?? ''));
+        SourceLink::store('announcement', $id, $source);
 
         PostAudioService::refresh('announcement', $id, (int) $_SESSION['user_id']);
 

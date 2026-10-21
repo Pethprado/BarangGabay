@@ -44,7 +44,11 @@ class OrdinanceController
         }
 
         // Build the absolute PDF URL (PDF.js requires an absolute URL to fetch the file).
-        $pdfUrl = \rtrim(base_url(), '/') . '/' . \ltrim($ordinance['file_url'], '/');
+        // Empty when the ordinance was posted as a link only: the view shows
+        // the linked post where the PDF viewer would be.
+        $pdfUrl = \trim((string) $ordinance['file_url']) === ''
+            ? ''
+            : \rtrim(base_url(), '/') . '/' . \ltrim($ordinance['file_url'], '/');
 
         view('resident/ordinance-detail', compact('ordinance', 'pdfUrl'));
     }
@@ -114,7 +118,17 @@ class OrdinanceController
             ['.pdf']
         );
 
-        if (!$title || !$ordinanceNo || (empty($_FILES['file']['tmp_name']) && $imported === null)) {
+        // The PDF may be replaced by a link to where the ordinance was posted
+        // (the barangay's Facebook page, a Drive folder): the resident page
+        // then shows that post in place of the PDF viewer.
+        $source = SourceLink::prepare((string) ($_POST['source_url'] ?? ''));
+        [$title, $description] = SourceLink::fillLinkOnly(
+            $source, $title, $description, false,
+            ($_POST['source_lang'] ?? '') === 'en' ? 'en' : 'fil'
+        );
+        $hasPdf = !empty($_FILES['file']['tmp_name']) || $imported !== null;
+
+        if (!$title || !$ordinanceNo || (!$hasPdf && $source['url'] === '')) {
             flash('error', __('Title, ordinance number and PDF are required.'));
             redirect('/admin/ordinances/upload');
         }
@@ -134,7 +148,8 @@ class OrdinanceController
                 redirect('/admin/ordinances/upload');
             }
         } else {
-            $fileUrl = $imported;
+            // '' when the ordinance is only a link — see show().
+            $fileUrl = $imported ?? '';
         }
 
         $ordinanceId = Ordinance::create([
@@ -192,7 +207,7 @@ class OrdinanceController
         // twenty pages of legal text are never sent to a metered TTS provider.
         // Where this came from — for an ordinance, typically the Drive link
         // the PDF was pulled from. See the note in AnnouncementController.
-        SourceLink::store('ordinance', $ordinanceId, (string) ($_POST['source_url'] ?? ''));
+        SourceLink::store('ordinance', $ordinanceId, $source);
 
         PostAudioService::refresh('ordinance', $ordinanceId, (int) $_SESSION['user_id']);
 
@@ -345,7 +360,7 @@ class OrdinanceController
 
         // Regenerate whatever the edit made stale. ensure() compares the script
         // hash per language, so an unchanged language costs nothing.
-        SourceLink::store('ordinance', $id, (string) ($_POST['source_url'] ?? ''));
+        SourceLink::store('ordinance', $id, SourceLink::prepare((string) ($_POST['source_url'] ?? ''), $ordinance));
 
         PostAudioService::refresh('ordinance', $id, (int) $_SESSION['user_id']);
 
