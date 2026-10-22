@@ -228,6 +228,12 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS en_is_auto SMALLINT NOT NULL DEFAULT 0",
         "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS manobo_is_auto SMALLINT NOT NULL DEFAULT 0",
         "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS en_review_state VARCHAR(20) NOT NULL DEFAULT 'none'",
+        // Publish dispatch (MySQL migrations 019/020). Without these every
+        // "publish now" threw in ScheduledPublisher after the post was saved.
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS notified_at TIMESTAMP NULL",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS notify_sms SMALLINT NOT NULL DEFAULT 1",
+        "CREATE INDEX IF NOT EXISTS idx_due_for_publishing ON announcements (notified_at, published_at)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified SMALLINT NOT NULL DEFAULT 0",
 
         // 7. Events columns
         "ALTER TABLE events ADD COLUMN IF NOT EXISTS target_purok VARCHAR(50) NULL",
@@ -581,6 +587,18 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS fee_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30) NOT NULL DEFAULT 'free'",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_status VARCHAR(40) NOT NULL DEFAULT 'FREE'",
+        // Online payment removed from document requests: anything still
+        // waiting for it goes to staff review, fee paid at the hall. Replay-
+        // safe — nothing creates 'awaiting_payment' any more. Same as
+        // database/migrations/2026_10_22_000001_documents_no_online_payment.sql.
+        "UPDATE document_requests
+            SET payment_method = CASE WHEN fee_amount > 0 THEN 'pickup' ELSE payment_method END,
+                payment_status = CASE
+                    WHEN fee_amount > 0 AND payment_status NOT IN ('PAID', 'PAID_VERIFIED', 'PAID_AT_PICKUP', 'WAIVED', 'FREE', 'NOT_REQUIRED')
+                    THEN 'PAY_AT_PICKUP' ELSE payment_status END,
+                status = 'pending_review',
+                updated_at = NOW()
+          WHERE status = 'awaiting_payment'",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_id INT NULL",
 
         // 18d. Automatic hazard monitoring (App\Services\HazardMonitor)
@@ -865,6 +883,34 @@ function syncPostgresSchema(PDO $pdo): void
         } catch (\PDOException $e) {
             error_log('PgSQL schema sync note: ' . $e->getMessage());
         }
+    }
+
+    // One-time: posts already live when notified_at arrived were announced (or
+    // never will be), so stamp them. Otherwise the scheduled sweep would see
+    // every old post as "not yet announced" and notify/SMS all of them again.
+    // Future-scheduled posts stay NULL so the sweep still sends them on time.
+    try {
+        if (\App\Models\Setting::get('pg_notified_at_backfill_v1') !== '1') {
+            $pdo->beginTransaction();
+            $pdo->query('SELECT pg_advisory_xact_lock(724002)');
+            $done = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'pg_notified_at_backfill_v1'")->fetchColumn();
+            if ($done !== '1') {
+                $pdo->exec("UPDATE announcements
+                               SET notified_at = COALESCE(published_at, created_at)
+                             WHERE status = 'published'
+                               AND notified_at IS NULL
+                               AND (published_at IS NULL OR published_at <= NOW())");
+                $pdo->exec("INSERT INTO settings (setting_key, setting_value, value_type, updated_at)
+                            VALUES ('pg_notified_at_backfill_v1', '1', 'string', NOW())
+                            ON CONFLICT (setting_key) DO UPDATE SET setting_value = '1'");
+            }
+            $pdo->commit();
+        }
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('PgSQL notified_at backfill note: ' . $e->getMessage());
     }
 
     static $datasetSeeded = false;

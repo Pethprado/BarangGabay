@@ -13,9 +13,10 @@ use App\Services\SemaphoreSmsService;
  * Residents asking the barangay to prepare a document, and staff working
  * through the queue.
  *
- * Supports both:
- * 1. Personal Pickup at the Barangay Hall.
- * 2. Digital Soft Copy delivery online (direct download and printing).
+ * Requests are filed online and picked up at the Barangay Hall. There is no
+ * online payment: staff approve a request when the document is ready for
+ * pickup, and any fee is paid in cash at the hall. Older Digital Soft Copy
+ * requests keep their preview and download.
  */
 class DocumentRequestController
 {
@@ -29,11 +30,8 @@ class DocumentRequestController
         $requests        = DocumentRequest::forUser($userId);
         $types           = DocumentRequest::TYPES;
         $docFees         = \App\Models\DocumentFee::getAll();
-        
-        $deliveryEnabled = (bool) \App\Models\Setting::get('doc_delivery_enabled', true);
-        $deliveryFee     = (float) \App\Models\Setting::get('doc_delivery_fee', 40.00);
 
-        view('resident/documents', compact('user', 'requests', 'types', 'docFees', 'deliveryEnabled', 'deliveryFee'));
+        view('resident/documents', compact('user', 'requests', 'types', 'docFees'));
     }
 
     /**
@@ -92,7 +90,8 @@ class DocumentRequestController
         $purposeOther   = trim($_POST['purpose_other'] ?? '');
         $purpose        = ($purposeChoice === 'Other' && $purposeOther !== '') ? $purposeOther : $purposeChoice;
         $notes          = trim($_POST['notes'] ?? '');
-        $deliveryMethod = trim($_POST['delivery_method'] ?? 'pickup');
+        // Every request is picked up at the Barangay Hall.
+        $deliveryMethod = 'pickup';
 
         if (!\array_key_exists($type, DocumentRequest::TYPES)) {
             if ($isAjax) {
@@ -102,17 +101,6 @@ class DocumentRequestController
                 return;
             }
             flash('error', t('documents.err_type'));
-            redirect('/documents');
-        }
-
-        if (!\array_key_exists($deliveryMethod, DocumentRequest::DELIVERY_METHODS)) {
-            if ($isAjax) {
-                header('Content-Type: application/json; charset=utf-8');
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => t('documents.err_delivery')]);
-                return;
-            }
-            flash('error', t('documents.err_delivery'));
             redirect('/documents');
         }
 
@@ -178,35 +166,9 @@ class DocumentRequestController
         }
         $feeAmount = $feeInfo['is_free'] ? 0.00 : (float) $feeInfo['amount'];
 
-        // Delivery handling
-        $deliveryAddress = null;
-        $deliveryFee     = 0.00;
-        if ($deliveryMethod === 'delivery') {
-            $isDeliveryEnabled = (bool) \App\Models\Setting::get('doc_delivery_enabled', true);
-            if (!$isDeliveryEnabled) {
-                flash('error', __('Kasalukuyang hindi available ang serbisyong delivery.'));
-                redirect('/documents');
-            }
-            $deliveryAddress = trim($_POST['delivery_address'] ?? '');
-            if ($deliveryAddress === '') {
-                $deliveryAddress = \App\Models\User::formatAddress($user);
-            }
-            $deliveryFee = (float) \App\Models\Setting::get('doc_delivery_fee', 40.00);
-            $feeAmount += $deliveryFee;
-        }
-
-        $isFree       = $feeAmount <= 0.00;
-        $chosenMethod = trim($_POST['payment_method'] ?? ($isFree ? 'free' : 'pickup'));
-
-        if ($isFree) {
-            $paymentMethod = 'free';
-        } else {
-            // Online payment is GCash through PayMongo. Paying in cash at the
-            // hall is only possible when the document is picked up there.
-            $paymentMethod = ($deliveryMethod === 'pickup' && $chosenMethod === 'pickup') ? 'pickup' : 'gcash';
-        }
-
-        
+        // No online payment: a fee, if any, is paid in cash at the hall on pickup.
+        $isFree        = $feeAmount <= 0.00;
+        $paymentMethod = $isFree ? 'free' : 'pickup';
 
         $created = DocumentRequest::create(
             $userId,
@@ -215,10 +177,7 @@ class DocumentRequestController
             $notes,
             $deliveryMethod,
             $feeAmount,
-                        $paymentMethod,
-            null,
-            $deliveryAddress,
-            $deliveryFee
+            $paymentMethod
         );
 
         $newId     = (int) $created['id'];
@@ -228,8 +187,8 @@ class DocumentRequestController
         }
 
         // Tell back office there is work waiting
-        $deliveryText = $deliveryMethod === 'digital' ? ' (Digital Soft Copy)' : ' (Personal Pickup)';
-        $feeText = $isFree ? ' [LIBRE]' : sprintf(' [₱%.2f via %s]', $feeAmount, strtoupper($paymentMethod));
+        $deliveryText = ' (Personal Pickup)';
+        $feeText = $isFree ? ' [LIBRE]' : sprintf(' [₱%.2f, paid at the hall]', $feeAmount);
         (new NotificationService())->notifyBackOffice(
             'notify_content',
             'system',
@@ -245,63 +204,14 @@ class DocumentRequestController
 
         if ($isAjax) {
             header('Content-Type: application/json; charset=utf-8');
-            if ($isFree) {
-                echo json_encode([
-                    'success'      => true,
-                    'is_free'      => true,
-                    'request_id'   => $newId,
-                    'reference'    => $reference,
-                    'redirect_url' => route('documents?tab=requests&ref=' . urlencode($reference)),
-                ]);
-                return;
-            }
-
-            // Direct GCash (default): go to the payment page — GCash details, QR,
-            // "Open GCash" and the proof upload.
-            $usePaymongo = (bool) \App\Models\Setting::get('paymongo_checkout_enabled', false)
-                && \App\Services\PayMongoService::isConfigured();
-            if (!$usePaymongo) {
-                echo json_encode([
-                    'success'      => true,
-                    'is_free'      => false,
-                    'request_id'   => $newId,
-                    'reference'    => $reference,
-                    'redirect_url' => route('documents/' . $newId . '/payment'),
-                ]);
-                return;
-            }
-
-            // Optional PayMongo hosted checkout (server-side fee, shared service).
-            $payment = \App\Models\DocumentPayment::findByRequest($newId);
-            $pmRes   = $payment && $paymentMethod === 'gcash'
-                ? \App\Services\PaymongoCheckout::start((int) $payment['id'], $userId)
-                : ['success' => false, 'checkout_url' => null, 'error' => null];
-
-            if ($pmRes['success'] && !empty($pmRes['checkout_url'])) {
-                echo json_encode([
-                    'success'      => true,
-                    'is_free'      => false,
-                    'request_id'   => $newId,
-                    'reference'    => $reference,
-                    'checkout_url' => $pmRes['checkout_url'],
-                ]);
-                return;
-            }
-
             echo json_encode([
-                'success'      => false,
-                'error'        => $pmRes['error'] ?? 'Nalikha ang kahilingan. Magbayad sa Barangay Hall sa pagkuha.',
+                'success'      => true,
+                'is_free'      => $isFree,
                 'request_id'   => $newId,
                 'reference'    => $reference,
-                'fallback_url' => route('documents/' . $newId . '/payment'),
+                'redirect_url' => route('documents?tab=requests&ref=' . urlencode($reference)),
             ]);
             return;
-        }
-
-        // Standard non-AJAX submission
-        if ($paymentMethod === 'gcash' && !$isFree) {
-            flash('info', __('Nalikha na ang inyong kahilingan (:ref). Kumpletuhin ang pagbabayad gamit ang online checkout.', ['ref' => $reference]));
-            redirect('/documents/' . $newId . '/payment');
         }
 
         flash('success', t('documents.filed', ['reference' => $reference]));

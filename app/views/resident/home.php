@@ -135,7 +135,7 @@ ob_start();
     .rd-alerts .urgent-banner > .flex > .min-w-0 > * { grid-column: 1; }
     .rd-alerts .urgent-banner-cta { grid-column: 2 !important; grid-row: 1 / span 3; margin-top: 0 !important; }
 }
-/* Language & Voice: joined segmented control, Listen on the right. */
+/* Language: joined segmented control, hint on the right. */
 @media (min-width: 768px) { .rd-lang { grid-template-columns: auto 1fr; } .rd-lang__voice { display: flex; flex-direction: column; align-items: flex-end; text-align: right; } }
 .rd-lang__opts { gap: 0 !important; padding: 4px; border-radius: .9rem; background: var(--surface-muted); border: 1px solid var(--border); width: max-content; }
 .rd-lang__opt { border: 0 !important; background: transparent !important; min-width: 92px; }
@@ -387,10 +387,8 @@ if ($hazards !== []):
     <?php endforeach; ?>
 </section>
 
-<!-- ══ LANGUAGE & VOICE ════════════════════════════════════════════════════
-     The header's EN / FIL / MN switch, repeated here as the mockup's card.
-     Every post's Voice Reader reads the selected language using the
-     barangay's approved recordings. -->
+<!-- ══ LANGUAGE ════════════════════════════════════════════════════════════
+     The header's EN / FIL / MN switch, repeated here as the mockup's card. -->
 <?php $curLocale = current_locale(); ?>
 <section class="fade-up mb-8" aria-labelledby="rd-lang-title">
     <h2 id="rd-lang-title" class="rd-h2"><?= e(t('resident_home.lang_voice_title')) ?></h2>
@@ -404,11 +402,6 @@ if ($hazards !== []):
         </div>
         <div class="rd-lang__voice">
             <p class="text-sm text-slate-600 mb-2"><?= e(t('resident_home.lang_voice_hint')) ?></p>
-            <?php if (!empty($latestPosts[0])): ?>
-                <a href="<?= e(route('announcements/' . $latestPosts[0]['slug'])) ?>" class="rd-btn">
-                    <i class="bi bi-volume-up-fill" aria-hidden="true"></i> <?= e(t('resident_home.listen_page')) ?>
-                </a>
-            <?php endif; ?>
         </div>
     </div>
 </section>

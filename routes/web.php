@@ -109,20 +109,9 @@ return [
 ['POST', '/admin/retranslate-all',     'TranslationHealthController@retryAll', ['auth', 'role:admin,staff']],
 ['POST', '/admin/translation-health/rebuild-manobo', 'TranslationHealthController@rebuildManobo', ['auth', 'role:admin,staff']],
 
-// Voice Training & Voice Dataset Management
-['GET',  '/admin/voice-training',           'VoiceTrainingController@index',         ['auth', 'role:admin,superadmin']],
-['POST', '/admin/voice-training/samples',   'VoiceTrainingController@storeSample',   ['auth', 'role:admin,superadmin']],
-['POST', '/admin/voice-training/update',    'VoiceTrainingController@updateSample',  ['auth', 'role:admin,superadmin']],
-['POST', '/admin/voice-training/profile',   'VoiceTrainingController@updateProfile', ['auth', 'role:admin,superadmin']],
-['POST', '/admin/voice-training/test',      'VoiceTrainingController@testVoice',     ['auth', 'role:admin,superadmin']],
-['GET',  '/admin/voice-training/export',    'VoiceTrainingController@exportDataset', ['auth', 'role:admin,superadmin']],
-['GET',  '/admin/voice-training/script',    'VoiceTrainingController@script',        ['auth', 'role:admin,superadmin']],
-['POST', '/admin/voice-training/rescan',    'VoiceTrainingController@rescan',        ['auth', 'role:admin,superadmin']],
-['POST', '/admin/voice-training/settings',  'VoiceTrainingController@settings',      ['auth', 'role:admin,superadmin']],
-['POST', '/admin/voice-training/diagnostics', 'VoiceTrainingController@diagnostics', ['auth', 'role:superadmin']],
-// Stored dataset recordings (bytes live in the database — Render's disk is
-// ephemeral). Approved clips are what the resident reader plays; the
-// controller restricts unreviewed clips to staff.
+// Stored word recordings (bytes live in the database — Render's disk is
+// ephemeral), played by the Manobo dictionary. The controller restricts
+// unreviewed clips to staff.
 ['GET',  '/voice/audio/{id}',               'VoiceTrainingController@audio',         ['auth']],
 
 ['GET',  '/admin/staff',        'ResidentController@staffIndex',  ['auth', 'role:admin,superadmin']],
@@ -217,21 +206,13 @@ return [
     ['GET',  '/admin/feedback',                  'FeedbackController@adminIndex',   ['auth', 'role:admin,staff']],
     ['GET',  '/admin/feedback/{id}/messages',    'FeedbackController@adminThread',  ['auth', 'role:admin,staff']],
     ['POST', '/admin/feedback/{id}/reply',       'FeedbackController@adminReply',   ['auth', 'role:admin,staff']],
-    // Document requests: Personal Pickup & Digital Soft Copy delivery
+    // Document requests: filed online, approved by staff, picked up at the Barangay Hall
     ['GET',  '/documents',                        'DocumentRequestController@index',        ['auth', 'verified']],
     ['POST', '/documents',                        'DocumentRequestController@store',        ['auth', 'verified']],
     ['GET',  '/documents/history',                'DocumentRequestController@history',      ['auth', 'verified']],
-    ['GET',  '/documents/{id}/payment',           'PaymentController@checkout',             ['auth', 'verified']],
-    ['GET',  '/documents/{id}/checkout',          'PaymentController@checkout',             ['auth', 'verified']],
-    ['POST', '/documents/{id}/payment',           'PaymentController@residentUploadProof',  ['auth', 'verified']],
-    ['GET',  '/documents/{id}/acknowledgement',   'PaymentController@acknowledgement',      ['auth', 'verified']],
     ['GET',  '/documents/{id}/download',          'DocumentRequestController@download',     ['auth', 'verified']],
     ['GET',  '/documents/{id}/preview',           'DocumentRequestController@preview',      ['auth', 'verified']],
     ['GET',  '/documents/{ref}/verify',           'DocumentRequestController@verifyPublic', []],
-    // A request's own QR: scan → details & fee → pay → proof → unlocked after staff approve.
-    ['GET',  '/d/{token}',                        'DocumentClaimController@show',           ['auth', 'verified']],
-    ['GET',  '/documents/{id}/qr',                'DocumentClaimController@qrImage',        ['auth']],
-    ['GET',  '/documents/{id}/gcash-qr',          'PaymentController@amountQr',             ['auth', 'verified']],
     ['POST', '/documents/{id}/print-request',     'DocumentTemplateController@requestPrint', ['auth', 'verified']],
     ['GET',  '/admin/documents',                  'DocumentRequestController@adminIndex',   ['auth', 'role:admin,staff']],
     ['POST', '/admin/documents/{id}/status',      'DocumentRequestController@updateStatus', ['auth', 'role:admin,staff']],
@@ -258,7 +239,6 @@ return [
     ['GET',  '/admin/document-templates/{type}/sample',      'DocumentTemplateController@sample',          ['auth', 'role:admin']],
     ['POST', '/admin/document-templates/{type}/reset',       'DocumentTemplateController@resetTemplate',   ['auth', 'role:admin']],
     ['POST', '/admin/document-templates/{type}',             'DocumentTemplateController@saveTemplate',    ['auth', 'role:admin']],
-    ['POST', '/admin/documents/{id}/pickup-payment','PaymentController@markRequestPaidAtPickup',['auth', 'role:admin,staff']],
 
     // Profile Updates Management
     ['POST', '/profile/request-update',           'ResidentController@requestProfileUpdate', ['auth', 'verified']],
@@ -267,34 +247,11 @@ return [
     ['POST', '/admin/profile-updates/{id}/reject', 'ResidentController@rejectProfileUpdate',  ['auth', 'role:admin,staff']],
     ['GET',  '/admin/profile-updates/{id}/document','ResidentController@downloadProfileDoc', ['auth', 'role:admin,staff']],
 
-    // Payment Management System
-    ['GET',  '/admin/payments',                   'PaymentController@adminIndex',       ['auth', 'role:admin,staff']],
-    ['POST', '/admin/payments/{id}/verify',       'PaymentController@verify',           ['auth', 'role:admin,staff']],
-    ['POST', '/admin/payments/{id}/reject',       'PaymentController@reject',           ['auth', 'role:admin,staff']],
-    ['POST', '/admin/payments/{id}/mark-pickup',  'PaymentController@markPaidAtPickup', ['auth', 'role:admin,staff']],
-    ['POST', '/admin/payments/{id}/waive',        'PaymentController@waive',            ['auth', 'role:admin']],
-    ['POST', '/admin/payments/{id}/refund',       'PaymentController@refund',           ['auth', 'role:admin']],
-    ['GET',  '/admin/payments/{id}/receipt',      'PaymentController@receiptPreview',   ['auth', 'role:admin,staff']],
-    ['POST', '/admin/payments/{id}/check-status', 'PaymentController@checkStatus',      ['auth', 'role:admin,staff']],
-    ['GET',  '/admin/payments/{id}/history',      'PaymentController@auditHistory',     ['auth', 'role:admin,staff']],
+    // Document fees and requirements per document type (shown on the request form)
     ['GET',  '/admin/payments/fees',              'PaymentController@feesIndex',        ['auth', 'role:admin']],
-    ['POST', '/admin/payments/gcash-account',     'PaymentController@gcashAccountUpdate', ['auth', 'role:admin']],
-    ['GET',  '/payments/gcash-qr',                'PaymentController@gcashQr',          ['auth']],
     ['POST', '/admin/payments/fees',              'PaymentController@feesUpdate',       ['auth', 'role:admin']],
-    ['GET',  '/admin/payments/export',            'PaymentController@exportCsv',        ['auth', 'role:admin']],
 
-    // PayMongo GCash Online Payment Endpoints
-    ['POST', '/api/payments/paymongo/create-checkout',      'PaymentController@paymongoCreateCheckout', ['auth', 'verified']],
-    ['GET',  '/payments/paymongo/return',                   'PaymentController@paymongoReturn',         ['auth']],
-    ['GET',  '/documents/payment/success',                  'PaymentController@paymentSuccess',         ['auth', 'verified']],
-    ['GET',  '/documents/payment/cancel',                   'PaymentController@paymentCancel',          ['auth', 'verified']],
     ['GET',  '/api/documents/changes',                      'DocumentRequestController@changes',        ['auth']],
-    ['GET',  '/api/payments/status/{id}',                   'PaymentController@apiPaymentStatus',       ['auth', 'verified']],
-    // PayMongo webhook — public on purpose (no auth, no CSRF): the HMAC
-    // Paymongo-Signature header is the authentication. Register the first URL.
-    ['POST', '/api/webhooks/paymongo',                      'PaymentController@paymongoWebhook',        []],
-    ['POST', '/api/payments/paymongo/webhook',              'PaymentController@paymongoWebhook',        []],
-    ['POST', '/payments/paymongo/webhook',                  'PaymentController@paymongoWebhook',        []],
 
     // Emergency: where this resident's purok evacuates to, and the one-tap
     // "Ligtas ako" answer after a storm.
@@ -326,7 +283,6 @@ return [
     ['POST', '/superadmin/backups/delete',       'SuperAdminController@deleteBackup',   ['auth', 'role:superadmin']],
     ['GET',  '/superadmin/settings',             'SuperAdminController@settings',       ['auth', 'role:superadmin']],
     ['POST', '/superadmin/settings',             'SuperAdminController@updateSettings', ['auth', 'role:superadmin']],
-    ['POST', '/superadmin/settings/paymongo',    'SuperAdminController@savePaymongoKeys', ['auth', 'role:superadmin']],
     ['POST', '/superadmin/settings/clear-document-requests', 'SuperAdminController@clearDocumentRequests', ['auth', 'role:superadmin']],
     ['POST', '/superadmin/settings/logo',        'SuperAdminController@uploadLogo',     ['auth', 'role:superadmin']],
     ['POST', '/superadmin/settings/logo/reset',  'SuperAdminController@resetLogo',      ['auth', 'role:superadmin']],

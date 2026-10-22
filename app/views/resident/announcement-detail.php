@@ -103,22 +103,6 @@ ob_start();
 
         <?php
         /*
-         * Voice reader — directly under the headline, before the article and
-         * well before the share row. A resident who needs this post read to
-         * them must not have to read their way down the page to find the
-         * button that reads it.
-         *
-         * All three language tracks are built from the row by PostScript, so
-         * the words spoken and the words cached as audio can never drift apart.
-         * The picker inside the player starts on the page's own language.
-         */
-        $__vrType = 'announcement';
-        $__vrRow  = $announcement;
-        require __DIR__ . '/../shared/_voice-reader.php';
-        ?>
-
-        <?php
-        /*
          * "Ligtas ako" — only on advisories that asked for it.
          *
          * Placed directly under the headline, above the article. A resident

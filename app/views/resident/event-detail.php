@@ -76,19 +76,6 @@ ob_start();
 $evTitlePick  = localised_content($event, 'title');
         ?>
 
-        <?php
-        /*
-         * Voice reader, directly under the headline.
-         *
-         * When, where, then what: PostScript puts the date, time and venue
-         * ahead of the description, because a listener who cannot see the
-         * sidebar needs them first rather than four sentences in.
-         */
-        $__vrType = 'event';
-        $__vrRow  = $event;
-        require __DIR__ . '/../shared/_voice-reader.php';
-        ?>
-
         <hr class="post-rule">
 
         <?php $__tnPicks = [$descPick, $evTitlePick]; $__tnType = 'event'; $__tnId = (int) $event['id']; require __DIR__ . '/../shared/_translation-notice.php'; ?>

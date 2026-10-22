@@ -11,6 +11,7 @@ function aiChatWidget() {
         open:      false,
         question:  '',
         messages:  [],   // { id, role: 'ai'|'user', html }
+        history:   [],   // { role: 'user'|'assistant', content } sent back so follow-ups make sense
         typing:    false,
         hasNewMsg: false,
         _id:          0,
@@ -61,6 +62,16 @@ function aiChatWidget() {
 
         // ── Send message ─────────────────────────────────────────────
 
+        /** Quick-question chips shown until the resident asks something. */
+        get suggestions() {
+            return this.history.length === 0 ? (this._i18n().suggestions || []) : [];
+        },
+
+        ask(text) {
+            this.question = text;
+            this.sendMessage();
+        },
+
         async sendMessage() {
             const q = this.question.trim();
             if (!q || this.typing || q.length > 500) return;
@@ -76,6 +87,7 @@ function aiChatWidget() {
                 const fd   = new FormData();
                 fd.append('question',   q);
                 fd.append('csrf_token', BG.csrfToken || '');
+                fd.append('history',    JSON.stringify(this.history.slice(-8)));
 
                 const res  = await fetch(base + '/api/ai/chat', { method: 'POST', body: fd });
                 const data = await res.json();
@@ -84,6 +96,7 @@ function aiChatWidget() {
                     this._push('ai', this._i18n().rateLimited);
                 } else if (data.answer) {
                     this._push('ai', data.answer);
+                    this.history.push({ role: 'user', content: q }, { role: 'assistant', content: data.answer });
                 } else {
                     this._push('ai', data.error || this._i18n().genericError);
                 }
@@ -110,13 +123,30 @@ function aiChatWidget() {
             };
         },
 
-        /** Sanitise text, convert newlines to <br>, push to messages[]. */
+        /**
+         * Sanitise text, then format it: **bold**, newlines, and page paths
+         * like (/documents) or (/events/some-slug) become links. Escaping runs
+         * first, so nothing in an answer can inject markup.
+         */
         _push(role, text) {
-            const html = text
+            let html = String(text)
                 .replace(/&/g,  '&amp;')
                 .replace(/</g,  '&lt;')
                 .replace(/>/g,  '&gt;')
-                .replace(/\n/g, '<br>');
+                .replace(/"/g,  '&quot;');
+            if (role === 'ai') {
+                const base = ((window.BarangGabay || {}).baseUrl || '').replace(/\/$/, '');
+                html = html
+                    .replace(/`([^`\n]+)`/g, '$1')   // models sometimes wrap paths in backticks
+                    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+                    .replace(/(^|[^*\w])\*([^*\s][^*\n]*?)\*(?![*\w])/g, '$1<em>$2</em>')
+                    .replace(/\(\/\)/g, '(<a class="aic-link" href="' + base + '/">Dashboard</a>)')
+                    .replace(
+                        /(^|[\s(\[])(\/(?:announcements|events|ordinances|documents|evacuation|feedback|profile|notifications|dictionary|manobo|bookmarks|search|forgot-password)(?:\/[A-Za-z0-9._~%-]+)*)(?=$|[\s).,\]!?;:])/g,
+                        (m, pre, path) => pre + '<a class="aic-link" href="' + base + path + '">' + path + '</a>'
+                    );
+            }
+            html = html.replace(/\n/g, '<br>');
             this.messages.push({ id: ++this._id, role, html });
         },
 

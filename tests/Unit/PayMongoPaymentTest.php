@@ -133,31 +133,19 @@ final class PayMongoPaymentTest extends TestCase
 
     // ── Release guard ───────────────────────────────────────────────────
 
-    public function testUnpaidRequestCannotBeReleasedOrApproved(): void
+    /**
+     * Online payment was removed (2026-10-22): fees are paid in cash at the
+     * hall, so no payment state may stop staff approving or releasing.
+     */
+    public function testPaymentNeverBlocksStaff(): void
     {
-        $req = ['fee_amount' => 50.00, 'payment_status' => 'PENDING'];
-        foreach (['released', 'completed', 'approved', 'ready', 'pending_review'] as $to) {
-            $this->assertNotNull(DocumentRequest::paymentBlocksMove($req, $to), $to);
+        foreach (['PENDING', 'PAY_AT_PICKUP', 'UNDER_REVIEW', 'PAYMENT_PROOF_SUBMITTED', 'PAID', 'NOT_REQUIRED'] as $status) {
+            foreach (['approved', 'ready', 'ready_for_pickup', 'released', 'completed', 'rejected'] as $to) {
+                $this->assertNull(
+                    DocumentRequest::paymentBlocksMove(['fee_amount' => 50.00, 'payment_status' => $status], $to),
+                    "{$status} → {$to}"
+                );
+            }
         }
-        $this->assertNull(DocumentRequest::paymentBlocksMove($req, 'cancelled'));
-        $this->assertNull(DocumentRequest::paymentBlocksMove($req, 'rejected'));
-    }
-
-    public function testPaidAndFreeRequestsMoveFreely(): void
-    {
-        $this->assertNull(DocumentRequest::paymentBlocksMove(['fee_amount' => 50.00, 'payment_status' => 'PAID'], 'released'));
-        $this->assertNull(DocumentRequest::paymentBlocksMove(['fee_amount' => 0.00, 'payment_status' => 'NOT_REQUIRED'], 'released'));
-    }
-
-    public function testPayAtHallCanBePreparedButNotReleasedUnpaid(): void
-    {
-        $req = ['fee_amount' => 50.00, 'payment_status' => 'PAY_AT_PICKUP'];
-        $this->assertNull(DocumentRequest::paymentBlocksMove($req, 'ready_for_pickup'));
-        $this->assertNotNull(DocumentRequest::paymentBlocksMove($req, 'released'));
-    }
-
-    public function testManualReviewBlocksRelease(): void
-    {
-        $this->assertNotNull(DocumentRequest::paymentBlocksMove(['fee_amount' => 50.00, 'payment_status' => 'UNDER_REVIEW'], 'released'));
     }
 }

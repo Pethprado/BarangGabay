@@ -8,7 +8,6 @@ use App\Models\AuditLog;
 use App\Models\TranslationAttempt;
 use App\Services\FileService;
 use App\Services\NotificationService;
-use App\Services\PostAudioService;
 use App\Services\PostSms;
 use App\Services\SourceLink;
 use App\Services\SemaphoreSmsService;
@@ -279,16 +278,9 @@ class EventController
             'event', $id, $evTitle, $evDesc, $sourceLang, !$manualOther, !$manualManobo
         );
 
-        // Cache the narration residents will hear, in every language this event
-        // now has text for. After the translations, never before: the audio has
-        // to be generated from the final wording. Non-fatal by design — the
-        // event is saved either way and the reader falls back to the device's
-        // own voice for anything that failed.
         // Where this came from, if it came from somewhere. See the note in
         // AnnouncementController.
         SourceLink::store('event', $id, $source);
-
-        PostAudioService::refresh('event', $id, (int) $_SESSION['user_id']);
 
         if ($manualManobo) {
             $successMsg = t('flash.event_created') . t('flash.manual_manobo_saved');
@@ -336,7 +328,6 @@ class EventController
 
         AuditLog::record((int) $_SESSION['user_id'], 'event.create', 'Created event: ' . $evTitle);
         flash('success', $successMsg);
-        voice_coverage_flash('event', (int) $id);
         redirect('/admin/events');
     }
 
@@ -472,8 +463,6 @@ class EventController
         // AnnouncementController.
         SourceLink::store('event', $id, $source);
 
-        PostAudioService::refresh('event', $id, (int) $_SESSION['user_id']);
-
         if ($manualManobo) {
             $successMsg = t('flash.event_updated') . t('flash.manual_manobo_saved');
         } else {
@@ -496,7 +485,6 @@ class EventController
 
         AuditLog::record((int) $_SESSION['user_id'], 'event.update', "Updated event #{$id}: {$upTitle}");
         flash('success', $successMsg);
-        voice_coverage_flash('event', (int) $id);
         redirect('/admin/events');
     }
 

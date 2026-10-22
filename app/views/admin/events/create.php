@@ -90,19 +90,10 @@ ob_start();
             $__eBodyVal   = '';
             $__eBodyName  = 'description_en';
             $__eBodyLabel = t('manobo_fields.label_description');
-            // Staff hear the post before a resident does — the only reliable
-            // way to catch an abbreviation or a missing full stop that reads
-            // fine but sounds wrong. Above the translation panels because it
-            // is about the content just typed, not a translation of it.
             // See the note in the announcement create form.
             $__ipType   = 'event';
             $__ipSource = null;
             require __DIR__ . '/../../shared/_import-panel.php';
-
-            $__vpSourceLang = $__eSourceLang ?? 'fil';
-            $__vpType       = 'event';
-            $__vpRow        = null;          // nothing saved yet — preview only
-            require __DIR__ . '/../../shared/_voice-preview.php';
 
             require __DIR__ . '/../../shared/_english-fields.php';
 

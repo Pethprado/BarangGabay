@@ -59,21 +59,7 @@ $__pBadges  = [['label' => $sMeta['label'], 'class' => $sMeta['cls']]];
 $__pType = 'ordinance'; $__pId = (int) $ordinance['id']; require __DIR__ . '/../shared/_post-header.php';
 ?>
 
-<?php
-/*
- * Voice reader.
- *
- * It reads the plain-language summary, never the PDF. Reading twenty pages of
- * legal text aloud helps nobody and would cost a fortune to synthesise, so the
- * reader says plainly at the end that it was a summary and the full document
- * is on this page. PostScript owns that rule, and the rule that the summary is
- * only spoken in Filipino — the language AIService writes it in.
- */
-$__vrDesc = trim((string) $ordDescPick['text']);
-$__vrType = 'ordinance';
-$__vrRow  = $ordinance;
-require __DIR__ . '/../shared/_voice-reader.php';
-?>
+<?php $__vrDesc = trim((string) $ordDescPick['text']); ?>
 
 <?php $__tnPicks = [$ordTitlePick, $ordDescPick]; $__tnType = 'ordinance'; $__tnId = (int) $ordinance['id']; require __DIR__ . '/../shared/_translation-notice.php'; ?>
 
@@ -452,21 +438,6 @@ function ordinanceSummarize(ordinanceId, hasCachedSummary, cachedText) {
                 if (data.summary) {
                     this.summary = data.summary;
                     this.cached  = data.cached || false;
-
-                    /* There was no summary when this page rendered, so the
-                       voice reader was set up to read the description. Hand it
-                       the summary now — it re-prepares the text through the
-                       same server-side code the page used, rather than this
-                       view growing its own copy of that logic.
-
-                       Filipino only: that is the language the summary is
-                       written in, and no cached MP3 can exist for text that was
-                       generated seconds ago, so this updates the device-speech
-                       track. The provider version arrives next time staff save
-                       the ordinance. */
-                    document.dispatchEvent(new CustomEvent('voice-reader:body', {
-                        detail: { text: this.summary, locale: 'fil' },
-                    }));
                 } else {
                     this.errorMsg = data.error
                         || <?= json_encode(t('ai_summary.err_unknown')) ?>;

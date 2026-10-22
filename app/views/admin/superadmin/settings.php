@@ -220,6 +220,17 @@ ob_start();
                 <?= e(t('superadmin.set_free_translation_toggle')) ?>
             </label>
         </div>
+
+        <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" role="switch" id="grammarAutocorrect"
+                   name="grammar_autocorrect" value="1"
+                   <?= (int) ($settings['grammar_autocorrect'] ?? 1) === 1 ? 'checked' : '' ?>
+                   style="cursor:pointer;">
+            <label class="form-check-label" for="grammarAutocorrect" style="font-weight:600;font-size:.86rem;cursor:pointer;">
+                <?= e(t('superadmin.set_grammar_toggle')) ?>
+            </label>
+            <p class="set-help mb-0"><?= e(t('superadmin.set_grammar_help')) ?></p>
+        </div>
     </div>
 
     <!-- ── Document Issuance, Delivery & Signatories ───────────────────── -->
@@ -361,38 +372,6 @@ ob_start();
         <?php endif; ?>
     </div>
     <p class="form-text mt-2 mb-0" style="font-size:.74rem;"><?= e(t('superadmin.set_logo_limits')) ?></p>
-</div>
-
-<!-- ── Payment gateway (separate form — write-only secrets) ─────────────── -->
-<?php
-use App\Services\PayMongoService as __PM;
-$__pmFields = [
-    'PAYMONGO_SECRET_KEY'     => [__('Secret key'), 'sk_test_… or sk_live_…'],
-    'PAYMONGO_PUBLIC_KEY'     => [__('Public key'), 'pk_test_… or pk_live_…'],
-    'PAYMONGO_WEBHOOK_SECRET' => [__('Webhook signing secret'), 'whsk_…'],
-];
-?>
-<div class="admin-card" id="payment-gateway">
-    <p class="set-legend"><i class="bi bi-wallet2 me-1" style="color:var(--brand-primary);"></i><?= e(__('Payment Gateway — PayMongo GCash')) ?></p>
-    <p class="set-help">
-        <?= e(__('Keys are encrypted before they are stored and are never shown again. Render environment variables, if set, take precedence. Mode now:')) ?> <strong><?= __PM::getMode() === 'live' ? __('LIVE (real money)') : __('TEST (no real money)') ?></strong><?= e(__('. Webhook URL for PayMongo:')) ?> <code><?= e(route('api/webhooks/paymongo')) ?></code>
-    </p>
-    <form method="POST" action="<?= e(route('superadmin/settings/paymongo')) ?>" autocomplete="off">
-        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-        <div class="row g-3">
-            <?php foreach ($__pmFields as $__name => [$__label, $__ph]): $__src = __PM::credentialSource($__name); ?>
-            <div class="col-12 col-lg-4">
-                <label class="form-label" for="pm_<?= e($__name) ?>" style="font-size:.78rem;font-weight:600;"><?= e($__label) ?></label>
-                <input type="password" class="form-control" id="pm_<?= e($__name) ?>" name="<?= e($__name) ?>"
-                       placeholder="<?= e($__src !== '' ? __('Saved — leave blank to keep') : $__ph) ?>" autocomplete="new-password" spellcheck="false">
-                <div class="form-text" style="font-size:.74rem;">
-                    <?= $__src === 'env' ? __('✓ Set in the server environment') : ($__src === 'stored' ? __('✓ Saved (encrypted)') : __('✗ Not set')) ?>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <button type="submit" class="btn btn-barangay mt-3" style="border-radius:8px;font-weight:600;"><i class="bi bi-shield-lock me-1"></i><?= e(__('Save payment keys')) ?></button>
-    </form>
 </div>
 
 <!-- ── Danger zone ─────────────────────────────────────────────────────── -->

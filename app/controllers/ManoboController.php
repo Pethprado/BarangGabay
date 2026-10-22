@@ -722,12 +722,17 @@ class ManoboController
             return;
         }
 
+        // Clean up the word-by-word draft (spacing, punctuation, capitals,
+        // doubled particles) before staff see it.
+        $fixed = self::grammar((string) ($result['text'] ?? ''), 'msm');
+
         echo json_encode([
-            'success' => true,
-            'text'    => (string) ($result['text'] ?? ''),
-            'matched' => $matched,
-            'total'   => $total,
-            'missing' => array_values(array_unique(array_slice($result['missing'] ?? [], 0, 25))),
+            'success'   => true,
+            'text'      => $fixed['text'],
+            'matched'   => $matched,
+            'total'     => $total,
+            'missing'   => array_values(array_unique(array_slice($result['missing'] ?? [], 0, 25))),
+            'corrected' => $fixed['fixes'],
         ]);
     }
 
@@ -771,13 +776,30 @@ class ManoboController
             return;
         }
 
+        // English grammar check of the draft (LanguageTool + local rules).
+        $fixed = self::grammar((string) $result['text'], 'en');
+
         echo json_encode([
-            'success' => true,
-            'text'    => $result['text'],
-            'matched' => $result['matched'],
-            'total'   => $result['total'],
-            'missing' => array_slice($result['missing'], 0, 25),
+            'success'   => true,
+            'text'      => $fixed['text'],
+            'matched'   => $result['matched'],
+            'total'     => $result['total'],
+            'missing'   => array_slice($result['missing'], 0, 25),
+            'corrected' => $fixed['fixes'],
         ]);
+    }
+
+    /**
+     * Grammar clean-up for a draft, unless a superadmin switched it off.
+     *
+     * @return array{text: string, fixes: int}
+     */
+    private static function grammar(string $text, string $lang): array
+    {
+        if ((int) setting('grammar_autocorrect', 1) !== 1) {
+            return ['text' => $text, 'fixes' => 0];
+        }
+        return \App\Services\GrammarCorrector::fix($text, $lang);
     }
 
     // ── Actions ───────────────────────────────────────────────────────────

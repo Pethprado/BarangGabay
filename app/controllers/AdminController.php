@@ -118,10 +118,6 @@ class AdminController
                                                 + Event::countWithoutManobo()
                                                 + Ordinance::countWithoutManobo(),             '/admin/announcements', 'bi-translate',      $everyone],
             ['documents',    static fn (): int => \App\Models\DocumentRequest::countOpen(),  '/admin/documents',    'bi-file-earmark-check', $everyone],
-            ['payments',     static fn (): int => (int) db()->query("SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAYMENT_PROOF_SUBMITTED'")->fetchColumn(),
-                                                                                                '/admin/payments',     'bi-wallet2',            $everyone],
-            ['voice',        static fn (): int => (int) db()->query("SELECT COUNT(*) FROM voice_samples WHERE LOWER(status) = 'pending'")->fetchColumn(),
-                                                                                                '/admin/voice-training?status=pending#samples', 'bi-mic', $adminsOnly],
         ];
 
         foreach ($rows as [$key, $countFn, $url, $icon, $roles]) {
@@ -158,10 +154,6 @@ class AdminController
         $manoboDictionary = ['total_dictionary_words' => 0, 'words_with_audio' => 0, 'coverage_percentage' => 0.0];
         $activeStaffCount = 0;
         try {
-            foreach (\App\Services\VoiceUsageIndex::reports() as $lang => $report) {
-                $datasetCoverage[$lang] = $report;
-            }
-            $manoboDictionary = \App\Models\VoiceSample::getManoboCoverageStats();
             $activeStaffCount = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role IN ('staff','admin') AND status = 'verified'")->fetchColumn();
         } catch (\Throwable $e) {
             error_log('[AdminController::dashboard] dataset coverage: ' . $e->getMessage());

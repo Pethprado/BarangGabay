@@ -1,30 +1,29 @@
 <?php
 /**
- * Resident Document Request & History Page — BarangGabay
+ * Resident Document Requests — BarangGabay
  *
- * Requirements 2, 3, 4, 5, 6, 7, 10, 24, 25, 26, 27, 28, 49, 50, 51:
- * - Top tabs: [ NEW REQUEST ] and [ MY REQUESTS ] (never display side-by-side)
- * - 4-Step clean wizard for New Request:
- *     Step 1: Choose Document (with fee, requirements, processing time)
- *     Step 2: Review Resident Information (auto-loaded from DB profile, Verified badge)
- *     Step 3: Purpose (with 'Other' text field) and Receiving Method (Digital Copy vs Pickup at Barangay Hall)
- *     Step 4: Clean Order Summary & Pay with GCash button (double-click protected)
- * - My Requests tab: compact table/cards + View Details modal with real-time status tracker.
+ * Request online, pick up at the Barangay Hall. There is no online payment:
+ *   1. The resident files the request here.
+ *   2. Barangay staff review it and approve it when the document is ready.
+ *   3. The resident is notified "Ready for Pickup" and claims it at the hall,
+ *      paying any fee there in cash.
+ *
+ * Two tabs: NEW REQUEST (the form) and MY REQUESTS (status of each request).
  */
 use App\Models\DocumentRequest;
-use App\Models\DocumentPayment;
 use App\Models\User;
 
-$requests     = $requests ?? [];
-$types        = $types    ?? [];
-$docFees      = $docFees  ?? \App\Models\DocumentFee::getAll();
-$user         = $user     ?? [];
+$requests = $requests ?? [];
+$types    = $types    ?? [];
+$docFees  = $docFees  ?? \App\Models\DocumentFee::getAll();
+$user     = $user     ?? [];
 
 $isVerifiedResident = (($user['status'] ?? '') === 'verified');
 $activeTab = $_GET['tab'] ?? (empty($requests) ? 'new' : 'requests');
 if (!in_array($activeTab, ['new', 'requests'], true)) {
     $activeTab = 'new';
 }
+$highlightRef = (string) ($_GET['ref'] ?? '');
 
 $pageTitle = __('Mga Dokumento at Kahilingan — BarangGabay');
 ob_start();
@@ -39,8 +38,8 @@ ob_start();
 .doc-timeline__step.is-current .doc-timeline__dot { border-color: var(--action-solid); background: var(--brand-primary-light); box-shadow: 0 0 0 3px var(--brand-primary-light); }
 .doc-timeline__label { font-size: .68rem; font-weight: 700; color: var(--text-muted); line-height: 1.2; }
 .doc-timeline__step.is-current .doc-timeline__label { color: var(--brand-primary); }
+.doc-step-num { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 999px; font-size: .75rem; font-weight: 900; background: var(--action-solid); color: var(--text-on-action, #fff); flex-shrink: 0; }
 </style>
-
 
 <div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
 
@@ -49,17 +48,12 @@ ob_start();
         <div>
             <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white"><?= e(__('Mga Kahilingan ng Dokumento')) ?></h1>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                <?= e(__('Opisyal na serbisyo sa paghiling at pagbabayad ng mga clearance at sertipiko ng Barangay Bayogo.')) ?>
+                <?= e(__('Request barangay clearances and certificates online, then pick them up at the Barangay Hall.')) ?>
             </p>
         </div>
-        <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-100 dark:border-blue-900">
-                <i class="bi bi-wallet2"></i> GCash
-            </span>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                <i class="bi bi-folder2"></i> <?= count($requests) ?> <?= count($requests) === 1 ? __('Kahilingan') : __('Mga Kahilingan') ?>
-            </span>
-        </div>
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <i class="bi bi-folder2"></i> <?= count($requests) ?> <?= count($requests) === 1 ? __('Kahilingan') : __('Mga Kahilingan') ?>
+        </span>
     </div>
 
     <!-- Verification Required Alert (if resident is not verified) -->
@@ -90,14 +84,14 @@ ob_start();
     </div>
     <?php endif; ?>
 
-    <!-- Top Tabs: NEW REQUEST vs MY REQUESTS (Requirement 50) -->
-    <div class="mb-6 flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800">
-        <button type="button" id="tabBtnNew" onclick="switchMainTab('new')"
+    <!-- Tabs: NEW REQUEST vs MY REQUESTS -->
+    <div class="mb-6 flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800" role="tablist">
+        <button type="button" id="tabBtnNew" onclick="switchMainTab('new')" role="tab" aria-selected="<?= $activeTab === 'new' ? 'true' : 'false' ?>"
                 class="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all <?= $activeTab === 'new' ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' ?>">
             <i class="bi bi-file-earmark-plus text-base"></i>
             <span><?= e(__('HUMILING NG DOKUMENTO (NEW REQUEST)')) ?></span>
         </button>
-        <button type="button" id="tabBtnRequests" onclick="switchMainTab('requests')"
+        <button type="button" id="tabBtnRequests" onclick="switchMainTab('requests')" role="tab" aria-selected="<?= $activeTab === 'requests' ? 'true' : 'false' ?>"
                 class="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all <?= $activeTab === 'requests' ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white' ?>">
             <i class="bi bi-clock-history text-base"></i>
             <span><?= e(__('AKING MGA KAHILINGAN (MY REQUESTS)')) ?></span>
@@ -109,11 +103,11 @@ ob_start();
         </button>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- SECTION 1: NEW REQUEST (STEP-BY-STEP WIZARD)                              -->
-    <!-- ========================================================================= -->
+    <!-- ===================================================================== -->
+    <!-- NEW REQUEST                                                           -->
+    <!-- ===================================================================== -->
     <div id="sectionNewRequest" class="<?= $activeTab === 'new' ? '' : 'hidden' ?>">
-        
+
         <?php if (!$isVerifiedResident): ?>
         <div class="rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900">
             <i class="bi bi-shield-lock text-4xl text-slate-400 mb-2 block"></i>
@@ -127,399 +121,190 @@ ob_start();
         </div>
         <?php else: ?>
 
-        <!-- Wizard Stepper Indicators -->
-        <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div class="grid grid-cols-4 text-center text-xs font-bold">
-                <div id="stepIndicator1" class="flex flex-col items-center text-blue-600 dark:text-blue-400">
-                    <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white font-black text-xs shadow-sm mb-1">
-                        1
-                    </div>
-                    <span class="hidden sm:inline"><?= e(__('Piliin ang Dokumento')) ?></span>
-                    <span class="sm:hidden text-[11px]"><?= e(__('Dokumento')) ?></span>
-                </div>
-                <div id="stepIndicator2" class="flex flex-col items-center text-slate-400">
-                    <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400">
-                        2
-                    </div>
-                    <span class="hidden sm:inline"><?= e(__('Impormasyon ng Residente')) ?></span>
-                    <span class="sm:hidden text-[11px]"><?= e(__('Profile')) ?></span>
-                </div>
-                <div id="stepIndicator3" class="flex flex-col items-center text-slate-400">
-                    <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400">
-                        3
-                    </div>
-                    <span class="hidden sm:inline"><?= e(__('Layunin & Pagtanggap')) ?></span>
-                    <span class="sm:hidden text-[11px]"><?= e(__('Layunin')) ?></span>
-                </div>
-                <div id="stepIndicator4" class="flex flex-col items-center text-slate-400">
-                    <div class="step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400">
-                        4
-                    </div>
-                    <span class="hidden sm:inline"><?= e(__('Bayaran gamit ang GCash')) ?></span>
-                    <span class="sm:hidden text-[11px]"><?= e(__('Bayad')) ?></span>
-                </div>
-            </div>
-        </div>
+        <!-- How it works -->
+        <ol class="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-3" aria-label="<?= e(__('How it works')) ?>">
+            <?php foreach ([
+                ['bi-send', __('Submit your request online')],
+                ['bi-person-check', __('Barangay staff review and approve it')],
+                ['bi-building-check', __('Pick it up at the Barangay Hall when it is ready')],
+            ] as $__i => [$__icon, $__text]): ?>
+            <li class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                <span class="doc-step-num" aria-hidden="true"><?= $__i + 1 ?></span>
+                <i class="bi <?= $__icon ?> text-base text-blue-600 dark:text-blue-400" aria-hidden="true"></i>
+                <span><?= e($__text) ?></span>
+            </li>
+            <?php endforeach; ?>
+        </ol>
 
-        <!-- Wizard Card Form -->
-        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-md sm:p-8 dark:border-slate-800 dark:bg-slate-900">
-            <form id="wizardDocForm" onsubmit="event.preventDefault(); submitWizardForm();">
-                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                <input type="hidden" name="is_ajax" value="1">
-                <input type="hidden" name="payment_method" value="gcash">
+        <form method="post" action="<?= e(route('documents')) ?>" id="docRequestForm"
+              class="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-md sm:p-8 dark:border-slate-800 dark:bg-slate-900">
+            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+            <input type="hidden" name="delivery_method" value="pickup">
 
-                <!-- ── STEP 1: CHOOSE DOCUMENT ──────────────────────────── -->
-                <div id="wizardStep1" class="wizard-step">
-                    <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1"><?= e(__('HAKBANG 1 SA 4')) ?></span>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white"><?= e(__('Piliin ang Dokumento (Choose Document)')) ?></h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            <?= e(__('Pumili ng opisyal na sertipiko o clearance na nais hilingin sa Barangay Bayogo.')) ?>
-                        </p>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div>
-                            <label for="wizard_document_type" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                                <?= e(__('Uri ng Dokumento')) ?> <span class="text-rose-500">*</span>
-                            </label>
-                            <select id="wizard_document_type" name="document_type" onchange="onDocumentTypeChange()"
-                                    class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                                <?php foreach ($types as $key => $label):
-                                    $f = $docFees[$key] ?? null;
-                                    if ($f === null || empty($f['is_active'])) { continue; } // disabled by the admin
-                                    $isFree = $f['is_free'] || (float)$f['amount'] <= 0;
-                                    $feeTxt = $isFree ? ' (LIBRE)' : sprintf(' (₱%.2f)', (float)$f['amount']);
-                                ?>
-                                <option value="<?= e($key) ?>"
-                                        data-amount="<?= (float)$f['amount'] ?>"
-                                        data-free="<?= $isFree ? '1' : '0' ?>"
-                                        data-requirements="<?= e((string) ($f['requirements'] ?? '')) ?>"
-                                        data-description="<?= e((string) ($f['description'] ?? '')) ?>"
-                                        data-label="<?= e($label) ?>">
-                                    <?= e($label) . $feeTxt ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <!-- Document Details Preview (Requirement 3) -->
-                        <div class="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
-                            <p class="mb-3 text-sm text-slate-700 dark:text-slate-300 hidden" id="step1DescDisplay"></p>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                                <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
-                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5"><?= e(__('Bayad sa Dokumento')) ?></span>
-                                    <span class="text-lg font-black text-blue-600 dark:text-blue-400" id="step1FeeDisplay">₱50.00</span>
-                                </div>
-                                <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
-                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5"><?= e(__('Mga Kinakailangan')) ?></span>
-                                    <ul class="font-bold text-slate-800 dark:text-slate-200 list-disc ps-4" id="step1ReqsDisplay"><li><?= e(__('Valid Government ID')) ?></li></ul>
-                                    <span class="mt-1 block text-[11px] font-semibold text-slate-500" id="step1PayReq"></span>
-                                </div>
-                                <div class="rounded-xl bg-white p-3 border border-blue-100/80 shadow-xs dark:bg-slate-900 dark:border-slate-800">
-                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5"><?= e(__('Processing Time')) ?></span>
-                                    <span class="font-bold text-emerald-600 dark:text-emerald-400" id="step1TimeDisplay"><?= e(__('1–2 business days')) ?></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pt-4 flex justify-end">
-                            <button type="button" onclick="goToStep(2)"
-                                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition">
-                                <span><?= e(__('Magpatuloy (Continue)')) ?></span>
-                                <i class="bi bi-arrow-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ── STEP 2: RESIDENT INFORMATION ─────────────────────── -->
-                <div id="wizardStep2" class="wizard-step hidden">
-                    <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1"><?= e(__('HAKBANG 2 SA 4')) ?></span>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white"><?= e(__('Impormasyon ng Residente (Resident Information)')) ?></h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            <?= e(__('Awtomatikong kinuha mula sa inyong opisyal na rehistradong profile sa database.')) ?>
-                        </p>
-                    </div>
-
-                    <!-- Read-only verified profile summary (Requirement 4) -->
-                    <?php 
-                        $userArr = is_array($user) ? $user : [];
-                        $userFullName = !empty($userArr) ? User::formatFullName($userArr) : ($user['name'] ?? __('Residente'));
-                        $userAddress  = !empty($userArr) ? User::formatAddress($userArr) : 'Barangay Bayogo';
+            <!-- 1. Document -->
+            <section aria-labelledby="docStep1">
+                <h2 id="docStep1" class="mb-3 flex items-center gap-2 text-base font-black text-slate-900 dark:text-white">
+                    <span class="doc-step-num" aria-hidden="true">1</span> <?= e(__('Piliin ang Dokumento (Choose Document)')) ?>
+                </h2>
+                <label for="document_type" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                    <?= e(__('Uri ng Dokumento')) ?> <span class="text-rose-500">*</span>
+                </label>
+                <select id="document_type" name="document_type" required onchange="onDocumentTypeChange()"
+                        class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                    <?php foreach ($types as $key => $label):
+                        $f = $docFees[$key] ?? null;
+                        if ($f === null || empty($f['is_active'])) { continue; } // disabled by the admin
+                        $isFree = $f['is_free'] || (float) $f['amount'] <= 0;
                     ?>
-                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5 dark:border-emerald-900 dark:bg-emerald-950/20">
-                        <div class="flex items-center justify-between border-b border-emerald-200/60 pb-3 mb-3.5 dark:border-emerald-800">
-                            <div class="flex items-center gap-2">
-                                <i class="bi bi-person-check-fill text-xl text-emerald-600 dark:text-emerald-400"></i>
-                                <span class="text-sm font-black text-slate-900 dark:text-white">
-                                    <?= e($userFullName) ?>
-                                </span>
-                            </div>
-                            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-                                <i class="bi bi-check-circle-fill"></i> <?= e(__('Verified ✓')) ?>
-                            </span>
-                        </div>
+                    <option value="<?= e($key) ?>"
+                            data-amount="<?= $isFree ? '0' : number_format((float) $f['amount'], 2, '.', '') ?>"
+                            data-requirements="<?= e((string) ($f['requirements'] ?? '')) ?>"
+                            data-description="<?= e((string) ($f['description'] ?? '')) ?>">
+                        <?= e($label) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                            <div>
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Buong Pangalan:')) ?></span>
-                                <strong class="text-slate-800 dark:text-slate-200"><?= e($userFullName) ?></strong>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Kaarawan & Edad:')) ?></span>
-                                <strong class="text-slate-800 dark:text-slate-200">
-                                    <?= !empty($user['date_of_birth']) ? date('F d, Y', strtotime($user['date_of_birth'])) : 'N/A' ?>
-                                    (<?= User::getAge($user['date_of_birth'] ?? null) !== null ? User::getAge($user['date_of_birth']) . ' anyos' : 'N/A' ?>)
-                                </strong>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Katayuang Sibil / Kasarian:')) ?></span>
-                                <strong class="text-slate-800 dark:text-slate-200">
-                                    <?= e(ucfirst($user['civil_status'] ?? 'Single')) ?> &bull; <?= e(ucfirst($user['sex'] ?? 'N/A')) ?>
-                                </strong>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Contact Number:')) ?></span>
-                                <strong class="text-slate-800 dark:text-slate-200"><?= e($user['phone'] ?? 'N/A') ?></strong>
-                            </div>
-                            <div class="sm:col-span-2">
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Tirahan (Address):')) ?></span>
-                                <strong class="text-slate-800 dark:text-slate-200"><?= e($userAddress) ?></strong>
-                            </div>
-                            <?php if (!empty($user['household_no'])): ?>
-                            <div class="sm:col-span-2">
-                                <span class="text-slate-400 block text-[10px] font-bold uppercase"><?= e(__('Household Number:')) ?></span>
-                                <strong class="font-mono text-indigo-700 dark:text-indigo-400"><?= e($user['household_no']) ?></strong>
-                            </div>
-                            <?php endif; ?>
+                <div class="mt-3 rounded-2xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
+                    <p class="mb-3 hidden text-sm text-slate-700 dark:text-slate-300" id="docDescription"></p>
+                    <div class="grid grid-cols-1 gap-3 text-xs sm:grid-cols-3">
+                        <div class="rounded-xl border border-blue-100/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                            <span class="mb-0.5 block text-[10px] font-bold uppercase text-slate-400"><?= e(__('Bayad sa Dokumento')) ?></span>
+                            <span class="text-lg font-black text-blue-600 dark:text-blue-400" id="docFee"></span>
+                            <span class="mt-0.5 block text-[11px] font-semibold text-slate-500" id="docFeeNote"></span>
                         </div>
-
-                        <div class="mt-4 border-t border-emerald-200/60 pt-2 text-[11px] text-emerald-800 dark:text-emerald-300">
-                            <?= e(__('* Ang mga impormasyong ito ay awtomatikong ilalagay sa opisyal na sertipiko. Hindi mo na kailangang mag-type muli.')) ?>
-                            <?php $__printedAs = !empty($userArr) ? $userArr : (array) $user; ?>
-                            <span class="mt-2 block rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-                                <?= e(__('Printed on your document as:')) ?>
-                                <strong><?= e(trim(\App\Services\DocumentFields::honorific($__printedAs) . ' ' . mb_strtoupper(\App\Services\DocumentFields::name($__printedAs)))) ?></strong>
-                                <?php if (\App\Services\DocumentFields::purok($__printedAs) !== ''): ?> · <?= e(\App\Services\DocumentFields::purok($__printedAs)) ?><?php endif; ?>
-                                <span class="block opacity-80"><?= e(__('Something wrong? Update your profile before requesting.')) ?> <a href="<?= e(route('profile')) ?>" class="font-bold underline"><?= e(__('Profile')) ?></a></span>
-                            </span>
+                        <div class="rounded-xl border border-blue-100/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                            <span class="mb-0.5 block text-[10px] font-bold uppercase text-slate-400"><?= e(__('Mga Kinakailangan')) ?></span>
+                            <ul class="list-disc ps-4 font-bold text-slate-800 dark:text-slate-200" id="docRequirements"></ul>
+                        </div>
+                        <div class="rounded-xl border border-blue-100/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                            <span class="mb-0.5 block text-[10px] font-bold uppercase text-slate-400"><?= e(__('Processing Time')) ?></span>
+                            <span class="font-bold text-emerald-600 dark:text-emerald-400"><?= e(__('1–2 business days')) ?></span>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    <div class="pt-5 flex items-center justify-between">
-                        <button type="button" onclick="goToStep(1)"
-                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                            <i class="bi bi-arrow-left"></i>
-                            <span><?= e(__('Bumalik')) ?></span>
-                        </button>
-                        <button type="button" onclick="goToStep(3)"
-                                class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition">
-                            <span><?= e(__('Magpatuloy (Continue)')) ?></span>
-                            <i class="bi bi-arrow-right"></i>
-                        </button>
+            <!-- 2. Resident information (read-only, from the verified profile) -->
+            <?php
+                $userArr      = is_array($user) ? $user : [];
+                $userFullName = !empty($userArr) ? User::formatFullName($userArr) : __('Residente');
+                $userAddress  = !empty($userArr) ? User::formatAddress($userArr) : 'Barangay Bayogo';
+            ?>
+            <section aria-labelledby="docStep2">
+                <h2 id="docStep2" class="mb-3 flex items-center gap-2 text-base font-black text-slate-900 dark:text-white">
+                    <span class="doc-step-num" aria-hidden="true">2</span> <?= e(__('Impormasyon ng Residente (Resident Information)')) ?>
+                </h2>
+                <div class="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/60 pb-3 dark:border-emerald-800">
+                        <span class="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white">
+                            <i class="bi bi-person-check-fill text-xl text-emerald-600 dark:text-emerald-400"></i> <?= e($userFullName) ?>
+                        </span>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                            <i class="bi bi-check-circle-fill"></i> <?= e(__('Verified ✓')) ?>
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+                        <div>
+                            <span class="block text-[10px] font-bold uppercase text-slate-400"><?= e(__('Contact Number:')) ?></span>
+                            <strong class="text-slate-800 dark:text-slate-200"><?= e($user['phone'] ?? 'N/A') ?></strong>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] font-bold uppercase text-slate-400"><?= e(__('Tirahan (Address):')) ?></span>
+                            <strong class="text-slate-800 dark:text-slate-200"><?= e($userAddress) ?></strong>
+                        </div>
+                    </div>
+                    <span class="mt-3 block rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+                        <?= e(__('Printed on your document as:')) ?>
+                        <strong><?= e(trim(\App\Services\DocumentFields::honorific($userArr) . ' ' . mb_strtoupper(\App\Services\DocumentFields::name($userArr)))) ?></strong>
+                        <?php if (\App\Services\DocumentFields::purok($userArr) !== ''): ?> · <?= e(\App\Services\DocumentFields::purok($userArr)) ?><?php endif; ?>
+                        <span class="block opacity-80"><?= e(__('Something wrong? Update your profile before requesting.')) ?> <a href="<?= e(route('profile')) ?>" class="font-bold underline"><?= e(__('Profile')) ?></a></span>
+                    </span>
+                </div>
+            </section>
+
+            <!-- 3. Purpose -->
+            <section aria-labelledby="docStep3" class="space-y-4">
+                <h2 id="docStep3" class="flex items-center gap-2 text-base font-black text-slate-900 dark:text-white">
+                    <span class="doc-step-num" aria-hidden="true">3</span> <?= e(__('Layunin (Purpose)')) ?>
+                </h2>
+                <div>
+                    <label for="purpose" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                        <?= e(__('Layunin (Purpose)')) ?> <span class="text-rose-500">*</span>
+                    </label>
+                    <select id="purpose" name="purpose" required onchange="onPurposeChange(this.value)"
+                            class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                        <option value="Employment"><?= e(__('Employment (Paghahanapbuhay / Trabaho)')) ?></option>
+                        <option value="School"><?= e(__('School (Eskwela / Scholarship / Enrollment)')) ?></option>
+                        <option value="Business"><?= e(__('Business (Negosyo / Permit)')) ?></option>
+                        <option value="Government Requirement"><?= e(__('Government Requirement (SSS, PhilHealth, Pag-IBIG, ID)')) ?></option>
+                        <option value="Bank Requirement"><?= e(__('Bank Requirement (Pagbubukas ng Account / Loan)')) ?></option>
+                        <option value="Travel"><?= e(__('Travel (Lokal o Pang-ibayong Dagat)')) ?></option>
+                        <option value="Other"><?= e(__('Other (Iba pang layunin...)')) ?></option>
+                    </select>
+                    <div id="otherPurposeWrapper" class="mt-2.5 hidden">
+                        <label for="purpose_other" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                            <?= e(__('Tukuyin ang ibang layunin:')) ?> <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" id="purpose_other" name="purpose_other" maxlength="150" minlength="3"
+                               placeholder="<?= e(__('Halimbawa: Police clearance requirement, scholarship application, atbp.')) ?>"
+                               class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                     </div>
                 </div>
 
-                <!-- ── STEP 3: PURPOSE & RECEIVING METHOD ───────────────── -->
-                <div id="wizardStep3" class="wizard-step hidden">
-                    <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1"><?= e(__('HAKBANG 3 SA 4')) ?></span>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white"><?= e(__('Layunin at Paraan ng Pagtanggap')) ?></h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            <?= e(__('Piliin kung para saan ang dokumento at kung paano mo ito nais matanggap.')) ?>
-                        </p>
-                    </div>
-
-                    <div class="space-y-5">
-                        <!-- Purpose (Requirement 5) -->
+                <!-- Business Permit: what the permit is for -->
+                <div id="businessFields" class="hidden rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                    <p class="mb-3 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300"><?= e(__('Business details')) ?></p>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
-                            <label for="wizard_purpose" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                                <?= e(__('Layunin (Purpose)')) ?> <span class="text-rose-500">*</span>
-                            </label>
-                            <select id="wizard_purpose" name="purpose" required onchange="onPurposeChange(this.value)"
-                                    class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                                <option value="Employment"><?= e(__('Employment (Paghahanapbuhay / Trabaho)')) ?></option>
-                                <option value="School"><?= e(__('School (Eskwela / Scholarship / Enrollment)')) ?></option>
-                                <option value="Business"><?= e(__('Business (Negosyo / Permit)')) ?></option>
-                                <option value="Government Requirement"><?= e(__('Government Requirement (SSS, PhilHealth, Pag-IBIG, ID)')) ?></option>
-                                <option value="Bank Requirement"><?= e(__('Bank Requirement (Pagbubukas ng Account / Loan)')) ?></option>
-                                <option value="Travel"><?= e(__('Travel (Lokal o Pang-ibayong Dagat)')) ?></option>
-                                <option value="Other"><?= e(__('Other (Iba pang layunin...)')) ?></option>
-                            </select>
-
-                            <!-- Other Purpose Text Field -->
-                            <div id="otherPurposeWrapper" class="mt-2.5 hidden">
-                                <label for="wizard_purpose_other" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                    <?= e(__('Tukuyin ang ibang layunin:')) ?> <span class="text-rose-500">*</span>
-                                </label>
-                                <input type="text" id="wizard_purpose_other" name="purpose_other" maxlength="150"
-                                       placeholder="<?= e(__('Halimbawa: Police clearance requirement, scholarship application, atbp.')) ?>"
-                                       class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                            </div>
+                            <label for="business_type" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"><?= e(__('Kind of business')) ?> <span class="text-rose-500">*</span></label>
+                            <input type="text" id="business_type" name="business_type" maxlength="120" minlength="2" placeholder="<?= e(__('e.g. Sari-sari store')) ?>"
+                                   class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                         </div>
-
-                        <!-- Business Permit: what the permit is for -->
-                        <div id="businessFields" class="hidden rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-                            <p class="mb-3 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300"><?= e(__('Business details')) ?></p>
-                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <div>
-                                    <label for="wizard_business_type" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"><?= e(__('Kind of business')) ?> <span class="text-rose-500">*</span></label>
-                                    <input type="text" id="wizard_business_type" name="business_type" maxlength="120" placeholder="<?= e(__('e.g. Sari-sari store')) ?>"
-                                           class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                                </div>
-                                <div>
-                                    <label for="wizard_business_name" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"><?= e(__('Business name')) ?> <span class="text-rose-500">*</span></label>
-                                    <input type="text" id="wizard_business_name" name="business_name" maxlength="200" placeholder="<?= e(__('e.g. Tagra Store')) ?>"
-                                           class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                                </div>
-                                <div class="sm:col-span-2">
-                                    <label for="wizard_business_address" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"><?= e(__('Business location (optional)')) ?></label>
-                                    <input type="text" id="wizard_business_address" name="business_address" maxlength="255" placeholder="<?= e(__('e.g. Purok 2, near the chapel')) ?>"
-                                           class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Receiving Method (Requirement 5 & 6: Digital Copy vs Pickup at Barangay Hall ONLY) -->
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
-                                <?= e(__('Paano mo nais matanggap ang dokumento?')) ?> <span class="text-rose-500">*</span>
-                            </label>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <!-- Digital Option -->
-                                <label class="receiving-card relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-blue-600 bg-blue-50/30 p-4 transition dark:border-blue-500 dark:bg-blue-950/20">
-                                    <input type="radio" name="delivery_method" value="digital" checked onchange="updateReceivingMethod('digital')"
-                                           class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="text-sm font-bold text-slate-900 dark:text-white"><?= e(__('DIGITAL COPY')) ?></span>
-                                            <span class="rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300"><?= e(__('PDF Soft Copy')) ?></span>
-                                        </div>
-                                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                            <?= e(__('Awtomatikong mai-download ang opisyal na PDF na may QR Code verification kapag naaprubahan.')) ?>
-                                        </p>
-                                    </div>
-                                </label>
-
-                                <!-- Pickup Option -->
-                                <label class="receiving-card relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-slate-200 bg-white p-4 transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-800/40">
-                                    <input type="radio" name="delivery_method" value="pickup" onchange="updateReceivingMethod('pickup')"
-                                           class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="text-sm font-bold text-slate-900 dark:text-white"><?= e(__('PICKUP AT BARANGAY HALL')) ?></span>
-                                            <span class="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-300"><?= e(__('Counter')) ?></span>
-                                        </div>
-                                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                            <?= e(__('Kukunin ang pisikal na orihinal na dokumento sa Barangay Hall kapag handa na.')) ?>
-                                        </p>
-                                    </div>
-                                </label>
-                            </div>
+                            <label for="business_name" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"><?= e(__('Business name')) ?> <span class="text-rose-500">*</span></label>
+                            <input type="text" id="business_name" name="business_name" maxlength="200" minlength="2" placeholder="<?= e(__('e.g. Tagra Store')) ?>"
+                                   class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                         </div>
-
-                        <!-- Notes (Optional) -->
-                        <div>
-                            <label for="wizard_notes" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                <?= e(__('Karagdagang Paalala (Opsyonal):')) ?>
-                            </label>
-                            <textarea id="wizard_notes" name="notes" rows="2" maxlength="300"
-                                      placeholder="<?= e(__('Maaaring maglagay ng karagdagang impormasyon para sa kawani ng barangay...')) ?>"
-                                      class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"></textarea>
+                        <div class="sm:col-span-2">
+                            <label for="business_address" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"><?= e(__('Business location (optional)')) ?></label>
+                            <input type="text" id="business_address" name="business_address" maxlength="255" placeholder="<?= e(__('e.g. Purok 2, near the chapel')) ?>"
+                                   class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                         </div>
-                    </div>
-
-                    <div class="pt-5 flex items-center justify-between">
-                        <button type="button" onclick="goToStep(2)"
-                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                            <i class="bi bi-arrow-left"></i>
-                            <span><?= e(__('Bumalik')) ?></span>
-                        </button>
-                        <button type="button" onclick="goToStep(4)"
-                                class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition">
-                            <span><?= e(__('Suriin ang Bayad (Review Fee)')) ?></span>
-                            <i class="bi bi-arrow-right"></i>
-                        </button>
                     </div>
                 </div>
 
-                <!-- ── STEP 4: ORDER SUMMARY & PAY WITH GCASH ───────────── -->
-                <div id="wizardStep4" class="wizard-step hidden">
-                    <div class="mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1"><?= e(__('HAKBANG 4 SA 4')) ?></span>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white"><?= e(__('Kumpirmasyon at Pagbabayad')) ?></h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            <?= e(__('Review the details, then pay with GCash. You will send the fee to the barangay GCash and upload your receipt.')) ?>
-                        </p>
-                    </div>
-
-                    <!-- Clean Request Summary (Requirement 24) -->
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/40 mb-5">
-                        <div class="text-xs font-black uppercase tracking-wider text-slate-400 mb-3"><?= e(__('REQUEST SUMMARY')) ?></div>
-
-                        <div class="space-y-3 text-xs">
-                            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
-                                <span class="text-slate-500 dark:text-slate-400"><?= e(__('Dokumento (Document):')) ?></span>
-                                <strong class="text-slate-900 dark:text-white" id="summaryDocName"><?= e(__('Barangay Clearance')) ?></strong>
-                            </div>
-                            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
-                                <span class="text-slate-500 dark:text-slate-400"><?= e(__('Paraan ng Pagtanggap:')) ?></span>
-                                <strong class="text-slate-900 dark:text-white" id="summaryReceiving"><?= e(__('Digital Copy')) ?></strong>
-                            </div>
-                            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
-                                <span class="text-slate-500 dark:text-slate-400"><?= e(__('Layunin (Purpose):')) ?></span>
-                                <strong class="text-slate-900 dark:text-white" id="summaryPurpose"><?= e(__('Employment')) ?></strong>
-                            </div>
-                            <div class="flex items-center justify-between border-b border-slate-200/60 pb-2 dark:border-slate-700">
-                                <span class="text-slate-500 dark:text-slate-400"><?= e(__('Bayad sa Dokumento:')) ?></span>
-                                <span class="font-bold text-slate-900 dark:text-white" id="summaryDocFee">₱50.00</span>
-                            </div>
-                            <div class="flex items-center justify-between pt-1">
-                                <span class="text-sm font-black text-slate-900 dark:text-white"><?= e(__('KABUUAN (TOTAL):')) ?></span>
-                                <span class="text-xl font-black text-blue-600 dark:text-blue-400" id="summaryTotal">₱50.00</span>
-                            </div>
-                        </div>
-
-                        <!-- Payment Method Box (Requirement 7: GCash via PayMongo Only) -->
-                        <div id="summaryPaymentMethodBox" class="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-700 flex items-center justify-between">
-                            <span class="text-xs text-slate-500 dark:text-slate-400"><?= e(__('Paraan ng Pagbabayad:')) ?></span>
-                            <span class="inline-flex items-center gap-1.5 font-bold text-xs text-blue-700 dark:text-blue-300">
-                                <i class="bi bi-check-circle-fill text-blue-600"></i> <?= e(__('GCash (send + upload receipt)')) ?>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Alert message container -->
-                    <div id="wizardAlertBox" class="hidden mb-4 rounded-xl p-3 text-xs font-semibold"></div>
-
-                    <!-- Action Buttons -->
-                    <div class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <button type="button" onclick="goToStep(3)"
-                                class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                            <i class="bi bi-arrow-left"></i>
-                            <span><?= e(__('Bumalik')) ?></span>
-                        </button>
-
-                        <!-- Pay Button with double click protection (Requirement 38) -->
-                        <button type="submit" id="wizardSubmitBtn"
-                                class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] transition">
-                            <i class="bi bi-lock-fill"></i>
-                            <span id="wizardSubmitBtnText"><?= e(__('PAY ₱:amount WITH GCASH', ['amount' => '50.00'])) ?></span>
-                        </button>
-                    </div>
+                <div>
+                    <label for="notes" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        <?= e(__('Karagdagang Paalala (Opsyonal):')) ?>
+                    </label>
+                    <textarea id="notes" name="notes" rows="2" maxlength="300"
+                              placeholder="<?= e(__('Maaaring maglagay ng karagdagang impormasyon para sa kawani ng barangay...')) ?>"
+                              class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"></textarea>
                 </div>
+            </section>
 
-            </form>
-        </div>
+            <!-- Pickup notice + submit -->
+            <div class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300">
+                <i class="bi bi-building text-lg text-blue-600 dark:text-blue-400" aria-hidden="true"></i>
+                <p class="m-0 leading-relaxed">
+                    <strong><?= e(__('Pickup at Barangay Hall')) ?>.</strong>
+                    <?= e(__('You will get a notification when your document is ready. Bring a valid ID; any fee is paid at the Barangay Hall when you pick it up. No online payment is needed.')) ?>
+                </p>
+            </div>
+
+            <button type="submit" id="docSubmitBtn"
+                    class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-black text-white shadow-md hover:bg-blue-700 active:scale-[0.99] transition disabled:opacity-60">
+                <i class="bi bi-send-fill" aria-hidden="true"></i>
+                <span><?= e(__('Submit Request')) ?></span>
+            </button>
+        </form>
         <?php endif; ?>
-
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- SECTION 2: MY REQUESTS (COMPACT LIST & DETAIL MODAL)                      -->
-    <!-- ========================================================================= -->
+    <!-- ===================================================================== -->
+    <!-- MY REQUESTS                                                           -->
+    <!-- ===================================================================== -->
     <div id="sectionMyRequests" class="<?= $activeTab === 'requests' ? '' : 'hidden' ?>">
 
         <?php if (empty($requests)): ?>
@@ -538,131 +323,89 @@ ob_start();
         </div>
         <?php else: ?>
 
-        <!-- Compact Requests Container (Requirement 25) -->
         <div class="space-y-3">
             <?php foreach ($requests as $r):
-                $reqId      = (int) $r['id'];
-                $docLabel   = DocumentRequest::label((string) $r['document_type']);
-                $refNo      = (string) $r['reference_no'];
-                $statusKey  = (string) $r['status'];
-                $deliv      = (string) ($r['delivery_method'] ?? 'pickup');
-                $isDigital  = ($deliv === 'digital');
-                $fee        = (float) ($r['fee_amount'] ?? 0);
-                $payStatus  = (string) ($r['payment_status'] ?? 'UNPAID');
-                $isPaid     = DocumentRequest::isPaymentVerified($r);
-                $hasFile    = !empty($r['document_file_name']);
+                $reqId     = (int) $r['id'];
+                $refNo     = (string) $r['reference_no'];
+                $statusKey = strtolower((string) $r['status']);
+                $isDigital = ($r['delivery_method'] ?? 'pickup') === 'digital';
+                $fee       = (float) ($r['fee_amount'] ?? 0);
+                $closed    = in_array($statusKey, ['rejected', 'cancelled'], true);
+                $isReady   = in_array($statusKey, ['ready', 'ready_for_pickup', 'available_for_download'], true);
+                $isDone    = in_array($statusKey, ['released', 'completed'], true);
+                $canOpen   = $isDigital && !empty($r['document_file_name']) && empty($r['revoked_at'])
+                             && DocumentRequest::isPaymentVerified($r);
 
-                // Status Labels
-                $statusDisplay = DocumentRequest::statusLabel($statusKey);
-                if ($isDigital && $statusKey === 'ready') {
-                    $statusDisplay = __('Available for Download');
-                } elseif (!$isDigital && $statusKey === 'ready') {
-                    $statusDisplay = __('Ready for Pickup');
+                if ($isReady) {
+                    $statusDisplay = $isDigital ? __('Available for Download') : __('Ready for Pickup');
+                } elseif ($isDone) {
+                    $statusDisplay = __('Completed');
+                } else {
+                    $statusDisplay = DocumentRequest::statusLabel($statusKey);
                 }
 
-                // Payment Status Label
-                $payDisplay = __('Awaiting Payment');
-                $payBadgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
-                if ($fee <= 0.0 || $payStatus === DocumentPayment::STATUS_FREE || $payStatus === DocumentPayment::STATUS_NOT_REQUIRED) {
-                    $payDisplay = __('Not Required');
-                    $payBadgeClass = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
-                } elseif ($isPaid) {
-                    $payDisplay = __('Paid ✓');
-                    $payBadgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
-                } elseif (in_array($payStatus, ['FAILED', 'PAYMENT_REJECTED'], true)) {
-                    $payDisplay = __('Failed');
-                    $payBadgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300';
-                } elseif (in_array($payStatus, ['CANCELLED', 'EXPIRED'], true)) {
-                    $payDisplay = $payStatus === 'EXPIRED' ? __('Checkout expired') : __('Not completed');
-                    $payBadgeClass = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
-                } elseif (in_array($payStatus, ['PAYMENT_PROOF_SUBMITTED', 'UNDER_REVIEW'], true)) {
-                    $payDisplay = __('Payment verification');
-                } elseif ($payStatus === DocumentPayment::STATUS_PAY_AT_PICKUP) {
-                    $payDisplay = __('Pay at the hall');
-                }
-                $canPayOnline = !$isPaid && $fee > 0
-                    && !in_array($payStatus, ['PAYMENT_PROOF_SUBMITTED', 'UNDER_REVIEW', DocumentPayment::STATUS_PAY_AT_PICKUP], true)
-                    && !in_array($statusKey, ['rejected', 'cancelled'], true);
-            ?>
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs transition hover:border-slate-300 sm:p-5 dark:border-slate-800 dark:bg-slate-900">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    
-                    <!-- Document Info -->
-                    <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-center gap-2 mb-1">
-                            <h3 class="text-sm font-bold text-slate-900 dark:text-white truncate">
-                                <?= e($docLabel) ?>
-                            </h3>
-                            <span class="rounded bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                <?= e($refNo) ?>
-                            </span>
-                        </div>
-
-                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                            <span><i class="bi bi-calendar3 me-1"></i><?= date('M d, Y', strtotime($r['requested_at'])) ?></span>
-                            <span>&bull;</span>
-                            <span>
-                                <i class="bi bi-box-seam me-1"></i><?= $isDigital ? __('Digital Copy') : __('Pickup at Hall') ?>
-                            </span>
-                            <?php if ($fee > 0): ?>
-                            <span>&bull;</span>
-                            <span class="font-bold text-slate-700 dark:text-slate-300">₱<?= number_format($fee, 2) ?></span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- Statuses & Action -->
-                    <div class="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
-                        <div class="flex items-center gap-1.5">
-                            <!-- Payment + request status: shared colours (status_tone) -->
-                            <?= status_badge($isPaid ? 'paid' : (in_array($payStatus, ['FAILED', 'PAYMENT_REJECTED'], true) ? 'failed' : ($fee <= 0 ? 'draft' : ($payStatus === 'CANCELLED' ? 'cancelled' : 'awaiting_payment'))), $payDisplay) ?>
-                            <?= status_badge($statusKey === 'ready' ? ($isDigital ? 'available_for_download' : 'ready_for_pickup') : $statusKey, $statusDisplay) ?>
-                        </div>
-
-                        <!-- Action: View Details or Pay -->
-                        <div class="flex items-center gap-1.5">
-                            <?php if ($canPayOnline): ?>
-                            <a href="<?= e(route('documents/' . $reqId . '/payment')) ?>"
-                               class="inline-flex items-center gap-1 rounded-xl bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition">
-                                <i class="bi bi-wallet2" aria-hidden="true"></i> <?= e(__('Pay with GCash')) ?>
-                            </a>
-                            <?php endif; ?>
-
-                            <a href="<?= e(\App\Services\DocumentQr::url($r)) ?>"
-                               class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                               title="<?= e(__('Document QR: details, payment and claiming')) ?>">
-                                <i class="bi bi-qr-code" aria-hidden="true"></i> <?= e(__('QR')) ?>
-                            </a>
-                            <button type="button" onclick="openDetailsModal(<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>)"
-                                    class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                <i class="bi bi-eye"></i> <?= e(__('View Details')) ?>
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-                <?php
-                // Progress timeline: where this request is in the workflow.
-                $__stage = match (strtolower($statusKey)) {
-                    'awaiting_payment'                                   => 1,
-                    'under_review', 'processing', 'approved', 'needs_information' => 2,
-                    'ready', 'ready_for_pickup', 'available_for_download' => 3,
-                    'released', 'completed'                              => 4,
-                    default                                               => 0,
+                // Submitted → Under review → Ready for pickup → Claimed
+                $stage = match (true) {
+                    $isDone  => 3,
+                    $isReady => 2,
+                    in_array($statusKey, ['under_review', 'processing', 'approved', 'needs_information'], true) => 1,
+                    default  => 0,
                 };
-                if ($__stage < 2 && $isPaid && $fee > 0) { $__stage = max($__stage, 2); }
-                $__steps = [__('Submitted'), __('Payment'), __('Processing'), $isDigital ? __('Ready to download') : __('Ready for pickup'), __('Completed')];
-                if ($fee <= 0) { unset($__steps[1]); }
-                $__closed = in_array(strtolower($statusKey), ['rejected', 'cancelled'], true);
-                ?>
-                <?php if (!$__closed): ?>
+                $steps = [__('Submitted'), __('Under Review'), $isDigital ? __('Ready to download') : __('Ready for pickup'), __('Completed')];
+            ?>
+            <div id="req-<?= e($refNo) ?>"
+                 class="rounded-2xl border bg-white p-4 shadow-xs sm:p-5 dark:bg-slate-900 <?= $highlightRef === $refNo ? 'border-blue-400 ring-2 ring-blue-100 dark:border-blue-600 dark:ring-blue-950' : 'border-slate-200 dark:border-slate-800' ?>">
+                <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                    <div class="min-w-0 flex-1">
+                        <div class="mb-1 flex flex-wrap items-center gap-2">
+                            <h3 class="truncate text-sm font-bold text-slate-900 dark:text-white"><?= e(DocumentRequest::label((string) $r['document_type'])) ?></h3>
+                            <span class="rounded bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300"><?= e($refNo) ?></span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                            <span><i class="bi bi-calendar3 me-1"></i><?= e(date('M d, Y', strtotime((string) $r['requested_at']))) ?></span>
+                            <span>&bull;</span>
+                            <span><i class="bi bi-chat-left-text me-1"></i><?= e((string) $r['purpose']) ?></span>
+                            <span>&bull;</span>
+                            <span class="font-bold text-slate-700 dark:text-slate-300"><?= $fee > 0 ? '₱' . number_format($fee, 2) : e(__('LIBRE')) ?></span>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <?= status_badge($isReady ? ($isDigital ? 'available_for_download' : 'ready_for_pickup') : $statusKey, $statusDisplay) ?>
+                        <?php if ($canOpen): ?>
+                        <a href="<?= e(route('documents/' . $reqId . '/preview')) ?>" target="_blank" rel="noopener"
+                           class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <i class="bi bi-eye" aria-hidden="true"></i> <?= e(__('Preview')) ?>
+                        </a>
+                        <a href="<?= e(route('documents/' . $reqId . '/download')) ?>"
+                           class="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700">
+                            <i class="bi bi-download" aria-hidden="true"></i> <?= e(__('Download')) ?>
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <?php if ($isReady && !$isDigital): ?>
+                <p class="mt-3 mb-0 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+                    <i class="bi bi-building-check me-1" aria-hidden="true"></i>
+                    <?= e(__('Your document is ready. Pick it up at the Barangay Hall and bring a valid ID.')) ?>
+                    <?php if ($fee > 0): ?><?= e(__('Fee to pay at the hall:')) ?> <strong>₱<?= number_format($fee, 2) ?></strong><?php endif; ?>
+                </p>
+                <?php endif; ?>
+
+                <?php if (!empty($r['staff_note']) && ($closed || $statusKey === 'needs_information')): ?>
+                <p class="mt-3 mb-0 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                    <strong><?= e(__('Message from the barangay:')) ?></strong> <?= e((string) $r['staff_note']) ?>
+                </p>
+                <?php endif; ?>
+
+                <?php if (!$closed): ?>
                 <ol class="doc-timeline mt-3" aria-label="<?= e(__('Request progress')) ?>">
-                    <?php foreach ($__steps as $__i => $__label):
-                        $__state = $__i < $__stage ? 'done' : ($__i === $__stage ? 'current' : 'todo'); ?>
-                        <li class="doc-timeline__step is-<?= $__state ?>"<?= $__state === 'current' ? ' aria-current="step"' : '' ?>>
-                            <span class="doc-timeline__dot" aria-hidden="true"><?= $__state === 'done' ? '✓' : '' ?></span>
-                            <span class="doc-timeline__label"><?= e($__label) ?></span>
-                        </li>
+                    <?php foreach ($steps as $i => $label):
+                        $state = $i < $stage || ($i === $stage && $isDone) ? 'done' : ($i === $stage ? 'current' : 'todo'); ?>
+                    <li class="doc-timeline__step is-<?= $state ?>"<?= $state === 'current' ? ' aria-current="step"' : '' ?>>
+                        <span class="doc-timeline__dot" aria-hidden="true"><?= $state === 'done' ? '✓' : '' ?></span>
+                        <span class="doc-timeline__label"><?= e($label) ?></span>
+                    </li>
                     <?php endforeach; ?>
                 </ol>
                 <?php endif; ?>
@@ -670,431 +413,72 @@ ob_start();
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
-
-    </div>
-
-</div>
-
-<!-- ========================================================================= -->
-<!-- REQUEST DETAILS MODAL (Requirement 26)                                     -->
-<!-- ========================================================================= -->
-<div id="detailsModal" class="fixed inset-0 hidden bg-slate-900/60 p-3 sm:p-6 flex items-center justify-center backdrop-blur-xs transition-opacity" style="z-index:9000;">
-    <?php /* Compact and always on screen: the box scrolls inside instead of
-             growing past the window (it used to sit under the page header). */ ?>
-    <div class="relative w-full max-w-md rounded-2xl bg-white p-4 sm:p-5 shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-800 transition-all"
-         style="max-height:calc(100vh - 2rem);overflow-y:auto;">
-        
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 dark:border-slate-800">
-            <div>
-                <h3 class="text-base font-black text-slate-900 dark:text-white" id="modalDocTitle"><?= e(__('REQUEST DETAILS')) ?></h3>
-                <span class="font-mono text-xs font-bold text-blue-600 dark:text-blue-400" id="modalRefNo"></span>
-            </div>
-            <button type="button" onclick="closeDetailsModal()" class="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800">
-                <i class="bi bi-x-lg text-lg"></i>
-            </button>
-        </div>
-
-        <!-- Modal Body -->
-        <div class="space-y-4 text-xs">
-
-            <!-- Request Details Box -->
-            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-800/40">
-                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400"><?= e(__('DETALYE NG KAHILINGAN')) ?></div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500"><?= e(__('Dokumento:')) ?></span>
-                    <strong class="text-slate-900 dark:text-white" id="modalDocName"></strong>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500"><?= e(__('Layunin (Purpose):')) ?></span>
-                    <strong class="text-slate-900 dark:text-white" id="modalPurpose"></strong>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500"><?= e(__('Petsa ng Paghiling:')) ?></span>
-                    <strong class="text-slate-900 dark:text-white" id="modalDate"></strong>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500"><?= e(__('Paraan ng Pagtanggap:')) ?></span>
-                    <strong class="text-slate-900 dark:text-white" id="modalReceiving"></strong>
-                </div>
-            </div>
-
-            <!-- Payment Details Box -->
-            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-800/40">
-                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400"><?= e(__('PAGBABAYAD (PAYMENT)')) ?></div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500"><?= e(__('Halaga:')) ?></span>
-                    <strong class="text-slate-900 dark:text-white" id="modalAmount"></strong>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500"><?= e(__('Paraan ng Bayad:')) ?></span>
-                    <strong class="text-slate-900 dark:text-white" id="modalPaymentMethod">GCash</strong>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500"><?= e(__('Estado ng Bayad:')) ?></span>
-                    <span id="modalPaymentStatus" class="font-bold"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500"><?= e(__('Payment Reference:')) ?></span>
-                    <span class="font-mono font-bold text-slate-900 dark:text-white" id="modalPayRef"></span>
-                </div>
-                <div class="flex justify-between" id="modalPaidRow">
-                    <span class="text-slate-500"><?= e(__('Paid on:')) ?></span>
-                    <strong class="text-slate-900 dark:text-white" id="modalPaidAt"></strong>
-                </div>
-                <div class="flex justify-between gap-3" id="modalVerifyRow">
-                    <span class="text-slate-500"><?= e(__('Verification:')) ?></span>
-                    <strong class="text-right text-slate-900 dark:text-white" id="modalVerification"></strong>
-                </div>
-                <div class="flex justify-between" id="modalPmRow">
-                    <span class="text-slate-500"><?= e(__('PayMongo ref.:')) ?></span>
-                    <span class="font-mono text-slate-900 dark:text-white" id="modalPmRef"></span>
-                </div>
-            </div>
-
-            <!-- Process Timeline Tracker (Requirement 26) -->
-            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-800/40">
-                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5"><?= e(__('PROSESO (TIMELINE)')) ?></div>
-                <div class="space-y-2 text-xs" id="modalTimeline">
-                    <!-- Populated dynamically via JS -->
-                </div>
-            </div>
-
-            <!-- Pickup or Download Message Alert -->
-            <div id="modalNoticeBox" class="hidden rounded-xl p-3 text-xs font-semibold"></div>
-
-            <!-- Action Buttons inside Modal -->
-            <div class="pt-2 flex flex-col sm:flex-row gap-2 justify-end" id="modalActionButtons">
-                <!-- Populated dynamically via JS -->
-            </div>
-
-        </div>
-
     </div>
 </div>
 
 <script>
-var docFeesData = <?= json_encode($docFees, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-var currentStep = 1;
-var selectedFee = 50.0;
-var isSelectedFree = false;
-
 function switchMainTab(tab) {
-    var btnNew = document.getElementById('tabBtnNew');
-    var btnReq = document.getElementById('tabBtnRequests');
-    var secNew = document.getElementById('sectionNewRequest');
-    var secReq = document.getElementById('sectionMyRequests');
-
-    if (tab === 'new') {
-        btnNew.className = "flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400";
-        btnReq.className = "flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white";
-        secNew.classList.remove('hidden');
-        secReq.classList.add('hidden');
-    } else {
-        btnReq.className = "flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400";
-        btnNew.className = "flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white";
-        secReq.classList.remove('hidden');
-        secNew.classList.add('hidden');
-    }
+    var on  = 'flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400';
+    var off = 'flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white';
+    var isNew = tab === 'new';
+    var btnNew = document.getElementById('tabBtnNew'), btnReq = document.getElementById('tabBtnRequests');
+    btnNew.className = isNew ? on : off;
+    btnReq.className = isNew ? off : on;
+    btnNew.setAttribute('aria-selected', isNew ? 'true' : 'false');
+    btnReq.setAttribute('aria-selected', isNew ? 'false' : 'true');
+    document.getElementById('sectionNewRequest').classList.toggle('hidden', !isNew);
+    document.getElementById('sectionMyRequests').classList.toggle('hidden', isNew);
 }
 
 function onDocumentTypeChange() {
-    var sel = document.getElementById('wizard_document_type');
+    var sel = document.getElementById('document_type');
+    if (!sel || sel.selectedIndex < 0) { return; }
+    var opt = sel.options[sel.selectedIndex];
+    var amount = parseFloat(opt.getAttribute('data-amount') || '0');
+
     var isBiz = sel.value === 'business';
     document.getElementById('businessFields').classList.toggle('hidden', !isBiz);
-    document.getElementById('wizard_business_type').required = isBiz;
-    document.getElementById('wizard_business_name').required = isBiz;
-    var opt = sel.options[sel.selectedIndex];
-    var amt = parseFloat(opt.getAttribute('data-amount') || '50');
-    var isFree = (opt.getAttribute('data-free') === '1' || amt <= 0);
+    document.getElementById('business_type').required = isBiz;
+    document.getElementById('business_name').required = isBiz;
 
-    selectedFee = amt;
-    isSelectedFree = isFree;
-
-    var feeText = isFree ? <?= json_encode(__('LIBRE (₱0.00)')) ?> : '₱' + amt.toFixed(2);
+    document.getElementById('docFee').textContent = amount > 0 ? '₱' + amount.toFixed(2) : <?= json_encode(__('LIBRE')) ?>;
+    document.getElementById('docFeeNote').textContent = amount > 0
+        ? <?= json_encode(__('Paid at the Barangay Hall on pickup')) ?>
+        : <?= json_encode(__('No payment required')) ?>;
 
     // Description + requirements come from the admin's Document Fees page.
     var reqs = (opt.getAttribute('data-requirements') || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
     if (!reqs.length) { reqs = [<?= json_encode(__('Valid Government ID')) ?>]; }
-    var reqList = document.getElementById('step1ReqsDisplay');
-    reqList.textContent = '';
-    reqs.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; reqList.appendChild(li); });
+    var list = document.getElementById('docRequirements');
+    list.textContent = '';
+    reqs.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; list.appendChild(li); });
     var desc = opt.getAttribute('data-description') || '';
-    var descEl = document.getElementById('step1DescDisplay');
+    var descEl = document.getElementById('docDescription');
     descEl.textContent = desc;
     descEl.classList.toggle('hidden', desc === '');
-    document.getElementById('step1PayReq').textContent = isFree ? <?= json_encode(__('No payment required')) ?> : <?= json_encode(__('Payment required — pay with GCash')) ?>;
-    document.getElementById('step1FeeDisplay').innerText = feeText;
-    document.getElementById('summaryDocFee').innerText = feeText;
-    document.getElementById('summaryTotal').innerText = isFree ? '₱0.00' : '₱' + amt.toFixed(2);
-    document.getElementById('summaryDocName').innerText = opt.getAttribute('data-label') || opt.text;
-
-    var submitBtnText = document.getElementById('wizardSubmitBtnText');
-    var paymentBox = document.getElementById('summaryPaymentMethodBox');
-    if (isFree) {
-        submitBtnText.innerText = <?= json_encode(__('SUBMIT REQUEST (FREE)')) ?>;
-        paymentBox.classList.add('hidden');
-    } else {
-        submitBtnText.innerText = <?= json_encode(__('PAY ₱:amount WITH GCASH')) ?>.replace(':amount', amt.toFixed(2));
-        paymentBox.classList.remove('hidden');
-    }
 }
 
 function onPurposeChange(val) {
-    var otherWrap = document.getElementById('otherPurposeWrapper');
-    var otherInput = document.getElementById('wizard_purpose_other');
-    if (val === <?= json_encode(__('Other')) ?>) {
-        otherWrap.classList.remove('hidden');
-        otherInput.required = true;
-        otherInput.focus();
-    } else {
-        otherWrap.classList.add('hidden');
-        otherInput.required = false;
-    }
+    var isOther = val === 'Other';
+    var input = document.getElementById('purpose_other');
+    document.getElementById('otherPurposeWrapper').classList.toggle('hidden', !isOther);
+    input.required = isOther;
+    if (isOther) { input.focus(); }
 }
 
-function updateReceivingMethod(method) {
-    document.getElementById('summaryReceiving').innerText = (method === 'digital') ? <?= json_encode(__('Digital Copy (Online)')) ?> : <?= json_encode(__('Pickup at Barangay Hall')) ?>;
-}
-
-function goToStep(step) {
-    // Validate step transition
-    if (step === 4 && document.getElementById('wizard_document_type').value === 'business') {
-        var bt = document.getElementById('wizard_business_type'), bn = document.getElementById('wizard_business_name');
-        if (bt.value.trim().length < 2 || bn.value.trim().length < 2) {
-            alert(<?= json_encode(__('Enter the business name and the kind of business (e.g. Sari-sari store).')) ?>);
-            (bt.value.trim().length < 2 ? bt : bn).focus();
-            return;
-        }
+(function () {
+    var form = document.getElementById('docRequestForm');
+    if (form) {
+        // One request per click: a double tap must not file it twice.
+        form.addEventListener('submit', function () {
+            document.getElementById('docSubmitBtn').disabled = true;
+        });
+        onDocumentTypeChange();
     }
-    if (step === 4) {
-        var pur = document.getElementById('wizard_purpose').value;
-        if (pur === <?= json_encode(__('Other')) ?>) {
-            var oth = document.getElementById('wizard_purpose_other').value.trim();
-            if (oth.length < 3) {
-                alert(<?= json_encode(__('Mangyaring ilagay ang layunin sa text field.')) ?>);
-                document.getElementById('wizard_purpose_other').focus();
-                return;
-            }
-            document.getElementById('summaryPurpose').innerText = oth;
-        } else {
-            document.getElementById('summaryPurpose').innerText = pur;
-        }
-    }
-
-    currentStep = step;
-    for (var i = 1; i <= 4; i++) {
-        var el = document.getElementById('wizardStep' + i);
-        var ind = document.getElementById('stepIndicator' + i);
-        var circle = ind.querySelector('.step-circle');
-
-        if (i === step) {
-            el.classList.remove('hidden');
-            ind.className = "flex flex-col items-center text-blue-600 dark:text-blue-400";
-            circle.className = "step-circle flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white font-black text-xs shadow-sm mb-1";
-        } else if (i < step) {
-            el.classList.add('hidden');
-            ind.className = "flex flex-col items-center text-emerald-600 dark:text-emerald-400";
-            circle.className = "step-circle flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white font-black text-xs mb-1";
-            circle.innerHTML = '<i class="bi bi-check-lg"></i>';
-        } else {
-            el.classList.add('hidden');
-            ind.className = "flex flex-col items-center text-slate-400";
-            circle.className = "step-circle flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 font-black text-xs mb-1 dark:bg-slate-800 dark:text-slate-400";
-            circle.innerText = i;
-        }
-    }
-
-    window.scrollTo({ top: 100, behavior: 'smooth' });
-}
-
-function submitWizardForm() {
-    var btn = document.getElementById('wizardSubmitBtn');
-    var btnText = document.getElementById('wizardSubmitBtnText');
-    var alertBox = document.getElementById('wizardAlertBox');
-
-    // Requirement 38: Prevent double click
-    btn.disabled = true;
-    btnText.innerText = <?= json_encode(__('CREATING SECURE PAYMENT...')) ?>;
-
-    var form = document.getElementById('wizardDocForm');
-    var formData = new FormData(form);
-
-    fetch('<?= e(route('documents')) ?>', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(function(res) {
-        return res.json();
-    })
-    .then(function(data) {
-        // The request was saved but checkout could not start: go to its payment page,
-        // which explains why and lets the resident retry (re-submitting would be a duplicate).
-        if (data && !data.success && data.fallback_url) {
-            window.location.href = data.fallback_url;
-            return;
-        }
-        if (!data || !data.success) {
-            btn.disabled = false;
-            btnText.innerText = isSelectedFree ? <?= json_encode(__('SUBMIT REQUEST (FREE)')) ?> : <?= json_encode(__('PAY ₱:amount WITH GCASH')) ?>.replace(':amount', selectedFee.toFixed(2));
-            alertBox.className = "mb-4 rounded-xl p-3.5 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-900";
-            alertBox.innerText = data.error || <?= json_encode(__('Nabigong likhain ang kahilingan.')) ?>;
-            alertBox.classList.remove('hidden');
-            return;
-        }
-
-        // If free document, redirect to requests list
-        if (data.is_free) {
-            window.location.href = data.redirect_url || '<?= e(route('documents?tab=requests')) ?>';
-            return;
-        }
-
-        // Direct GCash: open the payment page (GCash details, QR, proof upload).
-        if (data.redirect_url && !data.checkout_url) {
-            btnText.innerText = <?= json_encode(__('OPENING GCASH PAYMENT...')) ?>;
-            window.location.href = data.redirect_url;
-            return;
-        }
-
-        // If paid document with PayMongo checkout URL, redirect immediately
-        if (data.checkout_url) {
-            btnText.innerText = <?= json_encode(__('REDIRECTING TO GCASH VIA PAYMONGO...')) ?>;
-            window.location.href = data.checkout_url;
-            return;
-        }
-
-        // Fallback
-        if (data.fallback_url) {
-            window.location.href = data.fallback_url;
-        }
-    })
-    .catch(function(err) {
-        console.error('Submission error:', err);
-        btn.disabled = false;
-        btnText.innerText = isSelectedFree ? <?= json_encode(__('SUBMIT REQUEST (FREE)')) ?> : <?= json_encode(__('PAY ₱:amount WITH GCASH')) ?>.replace(':amount', selectedFee.toFixed(2));
-        alertBox.className = "mb-4 rounded-xl p-3.5 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200";
-        alertBox.innerText = <?= json_encode(__('May naganap na aberya sa koneksyon. Pakisubukan muli.')) ?>;
-        alertBox.classList.remove('hidden');
-    });
-}
-
-function openDetailsModal(r) {
-    document.getElementById('modalRefNo').innerText = r.reference_no || '';
-    document.getElementById('modalDocName').innerText = r.document_type || '';
-    document.getElementById('modalPurpose').innerText = r.purpose || '';
-    document.getElementById('modalDate').innerText = r.requested_at ? new Date(r.requested_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
-    document.getElementById('modalReceiving').innerText = (r.delivery_method === 'digital') ? <?= json_encode(__('Digital Copy')) ?> : <?= json_encode(__('Pickup at Barangay Hall')) ?>;
-
-    var fee = parseFloat(r.fee_amount || 0);
-    document.getElementById('modalAmount').innerText = fee > 0 ? '₱' + fee.toFixed(2) : 'LIBRE';
-    document.getElementById('modalPayRef').innerText = r.payment_ref || (r.reference_no ? 'PAY-' + r.reference_no : 'N/A');
-
-    var pst = (r.payment_status || 'UNPAID').toUpperCase();
-    var verification = { paymongo: <?= json_encode(__('Automatically verified through PayMongo')) ?>, manual: <?= json_encode(__('Manually verified by the barangay')) ?>, counter: <?= json_encode(__('Paid in cash at the Barangay Hall')) ?>, waiver: <?= json_encode(__('Fee waived by the barangay')) ?> }[r.verification_type || ''] || '';
-    document.getElementById('modalPaidAt').innerText = r.paid_at ? new Date(String(r.paid_at).replace(' ', 'T')).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
-    document.getElementById('modalVerification').innerText = verification;
-    document.getElementById('modalPmRef').innerText = r.paymongo_payment_id || '';
-    document.getElementById('modalPaidRow').classList.toggle('hidden', !r.paid_at);
-    document.getElementById('modalVerifyRow').classList.toggle('hidden', !verification);
-    document.getElementById('modalPmRow').classList.toggle('hidden', !r.paymongo_payment_id);
-    var isPaid = (pst === 'PAID' || pst === 'PAID_VERIFIED' || pst === 'PAID_AT_PICKUP' || pst === 'FREE' || pst === 'NOT_REQUIRED' || fee <= 0);
-    var pstEl = document.getElementById('modalPaymentStatus');
-    if (isPaid) {
-        pstEl.className = "font-bold text-emerald-600 dark:text-emerald-400";
-        pstEl.innerText = <?= json_encode(__('PAID ✓')) ?>;
-    } else {
-        pstEl.className = "font-bold text-amber-600 dark:text-amber-400";
-        pstEl.innerText = pst;
-    }
-
-    // Process Timeline (Requirement 26)
-    var st = (r.status || 'pending').toLowerCase();
-    var timelineHtml = '';
-
-    // Step 1: Request Submitted
-    timelineHtml += '<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"><i class="bi bi-check-circle-fill"></i> <span>✓ Request Submitted</span></div>';
-
-    // Step 2: Payment Confirmed
-    if (isPaid) {
-        timelineHtml += '<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"><i class="bi bi-check-circle-fill"></i> <span>✓ Payment Confirmed</span></div>';
-    } else {
-        timelineHtml += '<div class="flex items-center gap-2 text-amber-600 dark:text-amber-400"><i class="bi bi-circle"></i> <span>○ Awaiting GCash Payment</span></div>';
-    }
-
-    // Step 3: Barangay Review
-    if (['approved', 'ready', 'released', 'completed'].indexOf(st) !== -1) {
-        timelineHtml += '<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"><i class="bi bi-check-circle-fill"></i> <span>✓ Barangay Review Completed</span></div>';
-    } else if (st === 'rejected') {
-        timelineHtml += '<div class="flex items-center gap-2 text-rose-600 dark:text-rose-400"><i class="bi bi-x-circle-fill"></i> <span>✗ Disapproved by Barangay</span></div>';
-    } else {
-        timelineHtml += '<div class="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold"><i class="bi bi-record-circle-fill"></i> <span>● Barangay Review Ongoing</span></div>';
-    }
-
-    // Step 4: Approved & Released
-    if (['ready', 'released', 'completed'].indexOf(st) !== -1) {
-        timelineHtml += '<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400"><i class="bi bi-check-circle-fill"></i> <span>✓ Approved & Document Ready</span></div>';
-    } else {
-        timelineHtml += '<div class="flex items-center gap-2 text-slate-400"><i class="bi bi-circle"></i> <span>○ Document Released / Ready for Pickup</span></div>';
-    }
-
-    document.getElementById('modalTimeline').innerHTML = timelineHtml;
-
-    // Notice & Action buttons
-    var noticeBox = document.getElementById('modalNoticeBox');
-    var actionBox = document.getElementById('modalActionButtons');
-    noticeBox.classList.add('hidden');
-    actionBox.innerHTML = '';
-
-    if (r.delivery_method === 'digital' && ['ready', 'released', 'completed'].indexOf(st) !== -1 && isPaid) {
-        noticeBox.className = "rounded-xl p-3 text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300";
-        noticeBox.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Handa na para i-download ang inyong opisyal na sertipiko.';
-        noticeBox.classList.remove('hidden');
-
-        actionBox.innerHTML = `
-            <a href="<?= e(route('documents/')) ?>${r.id}/preview" target="_blank"
-               class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition">
-                <i class="bi bi-eye"></i> Preview Document
-            </a>
-            <a href="<?= e(route('documents/')) ?>${r.id}/download"
-               class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition">
-                <i class="bi bi-download"></i> Download PDF
-            </a>
-        `;
-    } else if (r.delivery_method === 'pickup' && ['ready', 'released'].indexOf(st) !== -1) {
-        noticeBox.className = "rounded-xl p-3 text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300";
-        noticeBox.innerHTML = '<i class="bi bi-building-check me-1"></i> Ang inyong dokumento ay handa na para kunin sa Barangay Hall.';
-        noticeBox.classList.remove('hidden');
-    }
-
-    if (!isPaid && fee > 0) {
-        actionBox.innerHTML += `
-            <a href="<?= e(route('documents/')) ?>${r.id}/payment"
-               class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:from-blue-700 hover:to-indigo-700">
-                <i class="bi bi-wallet2"></i> Magbayad gamit ang GCash (₱${fee.toFixed(2)})
-            </a>
-        `;
-    }
-
-    // The page card it is written inside has a transform/blur, which makes
-    // "position: fixed" relative to that card (the modal sat under the header
-    // with no dimmed backdrop). On <body> it covers and centres on the screen.
-    const modal = document.getElementById('detailsModal');
-    if (modal.parentElement !== document.body) {
-        document.body.appendChild(modal);
-    }
-    modal.classList.remove('hidden');
-}
-
-function closeDetailsModal() {
-    document.getElementById('detailsModal').classList.add('hidden');
-}
-
-// Initial trigger
-onDocumentTypeChange();
+    var ref = <?= json_encode($highlightRef) ?>;
+    var card = ref ? document.getElementById('req-' + ref) : null;
+    if (card) { card.scrollIntoView({ block: 'center' }); }
+})();
 </script>
 
 <?php require __DIR__ . '/../shared/_live-refresh.php'; ?>

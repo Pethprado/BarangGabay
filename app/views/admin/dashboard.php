@@ -162,19 +162,7 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
 
 <?php if (!$__isStaffView): ?>
 <div class="row g-3 mb-3">
-    <?php if ($__isAdmin): ?>
-    <div class="col-12 col-lg-6">
-        <div class="admin-card dash-module">
-            <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-soundwave"></i></div>
-            <div>
-                <h2><?= e(__('Voice Training & AI Dataset Hub')) ?></h2>
-                <p><?= e(__('Train native voice pronunciations and manage datasets for Manobo, Filipino, English and Bisaya. Residents hear only approved recordings.')) ?></p>
-                <a href="<?= e(route('admin/voice-training')) ?>" class="btn-barangay"><?= e(__('Manage Voice Dataset')) ?> <i class="bi bi-arrow-right ms-1"></i></a>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
-    <div class="col-12 col-lg-<?= $__isAdmin ? '6' : '12' ?>">
+    <div class="col-12">
         <div class="admin-card dash-module">
             <div class="dash-module__icon" aria-hidden="true"><i class="bi bi-translate"></i></div>
             <div>
@@ -187,7 +175,7 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-12 col-lg-7">
+    <div class="col-12">
         <div class="admin-card h-100" style="padding:1.15rem 1.25rem;">
             <div class="d-flex justify-content-between align-items-center mb-1">
                 <h2 class="dash-h"><?= e(__('System Activity')) ?></h2>
@@ -208,28 +196,6 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
                     <time datetime="<?= e((string) $__log['created_at']) ?>"><?= e(relative_time((string) $__log['created_at'])) ?></time>
                 </div>
             <?php endforeach; endif; ?>
-        </div>
-    </div>
-    <div class="col-12 col-lg-5">
-        <div class="admin-card h-100" style="padding:1.15rem 1.25rem;">
-            <h2 class="dash-h mb-1"><?= e(__('Language Dataset Coverage')) ?></h2>
-            <p class="mb-1" style="font-size:.76rem;color:var(--text-muted);"><?= e(__('Words used in visible posts that have an approved recording.')) ?></p>
-            <?php foreach (($datasetCoverage ?? []) as $__lc => $__r):
-                $__pct = (float) ($__r['usage_coverage'] ?? 0); ?>
-                <div class="dash-cov-row">
-                    <span class="dash-cov-flag" aria-hidden="true"><?= e($__langFlag[$__lc] ?? strtoupper($__lc)) ?></span>
-                    <div style="flex:1;min-width:0;">
-                        <div class="dash-cov-top">
-                            <span><strong><?= e($__langName[$__lc] ?? $__lc) ?> <?= e(__('Words')) ?></strong><br><small><?= number_format((int) $__r['used_recorded']) ?> / <?= number_format((int) $__r['used_words']) ?></small></span>
-                            <strong><?= number_format($__pct, 0) ?>%</strong>
-                        </div>
-                        <div class="dash-cov-bar" role="progressbar" aria-label="<?= e($__langName[$__lc] ?? $__lc) ?> coverage" aria-valuenow="<?= $__pct ?>" aria-valuemin="0" aria-valuemax="100"><span class="<?= $__pct < 50 ? 'is-low' : '' ?>" style="width:<?= max(0, min(100, $__pct)) ?>%"></span></div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-            <?php if (!empty($manoboDictionary['total_dictionary_words'])): ?>
-                <p class="mb-0 mt-2" style="font-size:.76rem;color:var(--text-muted);"><?= e(__('Manobo dictionary:')) ?> <?= (int) $manoboDictionary['words_with_audio'] ?> <?= e(__('of')) ?> <?= (int) $manoboDictionary['total_dictionary_words'] ?> <?= e(__('entries recorded.')) ?></p>
-            <?php endif; ?>
         </div>
     </div>
 </div>

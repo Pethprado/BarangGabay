@@ -94,9 +94,6 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
     try { $__pendingTx = \App\Models\Announcement::countAwaitingTranslationReview(); } catch (\Throwable) { $__pendingTx = 0; }
     try { $__docOpen = \App\Models\DocumentRequest::countOpen(); } catch (\Throwable) { $__docOpen = 0; }
     try { $__fbUnread = (int) \App\Models\Feedback::unreadCountAdmin(); } catch (\Throwable) { $__fbUnread = 0; }
-    try {
-        $__payPending = (int) db()->query("SELECT COUNT(*) FROM document_payments WHERE payment_status = 'PAYMENT_PROOF_SUBMITTED'")->fetchColumn();
-    } catch (\Throwable) { $__payPending = 0; }
     $__sysErrors = 0;
     if ($userRole === 'superadmin') {
         try {
@@ -127,7 +124,6 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
         ];
         $__tools = [
             ['/admin/documents/print-queue', 'bi-printer', t('admin_nav.print_queue'), [], $__printQueue],
-            ['/admin/payments',   'bi-wallet2',           t('admin_nav.payments'),   [], $__payPending],
             ['/admin/evacuation', 'bi-house-exclamation', t('admin_nav.evacuation'), [], 0],
             ['/admin/safety',     'bi-shield-check',      t('admin_nav.safety'),     [], 0],
             ['/admin/reports',    'bi-bar-chart-line',    t('admin_nav.analytics'),  [], 0],
@@ -150,11 +146,10 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
             $__primary[] = ['/superadmin/settings', 'bi-gear', t('admin_nav.system_settings'), [], setting('maintenance_mode', false) ? '!' : 0];
         }
         $__tools = [
-            ['/admin/voice-training', 'bi-mic',               t('admin_nav.voice_training'), [], 0],
             ['/admin/manobo',         'bi-book',              t('admin_nav.manobo'),         ['/admin/dictionary', '/admin/bisaya'], 0],
             ['/admin/document-templates', 'bi-file-earmark-ruled', t('admin_nav.document_templates'), [], 0],
             ['/admin/documents/print-queue', 'bi-printer',     t('admin_nav.print_queue'),    [], $__printQueue],
-            ['/admin/payments',       'bi-wallet2',           t('admin_nav.payments'),       [], $__payPending],
+            ['/admin/payments/fees',  'bi-tags',              __('Document Fees'),           [], 0],
             ['/admin/feedback',       'bi-chat-left-text',    t('admin_nav.feedback'),       [], $__fbUnread],
             ['/admin/evacuation',     'bi-house-exclamation', t('admin_nav.evacuation'),     [], 0],
             ['/admin/safety',         'bi-shield-check',      t('admin_nav.safety'),         [], 0],
@@ -218,8 +213,8 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
             <?= $__primaryHtml ?>
 
             <?php /* Tools starts OPEN everywhere. It used to start folded on
-                     every page outside it, so Voice Training and the Manobo
-                     Dictionary looked "gone" from the admin; and on their own
+                     every page outside it, so the Manobo Dictionary
+                     looked "gone" from the admin; and on their own
                      pages a click on TOOLS folded it shut, which looked empty.
                      Folding is now the admin's choice, remembered per browser,
                      and never applies while you are on one of its pages. */ ?>

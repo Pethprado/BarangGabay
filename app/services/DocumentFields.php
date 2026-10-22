@@ -50,7 +50,13 @@ final class DocumentFields
             'ISSUE_YEAR'         => date('Y', $issued),
             'ISSUE_DATE_LONG'    => date('F j, Y', $issued),
             'OR_NUMBER'          => (string) ($request['or_number'] ?? ''),
-            'DOCUMENTARY_STAMP'  => $fee > 0 ? (DocumentRequest::isPaymentVerified($request) ? 'Paid' : 'Unpaid') : 'Not required',
+            // Pay-at-the-hall counts as paid: the printed copy is only handed
+            // over at the counter once the fee (O.R. above) is collected.
+            'DOCUMENTARY_STAMP'  => $fee > 0
+                ? (DocumentRequest::isPaymentVerified($request)
+                    || strtoupper((string) ($request['payment_status'] ?? '')) === \App\Models\DocumentPayment::STATUS_PAY_AT_PICKUP
+                    ? 'Paid' : 'Unpaid')
+                : 'Not required',
             'REFERENCE_NO'       => (string) ($request['certificate_no'] ?? $request['reference_no'] ?? ''),
             'BUSINESS_NAME'      => trim((string) ($request['business_name'] ?? '')),
             'BUSINESS_TYPE'      => mb_strtoupper(trim((string) ($request['business_type'] ?? ''))),

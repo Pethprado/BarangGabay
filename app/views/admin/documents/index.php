@@ -2,28 +2,26 @@
 /**
  * Admin Document Requests Queue & Review Area — BarangGabay
  *
- * Requirements 29, 30, 31, 32, 33, 34:
- * - Compact Table: REFERENCE, RESIDENT, DOCUMENT, AMOUNT, PAYMENT, REQUEST STATUS, DATE, ACTION
- * - Review Modal:
- *     RESIDENT INFORMATION
- *     DOCUMENT REQUEST
- *     PAYMENT INFORMATION (GCash via PayMongo, Paid, Amount, Reference, Paid On)
- *     REQUIREMENTS (Valid ID)
- *     ADMIN ACTIONS (Approve -> Auto Certificate Generation, Request Info, Reject, Mark Claimed)
+ * Residents file requests online; there is no online payment. Staff review a
+ * request, approve it when the document is ready for pickup (the certificate
+ * is generated and the resident is notified), then mark it claimed when it is
+ * collected — and any fee paid — at the Barangay Hall.
+ *
+ * - Compact Table: REFERENCE, RESIDENT, DOCUMENT, FEE, REQUEST STATUS, DATE, ACTION
+ * - Review Modal: resident, request, fee, requirements, and the staff actions
+ *   (Approve: Ready for Pickup, Request Info, Reject, Mark Claimed)
  */
 use App\Models\DocumentRequest;
-use App\Models\DocumentPayment;
 
 $requests = $requests ?? [];
 $status   = (string) ($status ?? '');
 $delivery = (string) ($delivery ?? '');
-$paymentStatus = (string) ($paymentStatus ?? '');
 $search   = (string) ($search ?? '');
 
 $totalCount    = count($requests);
 $pickupCount   = count(array_filter($requests, fn($r) => ($r['delivery_method'] ?? 'pickup') === 'pickup'));
-$digitalCount  = count(array_filter($requests, fn($r) => ($r['delivery_method'] ?? 'pickup') === 'digital'));
 $openCount     = count(array_filter($requests, fn($r) => in_array($r['status'] ?? '', ['pending', 'pending_review', 'under_review', 'processing'], true)));
+$readyCount    = count(array_filter($requests, fn($r) => in_array($r['status'] ?? '', ['ready', 'ready_for_pickup'], true)));
 
 ob_start();
 ?>
@@ -46,12 +44,14 @@ ob_start();
                 <span class="status-badge" style="background:var(--surface-muted);color:var(--text-secondary);font-size:.8rem;">
                     <strong><?= $totalCount ?></strong> <?= e(__('Total')) ?>
                 </span>
-                <span class="status-badge" style="background:#eef2ff;color:#4338ca;font-size:.8rem;border:1px solid #c7d2fe;">
-                    <i class="bi bi-file-earmark-arrow-down me-1"></i> <strong><?= $digitalCount ?></strong> <?= e(__('Digital')) ?>
-                </span>
                 <span class="status-badge" style="background:#f8fafc;color:#334155;font-size:.8rem;border:1px solid #e2e8f0;">
                     <i class="bi bi-building me-1"></i> <strong><?= $pickupCount ?></strong> <?= e(__('Pickup')) ?>
                 </span>
+                <?php if ($readyCount > 0): ?>
+                <span class="status-badge" style="background:#dcfce7;color:#166534;font-size:.8rem;border:1px solid #bbf7d0;">
+                    <i class="bi bi-box-seam me-1"></i> <strong><?= $readyCount ?></strong> <?= e(__('Ready for Pickup')) ?>
+                </span>
+                <?php endif; ?>
                 <?php if ($openCount > 0): ?>
                 <span class="status-badge" style="background:#fef3c7;color:#b45309;font-size:.8rem;border:1px solid #fde68a;">
                     <i class="bi bi-hourglass-split me-1"></i> <strong><?= $openCount ?></strong> <?= e(__('Pending Review')) ?>
@@ -94,12 +94,6 @@ ob_start();
                     <input type="hidden" name="status" value="<?= e($status) ?>">
                     <?php endif; ?>
 
-                    <select name="delivery" class="form-select form-select-sm" style="font-size:.8rem;min-width:120px;" onchange="this.form.submit()">
-                        <option value=""><?= e(__('Lahat ng Receiving')) ?></option>
-                        <option value="digital" <?= $delivery === 'digital' ? 'selected' : '' ?>><?= e(__('Digital Copy')) ?></option>
-                        <option value="pickup" <?= $delivery === 'pickup' ? 'selected' : '' ?>><?= e(__('Barangay Hall Pickup')) ?></option>
-                    </select>
-
                     <div class="input-group input-group-sm">
                         <input type="text" name="search" value="<?= e($search) ?>"
                                placeholder="<?= e(__('Hanapin (Ref, Pangalan)...')) ?>"
@@ -136,8 +130,7 @@ ob_start();
                     <th style="padding-left:16px;"><?= e(__('REFERENCE')) ?></th>
                     <th><?= e(__('RESIDENT')) ?></th>
                     <th><?= e(__('DOCUMENT')) ?></th>
-                    <th><?= e(__('AMOUNT')) ?></th>
-                    <th><?= e(__('PAYMENT')) ?></th>
+                    <th><?= e(__('FEE (PAID AT HALL)')) ?></th>
                     <th><?= e(__('REQUEST STATUS')) ?></th>
                     <th>DATE</th>
                     <th style="width:130px;text-align:right;padding-right:16px;"><?= e(__('ACTION')) ?></th>
@@ -151,11 +144,8 @@ ob_start();
                 $isDigital= $deliv === 'digital';
                 $hasFile  = !empty($r['document_file_name']);
 
-                // Payment calculations
                 $fee       = (float) ($r['fee_amount'] ?? 0);
-                $pst       = (string) ($r['payment_status'] ?? 'UNPAID');
-                $isPaid    = DocumentRequest::isPaymentVerified($r);
-                $isFree    = ($fee <= 0.0 || $pst === 'FREE' || $pst === 'NOT_REQUIRED');
+                $isFree    = $fee <= 0.0;
 
                 // Tailored Status Label
                 $statusLabel = __('Pending Review');
@@ -173,23 +163,6 @@ ob_start();
                 } elseif ($st === 'needs_information') {
                     $statusLabel = __('Needs Info');
                     $statusBadgeStyle = 'background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;';
-                } elseif ($st === 'awaiting_payment') {
-                    $statusLabel = __('Awaiting Payment');
-                    $statusBadgeStyle = 'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;';
-                }
-
-                // Payment Label
-                $payLabel = __('Pending');
-                $payBadgeStyle = 'background:#fef3c7;color:#92400e;border:1px solid #fde68a;';
-                if ($isFree) {
-                    $payLabel = __('Not Required');
-                    $payBadgeStyle = 'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;';
-                } elseif ($isPaid) {
-                    $payLabel = __('Paid ✓');
-                    $payBadgeStyle = 'background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;';
-                } elseif (in_array($pst, ['FAILED', 'PAYMENT_REJECTED'], true)) {
-                    $payLabel = __('Failed');
-                    $payBadgeStyle = 'background:#fee2e2;color:#991b1b;border:1px solid #fecaca;';
                 }
             ?>
             <tr>
@@ -228,16 +201,11 @@ ob_start();
                     </div>
                 </td>
 
-                <!-- 4. AMOUNT -->
+                <!-- 4. FEE -->
                 <td style="white-space:nowrap;">
                     <strong style="font-size:.84rem;color:var(--text-primary);">
                         <?= $isFree ? __('LIBRE') : '₱' . number_format($fee, 2) ?>
                     </strong>
-                </td>
-
-                <!-- 5. PAYMENT -->
-                <td style="white-space:nowrap;">
-                    <?= status_badge($isFree ? 'draft' : ($isPaid ? 'paid' : $pst), $payLabel) ?>
                 </td>
 
                 <!-- 6. REQUEST STATUS -->
@@ -328,24 +296,15 @@ ob_start();
                         </div>
                     </div>
 
-                    <!-- SECTION 3: PAYMENT INFORMATION (Requirement 30) -->
+                    <!-- SECTION 3: FEE -->
                     <div class="col-12 col-md-6">
                         <div class="p-3 rounded-3" style="background:#f0fdf4;border:1px solid #bbf7d0;height:100%;">
                             <h6 style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#166534;margin-bottom:.75rem;">
-                                <i class="bi bi-wallet2 text-success me-1"></i> <?= e(__('PAYMENT INFORMATION')) ?>
+                                <i class="bi bi-cash-coin text-success me-1"></i> <?= e(__('FEE')) ?>
                             </h6>
                             <div class="space-y-1" style="font-size:.82rem;">
-                                <div class="mb-1"><span class="text-muted"><?= e(__('Payment Method:')) ?></span> <strong id="revPayMethod" class="text-dark"><?= e(__('GCash via PayMongo')) ?></strong></div>
                                 <div class="mb-1"><span class="text-muted"><?= e(__('Halaga (Amount):')) ?></span> <strong id="revAmount" class="text-success" style="font-size:.95rem;"></strong></div>
-                                <div class="mb-1"><span class="text-muted"><?= e(__('Status:')) ?></span> <span id="revPayStatus" class="fw-bold"></span></div>
-                                <div class="mb-1"><span class="text-muted"><?= e(__('Reference:')) ?></span> <span class="font-monospace fw-bold" id="revPayRef"></span></div>
-                                <div class="mb-1"><span class="text-muted"><?= e(__('Paid On:')) ?></span> <span id="revPayDate" class="text-muted"></span></div>
-                                <div class="mb-1"><span class="text-muted"><?= e(__('Verification:')) ?></span> <strong id="revPayVerify" class="text-dark"></strong></div>
-                                <div class="mb-1" id="revPmRow"><span class="text-muted"><?= e(__('PayMongo receipt:')) ?></span> <span class="font-monospace" id="revPmId"></span></div>
-                                <div class="mt-2 d-flex flex-wrap gap-1">
-                                    <a id="revReceiptLink" class="btn btn-sm btn-outline-success d-none" target="_blank" rel="noopener"><i class="bi bi-receipt me-1"></i><?= e(__('View receipt')) ?></a>
-                                    <a id="revProofLink" class="btn btn-sm btn-outline-secondary d-none" target="_blank" rel="noopener"><i class="bi bi-image me-1"></i><?= e(__('Resident\'s screenshot')) ?></a>
-                                </div>
+                                <div class="text-muted" style="font-size:.76rem;line-height:1.35;"><?= e(__('No online payment. Collect the fee in cash at the Barangay Hall when the resident claims the document.')) ?></div>
                             </div>
                         </div>
                     </div>
@@ -386,12 +345,12 @@ ob_start();
                                     <?php if (in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true)): ?><a href="<?= e(route('admin/document-templates')) ?>#signatures" class="fw-bold">Upload it</a><?php else: ?>Ask an admin to upload it.<?php endif; ?>
                                 </div>
                                 <?php endif; ?>
-                                <form method="post" id="formApprove" onsubmit="return confirm(<?= e(json_encode(__('Aprubahan at awtomatikong gumawa ng opisyal na sertipiko na may QR Code?'))) ?>);">
+                                <form method="post" id="formApprove" onsubmit="return confirm(<?= e(json_encode(__('Approve this request and tell the resident it is ready for pickup?'))) ?>);">
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                                         <div>
-                                            <strong class="d-block text-dark" style="font-size:.85rem;"><?= e(__('Aprubahan ang Kahilingan (Approve & Auto-Generate)')) ?></strong>
-                                            <span class="text-muted" style="font-size:.75rem;">The document is filled from the resident's verified profile. Check the preview first.</span>
+                                            <strong class="d-block text-dark" style="font-size:.85rem;"><?= e(__('Approve — Ready for Pickup')) ?></strong>
+                                            <span class="text-muted" style="font-size:.75rem;"><?= e(__('Generates the document from the resident\'s verified profile and tells the resident it is ready to pick up at the Barangay Hall. Check the preview first.')) ?></span>
                                         </div>
                                         <a href="#" id="revDraftBtn" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm fw-bold"><i class="bi bi-eye me-1"></i>Preview document</a>
                                     </div>
@@ -401,7 +360,7 @@ ob_start();
                                             <input id="approveOr" name="or_number" maxlength="40" class="form-control form-control-sm" placeholder="e.g. 2513827">
                                         </div>
                                         <button type="submit" class="btn btn-success btn-sm px-4 fw-bold">
-                                            <i class="bi bi-patch-check me-1"></i> <?= e(__('APPROVE & GENERATE')) ?>
+                                            <i class="bi bi-patch-check me-1"></i> <?= e(__('APPROVE: READY FOR PICKUP')) ?>
                                         </button>
                                     </div>
                                 </form>
@@ -511,34 +470,9 @@ function openReviewModal(r) {
     document.getElementById('revReceiving').innerText = (r.delivery_method === 'digital') ? <?= json_encode(__('Digital Copy (Online Soft Copy)')) ?> : <?= json_encode(__('Pickup at Barangay Hall (Counter)')) ?>;
     document.getElementById('revDate').innerText = r.requested_at ? new Date(r.requested_at).toLocaleString() : '';
 
-    // Payment Section (Requirement 30)
+    // Fee (paid in cash at the hall)
     var fee = parseFloat(r.fee_amount || 0);
-    var pst = (r.payment_status || 'UNPAID').toUpperCase();
-    var isPaid = (pst === 'PAID' || pst === 'PAID_VERIFIED' || pst === 'PAID_AT_PICKUP' || pst === 'FREE' || pst === 'NOT_REQUIRED' || fee <= 0);
-
     document.getElementById('revAmount').innerText = fee > 0 ? '₱' + fee.toFixed(2) : 'LIBRE';
-    document.getElementById('revPayRef').innerText = r.payment_ref || (r.reference_no ? 'PAY-' + r.reference_no : 'N/A');
-    document.getElementById('revPayDate').innerText = r.paid_at ? new Date(String(r.paid_at).replace(' ', 'T')).toLocaleString() : '—';
-    var verify = { paymongo: <?= json_encode(__('Automatically verified through PayMongo')) ?>, manual: <?= json_encode(__('Manually verified by staff')) ?>, counter: <?= json_encode(__('Cash received at the hall')) ?>, waiver: <?= json_encode(__('Fee waived')) ?> }[r.verification_type || ''];
-    if (!verify) { verify = (pst === 'UNDER_REVIEW' || pst === 'PAYMENT_PROOF_SUBMITTED') ? <?= json_encode(__('Manual review needed — see Payment Management')) ?> : (fee > 0 ? <?= json_encode(__('Not paid yet')) ?> : <?= json_encode(__('No payment needed')) ?>); }
-    document.getElementById('revPayVerify').innerText = verify;
-    document.getElementById('revPmId').innerText = r.paymongo_payment_id || '';
-    document.getElementById('revPmRow').classList.toggle('d-none', !r.paymongo_payment_id);
-    var receiptLink = document.getElementById('revReceiptLink');
-    receiptLink.classList.toggle('d-none', !(r.paid_at && fee > 0));
-    receiptLink.href = <?= json_encode(route('documents/')) ?> + r.id + '/acknowledgement';
-    var proofLink = document.getElementById('revProofLink');
-    proofLink.classList.toggle('d-none', !(r.receipt_file_name && r.pay_id));
-    proofLink.href = <?= json_encode(route('admin/payments/')) ?> + r.pay_id + '/receipt';
-
-    var pstEl = document.getElementById('revPayStatus');
-    if (isPaid) {
-        pstEl.className = "text-success fw-bold";
-        pstEl.innerHTML = '<i class="bi bi-check-circle-fill"></i> PAID ✓';
-    } else {
-        pstEl.className = "text-warning fw-bold";
-        pstEl.innerText = pst;
-    }
 
     // Certificate Box
     var certBox = document.getElementById('revCertBox');

@@ -131,5 +131,7 @@
     "Settings": "Mga Kahikayan",
     "Bookmarks": "Mga Gitipigan",
     "My Profile": "Siak Propayl",
-    "File photo:": "Hulagway nga panig-ingnan:"
+    "File photo:": "Hulagway nga panig-ingnan:",
+    "Grammar auto-corrected: {0} fix(es).": "Awtomatikong gitul-id ang gramatika: {0} ka pagtul-id.",
+    "English and Filipino translations are checked with LanguageTool (free, sends the text to languagetool.org); Manobo gets spacing, punctuation, capital letters and doubled-word fixes. Text staff type is never changed.": "Ang mga hubad sa Iningles ug Filipino gisusi gamit ang LanguageTool (libre, ipadala ang teksto ngadto sa languagetool.org); sa Manobo, gitul-id ang mga espasyo, bantas, dagkong letra ug nagdoble nga pulong. Ang teksto nga gi-type sa kawani dili gayud usbon."
 }

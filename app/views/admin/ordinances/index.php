@@ -94,14 +94,6 @@ require __DIR__ . '/../../shared/_mine-switch.php';
                 </tr>
             </thead>
             <tbody>
-            <?php
-            /*
-             * Which ordinances are still leaning on the generated Manobo voice.
-             * One query for the whole page rather than one per row — the
-             * barangay's worklist for getting a real speaker to record them.
-             */
-            $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('ordinance');
-            ?>
             <?php foreach ($ordinances as $ord):
                 $statusCls = match($ord['status']) {
                     'active'   => 'status-active',
@@ -148,12 +140,6 @@ require __DIR__ . '/../../shared/_mine-switch.php';
                           title="<?= e(t('manobo_state.' . $__mnState . '_help')) ?>">
                         🌿 <?= e(t('manobo_state.' . $__mnState)) ?>
                     </span>
-                    <?php if (isset($__approxManobo['ordinance:' . $ord['id']])): ?>
-                    <span class="voice-approx-flag"
-                          title="<?= e(t('voice_reader.approx_flag_title')) ?>">
-                        <i class="bi bi-robot"></i> <?= e(t('voice_reader.approx_flag')) ?>
-                    </span>
-                    <?php endif; ?>
                     <?php if (!empty($ord['audio_manobo_path'])): ?>
                     <span class="badge rounded-pill"
                           style="background:#e0f2fe;color:#075985;font-size:.6rem;font-weight:600;"

@@ -211,41 +211,6 @@ function after_response(callable $job): void
     $jobs->append($job);
 }
 
-/**
- * After a post is saved: how much of its Manobo reading already has a
- * trained voice, shown under the success message with a link (admins) to
- * record the rest. The Voice Reader itself needs no step — it picks the
- * trained recordings for every post when a resident opens it.
- */
-function voice_coverage_flash(string $type, int $id): void
-{
-    try {
-        $c = \App\Services\VoiceScript::forPost($type, $id, 'msm');
-    } catch (\Throwable $e) {
-        error_log('[voice_coverage_flash] ' . $e->getMessage());
-        return;
-    }
-    $canRecord = in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true);
-    $link      = $canRecord ? route('admin/voice-training') . '?script=msm&post=' . rawurlencode($type . '-' . $id) . '#script' : null;
-
-    if ($c === null) {
-        flash('voice', ['text' => 'Voice reader: the Manobo version of this post is still being prepared. '
-            . 'Its words will appear in Voice Training → Recording Script as soon as it is ready.', 'link' => null]);
-        return;
-    }
-    if ($c['missing'] === 0) {
-        flash('voice', ['text' => "Voice reader: all {$c['words']} Manobo words in this post have a trained voice — "
-            . 'residents hear it read completely.', 'link' => null, 'ok' => true]);
-        return;
-    }
-    flash('voice', [
-        'text' => "Voice reader: {$c['recorded']} of {$c['words']} Manobo words in this post already have a trained voice "
-            . "and play automatically; {$c['missing']} still need a recording "
-            . "({$c['sentences_ready']} of {$c['sentences']} sentences can be read in full).",
-        'link' => $link,
-    ]);
-}
-
 function redirect(string $path): void
 {
     if (strpos($path, '://') === false) {

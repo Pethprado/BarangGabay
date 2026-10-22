@@ -61,7 +61,14 @@ class ScheduledPublisher
         }
 
         // Claim first, send second. Whoever wins the UPDATE owns the dispatch.
-        if (!Announcement::claimForNotification($id)) {
+        // The post is already saved by now; a failed claim must not turn that
+        // into an error page for staff.
+        try {
+            if (!Announcement::claimForNotification($id)) {
+                return false;
+            }
+        } catch (\Throwable $e) {
+            error_log("[ScheduledPublisher::dispatch] claim failed for announcement #{$id}: " . $e->getMessage());
             return false;
         }
 

@@ -181,8 +181,8 @@ class NotificationController
                 'announcement'     => $rid ? route('admin/announcements/' . $rid . '/edit') : route('admin/announcements'),
                 'event'            => $rid ? route('admin/events/' . $rid . '/edit') : route('admin/events'),
                 'ordinance'        => $rid ? route('admin/ordinances/' . $rid . '/edit') : route('admin/ordinances'),
-                'document_request' => route('admin/documents'),
-                'document_payment' => route('admin/payments'),
+                // Online payment was removed; old payment notices open the queue.
+                'document_request', 'document_payment' => route('admin/documents'),
                 'feedback'         => route('admin/feedback'),
                 'user', 'resident' => route('admin/residents'),
                 default            => match ((string) ($notif['type'] ?? '')) {

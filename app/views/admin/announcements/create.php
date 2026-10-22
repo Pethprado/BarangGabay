@@ -116,21 +116,12 @@ ob_start();
             $__eBodyVal   = '';
             $__eBodyName  = 'body_en';
             $__eBodyLabel = t('manobo_fields.label_body');
-            // Staff hear the post before a resident does — the only reliable
-            // way to catch an abbreviation or a missing full stop that reads
-            // fine but sounds wrong. Above the translation panels because it
-            // is about the content just typed, not a translation of it.
             // Bring content in from a Facebook caption, a link, or attach the
             // original post. Placed above the translation panels because it
             // fills the fields those panels then translate.
             $__ipType   = 'announcement';
             $__ipSource = null;
             require __DIR__ . '/../../shared/_import-panel.php';
-
-            $__vpSourceLang = $__eSourceLang ?? 'fil';
-            $__vpType       = 'announcement';
-            $__vpRow        = null;          // nothing saved yet — preview only
-            require __DIR__ . '/../../shared/_voice-preview.php';
 
             require __DIR__ . '/../../shared/_english-fields.php';
 

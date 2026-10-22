@@ -27,34 +27,13 @@ return [
     // Requirement 27: Expose reusable Manobo & Bisaya hybrid translation endpoint
     ['POST', '/api/translate/manobo', 'ManoboController@apiTranslateManobo', []],
 
-    // Voice reader script builder. Pure string work — no AI, no API key, no
-    // database — so it is safe on plain 'auth': staff previewing a draft they
-    // are still typing, and residents hearing a summary that was generated
-    // after the page rendered. The detail pages themselves embed their script
-    // at render time and never call this.
-    ['POST', '/api/voice/script', 'VoiceController@script', ['auth']],
-
-    // Text → playback plan of approved dataset recordings (longest phrase
-    // first) plus the words that still need the device voice. Same resolver
-    // the admin Interactive Voice Tester uses. Database reads only.
-    ['POST', '/api/voice/resolve', 'VoiceTrainingController@resolve', ['auth']],
-
     // A detail page whose language has no stored translation asks for one:
     // generated once (MyMemory / Manobo hybrid), stored for every reader.
     // Throttled per session in the controller; never bypasses the urgent-post
     // review gate.
     ['POST', '/api/content/translate', 'VoiceController@ensureTranslation', ['auth', 'verified']],
 
-    // Building the cached narration, on the other hand, spends the barangay's
-    // metered text-to-speech allowance — so it is staff-only and never reached
-    // from a resident's page. Publishing calls the same service directly.
-    ['POST', '/api/admin/voice/generate', 'VoiceController@generate', ['auth', 'role:admin,staff']],
 
-    // A resident pressed "Isalin ngayon" on a language the player has no text
-    // for yet. Text only, via the same TranslationRetryRunner staff already
-    // use — never audio, which stays behind the route above. Rate-limited so
-    // the barangay's translation allowance cannot be spent by one resident
-    // mashing the button across many posts.
     // Background retry of unfinished translations, requested by the page after
     // it loads (shared/_background-sweep.php). Any visitor's traffic drives it.
     ['POST', '/api/translations/sweep', 'MaintenanceController@translationSweep', []],
@@ -62,8 +41,6 @@ return [
     ['POST', '/api/hazards/sweep', 'MaintenanceController@hazardSweep', []],
     // For an outside scheduler (cron-job.org etc.): keeps checks running while nobody visits.
     ['GET',  '/api/hazards/cron',  'MaintenanceController@hazardCron', []],
-
-    ['POST', '/api/voice/translate-now', 'VoiceController@translateNow', ['auth', 'verified', 'rate-limit']],
 
     // Content import. These make outbound HTTP requests to an address the
     // caller supplies, so they are staff-only, rate-limited in the controller,

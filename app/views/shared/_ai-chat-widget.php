@@ -231,6 +231,23 @@
     border-bottom-right-radius: .3rem;
 }
 
+/* ── Links inside answers + quick-question chips ── */
+.aic-link { color: var(--brand-primary); font-weight: 600; text-decoration: underline; word-break: break-all; }
+.aic-chips { display: flex; flex-wrap: wrap; gap: .4rem; padding-left: 2.25rem; }
+.aic-chip {
+    background: var(--surface-card);
+    border: 1px solid var(--brand-primary);
+    color: var(--brand-primary);
+    border-radius: 9999px;
+    padding: .3rem .7rem;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s, color .15s;
+}
+.aic-chip:hover, .aic-chip:focus-visible { background: var(--brand-primary); color: #fff; }
+
 /* ── Typing indicator ── */
 .aic-typing-dots {
     display: flex;
@@ -386,6 +403,13 @@
                 </div>
             </template>
 
+            <!-- Quick questions (until the resident asks something) -->
+            <div class="aic-chips" x-show="suggestions.length && !typing">
+                <template x-for="s in suggestions" :key="s">
+                    <button type="button" class="aic-chip" @click="ask(s)" x-text="s"></button>
+                </template>
+            </div>
+
             <!-- Typing indicator (three bouncing dots) -->
             <div class="aic-msg aic-msg-ai" x-show="typing" aria-label="<?= e(t('ai_chat.typing')) ?>">
                 <div class="aic-avatar" aria-hidden="true">
@@ -476,6 +500,12 @@
         'rateLimited'     => t('ai_chat.rate_limited'),
         'genericError'    => t('ai_chat.generic_error'),
         'connectionError' => t('ai_chat.connection_error'),
+        'suggestions'     => [
+            t('ai_chat.suggest_documents'),
+            t('ai_chat.suggest_events'),
+            t('ai_chat.suggest_evacuation'),
+            t('ai_chat.suggest_ordinances'),
+        ],
     ]) ?>;
 </script>
 <script src="<?= e(asset_v('assets/js/ai-widget.js')) ?>"></script>

@@ -154,19 +154,10 @@ ob_start();
             $__eBodyVal   = $ordinance['description_en'] ?? '';
             $__eBodyName  = 'description_en';
             $__eBodyLabel = t('manobo_fields.label_description');
-            // Staff hear the post before a resident does — the only reliable
-            // way to catch an abbreviation or a missing full stop that reads
-            // fine but sounds wrong. Above the translation panels because it
-            // is about the content just typed, not a translation of it.
             // See the note in upload.php.
             $__ipType   = 'ordinance';
             $__ipSource = $ordinance['source_url'] ?? null;
             require __DIR__ . '/../../shared/_import-panel.php';
-
-            $__vpSourceLang = $__eSourceLang ?? 'fil';
-            $__vpType       = 'ordinance';
-            $__vpRow        = $ordinance;
-            require __DIR__ . '/../../shared/_voice-preview.php';
 
             /* Above the hand-entry fields — see the note in the
                announcement edit form. */

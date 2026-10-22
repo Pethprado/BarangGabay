@@ -269,6 +269,10 @@ if (typeof window.englishDraft === 'undefined') {
                         this.message = <?= json_encode(t('admin_manobo.draft_coverage')) ?>
                             .replace(':matched', data.matched)
                             .replace(':total',   data.total);
+                        if (data.corrected > 0) {
+                            this.message += ' ' + <?= json_encode(t('admin_manobo.grammar_fixed')) ?>
+                                .replace(':count', data.corrected);
+                        }
                     } else {
                         this.ok      = false;
                         this.missing = [];

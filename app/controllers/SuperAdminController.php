@@ -264,6 +264,9 @@ class SuperAdminController
         // switch rather than something hardcoded on.
         $values['free_translation_enabled'] = !empty($_POST['free_translation_enabled']) ? 1 : 0;
 
+        // Grammar clean-up of machine translations (GrammarCorrector). On by default.
+        $values['grammar_autocorrect'] = !empty($_POST['grammar_autocorrect']) ? 1 : 0;
+
         // Two-factor policy. Only these roles may be required — residents are
         // excluded on purpose: they sign in from shared phones and a lost
         // authenticator would flood staff with lockout requests.

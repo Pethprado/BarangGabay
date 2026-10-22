@@ -8,7 +8,6 @@ use App\Models\AuditLog;
 use App\Models\TranslationAttempt;
 use App\Services\FileService;
 use App\Services\NotificationService;
-use App\Services\PostAudioService;
 use App\Services\PostSms;
 use App\Services\SourceLink;
 use App\Services\SemaphoreSmsService;
@@ -202,14 +201,9 @@ class OrdinanceController
             'ordinance', $ordinanceId, $title, $description, $sourceLang, !$manualOther, !$manualManobo
         );
 
-        // Cache the narration residents will hear. An ordinance speaks its
-        // plain-language summary, never the PDF — PostScript enforces that, so
-        // twenty pages of legal text are never sent to a metered TTS provider.
         // Where this came from — for an ordinance, typically the Drive link
         // the PDF was pulled from. See the note in AnnouncementController.
         SourceLink::store('ordinance', $ordinanceId, $source);
-
-        PostAudioService::refresh('ordinance', $ordinanceId, (int) $_SESSION['user_id']);
 
         if ($manualManobo) {
             $successMsg = t('flash.ord_uploaded') . t('flash.manual_manobo_saved');
@@ -248,7 +242,6 @@ class OrdinanceController
 
         AuditLog::record((int) $_SESSION['user_id'], 'ordinance.upload', 'Uploaded ordinance: ' . $title);
         flash('success', $successMsg);
-        voice_coverage_flash('ordinance', (int) $ordinanceId);
         redirect('/admin/ordinances');
     }
 
@@ -362,8 +355,6 @@ class OrdinanceController
         // hash per language, so an unchanged language costs nothing.
         SourceLink::store('ordinance', $id, SourceLink::prepare((string) ($_POST['source_url'] ?? ''), $ordinance));
 
-        PostAudioService::refresh('ordinance', $id, (int) $_SESSION['user_id']);
-
         if ($manualManobo) {
             $successMsg = t('flash.ord_updated') . t('flash.manual_manobo_saved');
         } else {
@@ -383,7 +374,6 @@ class OrdinanceController
 
         AuditLog::record((int) $_SESSION['user_id'], 'ordinance.update', 'Updated ordinance: ' . $title);
         flash('success', $successMsg);
-        voice_coverage_flash('ordinance', (int) $id);
         redirect('/admin/ordinances');
     }
 

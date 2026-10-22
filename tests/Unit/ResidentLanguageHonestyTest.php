@@ -222,38 +222,6 @@ final class ResidentLanguageHonestyTest extends TestCase
     }
 
     /**
-     * The player must say which voice is speaking.
-     *
-     * Manobo is read by a Filipino voice, and a Manobo speaker has a right
-     * to know that before they press play rather than after. When no
-     * provider is configured at all it is the browser's own voice, and
-     * calling that "the AI voice" would be its own small lie.
-     */
-    public function testThePlayerNamesTheVoiceItIsUsing(): void
-    {
-        $js = (string) file_get_contents(
-            \dirname(__DIR__, 2) . '/public/assets/js/voice-reader.js'
-        );
-
-        $this->assertStringContainsString('sourceLabel', $js);
-        $this->assertStringContainsString('source_approx', $js, 'the Manobo approximation is not labelled');
-        $this->assertStringContainsString('source_device', $js, 'the browser fallback is not labelled');
-
-        $partial = (string) file_get_contents(
-            \dirname(__DIR__, 2) . '/app/views/shared/_voice-reader.php'
-        );
-        $this->assertStringContainsString('x-text="sourceLabel"', $partial,
-            'the label is computed and never rendered');
-
-        // And both sentences exist, in both languages.
-        foreach ([require \dirname(__DIR__, 2) . '/lang/en.php',
-                  require \dirname(__DIR__, 2) . '/lang/fil.php'] as $lang) {
-            $this->assertArrayHasKey('source_approx', $lang['voice_reader']);
-            $this->assertArrayHasKey('source_device', $lang['voice_reader']);
-        }
-    }
-
-    /**
      * The Manobo label must actually say it is a Filipino voice. "AI voice"
      * alone would be true and useless.
      */

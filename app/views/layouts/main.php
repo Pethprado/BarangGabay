@@ -648,16 +648,6 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
         }, 4000);
     </script>
     <script src="<?= e(asset_v('assets/js/main.js')) ?>"></script>
-    <script>
-        if (window.speechSynthesis) {
-            window.speechSynthesis.onvoiceschanged = function () {
-                window.speechSynthesis.getVoices();
-            };
-            window.addEventListener('beforeunload', function () {
-                window.speechSynthesis.cancel();
-            });
-        }
-    </script>
 <script>
 // Bookmark toggles (post pages and My Bookmarks): POST /bookmarks/toggle.
 document.addEventListener('click', function (ev) {

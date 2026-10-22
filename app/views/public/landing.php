@@ -99,7 +99,7 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
     /* Services */
     .mk-services { position: relative; z-index: 2; margin-top: -5rem; display: grid; gap: .9rem; grid-template-columns: repeat(2, minmax(0,1fr)); }
     @media (min-width: 760px) { .mk-services { grid-template-columns: repeat(3, minmax(0,1fr)); } }
-    @media (min-width: 1100px) { .mk-services { grid-template-columns: repeat(5, minmax(0,1fr)); } }
+    @media (min-width: 1100px) { .mk-services { grid-template-columns: repeat(4, minmax(0,1fr)); } }
     .mk-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 1rem; box-shadow: var(--shadow-card); transition: transform .15s, box-shadow .15s; }
     .mk-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
     .mk-svc { display: block; padding: 1.15rem .9rem; text-align: center; text-decoration: none; }
@@ -201,7 +201,6 @@ $__langs        = ['en' => 'EN', 'fil' => 'FIL', 'msm' => 'MN'];
             ['bi-megaphone-fill', 's_announce', '', route('announcements')],
             ['bi-exclamation-triangle-fill', 's_alerts', 'orange', route('evacuation')],
             ['bi-translate', 's_lang', '', route('dictionary')],
-            ['bi-volume-up-fill', 's_voice', '', route('announcements')],
             ['bi-calendar-event-fill', 's_events', 'orange', route('events')],
         ] as [$icon, $key, $tone, $href]): ?>
             <a href="<?= e($href) ?>" class="mk-card mk-svc">

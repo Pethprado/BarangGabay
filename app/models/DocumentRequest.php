@@ -8,8 +8,9 @@ use PDO;
 /**
  * A resident asking the barangay to prepare a document.
  *
- * Supports both Personal Pickup at the barangay hall and Digital Soft Copy
- * delivery with secure in-app upload, preview, and download.
+ * Requested online, picked up at the Barangay Hall: staff approve the request
+ * when the document is ready for pickup, then mark it claimed. Older requests
+ * may still be Digital Soft Copy, which keeps its preview and download.
  */
 class DocumentRequest
 {
@@ -126,27 +127,15 @@ class DocumentRequest
     /**
      * Why payment blocks moving this request to $to, or null if it may move.
      *
-     * The one rule every status change goes through (setStatus, markAsClaimed,
-     * approveAndGenerate), so no screen or route can release an unpaid document:
-     *   - rejecting or cancelling is always allowed;
-     *   - a paid / free / waived request may move anywhere;
-     *   - a pay-at-the-hall request may be prepared, but not released or
-     *     completed until the cash is recorded;
-     *   - anything else (pending, failed, expired, cancelled payment, or in
-     *     manual review) cannot move forward.
+     * Always null since 2026-10-22: online payment (GCash/PayMongo) was
+     * removed. Residents request online and any fee is paid in cash at the
+     * hall on pickup, so staff approve and release without a payment step.
+     * Kept as the single hook setStatus, markAsClaimed and approveAndGenerate
+     * call, in case a payment rule is ever needed again.
      */
     public static function paymentBlocksMove(array $request, string $to): ?string
     {
-        $to = strtolower(trim($to));
-        if (in_array($to, ['rejected', 'cancelled'], true) || self::isPaymentVerified($request)) {
-            return null;
-        }
-        $status = strtoupper((string) ($request['payment_status'] ?? ''));
-        if ($status === DocumentPayment::STATUS_PAY_AT_PICKUP && !in_array($to, ['released', 'completed'], true)) {
-            return null;
-        }
-        return sprintf('Payment is not verified yet (%s). The document cannot move to "%s" until it is paid.',
-            DocumentPayment::statusLabel($status ?: 'PENDING'), $to);
+        return null;
     }
 
     /**
@@ -195,10 +184,9 @@ class DocumentRequest
             default             => $isFree ? DocumentPayment::STATUS_NOT_REQUIRED : DocumentPayment::STATUS_PENDING,
         };
 
-        // Requirement 21 & 23:
-        // Free documents start at pending_review with payment NOT_REQUIRED.
-        // Paid documents start at awaiting_payment with payment PENDING until PayMongo confirms!
-        $initialDocStatus = ($isFree || $paymentMethod === 'pickup') ? 'pending_review' : 'awaiting_payment';
+        // Every request goes straight to staff review: there is no online
+        // payment to wait for (any fee is paid at the hall on pickup).
+        $initialDocStatus = 'pending_review';
 
         $pdo = db();
         $stmt = $pdo->prepare(

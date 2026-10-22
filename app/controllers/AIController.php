@@ -4,10 +4,12 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\Ordinance;
-use App\Models\Announcement;
 use App\Models\AuditLog;
 use App\Models\TranslationLog;
+use App\Models\User;
 use App\Services\AIService;
+use App\Services\BarangayGuide;
+use App\Services\ChatAssistant;
 use App\Services\ManoboAutoTranslator;
 
 class AIController
@@ -293,21 +295,40 @@ class AIController
             return;
         }
 
-        $recentPosts = Announcement::getPublished(5);
-        try {
-            $answer = $this->ai->chat($question, $recentPosts);
+        $question = mb_substr($question, 0, 500);
+        $userId   = (int) ($_SESSION['user_id'] ?? 0);
+        $guide    = new BarangayGuide($userId ? User::find($userId) : null, current_locale());
 
-            // Log to ai_logs so RateLimitMiddleware counts chat requests correctly.
-            $userId = (int) $_SESSION['user_id'];
+        // Earlier turns from the widget (kept in the browser only), so a
+        // follow-up like "how much is it?" is understood.
+        $history = json_decode((string) ($_POST['history'] ?? '[]'), true);
+        $history = \is_array($history) ? \array_slice($history, -8) : [];
+
+        try {
+            // Claude → Gemini (free) → Groq (free), whichever answers first.
+            $result = (new ChatAssistant($this->ai))->answer($question, $guide->context(), $history, current_locale());
+            $answer = $result['answer'];
+            $source = $result['provider'];
+
+            // Only real AI calls count toward the hourly limit (RateLimitMiddleware reads ai_logs).
             db()->prepare('INSERT INTO ai_logs (user_id, ordinance_id, created_at) VALUES (?, NULL, NOW())')
                ->execute([$userId ?: null]);
-
-            AuditLog::record($userId, 'ai.chat', 'AI chat question asked');
-            echo json_encode(['answer' => $answer]);
         } catch (\Throwable $e) {
-            error_log('[AIController::chat] ' . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(['error' => t('ai_chat.service_unavailable')]);
+            // Every provider failed (no keys, no credits, quota, outage): the resident still gets an
+            // answer from the built-in guide instead of an error.
+            error_log('[AIController::chat] AI unavailable, using guide: ' . $e->getMessage());
+            try {
+                $answer = $guide->answer($question);
+                $source = 'guide';
+            } catch (\Throwable $inner) {
+                error_log('[AIController::chat] guide failed: ' . $inner->getMessage());
+                http_response_code(500);
+                echo json_encode(['error' => t('ai_chat.service_unavailable')]);
+                return;
+            }
         }
+
+        AuditLog::record($userId ?: null, 'ai.chat', 'AI chat question asked (' . $source . ')');
+        echo json_encode(['answer' => $answer, 'source' => $source]);
     }
 }

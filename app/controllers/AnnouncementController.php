@@ -12,7 +12,6 @@ use App\Services\MailService;
 use App\Services\NotificationService;
 use App\Services\SemaphoreSmsService;
 use App\Services\ScheduledPublisher;
-use App\Services\PostAudioService;
 use App\Services\PostHtml;
 use App\Services\PostSms;
 use App\Services\SourceLink;
@@ -424,17 +423,10 @@ class AnnouncementController
             !$manualManobo
         );
 
-        // Cache the narration residents will hear, in every language this post
-        // now has text for. After the translations, never before: the audio has
-        // to be generated from the final wording. Non-fatal by design — the
-        // post is published either way and the reader falls back to the
-        // device's own voice for anything that failed.
         // Where this came from, if it came from somewhere. Stored whether or
         // not the import panel was used — staff may simply paste the Facebook
         // link of a post they retyped by hand, and that is still attribution.
         SourceLink::store('announcement', $id, $source);
-
-        PostAudioService::refresh('announcement', $id, (int) $_SESSION['user_id']);
 
         if ($manualManobo) {
             $successMsg = t('flash.ann_saved') . t('flash.manual_manobo_saved');
@@ -476,7 +468,6 @@ class AnnouncementController
                 : "Created: {$title}"
         );
         flash('success', $successMsg);
-        voice_coverage_flash('announcement', (int) $id);
         redirect('/admin/announcements');
     }
 
@@ -652,8 +643,6 @@ class AnnouncementController
         // link of a post they retyped by hand, and that is still attribution.
         SourceLink::store('announcement', $id, $source);
 
-        PostAudioService::refresh('announcement', $id, (int) $_SESSION['user_id']);
-
         if ($manualManobo) {
             $successMsg = t('flash.ann_updated') . t('flash.manual_manobo_saved');
         } else {
@@ -702,7 +691,6 @@ class AnnouncementController
                 : "Updated ID {$id}: {$title}"
         );
         flash('success', $successMsg);
-        voice_coverage_flash('announcement', (int) $id);
         redirect('/admin/announcements');
     }
 

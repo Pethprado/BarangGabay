@@ -126,8 +126,7 @@ class TranslationService
                 return false;
             }
 
-            $t = $result['title'] ?: '';
-            $b = $result['body']  ?: '';
+            [$t, $b] = self::polish('msm', $result['title'] ?: '', $result['body'] ?: '');
 
             switch ($contentType) {
                 case 'announcement':
@@ -596,6 +595,10 @@ class TranslationService
         bool   $isAuto
     ): bool {
         try {
+            if ($isAuto) {
+                [$title, $body] = self::polish('fil', $title, $body);
+            }
+
             switch ($contentType) {
                 case 'announcement':
                     Announcement::updateFilipino($contentId, $title, $body);
@@ -650,6 +653,10 @@ class TranslationService
         bool   $isAuto
     ): bool {
         try {
+            if ($isAuto) {
+                [$title, $body] = self::polish('en', $title, $body);
+            }
+
             switch ($contentType) {
                 case 'announcement':
                     Announcement::updateEnglish($contentId, $title, $body);
@@ -759,8 +766,7 @@ class TranslationService
                 }
             }
 
-            $t = $titleGloss ?? '';
-            $b = $bodyGloss  ?? '';
+            [$t, $b] = self::polish('msm', $titleGloss ?? '', $bodyGloss ?? '');
 
             switch ($contentType) {
                 case 'announcement':
@@ -811,6 +817,26 @@ class TranslationService
 
             return false;
         }
+    }
+
+    /**
+     * Grammar clean-up for machine translations, before anyone reads them.
+     *
+     * Only machine output passes through here — text a person typed is never
+     * rewritten. GrammarCorrector never throws; on any problem the text comes
+     * back unchanged. Superadmins can switch it off with the
+     * grammar_autocorrect setting.
+     *
+     * @return array{0: string, 1: string} [title, body]
+     */
+    private static function polish(string $lang, string $title, string $body): array
+    {
+        if ((int) setting('grammar_autocorrect', 1) !== 1) {
+            return [$title, $body];
+        }
+        [$title, $body] = GrammarCorrector::fixPair($lang, $title, $body);
+
+        return [$title, $body];
     }
 
     /**

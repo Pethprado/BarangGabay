@@ -122,19 +122,10 @@ ob_start();
             $__eBodyVal   = $announcement['body_en'] ?? '';
             $__eBodyName  = 'body_en';
             $__eBodyLabel = t('manobo_fields.label_body');
-            // Staff hear the post before a resident does — the only reliable
-            // way to catch an abbreviation or a missing full stop that reads
-            // fine but sounds wrong. Above the translation panels because it
-            // is about the content just typed, not a translation of it.
             // See the note in create.php.
             $__ipType   = 'announcement';
             $__ipSource = $announcement['source_url'] ?? null;
             require __DIR__ . '/../../shared/_import-panel.php';
-
-            $__vpSourceLang = $__eSourceLang ?? 'fil';
-            $__vpType       = 'announcement';
-            $__vpRow        = $announcement;
-            require __DIR__ . '/../../shared/_voice-preview.php';
 
             /* Where each language stands, above the fields for filling them
                in by hand — the order matters. A staff member who can see

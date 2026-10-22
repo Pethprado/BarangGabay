@@ -197,10 +197,6 @@ $viewUrl    = static fn (array $ann): string => $isSuper
 
 <?php else: ?>
 
-<?php
-$__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
-?>
-
 <!-- Table View -->
 <div id="announcementTableView" class="admin-card p-0 fade-up">
     <div class="table-responsive">
@@ -267,12 +263,6 @@ $__approxManobo = \App\Models\PostAudio::approximateManoboIndex('announcement');
                           style="background:#e0f2fe;color:#075985;font-size:.65rem;font-weight:600;"
                           title="<?= e(t('admin_announcements.audio_badge')) ?>">
                         <?= e(__('🎙 Audio')) ?>
-                    </span>
-                    <?php endif; ?>
-                    <?php if (isset($__approxManobo['announcement:' . $ann['id']])): ?>
-                    <span class="voice-approx-flag"
-                          title="<?= e(t('voice_reader.approx_flag_title')) ?>">
-                        <i class="bi bi-robot"></i> <?= e(t('voice_reader.approx_flag')) ?>
                     </span>
                     <?php endif; ?>
                 </td>

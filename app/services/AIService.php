@@ -8,11 +8,15 @@ use GuzzleHttp\Client;
 class AIService
 {
     private ?Client $client = null;
-    private string $model = 'claude-sonnet-4-20250514';
+    private string $model;
     private int $maxTokens = 1024;
 
     public function __construct()
     {
+        // ANTHROPIC_MODEL lets the deployment switch models (e.g. when one is
+        // retired) without a code change.
+        $this->model = (string) (env('ANTHROPIC_MODEL', '') ?: 'claude-sonnet-4-20250514');
+
         $apiKey = env('ANTHROPIC_API_KEY', '');
         if (empty($apiKey)) {
             $this->client = null;
@@ -599,40 +603,33 @@ PROMPT;
     }
 
     /**
-     * Community Q&A — answer resident questions using recent announcements as context.
+     * One Claude Messages API call — used by ChatAssistant, which builds the
+     * prompt and decides which provider to try.
+     *
+     * @param list<array{role:string, content:string}> $messages Alternating turns ending with "user".
+     * @throws \RuntimeException When no API key is configured or the answer is empty.
      */
-    public function chat(string $question, array $recentPosts): string
+    public function complete(string $system, array $messages, int $maxTokens = 700): string
     {
         if ($this->client === null) {
-            return "Pasensya na, kasalukuyang hindi available ang AI service. Mangyaring makipag-ugnayan sa Barangay Hall para sa karagdagang impormasyon.";
+            throw new \RuntimeException('ANTHROPIC_API_KEY not configured.');
         }
-        $context = implode("\n\n", array_map(static fn($post) => "### {$post['title']}\n{$post['body']}", array_slice($recentPosts, 0, 5)));
-
-        $systemPrompt = <<<PROMPT
-You are BarangGabay, a helpful assistant for residents of Barangay Bayogo, Madrid.
-Answer questions based only on the barangay information provided below.
-If the answer is not in the provided context, say:
-"Pasensya na, wala akong impormasyon tungkol diyan. Mangyaring makipag-ugnayan sa Barangay Hall."
-Be friendly, concise, and use simple Filipino or Taglish.
-Keep answers under 150 words.
-
-BARANGAY CONTEXT:
-{$context}
-PROMPT;
 
         $response = $this->client->post('/v1/messages', [
             'json' => [
-                'model' => $this->model,
-                'max_tokens' => 512,
-                'system' => $systemPrompt,
-                'messages' => [
-                    ['role' => 'user', 'content' => $question],
-                ],
+                'model'      => $this->model,
+                'max_tokens' => $maxTokens,
+                'system'     => $system,
+                'messages'   => $messages,
             ],
         ]);
 
-        $data = json_decode((string) $response->getBody(), true);
-        return $data['content'][0]['text'] ?? 'Hindi ko masagot ang iyong tanong sa ngayon.';
+        $data   = json_decode((string) $response->getBody(), true);
+        $answer = trim((string) ($data['content'][0]['text'] ?? ''));
+        if ($answer === '') {
+            throw new \RuntimeException('Empty answer from Claude.');
+        }
+        return $answer;
     }
 
     /**
