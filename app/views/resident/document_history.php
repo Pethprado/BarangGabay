@@ -121,7 +121,7 @@ ob_start();
                         <?php endif; ?>
                     </td>
                     <td class="py-3.5 px-4 whitespace-nowrap">
-                        <div class="text-slate-700"><?= e(date('M d, Y', strtotime((string)$r['requested_at']))) ?></div>
+                        <div class="text-slate-700"><?= live_time((string) $r['requested_at'], 'stack') ?></div>
                         <?php if (!empty($r['issued_at'])): ?>
                         <div class="text-[10px] text-emerald-600"><?= e(__('Inisyu:')) ?> <?= e(date('M d, Y', strtotime((string)$r['issued_at']))) ?></div>
                         <?php endif; ?>

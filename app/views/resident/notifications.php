@@ -27,16 +27,6 @@ $typeConf = [
     'system'       => ['icon' => 'bi-info-circle-fill',    'bg' => '#f1f5f9', 'color' => '#475569'],
 ];
 
-/* ── Time-ago, in the active locale ── */
-$timeAgo = static function (string $datetime): string {
-    $diff = time() - strtotime($datetime);
-    if ($diff <    120) return t('res_notifications.ago_just_now');
-    if ($diff <   3600) return t('res_notifications.ago_minutes', ['n' => (int) floor($diff / 60)]);
-    if ($diff <  86400) return t('res_notifications.ago_hours',   ['n' => (int) floor($diff / 3600)]);
-    if ($diff < 604800) return t('res_notifications.ago_days',    ['n' => (int) floor($diff / 86400)]);
-    return date('M j, Y', strtotime($datetime));
-};
-
 /* ── Group by date bucket ── */
 $today     = date('Y-m-d');
 $yesterday = date('Y-m-d', strtotime('yesterday'));
@@ -213,7 +203,7 @@ $__typeNames = ['announcement' => __('Announcements'), 'event' => __('Events'), 
                 </p>
                 <!-- Timestamp: the actual date and time, then how long ago -->
                 <span class="text-xs text-slate-400 shrink-0 whitespace-nowrap">
-                    <?= e($fullTime) ?> · <?= e($timeAgo($notif['created_at'])) ?>
+                    <?= live_time((string) $notif['created_at']) ?>
                 </span>
             </div>
             <p class="mt-0.5 text-xs leading-relaxed text-slate-500 line-clamp-2">

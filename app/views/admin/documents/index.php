@@ -146,6 +146,9 @@ ob_start();
 
                 $fee       = (float) ($r['fee_amount'] ?? 0);
                 $isFree    = $fee <= 0.0;
+                // For the review modal: when it was filed, in the barangay's time.
+                $r['requested_label'] = format_datetime((string) $r['requested_at']);
+                $r['requested_iso']   = iso_time((string) $r['requested_at']);
 
                 // Tailored Status Label
                 $statusLabel = __('Pending Review');
@@ -222,7 +225,7 @@ ob_start();
 
                 <!-- 7. DATE -->
                 <td style="white-space:nowrap;font-size:.78rem;color:var(--text-secondary);">
-                    <?= date('M d, Y', strtotime($r['requested_at'])) ?>
+                    <?= live_time((string) $r['requested_at'], 'stack') ?>
                 </td>
 
                 <!-- 8. ACTION (Requirement 29 & 30) -->
@@ -494,7 +497,18 @@ function openReviewModal(r) {
     document.getElementById('revDocType').innerText = r.document_type || '';
     document.getElementById('revPurpose').innerText = r.purpose || '';
     document.getElementById('revReceiving').innerText = (r.delivery_method === 'digital') ? <?= json_encode(__('Digital Copy (Online Soft Copy)')) ?> : <?= json_encode(__('Pickup at Barangay Hall (Counter)')) ?>;
-    document.getElementById('revDate').innerText = r.requested_at ? new Date(r.requested_at).toLocaleString() : '';
+    var revDate = document.getElementById('revDate');
+    revDate.innerHTML = '';
+    if (r.requested_iso) {
+        var t = document.createElement('time');
+        t.className = 'js-live-time';
+        t.dateTime = r.requested_iso;
+        t.title = r.requested_label;
+        t.innerHTML = '<span></span><span data-rel-wrap> · <small data-rel></small></span>';
+        t.firstChild.textContent = r.requested_label;
+        revDate.appendChild(t);
+        if (window.BG_liveTimeRefresh) { window.BG_liveTimeRefresh(revDate); }
+    }
 
     // Fee (paid in cash at the hall)
     var fee = parseFloat(r.fee_amount || 0);

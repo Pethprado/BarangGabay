@@ -228,7 +228,9 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
                                         <div class="min-w-0 flex-1">
                                             <p class="text-xs font-semibold text-slate-900 line-clamp-1" x-text="n.title"></p>
                                             <p class="text-xs text-slate-500 line-clamp-2 mt-0.5" x-text="n.message"></p>
-                                            <p class="text-[10px] text-slate-400 mt-1" x-text="(n.time_at ? n.time_at + ' · ' : '') + n.time_ago"></p>
+                                            <p class="text-[10px] text-slate-400 mt-1">
+                                                <time class="js-live-time" :datetime="n.time_iso" :title="n.time_at"><span x-text="n.time_at"></span><span data-rel-wrap> · <small data-rel x-text="n.time_ago"></small></span></time>
+                                            </p>
                                         </div>
                                     </div>
                                 </button>
@@ -647,6 +649,7 @@ $__rsPath  = '/' . trim(substr((string) strtok($_SERVER['REQUEST_URI'] ?? '/', '
             });
         }, 4000);
     </script>
+    <?= live_time_config() ?>
     <script src="<?= e(asset_v('assets/js/main.js')) ?>"></script>
 <script>
 // Bookmark toggles (post pages and My Bookmarks): POST /bookmarks/toggle.

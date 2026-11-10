@@ -69,7 +69,7 @@ ob_start();
                     <?php endif; ?>
                     <?php $__at = strtotime((string) ($n['created_at'] ?? '')); ?>
                     <span class="d-block small text-muted">
-                        <?php if ($__at): ?><i class="bi bi-clock me-1"></i><?= e(date('M j, Y · g:i A', $__at)) ?> · <?php endif; ?><?= e(relative_time((string) ($n['created_at'] ?? ''))) ?>
+                        <?php if ($__at): ?><i class="bi bi-clock me-1"></i><?= live_time((string) $n['created_at']) ?><?php endif; ?>
                     </span>
                 </span>
             </a>

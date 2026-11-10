@@ -439,6 +439,7 @@ $avatarInitial = mb_strtoupper(mb_substr($userName, 0, 1, 'UTF-8'), 'UTF-8');
     }
 </script>
 
+<?= live_time_config() ?>
 <script src="<?= e(asset_v('assets/js/admin.js')) ?>"></script>
 <?php require __DIR__ . '/../shared/_background-sweep.php'; ?>
 </body>

@@ -144,6 +144,7 @@ class NotificationController
             $n['url']      = $this->resolveUrl($n);
             $n['time_ago'] = $this->timeAgo((string) $n['created_at']);
             $n['time_at']  = ($at = strtotime((string) $n['created_at'])) ? date('M j, Y · g:i A', $at) : '';
+            $n['time_iso'] = iso_time((string) $n['created_at']);   // live-time.js keeps the age current
         }
         unset($n);
 

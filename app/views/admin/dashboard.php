@@ -193,7 +193,7 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
                 <div class="dash-act">
                     <span class="dash-ico dash-ico--<?= $__tone ?>" aria-hidden="true"><i class="bi <?= $__ic ?>"></i></span>
                     <p title="<?= e($__desc) ?>"><?= e($__desc) ?></p>
-                    <time datetime="<?= e((string) $__log['created_at']) ?>"><?= e(relative_time((string) $__log['created_at'])) ?></time>
+                    <?= live_time((string) $__log['created_at'], 'relative') ?>
                 </div>
             <?php endforeach; endif; ?>
         </div>
@@ -222,7 +222,7 @@ $__langFlag = ['msm' => 'MN', 'en' => 'EN', 'fil' => 'FIL', 'ceb' => 'BIS'];
                     <span class="dash-ico dash-ico--blue" style="width:36px;height:36px;border-radius:999px;font-size:.9rem;" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
                     <span class="flex-grow-1" style="min-width:0;">
                         <span class="d-block text-truncate" style="font-size:.86rem;font-weight:700;color:var(--text-primary);"><?= e(\App\Models\DocumentRequest::label((string) $__t['document_type'])) ?></span>
-                        <span class="d-block text-truncate" style="font-size:.75rem;color:var(--text-muted);"><?= e((string) ($__t['full_name'] ?? '')) ?> · <?= e((string) $__t['reference_no']) ?> · <?= e(relative_time((string) $__t['requested_at'])) ?></span>
+                        <span class="d-block text-truncate" style="font-size:.75rem;color:var(--text-muted);"><?= e((string) ($__t['full_name'] ?? '')) ?> · <?= e((string) $__t['reference_no']) ?> · <?= live_time((string) $__t['requested_at']) ?></span>
                     </span>
                     <span class="ds-status ds-status--<?= $__tone ?>"><?= e($__pl) ?></span>
                 </a>

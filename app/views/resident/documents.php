@@ -395,7 +395,7 @@ ob_start();
                             <span class="rounded bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300"><?= e($refNo) ?></span>
                         </div>
                         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                            <span><i class="bi bi-calendar3 me-1"></i><?= e(date('M d, Y', strtotime((string) $r['requested_at']))) ?></span>
+                            <span><i class="bi bi-calendar3 me-1"></i><?= live_time((string) $r['requested_at']) ?></span>
                             <span>&bull;</span>
                             <span><i class="bi bi-chat-left-text me-1"></i><?= e((string) $r['purpose']) ?></span>
                             <span>&bull;</span>

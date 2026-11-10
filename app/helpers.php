@@ -1144,6 +1144,63 @@ function format_datetime_input(?string $timestamp): string
     return $when === false ? '' : date('Y-m-d\TH:i', $when);
 }
 
+/** A stored timestamp as ISO 8601 with the app's UTC offset ("2026-11-10T22:04:37+08:00"). */
+function iso_time(?string $timestamp): string
+{
+    $when = strtotime(trim((string) $timestamp));
+    return $when === false ? '' : date('c', $when);
+}
+
+/**
+ * A timestamp that stays current on screen.
+ *
+ * The exact date and time (in the barangay's time zone) is rendered here; the
+ * "5 minutes ago" part is kept counting by public/assets/js/live-time.js,
+ * so a page left open never shows a stale age. $mode: 'both' (date + time ·
+ * ago), 'relative' (ago only, exact time on hover), 'stack' (date + time with
+ * the age on a second line, for tables).
+ */
+function live_time(?string $timestamp, string $mode = 'both'): string
+{
+    $iso = iso_time($timestamp);
+    if ($iso === '') {
+        return '';
+    }
+    $abs = e(date('M j, Y · g:i A', strtotime((string) $timestamp)));
+    $rel = e(relative_time($timestamp));
+
+    if ($mode === 'relative') {
+        return '<time class="js-live-time" datetime="' . e($iso) . '" title="' . $abs . '"><span data-rel>' . $rel . '</span></time>';
+    }
+    $sep = $mode === 'stack' ? '<br>' : ' · ';
+    // Older than a week relative_time() gives the date itself — already shown.
+    $old = time() - (int) strtotime((string) $timestamp) >= 604800;
+    return '<time class="js-live-time" datetime="' . e($iso) . '" title="' . $abs . '"><span>' . $abs . '</span>'
+        . '<span data-rel-wrap' . ($old ? ' hidden' : '') . '>' . $sep . '<small data-rel>' . ($old ? '' : $rel) . '</small></span></time>';
+}
+
+/**
+ * The settings live-time.js needs: the server's clock (so a phone with the
+ * wrong time still shows correct ages) and the wording, in the page's language.
+ */
+function live_time_config(): string
+{
+    $config = [
+        'serverNow' => time() * 1000,
+        'words'     => [
+            'just_now'    => t('post.just_now'),
+            'minute_ago'  => t('post.minute_ago'),
+            'minutes_ago' => t('post.minutes_ago'),
+            'hour_ago'    => t('post.hour_ago'),
+            'hours_ago'   => t('post.hours_ago'),
+            'day_ago'     => t('post.day_ago'),
+            'days_ago'    => t('post.days_ago'),
+        ],
+    ];
+    return '<script>window.BG_LIVE_TIME = ' . json_encode($config, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) . ';</script>'
+        . '<script src="' . e(asset_v('assets/js/live-time.js')) . '" defer></script>';
+}
+
 function relative_time(?string $timestamp, ?int $now = null): string
 {
     $timestamp = trim((string) $timestamp);
