@@ -216,6 +216,10 @@ return [
     // no print/download), and their "correct" / "something is wrong" answer.
     ['GET',  '/documents/{id}/proof',             'DocumentRequestController@proof',        ['auth', 'verified']],
     ['POST', '/documents/{id}/check',             'DocumentRequestController@residentCheck', ['auth', 'verified']],
+    // Messages between the resident and staff on a request (owner or staff;
+    // checked in the controller). Plain 'auth' so staff accounts can use them.
+    ['GET',  '/documents/{id}/messages',          'DocumentRequestController@messages',     ['auth']],
+    ['POST', '/documents/{id}/messages',          'DocumentRequestController@sendMessage',  ['auth']],
     ['GET',  '/documents/{ref}/verify',           'DocumentRequestController@verifyPublic', []],
     ['POST', '/documents/{id}/print-request',     'DocumentTemplateController@requestPrint', ['auth', 'verified']],
     ['GET',  '/admin/documents',                  'DocumentRequestController@adminIndex',   ['auth', 'role:admin,staff']],

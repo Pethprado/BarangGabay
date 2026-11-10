@@ -193,9 +193,15 @@ ob_start();
 
                 <!-- 3. DOCUMENT -->
                 <td>
-                    <div style="font-size:.84rem;font-weight:600;color:var(--text-primary);">
-                        <?= e(DocumentRequest::label((string) $r['document_type'])) ?>
+                    <div style="font-size:.84rem;font-weight:600;color:var(--text-primary);white-space:normal;max-width:260px;">
+                        <?php if ((string) $r['document_type'] === 'other'): ?><span class="badge text-bg-warning me-1" style="font-size:.62rem;"><?= e(__('Typed request')) ?></span><?php endif; ?>
+                        <?= e(DocumentRequest::displayLabel($r)) ?>
                     </div>
+                    <?php if (($r['last_msg_role'] ?? '') === 'resident'): ?>
+                    <div class="mt-1" style="font-size:.72rem;font-weight:700;color:#b54708;"><i class="bi bi-chat-dots-fill"></i> <?= e(__('New message from resident')) ?></div>
+                    <?php elseif ((int) ($r['msg_count'] ?? 0) > 0): ?>
+                    <div class="mt-1" style="font-size:.72rem;color:var(--text-muted);"><i class="bi bi-chat-dots"></i> <?= (int) $r['msg_count'] ?></div>
+                    <?php endif; ?>
                     <div class="mt-0.5">
                         <span class="badge" style="font-size:.68rem;<?= $isDigital ? 'background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;' : 'background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;' ?>">
                             <i class="bi bi-<?= $isDigital ? 'file-earmark-arrow-down' : 'building' ?> me-0.5"></i>
@@ -322,6 +328,27 @@ ob_start();
                                 <div class="mb-1"><a href="#" id="revProofLink" target="_blank" rel="noopener" style="font-size:.78rem;font-weight:700;"><i class="bi bi-file-earmark-check me-1"></i><?= e(__('See what the resident sees (proof copy)')) ?></a></div>
                                 <div class="mb-1 d-none" id="revRevokedRow"><span class="badge bg-danger">CANCELLED</span> <span id="revRevoked" class="text-danger" style="font-size:.76rem;"></span></div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- What the resident typed (typed requests) -->
+                    <div class="col-12 d-none" id="revDetailsBox">
+                        <div class="p-3 rounded-3" style="background:#fffbeb;border:1px solid #fde68a;">
+                            <h6 style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#92400e;margin-bottom:.5rem;">
+                                <i class="bi bi-pencil-square me-1"></i> <?= e(__('What the resident needs')) ?>
+                            </h6>
+                            <div id="revDetails" style="font-size:.9rem;white-space:pre-wrap;color:var(--text-primary);"></div>
+                            <div class="mt-2" style="font-size:.75rem;color:var(--text-muted);"><?= e(__('No document is generated for a typed request: prepare it, tell the resident any fee or requirement below, then mark it ready for pickup.')) ?></div>
+                        </div>
+                    </div>
+
+                    <!-- Conversation with the resident -->
+                    <div class="col-12">
+                        <div class="p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                            <h6 style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.25rem;">
+                                <i class="bi bi-chat-dots text-primary me-1"></i> <?= e(__('Messages with the resident')) ?>
+                            </h6>
+                            <div id="revThread" data-thread-url="" hidden></div>
                         </div>
                     </div>
 
@@ -545,7 +572,15 @@ function openReviewModal(r) {
     chk.textContent = r.resident_check === 'issue'
         ? <?= json_encode(__('Resident reported a mistake:')) ?> + ' "' + (r.resident_check_note || '') + '"'
         : (r.resident_check === 'ok' ? <?= json_encode(__('Resident confirmed the details are correct.')) ?> : '');
-    document.getElementById('revProofLink').href = '<?= e(route('documents/')) ?>' + r.id + '/proof';
+    var typed = r.document_type === 'other';
+    var proofLink = document.getElementById('revProofLink');
+    proofLink.href = '<?= e(route('documents/')) ?>' + r.id + '/proof';
+    proofLink.parentElement.classList.toggle('d-none', typed);
+    document.getElementById('revDetailsBox').classList.toggle('d-none', !typed);
+    document.getElementById('revDetails').textContent = r.request_details || '';
+    var thread = document.getElementById('revThread');
+    thread.dataset.threadUrl = '<?= e(route('documents/')) ?>' + r.id + '/messages';
+    if (window.BG_openThread) { window.BG_openThread(thread); }
     document.getElementById('revRevoked').innerText = r.revoked_at ? (r.revoke_reason || '') : '';
     var revokeSec = document.getElementById('actionRevokeSection');
     if (revokeSec) {
@@ -586,6 +621,9 @@ function openReviewModal(r) {
         downBtn.classList.add('d-none');
     }
 
+    modalEl.addEventListener('hidden.bs.modal', function () {
+        if (window.BG_closeThread) { window.BG_closeThread(document.getElementById('revThread')); }
+    }, { once: true });
     modal.show();
 }
 </script>
@@ -602,6 +640,7 @@ function openReviewModal(r) {
 })();
 </script>
 
+<?= request_thread_assets() ?>
 <?php require __DIR__ . '/../../shared/_live-refresh.php'; ?>
 <?php
 $content   = ob_get_clean();

@@ -20,7 +20,7 @@ class DocumentRequest
         'residency'  => 'Certificate of Residency',
         'indigency'  => 'Certificate of Indigency',
         'business'   => 'Barangay Business Clearance',
-        'other'      => 'Iba pa',
+        'other'      => 'Other Request',   // typed by the resident (request_details)
     ];
 
     /** Delivery methods supported by the system (Digital Copy & Pickup at Barangay Hall). */
@@ -254,6 +254,105 @@ class DocumentRequest
         ];
     }
 
+    /**
+     * True when approving this request must wait for the Punong Barangay's
+     * uploaded e-signature: only a downloadable (digital) copy needs it — a
+     * pickup copy is signed by hand at the hall.
+     */
+    public static function needsESignature(array $request, ?bool $hasSignature = null): bool
+    {
+        $hasSignature ??= \App\Models\DocumentTemplate::hasSignature('captain');
+        return ($request['delivery_method'] ?? 'pickup') === 'digital' && !$hasSignature;
+    }
+
+    /** What to call this request: its type, or for a typed request what the resident asked for. */
+    public static function displayLabel(array $request): string
+    {
+        $details = trim((string) ($request['request_details'] ?? ''));
+        if (($request['document_type'] ?? '') === 'other' && $details !== '') {
+            $first = trim((string) strtok($details, "\n"));
+            return mb_strlen($first) > 60 ? mb_substr($first, 0, 57) . '…' : $first;
+        }
+        return self::label((string) ($request['document_type'] ?? ''));
+    }
+
+    /** Store what the resident typed for an "other" request. */
+    public static function setRequestDetails(int $id, string $details): void
+    {
+        db()->prepare('UPDATE document_requests SET request_details = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([mb_substr(trim($details), 0, 2000), $id]);
+    }
+
+    /**
+     * "Ready for pickup" for a request with no template (typed requests).
+     *
+     * @return array{success: bool, certificate_no?: string, error?: string}
+     */
+    private static function markReadyWithoutDocument(array $request, int $staffId, ?string $staffNote): array
+    {
+        $id = (int) $request['id'];
+        db()->prepare(
+            "UPDATE document_requests
+                SET status = 'ready', ready_at = NOW(), handled_by = ?, staff_note = COALESCE(?, staff_note), updated_at = NOW()
+              WHERE id = ?"
+        )->execute([$staffId, $staffNote ?: null, $id]);
+
+        self::clearResidentCheck($id);
+        self::logActivity($id, $staffId, 'ready_no_template', (string) $request['status'], 'ready',
+            'Typed request marked ready for pickup (prepared by staff).');
+
+        try {
+            (new \App\Services\NotificationService())->notifyUser(
+                (int) $request['user_id'],
+                'system',
+                'Handa nang Kunin (' . $request['reference_no'] . ')',
+                'Handa na sa Barangay Hall ang inyong kahilingan: "' . self::displayLabel($request) . '". Magdala ng valid ID.',
+                $id,
+                'document_request'
+            );
+        } catch (\Throwable $e) {
+        }
+
+        return ['success' => true, 'certificate_no' => (string) $request['reference_no']];
+    }
+
+    // ── Messages between the resident and staff ──────────────────────────
+
+    /** @return list<array<string,mixed>> oldest first */
+    public static function messages(int $requestId): array
+    {
+        try {
+            $stmt = db()->prepare(
+                'SELECT m.id, m.sender_role, m.message, m.created_at, u.full_name
+                   FROM document_request_messages m
+              LEFT JOIN users u ON u.id = m.user_id
+                  WHERE m.request_id = ?
+               ORDER BY m.id ASC'
+            );
+            $stmt->execute([$requestId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            error_log('[DocumentRequest::messages] #' . $requestId . ': ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /** Add a message; $role is 'resident' or 'staff'. Returns the new id, or 0. */
+    public static function addMessage(int $requestId, int $userId, string $role, string $message): int
+    {
+        $message = trim($message);
+        if ($message === '' || !\in_array($role, ['resident', 'staff'], true)) {
+            return 0;
+        }
+        $pdo = db();
+        $pdo->prepare(
+            'INSERT INTO document_request_messages (request_id, user_id, sender_role, message, created_at) VALUES (?, ?, ?, ?, NOW())'
+        )->execute([$requestId, $userId, $role, mb_substr($message, 0, 2000)]);
+        $pdo->prepare('UPDATE document_requests SET updated_at = NOW() WHERE id = ?')->execute([$requestId]);
+
+        return (int) $pdo->lastInsertId();
+    }
+
     /** What a Business Permit is for, as the resident typed it. */
     public static function setBusinessDetails(int $id, string $name, string $type, string $address = ''): void
     {
@@ -275,13 +374,19 @@ class DocumentRequest
             return ['success' => false, 'error' => $blocked];
         }
 
+        // A typed ("other") request has no template — filling the clearance
+        // one would print the wrong document. Staff prepare it themselves;
+        // this marks it ready and tells the resident.
+        if ((string) $request['document_type'] === 'other') {
+            return self::markReadyWithoutDocument($request, $staffId, $staffNote);
+        }
+
         // A downloadable (digital) document must carry the Punong Barangay's
         // authorized e-signature. A pickup copy is printed and signed by hand
         // at the hall, so a missing e-signature must not stop staff from
         // telling the resident it is ready — the PDF then shows the name over
         // a blank signature line.
-        if (($request['delivery_method'] ?? 'pickup') === 'digital'
-            && !\App\Models\DocumentTemplate::hasSignature('captain')) {
+        if (self::needsESignature($request)) {
             return ['success' => false, 'error' => 'Signature Required: the Punong Barangay\'s authorized e-signature has not been uploaded yet (Admin → Document Templates). The request stays pending.'];
         }
 
@@ -597,6 +702,8 @@ class DocumentRequest
     {
         $stmt = db()->prepare(
             'SELECT r.*, su.full_name AS uploaded_by_name,
+                    (SELECT COUNT(*) FROM document_request_messages m WHERE m.request_id = r.id) AS msg_count,
+                    (SELECT m2.sender_role FROM document_request_messages m2 WHERE m2.request_id = r.id ORDER BY m2.id DESC LIMIT 1) AS last_msg_role,
                     p.payment_ref, p.amount_reported, p.gcash_reference_no, p.receipt_file_name, p.rejection_reason, p.rejection_note, p.verified_at,
                     p.paid_at, p.verification_type, p.paymongo_payment_id, p.paymongo_source_type
                FROM document_requests r
@@ -617,6 +724,8 @@ class DocumentRequest
     {
         $sql = "SELECT r.*, u.full_name, u.phone, u.zone,
                        su.full_name AS uploaded_by_name,
+                       (SELECT COUNT(*) FROM document_request_messages m WHERE m.request_id = r.id) AS msg_count,
+                    (SELECT m2.sender_role FROM document_request_messages m2 WHERE m2.request_id = r.id ORDER BY m2.id DESC LIMIT 1) AS last_msg_role,
                        p.payment_ref, p.amount_reported, p.gcash_reference_no, p.receipt_file_name, p.rejection_reason,
                        p.id AS pay_id, p.paymongo_payment_id, p.paid_at, p.verification_type, p.paymongo_source_type
                   FROM document_requests r

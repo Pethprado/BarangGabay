@@ -96,22 +96,17 @@ class DocumentTemplateTest extends TestCase
         }
     }
 
-    public function testApprovalNeedsThePunongBarangaysSignature(): void
+    /**
+     * A downloadable copy needs the uploaded e-signature; a pickup copy is
+     * signed by hand at the hall. Pure check — this test must never approve
+     * a real request (an earlier version did, against whatever row was last).
+     */
+    public function testOnlyDigitalCopiesNeedTheUploadedSignature(): void
     {
-        $saved = [Setting::get('doc_sig_captain', ''), Setting::get('doc_sig_captain_mime', '')];
-        try {
-            DocumentTemplate::removeSignature('captain', 0);
-            $id = (int) db()->query("SELECT id FROM document_requests WHERE fee_amount = 0 OR payment_status IN ('PAID', 'PAID_VERIFIED', 'PAID_AT_PICKUP', 'WAIVED', 'FREE', 'NOT_REQUIRED') ORDER BY id DESC LIMIT 1")->fetchColumn();
-            if ($id === 0) {
-                $this->markTestSkipped('No document request in this database to try approving.');
-            }
-            $result = DocumentRequest::approveAndGenerate($id, 0);
-            $this->assertFalse($result['success']);
-            $this->assertStringContainsString('Signature Required', (string) $result['error']);
-        } finally {
-            Setting::setMany(['doc_sig_captain' => (string) $saved[0], 'doc_sig_captain_mime' => (string) $saved[1]]);
-            Setting::flush();
-        }
+        $this->assertTrue(DocumentRequest::needsESignature(['delivery_method' => 'digital'], false));
+        $this->assertFalse(DocumentRequest::needsESignature(['delivery_method' => 'digital'], true));
+        $this->assertFalse(DocumentRequest::needsESignature(['delivery_method' => 'pickup'], false));
+        $this->assertFalse(DocumentRequest::needsESignature([], false), 'pickup is the default');
     }
 
     public function testSignatureMustBeARealImage(): void

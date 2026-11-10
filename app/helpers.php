@@ -1201,6 +1201,24 @@ function live_time_config(): string
         . '<script src="' . e(asset_v('assets/js/live-time.js')) . '" defer></script>';
 }
 
+/** Loads public/assets/js/request-thread.js (request messages) with its wording. */
+function request_thread_assets(): string
+{
+    $config = [
+        'csrf'  => csrf_token(),
+        'words' => [
+            'empty'       => __('No messages yet. Write below — barangay staff will reply here.'),
+            'placeholder' => __('Write a message…'),
+            'send'        => __('Send'),
+            'sending'     => __('Sending…'),
+            'error'       => __('Sorry, your message could not be sent. Please try again.'),
+            'you'         => __('You'),
+        ],
+    ];
+    return '<script>window.BG_THREAD = ' . json_encode($config, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) . ';</script>'
+        . '<script src="' . e(asset_v('assets/js/request-thread.js')) . '"></script>';
+}
+
 function relative_time(?string $timestamp, ?int $now = null): string
 {
     $timestamp = trim((string) $timestamp);

@@ -22,7 +22,8 @@
     function busy() {
         var a = document.activeElement;
         var typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'button' && a.type !== 'submit';
-        var dialogOpen = document.querySelector('.modal.show, [aria-modal="true"]:not([hidden]), details[open] form');
+        // An open message thread updates itself; reloading would close it.
+        var dialogOpen = document.querySelector('.modal.show, [aria-modal="true"]:not([hidden]), details[open] form, [data-thread-url]:not([hidden])');
         var wizardStarted = document.getElementById('sectionNewRequest') && !document.getElementById('sectionNewRequest').classList.contains('hidden')
             && document.querySelector('#wizardStep2:not(.hidden), #wizardStep3:not(.hidden), #wizardStep4:not(.hidden)');
         return typing || dialogOpen || wizardStarted;

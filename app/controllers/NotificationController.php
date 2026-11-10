@@ -183,7 +183,7 @@ class NotificationController
                 'event'            => $rid ? route('admin/events/' . $rid . '/edit') : route('admin/events'),
                 'ordinance'        => $rid ? route('admin/ordinances/' . $rid . '/edit') : route('admin/ordinances'),
                 // Online payment was removed; old payment notices open the queue.
-                'document_request' => $rid ? route('admin/documents') . '?open=' . $rid : route('admin/documents'),
+                'document_request', 'document_message' => $rid ? route('admin/documents') . '?open=' . $rid : route('admin/documents'),
                 'document_payment' => route('admin/documents'),
                 'feedback'         => route('admin/feedback'),
                 'user', 'resident' => route('admin/residents'),
@@ -195,14 +195,17 @@ class NotificationController
         }
 
         // A resident's document update opens their request (highlighted).
-        if (($notif['related_type'] ?? '') === 'document_request') {
+        if (\in_array($notif['related_type'] ?? '', ['document_request', 'document_message'], true)) {
             $ref = '';
             if (!empty($notif['related_id'])) {
                 $stmt = db()->prepare('SELECT reference_no FROM document_requests WHERE id = ? AND user_id = ? LIMIT 1');
                 $stmt->execute([(int) $notif['related_id'], (int) ($_SESSION['user_id'] ?? 0)]);
                 $ref = (string) ($stmt->fetchColumn() ?: '');
             }
-            return route('documents') . '?tab=requests' . ($ref !== '' ? '&ref=' . rawurlencode($ref) : '');
+            // A reply from staff opens the conversation itself.
+            $thread = ($notif['related_type'] ?? '') === 'document_message' && !empty($notif['related_id'])
+                ? '&thread=' . (int) $notif['related_id'] : '';
+            return route('documents') . '?tab=requests' . ($ref !== '' ? '&ref=' . rawurlencode($ref) : '') . $thread;
         }
 
         if (empty($notif['related_id']) || empty($notif['related_type'])) {

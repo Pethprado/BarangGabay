@@ -131,9 +131,24 @@ class DocumentRequestController
             redirect('/documents');
         }
 
-        // Prevent duplicate open request per document type
+        // A typed ("something else") request: what they need, in their words.
+        $details = mb_substr(trim((string) ($_POST['request_details'] ?? '')), 0, 2000);
+        if ($type === 'other' && mb_strlen($details) < 5) {
+            $otherMsg = __('Please type what you need from the barangay.');
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => $otherMsg]);
+                return;
+            }
+            flash('error', $otherMsg);
+            redirect('/documents?type=other');
+        }
+
+        // Prevent duplicate open request per document type (typed requests
+        // are each about something different, so they are never duplicates).
         foreach (DocumentRequest::forUser($userId) as $existing) {
-            if ($existing['document_type'] === $type
+            if ($type !== 'other' && $existing['document_type'] === $type
                 && \in_array($existing['status'], ['awaiting_payment', 'pending', 'pending_review', 'under_review', 'processing',
                                                      'needs_information', 'approved', 'ready', 'ready_for_pickup'], true)) {
                 $dupMsg = t('documents.err_duplicate', [
@@ -165,6 +180,9 @@ class DocumentRequestController
             redirect('/documents');
         }
         $feeAmount = $feeInfo['is_free'] ? 0.00 : (float) $feeInfo['amount'];
+        if ($type === 'other') {
+            $feeAmount = 0.00;   // unknown until staff see what is asked; they say so in a message
+        }
 
         // No online payment: a fee, if any, is paid in cash at the hall on pickup.
         $isFree        = $feeAmount <= 0.00;
@@ -185,6 +203,9 @@ class DocumentRequestController
         if ($type === 'business') {
             DocumentRequest::setBusinessDetails($newId, $businessName, $businessType, $businessAddr);
         }
+        if ($type === 'other') {
+            DocumentRequest::setRequestDetails($newId, $details);
+        }
 
         // Tell back office there is work waiting
         $deliveryText = ' (Personal Pickup)';
@@ -196,7 +217,7 @@ class DocumentRequestController
             'system',
             t('documents.notify_staff_title'),
             t('documents.notify_staff_body', [
-                'type'      => DocumentRequest::label($type) . $deliveryText . $feeText,
+                'type'      => ($type === 'other' ? 'Other request: "' . mb_substr($details, 0, 80) . '"' : DocumentRequest::label($type)) . $deliveryText . $feeText,
                 'reference' => $reference,
             ]),
             $newId,
@@ -797,6 +818,11 @@ class DocumentRequestController
             redirect('/documents?tab=requests');
         }
 
+        if ((string) $request['document_type'] === 'other') {
+            flash('warning', __('A typed request has no preview. Use Messages to talk with barangay staff about it.'));
+            redirect($isStaff ? '/admin/documents?open=' . $id : '/documents?tab=requests&ref=' . urlencode((string) $request['reference_no']));
+        }
+
         $resident = \App\Models\User::find((int) $request['user_id']);
         if ($resident === null) {
             http_response_code(404);
@@ -926,6 +952,107 @@ class DocumentRequestController
             error_log('[DocumentRequestController] ready SMS failed for #' . ($request['id'] ?? '?') . ': ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * GET /documents/{id}/messages — the thread between the resident and
+     * staff on one request (the owner or staff only), oldest first.
+     */
+    public function messages(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
+        [$request, $isStaff] = $this->threadAccess((int) ($params['id'] ?? 0));
+        if ($request === null) {
+            http_response_code(404);
+            echo json_encode(['ok' => false]);
+            return;
+        }
+
+        $me  = (int) ($_SESSION['user_id'] ?? 0);
+        $out = [];
+        foreach (DocumentRequest::messages((int) $request['id']) as $m) {
+            $out[] = [
+                'id'       => (int) $m['id'],
+                'role'     => (string) $m['sender_role'],
+                'name'     => $m['sender_role'] === 'staff' ? __('Barangay staff') : (string) ($m['full_name'] ?? ''),
+                'message'  => (string) $m['message'],
+                'time'     => format_datetime((string) $m['created_at']),
+                'time_iso' => iso_time((string) $m['created_at']),
+                'mine'     => ($m['sender_role'] === 'staff') === $isStaff,
+            ];
+        }
+        echo json_encode(['ok' => true, 'messages' => $out, 'me' => $me]);
+    }
+
+    /**
+     * POST /documents/{id}/messages — send a message. A resident's message
+     * reaches every staff member; a staff reply reaches the resident.
+     */
+    public function sendMessage(array $params): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        check_csrf();
+        [$request, $isStaff] = $this->threadAccess((int) ($params['id'] ?? 0));
+        if ($request === null) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'error' => t('flash.not_found')]);
+            return;
+        }
+
+        $text = trim((string) ($_POST['message'] ?? ''));
+        if (mb_strlen($text) < 1 || mb_strlen($text) > 1000) {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'error' => __('Write a message of up to 1,000 characters.')]);
+            return;
+        }
+
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        $id     = (int) $request['id'];
+        $ref    = (string) $request['reference_no'];
+        try {
+            DocumentRequest::addMessage($id, $userId, $isStaff ? 'staff' : 'resident', $text);
+        } catch (\Throwable $e) {
+            error_log('[DocumentRequestController::sendMessage] #' . $id . ': ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => __('Sorry, your message could not be sent. Please try again.')]);
+            return;
+        }
+
+        $preview = mb_strlen($text) > 140 ? mb_substr($text, 0, 137) . '…' : $text;
+        if ($isStaff) {
+            (new NotificationService())->notifyUser(
+                (int) $request['user_id'], 'system',
+                'Sagot ng Barangay — ' . $ref,
+                DocumentRequest::displayLabel($request) . ': ' . $preview,
+                $id, 'document_message'
+            );
+            AuditLog::record($userId, 'documents.message', 'Replied on ' . $ref);
+        } else {
+            (new NotificationService())->notifyBackOffice(
+                'always', 'system',
+                'Mensahe mula sa residente — ' . $ref,
+                ($request['full_name'] ?? '') . ' (' . DocumentRequest::displayLabel($request) . '): ' . $preview,
+                $id, 'document_message', $userId
+            );
+        }
+
+        echo json_encode(['ok' => true]);
+    }
+
+    /**
+     * The request, if this user may read and write its thread.
+     *
+     * @return array{0: ?array, 1: bool} [request|null, isStaff]
+     */
+    private function threadAccess(int $id): array
+    {
+        $isStaff = in_array((string) ($_SESSION['role'] ?? ''), ['admin', 'staff', 'superadmin'], true);
+        $request = DocumentRequest::find($id);
+        if ($request === null || (!$isStaff && (int) $request['user_id'] !== (int) ($_SESSION['user_id'] ?? 0))) {
+            return [null, $isStaff];
+        }
+        return [$request, $isStaff];
     }
 
     public function history(): void
