@@ -93,7 +93,9 @@ class DocumentRequestController
         // Every request is picked up at the Barangay Hall.
         $deliveryMethod = 'pickup';
 
-        if (!\array_key_exists($type, DocumentRequest::TYPES)) {
+        // "Other" (typed) requests were removed from the form. Requests filed
+        // before that stay valid; new ones are refused like an unknown type.
+        if (!\array_key_exists($type, DocumentRequest::TYPES) || $type === 'other') {
             if ($isAjax) {
                 header('Content-Type: application/json; charset=utf-8');
                 http_response_code(400);
@@ -131,24 +133,9 @@ class DocumentRequestController
             redirect('/documents');
         }
 
-        // A typed ("something else") request: what they need, in their words.
-        $details = mb_substr(trim((string) ($_POST['request_details'] ?? '')), 0, 2000);
-        if ($type === 'other' && mb_strlen($details) < 5) {
-            $otherMsg = __('Please type what you need from the barangay.');
-            if ($isAjax) {
-                header('Content-Type: application/json; charset=utf-8');
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => $otherMsg]);
-                return;
-            }
-            flash('error', $otherMsg);
-            redirect('/documents?type=other');
-        }
-
-        // Prevent duplicate open request per document type (typed requests
-        // are each about something different, so they are never duplicates).
+        // Prevent duplicate open request per document type
         foreach (DocumentRequest::forUser($userId) as $existing) {
-            if ($type !== 'other' && $existing['document_type'] === $type
+            if ($existing['document_type'] === $type
                 && \in_array($existing['status'], ['awaiting_payment', 'pending', 'pending_review', 'under_review', 'processing',
                                                      'needs_information', 'approved', 'ready', 'ready_for_pickup'], true)) {
                 $dupMsg = t('documents.err_duplicate', [
@@ -180,9 +167,6 @@ class DocumentRequestController
             redirect('/documents');
         }
         $feeAmount = $feeInfo['is_free'] ? 0.00 : (float) $feeInfo['amount'];
-        if ($type === 'other') {
-            $feeAmount = 0.00;   // unknown until staff see what is asked; they say so in a message
-        }
 
         // No online payment: a fee, if any, is paid in cash at the hall on pickup.
         $isFree        = $feeAmount <= 0.00;
@@ -203,9 +187,6 @@ class DocumentRequestController
         if ($type === 'business') {
             DocumentRequest::setBusinessDetails($newId, $businessName, $businessType, $businessAddr);
         }
-        if ($type === 'other') {
-            DocumentRequest::setRequestDetails($newId, $details);
-        }
 
         // Tell back office there is work waiting
         $deliveryText = ' (Personal Pickup)';
@@ -217,7 +198,7 @@ class DocumentRequestController
             'system',
             t('documents.notify_staff_title'),
             t('documents.notify_staff_body', [
-                'type'      => ($type === 'other' ? 'Other request: "' . mb_substr($details, 0, 80) . '"' : DocumentRequest::label($type)) . $deliveryText . $feeText,
+                'type'      => DocumentRequest::label($type) . $deliveryText . $feeText,
                 'reference' => $reference,
             ]),
             $newId,

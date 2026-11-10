@@ -32,6 +32,7 @@ ob_start();
     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
 
     <?php foreach ($fees as $type => $f):
+        if ($type === 'other') { continue; }   // residents can no longer file "other" requests
         $id = 'fee_' . preg_replace('/[^a-z0-9_]/', '', (string) $type);
         $paid = !$f['is_free'];
     ?>

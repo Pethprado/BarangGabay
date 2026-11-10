@@ -27,6 +27,9 @@ $highlightRef = (string) ($_GET['ref'] ?? '');
 
 // "Request again" links prefill the form with a finished request's choices.
 $prefillType    = (string) ($_GET['type'] ?? '');
+if ($prefillType === 'other') {
+    $prefillType = '';   // typed requests can no longer be filed
+}
 $prefillPurpose = trim((string) ($_GET['purpose'] ?? ''));
 if ($prefillType !== '') {
     $activeTab = 'new';
@@ -59,7 +62,6 @@ ob_start();
 .doc-pick { position: relative; display: flex; gap: .75rem; align-items: flex-start; padding: .85rem; border-radius: 1rem; border: 2px solid var(--border); background: var(--surface-card, #fff); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
 .doc-pick:hover { border-color: rgba(26, 107, 58, .35); }
 .doc-pick:has(input:checked)::after { content: '\2713'; position: absolute; top: .55rem; right: .7rem; width: 1.35rem; height: 1.35rem; border-radius: 999px; display: grid; place-items: center; font-size: .78rem; font-weight: 800; background: var(--action-solid); color: var(--text-on-action, #fff); }
-.doc-pick--other { border-style: dashed; }
 .doc-pick input { position: absolute; opacity: 0; pointer-events: none; }
 .doc-pick:has(input:checked) { border-color: var(--action-solid); box-shadow: 0 0 0 3px var(--brand-primary-light); }
 .doc-pick:has(input:focus-visible) { outline: 3px solid var(--action-solid); outline-offset: 2px; }
@@ -199,27 +201,6 @@ ob_start();
                         </span>
                     </label>
                     <?php endforeach; ?>
-                    <?php $__other = $docFees['other'] ?? null; if ($__other !== null && !empty($__other['is_active'])): ?>
-                    <label class="doc-pick doc-pick--other sm:col-span-2">
-                        <input type="radio" name="document_type" value="other" required <?= $prefillType === 'other' ? 'checked' : '' ?>
-                               data-amount="0" data-requirements="" data-description="">
-                        <span class="doc-pick__icon" aria-hidden="true"><i class="bi bi-pencil-square"></i></span>
-                        <span class="min-w-0">
-                            <strong class="block text-sm text-slate-900 dark:text-white"><?= e(__('Something else? Type your request')) ?></strong>
-                            <span class="text-xs text-slate-500 dark:text-slate-400"><?= e(__('Tell the barangay what you need. Staff will reply to you here.')) ?></span>
-                        </span>
-                    </label>
-                    <?php endif; ?>
-                </div>
-
-                <div id="otherFields" class="mt-3 hidden">
-                    <label for="request_details" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                        <?= e(__('What do you need?')) ?> <span class="text-rose-500">*</span>
-                    </label>
-                    <textarea id="request_details" name="request_details" rows="4" maxlength="2000" minlength="5"
-                              placeholder="<?= e(__('e.g. Certificate of Good Moral Character for my scholarship; or a barangay certification that I am a solo parent.')) ?>"
-                              class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"></textarea>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400"><?= e(__('Staff will read it, tell you any fee or requirement in a message, and let you know when it is ready.')) ?></p>
                 </div>
 
                 <div class="mt-3 rounded-2xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
@@ -438,7 +419,7 @@ ob_start();
                             <i class="bi bi-file-earmark-check" aria-hidden="true"></i> <?= e(__('Check details')) ?>
                         </a>
                         <?php endif; ?>
-                        <?php if ($isDone || $closed): ?>
+                        <?php if (($isDone || $closed) && !$isTyped): ?>
                         <a href="<?= e(route('documents') . '?type=' . rawurlencode((string) $r['document_type']) . '&purpose=' . rawurlencode((string) $r['purpose'])) ?>"
                            class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                             <i class="bi bi-arrow-repeat" aria-hidden="true"></i> <?= e(__('Request again')) ?>
@@ -535,22 +516,14 @@ function onDocumentTypeChange() {
     document.getElementById('business_type').required = isBiz;
     document.getElementById('business_name').required = isBiz;
 
-    var isOther = opt.value === 'other';
-    var otherBox = document.getElementById('otherFields');
-    if (otherBox) {
-        otherBox.classList.toggle('hidden', !isOther);
-        document.getElementById('request_details').required = isOther;
-        if (isOther) { document.getElementById('request_details').focus(); }
-    }
-
-    document.getElementById('docFee').textContent = isOther ? '—' : (amount > 0 ? '₱' + amount.toFixed(2) : <?= json_encode(__('LIBRE')) ?>);
-    document.getElementById('docFeeNote').textContent = isOther
-        ? <?= json_encode(__('Staff will tell you, if there is one')) ?>
-        : (amount > 0 ? <?= json_encode(__('Paid at the Barangay Hall on pickup')) ?> : <?= json_encode(__('No payment required')) ?>);
+    document.getElementById('docFee').textContent = amount > 0 ? '₱' + amount.toFixed(2) : <?= json_encode(__('LIBRE')) ?>;
+    document.getElementById('docFeeNote').textContent = amount > 0
+        ? <?= json_encode(__('Paid at the Barangay Hall on pickup')) ?>
+        : <?= json_encode(__('No payment required')) ?>;
 
     // Description + requirements come from the admin's Document Fees page.
     var reqs = (opt.getAttribute('data-requirements') || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
-    if (!reqs.length) { reqs = [isOther ? <?= json_encode(__('Depends on your request — staff will tell you')) ?> : <?= json_encode(__('Valid Government ID')) ?>]; }
+    if (!reqs.length) { reqs = [<?= json_encode(__('Valid Government ID')) ?>]; }
     var list = document.getElementById('docRequirements');
     list.textContent = '';
     reqs.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; list.appendChild(li); });
