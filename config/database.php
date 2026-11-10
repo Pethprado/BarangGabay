@@ -1229,64 +1229,165 @@ function loadDatabaseSchema(PDO $pdo, string $driver = 'mysql'): void
  * @never-returns (calls exit)
  */
 if (!function_exists('renderDbConnectionError')) {
+/**
+ * Why the database connection failed, in words staff can act on.
+ *
+ * Only the kind of failure is shown — never the host, user or password.
+ *
+ * @return array{code: string, title: string, detail: string, fix: list<string>}
+ */
+function dbFailureReason(\PDOException $e): array
+{
+    $msg    = strtolower($e->getMessage());
+    $hasUrl = trim((string) (env('DATABASE_URL') ?: env('MYSQL_URL', ''))) !== '';
+    $dash   = 'Render Dashboard &rarr; <strong>baranggabay-db</strong>';
+
+    if (!$hasUrl) {
+        return [
+            'code'   => 'NO_DATABASE_URL',
+            'title'  => 'DATABASE_URL is not set',
+            'detail' => 'The web service has no database connection string.',
+            'fix'    => [
+                'Render Dashboard &rarr; <strong>baranggabay</strong> &rarr; Environment &rarr; add <code>DATABASE_URL</code>.',
+                'Use the <strong>Internal Database URL</strong> from ' . $dash . ' &rarr; Connect.',
+                'Save; Render redeploys by itself.',
+            ],
+        ];
+    }
+    if (str_contains($msg, 'could not translate host name') || str_contains($msg, 'name or service not known')
+        || str_contains($msg, 'nodename nor servname') || str_contains($msg, 'getaddrinfo')
+        || str_contains($msg, 'no such host')) {
+        return [
+            'code'   => 'DB_HOST_NOT_FOUND',
+            'title'  => 'The database no longer exists at this address',
+            'detail' => 'The database host in DATABASE_URL cannot be found. A free Render PostgreSQL is deleted after it expires, or the database was recreated with a new address.',
+            'fix'    => [
+                'Open ' . $dash . '. If it is gone, create a new PostgreSQL database.',
+                'Copy its <strong>Internal Database URL</strong> into <strong>baranggabay</strong> &rarr; Environment &rarr; <code>DATABASE_URL</code>.',
+                'Save. The system builds its tables and the admin account by itself on the first visit.',
+            ],
+        ];
+    }
+    if (str_contains($msg, 'password authentication failed') || str_contains($msg, 'access denied')) {
+        return [
+            'code'   => 'DB_LOGIN_REJECTED',
+            'title'  => 'The database rejected the login',
+            'detail' => 'The user name or password in DATABASE_URL is no longer valid (for example after a password reset).',
+            'fix'    => [
+                'Copy the current <strong>Internal Database URL</strong> from ' . $dash . ' &rarr; Connect.',
+                'Paste it into <strong>baranggabay</strong> &rarr; Environment &rarr; <code>DATABASE_URL</code> and save.',
+            ],
+        ];
+    }
+    if (preg_match('/database "[^"]*" does not exist|unknown database/', $msg)) {
+        return [
+            'code'   => 'DB_NAME_WRONG',
+            'title'  => 'The database name is wrong',
+            'detail' => 'The server answered, but the database named in DATABASE_URL is not on it.',
+            'fix'    => ['Copy the full <strong>Internal Database URL</strong> again from ' . $dash . ' &rarr; Connect into <code>DATABASE_URL</code>.'],
+        ];
+    }
+    if (str_contains($msg, 'too many connections') || str_contains($msg, 'remaining connection slots')) {
+        return [
+            'code'   => 'DB_TOO_MANY_CONNECTIONS',
+            'title'  => 'The database is full of connections',
+            'detail' => 'Every connection slot is in use. This usually clears by itself.',
+            'fix'    => ['Wait a minute and reload. If it stays, restart the <strong>baranggabay</strong> service in Render.'],
+        ];
+    }
+
+    // Refused, timed out, or closed: the database exists but is not accepting
+    // connections — on Render's free plan, an expired (suspended) database.
+    return [
+        'code'   => 'DB_UNREACHABLE',
+        'title'  => 'The database is not accepting connections',
+        'detail' => 'Render free PostgreSQL databases expire 30 days after they are created and stop accepting connections (the data is kept about 14 more days, then deleted). It may also be suspended or restarting.',
+        'fix'    => [
+            'Open ' . $dash . ' and read its status.',
+            'If it says <strong>expired</strong> or <strong>suspended</strong>: upgrade it to a paid instance to keep all data, or create a new free database and put its <strong>Internal Database URL</strong> in <code>DATABASE_URL</code> (starts empty; the system rebuilds its tables).',
+            'If it is <strong>available</strong>, wait a minute and reload; then check <code>DATABASE_URL</code> matches its Internal Database URL.',
+        ],
+    ];
+}
+
 function renderDbConnectionError(string $host, \PDOException $e): never
 {
-    $debug = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
+    $debug  = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
+    $reason = dbFailureReason($e);
 
-    error_log('[DB] Connection failed (host=' . $host . '): ' . $e->getMessage());
+    error_log('[DB] Connection failed [' . $reason['code'] . '] (host=' . $host . '): ' . $e->getMessage());
 
     if ($debug || php_sapi_name() === 'cli') {
         throw $e;
     }
 
     http_response_code(503);
-    header('Content-Type: text/html; charset=UTF-8');
     header('Retry-After: 60');
+    header('Cache-Control: no-store');
+
+    // /health answers in JSON, so the reason can be checked from outside.
+    $path = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    if (preg_match('#/health/?$#', $path)) {
+        // 200, not 503: the web app itself is up. Render only puts a deploy
+        // live after /health passes, so a 503 here would keep the previous
+        // build serving even when this one carries the fix or the guidance.
+        http_response_code(200);
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode([
+            'app'      => 'ok',
+            'database' => 'down',
+            'reason'   => $reason['code'],
+            'title'    => $reason['title'],
+            'commit'   => substr((string) (getenv('RENDER_GIT_COMMIT') ?: ''), 0, 7),
+        ], JSON_PRETTY_PRINT);
+        exit(1);
+    }
+
+    header('Content-Type: text/html; charset=UTF-8');
+    $title  = htmlspecialchars($reason['title'], ENT_QUOTES, 'UTF-8');
+    $detail = htmlspecialchars($reason['detail'], ENT_QUOTES, 'UTF-8');
+    $code   = htmlspecialchars($reason['code'], ENT_QUOTES, 'UTF-8');
+    $steps  = implode('', array_map(static fn (string $s): string => '<li>' . $s . '</li>', $reason['fix']));
 
     echo <<<HTML
 <!DOCTYPE html>
-<html lang="fil">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>BarangGabay — Database Not Configured</title>
+  <title>BarangGabay — Database Unavailable</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{min-height:100vh;background:linear-gradient(180deg,#ecf3ea,#d8e9db);
          display:flex;align-items:center;justify-content:center;
          font-family:'Segoe UI',system-ui,sans-serif;padding:1rem}
-    .card{background:#fff;border-radius:1.25rem;padding:3rem 2.5rem;max-width:540px;width:100%;
+    .card{background:#fff;border-radius:1.25rem;padding:2.5rem 2rem;max-width:560px;width:100%;
           box-shadow:0 24px 80px rgba(15,64,35,.12);text-align:center;border:1px solid #e4ece6}
-    .icon{font-size:3rem;margin-bottom:1.25rem}
-    h1{color:#1a6b3a;font-size:1.35rem;font-weight:800;margin-bottom:.75rem}
+    .icon{font-size:2.6rem;margin-bottom:1rem}
+    h1{color:#1a6b3a;font-size:1.3rem;font-weight:800;margin-bottom:.6rem}
     p{color:#4a5568;line-height:1.7;font-size:.9rem;margin-bottom:.5rem}
-    .steps{text-align:left;background:#f4f9f5;border-radius:.75rem;padding:1.25rem 1.5rem;margin:1.25rem 0}
-    .steps li{color:#374151;font-size:.85rem;line-height:1.8;margin-left:1.25rem}
+    .reason{display:inline-block;background:#fff4e5;color:#8a4b00;border:1px solid #f5d0a0;border-radius:999px;
+            padding:.2rem .8rem;font-size:.75rem;font-weight:700;font-family:monospace;margin-bottom:.9rem}
+    .steps{text-align:left;background:#f4f9f5;border-radius:.75rem;padding:1.1rem 1.4rem;margin:1.1rem 0}
+    .steps li{color:#374151;font-size:.85rem;line-height:1.75;margin-left:1.1rem;margin-bottom:.35rem}
     code{background:#e8f5e9;padding:.1rem .35rem;border-radius:.25rem;font-size:.8rem;color:#1a6b3a;font-family:monospace}
-    .btn{display:inline-block;margin-top:1.5rem;background:#1a6b3a;color:#fff;
-         text-decoration:none;padding:.75rem 2rem;border-radius:.625rem;
-         font-weight:700;font-size:.875rem;transition:background .15s}
+    .btn{display:inline-block;margin-top:1rem;background:#1a6b3a;color:#fff;text-decoration:none;
+         padding:.7rem 1.8rem;border-radius:.625rem;font-weight:700;font-size:.875rem}
     .btn:hover{background:#145730}
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="icon">&#128374;</div>
-    <h1>Database Hindi Naka-configure</h1>
-    <p>Hindi makakonekta ang sistema sa database. Kailangan itakda ang database credentials sa Render dashboard.</p>
+    <div class="icon">&#128451;</div>
+    <h1>{$title}</h1>
+    <span class="reason">{$code}</span>
+    <p>{$detail}</p>
     <div class="steps">
-      <p style="font-weight:700;margin-bottom:.5rem;color:#1a6b3a;">Para sa Render &mdash; Itakda ang mga env var na ito:</p>
-      <ol>
-        <li>Pumunta sa <strong>Render Dashboard &rarr; baranggabay &rarr; Environment</strong></li>
-        <li>I-add o i-update ang mga sumusunod na variable:</li>
-      </ol>
-      <ul style="list-style:none;margin:.75rem 0 0 0">
-        <li>&bull; <code>DATABASE_URL</code> &mdash; Full connection string ng iyong Render PostgreSQL</li>
-        <li>&bull; <code>APP_URL</code> &mdash; <code>https://baranggabay.onrender.com</code></li>
-      </ul>
+      <p style="font-weight:700;margin-bottom:.5rem;color:#1a6b3a;">How to fix it</p>
+      <ol>{$steps}</ol>
     </div>
-    <p style="font-size:.8rem;color:#94a3b8;">Pagkatapos i-save ang mga env var, i-redeploy ang service sa Render.</p>
-    <a href="https://dashboard.render.com" class="btn">Buksan ang Render Dashboard</a>
+    <p style="font-size:.8rem;color:#94a3b8;">Hindi makakonekta ang sistema sa database. Sundin ang mga hakbang sa itaas sa Render dashboard.</p>
+    <a href="https://dashboard.render.com" class="btn">Open Render Dashboard</a>
   </div>
 </body>
 </html>
