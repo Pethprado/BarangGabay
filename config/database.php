@@ -52,10 +52,14 @@ function db(?PDO $setInstance = null): PDO
             if ($ssl === true || $ssl === 'true' || $ssl === '1'
                 || (!empty($parsed['query']) && str_contains((string)($parsed['query'] ?? ''), 'ssl'))
             ) {
-                if (defined('Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT')) {
-                    $options[\Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT] = false;
-                } elseif (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
-                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                // PHP 8.4 renamed this constant (Pdo\Mysql::…) and 8.5 deprecates
+                // the old PDO::MYSQL_… name. Looked up by name so the same code
+                // runs on 8.2 (XAMPP, Render) through 8.5 without warnings.
+                foreach (['Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT', 'PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT'] as $sslConst) {
+                    if (defined($sslConst)) {
+                        $options[constant($sslConst)] = false;
+                        break;
+                    }
                 }
             }
             $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $name);
