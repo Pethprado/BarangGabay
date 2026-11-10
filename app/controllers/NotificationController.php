@@ -182,7 +182,8 @@ class NotificationController
                 'event'            => $rid ? route('admin/events/' . $rid . '/edit') : route('admin/events'),
                 'ordinance'        => $rid ? route('admin/ordinances/' . $rid . '/edit') : route('admin/ordinances'),
                 // Online payment was removed; old payment notices open the queue.
-                'document_request', 'document_payment' => route('admin/documents'),
+                'document_request' => $rid ? route('admin/documents') . '?open=' . $rid : route('admin/documents'),
+                'document_payment' => route('admin/documents'),
                 'feedback'         => route('admin/feedback'),
                 'user', 'resident' => route('admin/residents'),
                 default            => match ((string) ($notif['type'] ?? '')) {
@@ -190,6 +191,17 @@ class NotificationController
                     default        => route('notifications'),
                 },
             };
+        }
+
+        // A resident's document update opens their request (highlighted).
+        if (($notif['related_type'] ?? '') === 'document_request') {
+            $ref = '';
+            if (!empty($notif['related_id'])) {
+                $stmt = db()->prepare('SELECT reference_no FROM document_requests WHERE id = ? AND user_id = ? LIMIT 1');
+                $stmt->execute([(int) $notif['related_id'], (int) ($_SESSION['user_id'] ?? 0)]);
+                $ref = (string) ($stmt->fetchColumn() ?: '');
+            }
+            return route('documents') . '?tab=requests' . ($ref !== '' ? '&ref=' . rawurlencode($ref) : '');
         }
 
         if (empty($notif['related_id']) || empty($notif['related_type'])) {

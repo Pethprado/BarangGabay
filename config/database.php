@@ -587,6 +587,10 @@ function syncPostgresSchema(PDO $pdo): void
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS fee_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30) NOT NULL DEFAULT 'free'",
         "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS payment_status VARCHAR(40) NOT NULL DEFAULT 'FREE'",
+        // The resident's check of the proof copy (2026_11_10_000001).
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS resident_check VARCHAR(20) NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS resident_check_note TEXT NULL",
+        "ALTER TABLE document_requests ADD COLUMN IF NOT EXISTS resident_checked_at TIMESTAMP NULL",
         // Online payment removed from document requests: anything still
         // waiting for it goes to staff review, fee paid at the hall. Replay-
         // safe — nothing creates 'awaiting_payment' any more. Same as

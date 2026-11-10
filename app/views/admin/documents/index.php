@@ -211,6 +211,13 @@ ob_start();
                 <!-- 6. REQUEST STATUS -->
                 <td style="white-space:nowrap;">
                     <?= status_badge($st === 'ready' ? ($isDigital ? 'available_for_download' : 'ready_for_pickup') : $st, $statusLabel) ?>
+                    <?php if (($r['resident_check'] ?? '') === 'issue'): ?>
+                    <div class="mt-1" style="font-size:.72rem;font-weight:700;color:#b42318;white-space:normal;max-width:220px;" title="<?= e((string) ($r['resident_check_note'] ?? '')) ?>">
+                        <i class="bi bi-exclamation-triangle-fill"></i> <?= e(__('Resident reported a mistake')) ?>
+                    </div>
+                    <?php elseif (($r['resident_check'] ?? '') === 'ok'): ?>
+                    <div class="mt-1" style="font-size:.72rem;font-weight:700;color:#166534;"><i class="bi bi-check2-circle"></i> <?= e(__('Resident confirmed details')) ?></div>
+                    <?php endif; ?>
                 </td>
 
                 <!-- 7. DATE -->
@@ -221,8 +228,25 @@ ob_start();
                 <!-- 8. ACTION (Requirement 29 & 30) -->
                 <td style="text-align:right;padding-right:16px;white-space:nowrap;">
                     <div class="d-flex align-items-center justify-content-end gap-1">
+                        <?php if (in_array($st, DocumentRequest::OPEN_STATUSES, true)): ?>
+                        <form method="post" action="<?= e(route('admin/documents/' . $id . '/approve')) ?>" class="m-0"
+                              onsubmit="if (!confirm(<?= e(json_encode(__('Mark this request ready for pickup? The document is generated and the resident is notified (app + SMS).'))) ?>)) { return false; } this.querySelector('button').disabled = true; return true;">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <button type="submit" class="btn btn-sm btn-success py-1 px-2 fw-bold" style="font-size:.76rem;border-radius:8px;" title="<?= e(__('Generate the document and tell the resident it is ready')) ?>">
+                                <i class="bi bi-box-seam me-1"></i><?= e(__('Ready for pickup')) ?>
+                            </button>
+                        </form>
+                        <?php elseif ($st === 'ready' && !$isDigital): ?>
+                        <form method="post" action="<?= e(route('admin/documents/' . $id . '/claim')) ?>" class="m-0"
+                              onsubmit="return confirm(<?= e(json_encode(__('Markahan bilang nakuha na (Claimed) sa Barangay Hall?'))) ?>);">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <button type="submit" class="btn btn-sm btn-outline-primary py-1 px-2 fw-bold" style="font-size:.76rem;border-radius:8px;">
+                                <i class="bi bi-hand-thumbs-up me-1"></i><?= e(__('Claimed')) ?>
+                            </button>
+                        </form>
+                        <?php endif; ?>
                         <button type="button" class="btn btn-sm btn-primary py-1 px-2.5 font-weight-bold"
-                                style="font-size:.78rem;border-radius:8px;"
+                                style="font-size:.78rem;border-radius:8px;" data-request-id="<?= $id ?>"
                                 onclick="openReviewModal(<?= htmlspecialchars(json_encode($r), ENT_QUOTES, 'UTF-8') ?>)">
                             <i class="bi bi-search me-1"></i> <?= e(__('Review')) ?>
                         </button>
@@ -291,6 +315,8 @@ ob_start();
                                 <div class="mb-1"><span class="text-muted"><?= e(__('Petsa ng Kahilingan:')) ?></span> <span id="revDate" class="text-muted"></span></div>
                                 <div class="mb-1 d-none" id="revBizRow"><span class="text-muted">Business:</span> <strong id="revBiz" class="text-dark"></strong></div>
                                 <div class="mb-1 d-none" id="revNumbersRow"><span class="text-muted">O.R. / Permit:</span> <strong id="revNumbers" class="text-dark"></strong></div>
+                                <div class="mb-1 d-none" id="revCheckRow"><span id="revCheck" style="font-size:.78rem;font-weight:700;"></span></div>
+                                <div class="mb-1"><a href="#" id="revProofLink" target="_blank" rel="noopener" style="font-size:.78rem;font-weight:700;"><i class="bi bi-file-earmark-check me-1"></i><?= e(__('See what the resident sees (proof copy)')) ?></a></div>
                                 <div class="mb-1 d-none" id="revRevokedRow"><span class="badge bg-danger">CANCELLED</span> <span id="revRevoked" class="text-danger" style="font-size:.76rem;"></span></div>
                             </div>
                         </div>
@@ -340,9 +366,9 @@ ob_start();
                             <!-- Form 1: Approve & Auto-Generate -->
                             <div id="actionApproveSection" class="mb-3 p-3 bg-white rounded-3 border">
                                 <?php if (!\App\Models\DocumentTemplate::hasSignature('captain')): ?>
-                                <div class="alert alert-danger py-2 px-3 mb-2" style="font-size:.78rem;" role="alert">
-                                    <strong>Signature Required.</strong> The Punong Barangay's authorized e-signature is not uploaded yet, so documents cannot be released.
-                                    <?php if (in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true)): ?><a href="<?= e(route('admin/document-templates')) ?>#signatures" class="fw-bold">Upload it</a><?php else: ?>Ask an admin to upload it.<?php endif; ?>
+                                <div class="alert alert-warning py-2 px-3 mb-2" style="font-size:.78rem;" role="alert">
+                                    <?= e(__('No e-signature uploaded: pickup copies print with a blank line for the Punong Barangay to sign by hand.')) ?>
+                                    <?php if (in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true)): ?><a href="<?= e(route('admin/document-templates')) ?>#signatures" class="fw-bold"><?= e(__('Upload it')) ?></a><?php endif; ?>
                                 </div>
                                 <?php endif; ?>
                                 <form method="post" id="formApprove" onsubmit="return confirm(<?= e(json_encode(__('Approve this request and tell the resident it is ready for pickup?'))) ?>);">
@@ -499,6 +525,13 @@ function openReviewModal(r) {
     document.getElementById('revNumbersRow').classList.toggle('d-none', !nums);
     document.getElementById('revNumbers').innerText = nums;
     document.getElementById('revRevokedRow').classList.toggle('d-none', !r.revoked_at);
+    var chk = document.getElementById('revCheck');
+    document.getElementById('revCheckRow').classList.toggle('d-none', !r.resident_check);
+    chk.style.color = r.resident_check === 'issue' ? '#b42318' : '#166534';
+    chk.textContent = r.resident_check === 'issue'
+        ? <?= json_encode(__('Resident reported a mistake:')) ?> + ' "' + (r.resident_check_note || '') + '"'
+        : (r.resident_check === 'ok' ? <?= json_encode(__('Resident confirmed the details are correct.')) ?> : '');
+    document.getElementById('revProofLink').href = '<?= e(route('documents/')) ?>' + r.id + '/proof';
     document.getElementById('revRevoked').innerText = r.revoked_at ? (r.revoke_reason || '') : '';
     var revokeSec = document.getElementById('actionRevokeSection');
     if (revokeSec) {
@@ -541,6 +574,18 @@ function openReviewModal(r) {
 
     modal.show();
 }
+</script>
+
+<script>
+(function () {
+    var id = new URLSearchParams(location.search).get('open');
+    var btn = id ? document.querySelector('[data-request-id="' + id.replace(/\D/g, '') + '"]') : null;
+    if (btn) {
+        btn.closest('tr').style.background = 'var(--brand-primary-light)';
+        btn.scrollIntoView({ block: 'center' });
+        btn.click();
+    }
+})();
 </script>
 
 <?php require __DIR__ . '/../../shared/_live-refresh.php'; ?>

@@ -49,6 +49,25 @@ class DocumentRequest
         'cancelled'              => [],
     ];
 
+    /** New requests nobody has handled yet. */
+    public const NEW_STATUSES = ['pending', 'pending_review'];
+
+    /**
+     * Everything still waiting on staff. Requests are filed as 'pending_review';
+     * counting only 'pending'/'processing' (the old names) made every new
+     * request invisible to the sidebar badge and the dashboard.
+     */
+    public const OPEN_STATUSES = ['pending', 'pending_review', 'under_review', 'processing', 'needs_information', 'approved'];
+
+    /** Ready and waiting for the resident at the hall. */
+    public const READY_STATUSES = ['ready', 'ready_for_pickup', 'available_for_download'];
+
+    /** SQL list of quoted statuses, for IN (...). The values are constants above, never input. */
+    public static function sqlList(array $statuses): string
+    {
+        return implode(',', array_map(static fn (string $s): string => "'" . $s . "'", $statuses));
+    }
+
     public static function label(string $type): string
     {
         return self::TYPES[$type] ?? $type;
@@ -256,9 +275,13 @@ class DocumentRequest
             return ['success' => false, 'error' => $blocked];
         }
 
-        // A final document carries the Punong Barangay's authorized
-        // e-signature. Without it nothing is released.
-        if (!\App\Models\DocumentTemplate::hasSignature('captain')) {
+        // A downloadable (digital) document must carry the Punong Barangay's
+        // authorized e-signature. A pickup copy is printed and signed by hand
+        // at the hall, so a missing e-signature must not stop staff from
+        // telling the resident it is ready — the PDF then shows the name over
+        // a blank signature line.
+        if (($request['delivery_method'] ?? 'pickup') === 'digital'
+            && !\App\Models\DocumentTemplate::hasSignature('captain')) {
             return ['success' => false, 'error' => 'Signature Required: the Punong Barangay\'s authorized e-signature has not been uploaded yet (Admin → Document Templates). The request stays pending.'];
         }
 
@@ -343,6 +366,10 @@ class DocumentRequest
             $id,
         ]);
 
+        // A fresh document: whatever the resident said about the last one no
+        // longer applies, so they are asked to check this version.
+        self::clearResidentCheck($id);
+
         self::logActivity(
             $id,
             $staffId,
@@ -359,7 +386,8 @@ class DocumentRequest
         $noticeMsg = match ($method) {
             'digital'  => "Naaprubahan na ang inyong {$certNo} at handa nang i-download ang inyong opisyal na kopya.",
             'delivery' => "Naaprubahan na ang inyong {$certNo} at kasalukuyan nang inihahanda para sa delivery.",
-            default    => "Naaprubahan na ang inyong {$certNo} at handa nang kunin sa Barangay Hall.",
+            default    => "Naaprubahan na ang inyong {$certNo} at handa nang kunin sa Barangay Hall. "
+                . 'Buksan ang My Requests para tingnan kung tama ang mga detalye bago kunin.',
         };
 
         try {
@@ -368,7 +396,7 @@ class DocumentRequest
                 'system',
                 'Naaprubahan ang Inyong Dokumento (' . $certNo . ')',
                 $noticeMsg,
-                0,
+                $id,
                 'document_request'
             );
         } catch (\Throwable $e) {}
@@ -379,6 +407,40 @@ class DocumentRequest
             'file_name'      => $stored['clean_name'],
             'url'            => $stored['url'],
         ];
+    }
+
+    /**
+     * The resident's verdict on the proof copy: 'ok' (details are correct) or
+     * 'issue' (with what is wrong). Staff see it on the request.
+     */
+    public static function setResidentCheck(int $id, string $result, string $note = ''): bool
+    {
+        if (!\in_array($result, ['ok', 'issue'], true)) {
+            return false;
+        }
+        try {
+            db()->prepare(
+                'UPDATE document_requests
+                    SET resident_check = ?, resident_check_note = ?, resident_checked_at = NOW(), updated_at = NOW()
+                  WHERE id = ?'
+            )->execute([$result, $note !== '' ? mb_substr($note, 0, 1000) : null, $id]);
+            return true;
+        } catch (\Throwable $e) {
+            error_log('[DocumentRequest::setResidentCheck] #' . $id . ': ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /** Forget the resident's verdict (a new version of the document was made). */
+    public static function clearResidentCheck(int $id): void
+    {
+        try {
+            db()->prepare(
+                'UPDATE document_requests SET resident_check = NULL, resident_check_note = NULL, resident_checked_at = NULL WHERE id = ?'
+            )->execute([$id]);
+        } catch (\Throwable $e) {
+            error_log('[DocumentRequest::clearResidentCheck] #' . $id . ': ' . $e->getMessage());
+        }
     }
 
     /**
@@ -415,7 +477,7 @@ class DocumentRequest
                 'system',
                 'Nakuha na ang Dokumento',
                 'Matagumpay na naitala ang pagkuha sa inyong opisyal na dokumento (' . (string) ($request['certificate_no'] ?? $request['reference_no']) . ') sa Barangay Hall. Maraming salamat!',
-                0,
+                $id,
                 'document_request'
             );
         } catch (\Throwable $e) {}
@@ -464,7 +526,7 @@ class DocumentRequest
                 'system',
                 'Delivery Update: ' . $deliveryStatus,
                 $msg,
-                0,
+                $id,
                 'document_request'
             );
         } catch (\Throwable $e) {}
@@ -596,8 +658,16 @@ class DocumentRequest
             $params[] = $like;
         }
 
-        $sql .= " ORDER BY CASE r.status WHEN 'pending' THEN 1 WHEN 'processing' THEN 2 WHEN 'ready' THEN 3 WHEN 'awaiting_payment' THEN 4 WHEN 'released' THEN 5 WHEN 'rejected' THEN 6 ELSE 7 END,
-                           r.requested_at ASC";
+        // New requests first (they used to sort last, after finished ones),
+        // then work in progress, then ready for pickup, then closed — newest
+        // first within each group.
+        $sql .= ' ORDER BY CASE
+                    WHEN r.status IN (' . self::sqlList(self::NEW_STATUSES) . ') THEN 1
+                    WHEN r.status IN (' . self::sqlList(self::OPEN_STATUSES) . ') THEN 2
+                    WHEN r.status IN (' . self::sqlList(self::READY_STATUSES) . ') THEN 3
+                    WHEN r.status IN (\'released\', \'completed\') THEN 4
+                    ELSE 5 END,
+                  r.requested_at DESC';
 
         $stmt = db()->prepare($sql);
         $stmt->execute($params);
@@ -836,7 +906,7 @@ class DocumentRequest
     {
         try {
             return (int) db()->query(
-                "SELECT COUNT(*) FROM document_requests WHERE status IN ('pending','processing')"
+                'SELECT COUNT(*) FROM document_requests WHERE status IN (' . self::sqlList(self::OPEN_STATUSES) . ')'
             )->fetchColumn();
         } catch (\Throwable $e) {
             return 0;
@@ -890,7 +960,7 @@ class DocumentRequest
                 'notify_content', 'system',
                 'Printed copy requested — ' . $request['certificate_no'],
                 $request['full_name'] . ' asked for a printed ' . self::label((string) $request['document_type']) . '. It is in the Print Queue.',
-                0, 'document_request', $userId
+                (int) $request['id'], 'document_request', $userId
             );
         } catch (\Throwable $e) {
         }
@@ -927,7 +997,7 @@ class DocumentRequest
                 (int) $request['user_id'], 'system',
                 'Printed copy ready — ' . $request['certificate_no'],
                 'Your printed ' . self::label((string) $request['document_type']) . ' is ready. Claim it at the Barangay Hall; show your document QR.',
-                0, 'document_request'
+                (int) $request['id'], 'document_request'
             );
         } catch (\Throwable $e) {
         }
@@ -954,7 +1024,7 @@ class DocumentRequest
                 (int) $request['user_id'], 'system',
                 'Document cancelled — ' . $request['certificate_no'],
                 'The barangay cancelled your ' . self::label((string) $request['document_type']) . '. Reason: ' . $reason,
-                0, 'document_request'
+                (int) $request['id'], 'document_request'
             );
         } catch (\Throwable $e) {
         }

@@ -189,15 +189,17 @@ class DocumentRequestController
         // Tell back office there is work waiting
         $deliveryText = ' (Personal Pickup)';
         $feeText = $isFree ? ' [LIBRE]' : sprintf(' [₱%.2f, paid at the hall]', $feeAmount);
+        // Every staff member, whatever their "content alerts" choice: this is
+        // work waiting, and it opens straight on the request.
         (new NotificationService())->notifyBackOffice(
-            'notify_content',
+            'always',
             'system',
             t('documents.notify_staff_title'),
             t('documents.notify_staff_body', [
                 'type'      => DocumentRequest::label($type) . $deliveryText . $feeText,
                 'reference' => $reference,
             ]),
-            0,
+            $newId,
             'document_request',
             $userId
         );
@@ -603,7 +605,7 @@ class DocumentRequestController
                 'system',
                 t('documents.notify_title', ['reference' => $reference]),
                 $body,
-                0,
+                (int) $request['id'],
                 'document_request'
             );
         } catch (\Throwable $e) {
@@ -702,7 +704,14 @@ class DocumentRequestController
         if (!$res['success']) {
             flash('error', $res['error'] ?? 'Nabigong aprubahan ang kahilingan.');
         } else {
-            flash('success', sprintf('Matagumpay na naaprubahan ang kahilingan at awtomatikong nailikha ang opisyal na sertipiko: %s.', $res['certificate_no']));
+            $request = DocumentRequest::find($id);
+            $texted  = $request !== null && $this->textReadyForPickup($request);
+            AuditLog::record($staffId, 'documents.ready', 'Ready for pickup: ' . ($request['reference_no'] ?? ('#' . $id)));
+            flash('success', sprintf(
+                __('Ready for pickup: %s. The resident was notified in the app%s and can now check the details.'),
+                $res['certificate_no'],
+                $texted ? ' ' . __('and by SMS') : ''
+            ));
         }
 
         $redirectQuery = $this->buildRedirectQuery();
@@ -760,6 +769,165 @@ class DocumentRequestController
     /**
      * GET /documents/history — Requirement 18: Resident Document History.
      */
+    /**
+     * GET /documents/{id}/proof — the document as it will be printed, for the
+     * resident to check their details.
+     *
+     * Deliberately NOT the real PDF: this page is rendered from the same
+     * template and the same profile fields, but carries no signature, seal,
+     * QR or O.R. number, and is covered by a watermark with the viewer's name
+     * and the time. Printing, saving and copying are blocked in the page, and
+     * nothing is cached. No web page can stop a camera or every screenshot
+     * tool, so the watermark is what makes a copy useless as a document.
+     */
+    public function proof(array $params): void
+    {
+        $id      = (int) ($params['id'] ?? 0);
+        $userId  = (int) ($_SESSION['user_id'] ?? 0);
+        $isStaff = in_array((string) ($_SESSION['role'] ?? ''), ['admin', 'staff', 'superadmin'], true);
+        $request = DocumentRequest::find($id);
+
+        if ($request === null || (!$isStaff && (int) $request['user_id'] !== $userId)) {
+            http_response_code(404);
+            flash('error', t('flash.not_found'));
+            redirect('/documents?tab=requests');
+        }
+        if (in_array((string) $request['status'], ['rejected', 'cancelled'], true) || !empty($request['revoked_at'])) {
+            flash('error', __('This request is closed, so there is no document to check.'));
+            redirect('/documents?tab=requests');
+        }
+
+        $resident = \App\Models\User::find((int) $request['user_id']);
+        if ($resident === null) {
+            http_response_code(404);
+            exit;
+        }
+
+        $type     = (string) $request['document_type'];
+        $template = \App\Models\DocumentTemplate::get(in_array($type, \App\Models\DocumentTemplate::TYPES, true) ? $type : 'clearance');
+        $issued   = !empty($request['issued_at']);
+        $values   = \App\Services\DocumentFields::for($request, $resident, $issued ? null : date('Y-m-d H:i:s'));
+
+        // **bold** and ^^superscript^^ are the template's own markup.
+        $render = static function (string $text) use ($values): string {
+            $html = htmlspecialchars(\App\Services\DocumentFields::fill($text, $values), ENT_QUOTES, 'UTF-8');
+            $html = preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $html) ?? $html;
+            return preg_replace('/\^\^(.+?)\^\^/s', '<sup>$1</sup>', $html) ?? $html;
+        };
+
+        if (!$isStaff) {
+            DocumentRequest::logActivity($id, $userId, 'proof_viewed', (string) $request['status'], (string) $request['status'],
+                'Resident opened the proof copy to check the details.');
+        }
+
+        // Never stored by the browser or a proxy, never framed, never indexed.
+        header('Cache-Control: no-store, no-cache, must-revalidate, private');
+        header('Pragma: no-cache');
+        header('X-Frame-Options: DENY');
+        header("Content-Security-Policy: frame-ancestors 'none'");
+        header('Referrer-Policy: no-referrer');
+        header('X-Robots-Tag: noindex, nofollow');
+
+        $viewer = $isStaff ? (string) ($_SESSION['full_name'] ?? 'Staff') : (string) ($resident['full_name'] ?? '');
+
+        view('resident/document_proof', [
+            'request'    => $request,
+            'resident'   => $resident,
+            'values'     => $values,
+            'office'     => $render((string) $template['office']),
+            'title'      => $render((string) $template['title']),
+            'paragraphs' => array_map($render, (array) $template['paragraphs']),
+            'header'     => [
+                'REPUBLIC OF THE PHILIPPINES',
+                mb_strtoupper(\App\Models\DocumentTemplate::setting('doc_province')),
+                mb_strtoupper(\App\Models\DocumentTemplate::setting('doc_municipality')),
+                mb_strtoupper(\App\Models\DocumentTemplate::setting('doc_barangay_name')),
+            ],
+            'captain'    => \App\Models\DocumentTemplate::setting('doc_punong_barangay'),
+            'secretary'  => \App\Models\DocumentTemplate::setting('doc_barangay_secretary'),
+            'watermark'  => mb_strtoupper(trim($viewer)) . ' · ' . date('M j, Y g:i A') . ' · ' . $request['reference_no'],
+            'isStaff'    => $isStaff,
+            'pageTitle'  => __('Check your document') . ' — ' . $request['reference_no'],
+        ]);
+    }
+
+    /**
+     * POST /documents/{id}/check — the resident confirms the details, or
+     * reports what is wrong. A report reaches every staff member.
+     */
+    public function residentCheck(array $params): void
+    {
+        check_csrf();
+
+        $id      = (int) ($params['id'] ?? 0);
+        $userId  = (int) ($_SESSION['user_id'] ?? 0);
+        $request = DocumentRequest::find($id);
+        if ($request === null || (int) $request['user_id'] !== $userId) {
+            http_response_code(404);
+            redirect('/documents?tab=requests');
+        }
+
+        $result = (string) ($_POST['result'] ?? '');
+        $note   = trim((string) ($_POST['note'] ?? ''));
+        if ($result === 'issue' && mb_strlen($note) < 5) {
+            flash('error', __('Please write what is wrong, for example the correct spelling of your name.'));
+            redirect('/documents/' . $id . '/proof');
+        }
+        if (!DocumentRequest::setResidentCheck($id, $result, $result === 'issue' ? $note : '')) {
+            flash('error', __('Sorry, your answer could not be saved. Please try again.'));
+            redirect('/documents/' . $id . '/proof');
+        }
+
+        $label = DocumentRequest::label((string) $request['document_type']);
+        if ($result === 'issue') {
+            DocumentRequest::logActivity($id, $userId, 'resident_reported_issue', (string) $request['status'], (string) $request['status'],
+                'Resident reported a mistake: ' . mb_substr($note, 0, 500));
+            (new NotificationService())->notifyBackOffice(
+                'always',
+                'system',
+                'May mali raw sa dokumento — ' . $request['reference_no'],
+                $request['reference_no'] . ' (' . $label . '): ' . mb_substr($note, 0, 300),
+                $id,
+                'document_request'
+            );
+            flash('success', __('Thank you. Barangay staff were told what to correct; you will be notified when the corrected document is ready.'));
+        } else {
+            DocumentRequest::logActivity($id, $userId, 'resident_confirmed', (string) $request['status'], (string) $request['status'],
+                'Resident confirmed the details are correct.');
+            flash('success', __('Thank you for checking. Your details are confirmed.'));
+        }
+
+        redirect('/documents?tab=requests&ref=' . urlencode((string) $request['reference_no']));
+    }
+
+    /**
+     * Text the resident that their document is ready for pickup, through the
+     * barangay's configured SMS provider. Best effort: true only if sent.
+     */
+    private function textReadyForPickup(array $request): bool
+    {
+        try {
+            $resident = \App\Models\User::find((int) $request['user_id']);
+            $phone    = trim((string) ($resident['phone'] ?? ''));
+            $sms      = \App\Services\SmsGateway::make();
+            if ($phone === '' || !$sms->isConfigured() || $sms->cleanPhone($phone) === null) {
+                return false;
+            }
+            $fee = (float) ($request['fee_amount'] ?? 0);
+            $message = sprintf(
+                'BarangGabay: Your %s (%s) is READY for pickup at the Barangay Hall. Bring a valid ID%s. You can check the details in My Requests.',
+                DocumentRequest::label((string) $request['document_type']),
+                (string) $request['reference_no'],
+                $fee > 0 ? sprintf(' and the fee of P%.2f', $fee) : ''
+            );
+            $result = $sms->send($phone, $message, 'document_request', (int) $request['id']);
+            return !empty($result['success']);
+        } catch (\Throwable $e) {
+            error_log('[DocumentRequestController] ready SMS failed for #' . ($request['id'] ?? '?') . ': ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function history(): void
     {
         $userId   = (int) ($_SESSION['user_id'] ?? 0);

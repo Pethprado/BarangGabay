@@ -333,16 +333,19 @@ class User
      */
     public static function backOfficeWanting(string $preference, int $exceptUserId = 0): array
     {
-        $allowed = ['notify_feedback', 'notify_registrations', 'notify_content'];
+        // 'always' is for work that must reach someone (a resident's document
+        // request): a personal "no content alerts" choice must not hide it.
+        $allowed = ['notify_feedback', 'notify_registrations', 'notify_content', 'always'];
         if (!in_array($preference, $allowed, true)) {
             return [];
         }
+        $wants = $preference === 'always' ? '' : "AND {$preference} = 1";
 
         $stmt = db()->prepare(
             "SELECT id FROM users
               WHERE role IN ('staff','admin','superadmin')
                 AND status = 'verified'
-                AND {$preference} = 1
+                {$wants}
                 AND id <> ?"
         );
         $stmt->execute([$exceptUserId]);

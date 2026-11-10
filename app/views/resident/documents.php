@@ -25,6 +25,24 @@ if (!in_array($activeTab, ['new', 'requests'], true)) {
 }
 $highlightRef = (string) ($_GET['ref'] ?? '');
 
+// "Request again" links prefill the form with a finished request's choices.
+$prefillType    = (string) ($_GET['type'] ?? '');
+$prefillPurpose = trim((string) ($_GET['purpose'] ?? ''));
+if ($prefillType !== '') {
+    $activeTab = 'new';
+}
+$purposeOptions = [
+    'Employment'             => [__('Employment'), 'bi-briefcase'],
+    'School'                 => [__('School / Scholarship'), 'bi-mortarboard'],
+    'Business'               => [__('Business / Permit'), 'bi-shop'],
+    'Government Requirement' => [__('Government ID / SSS / PhilHealth'), 'bi-bank'],
+    'Bank Requirement'       => [__('Bank / Loan'), 'bi-cash-stack'],
+    'Travel'                 => [__('Travel'), 'bi-airplane'],
+    'Other'                  => [__('Other'), 'bi-three-dots'],
+];
+$purposeIsListed = $prefillPurpose === '' || isset($purposeOptions[$prefillPurpose]);
+$docIcons = ['clearance' => 'bi-shield-check', 'residency' => 'bi-house-heart', 'indigency' => 'bi-heart-pulse', 'business' => 'bi-shop-window', 'other' => 'bi-file-earmark-text'];
+
 $pageTitle = __('Mga Dokumento at Kahilingan — BarangGabay');
 ob_start();
 ?>
@@ -38,6 +56,16 @@ ob_start();
 .doc-timeline__step.is-current .doc-timeline__dot { border-color: var(--action-solid); background: var(--brand-primary-light); box-shadow: 0 0 0 3px var(--brand-primary-light); }
 .doc-timeline__label { font-size: .68rem; font-weight: 700; color: var(--text-muted); line-height: 1.2; }
 .doc-timeline__step.is-current .doc-timeline__label { color: var(--brand-primary); }
+.doc-pick { position: relative; display: flex; gap: .75rem; align-items: flex-start; padding: .85rem; border-radius: 1rem; border: 2px solid var(--border); background: var(--surface-card, #fff); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.doc-pick:hover { border-color: var(--action-solid); }
+.doc-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.doc-pick:has(input:checked) { border-color: var(--action-solid); box-shadow: 0 0 0 3px var(--brand-primary-light); }
+.doc-pick:has(input:focus-visible) { outline: 3px solid var(--action-solid); outline-offset: 2px; }
+.doc-pick__icon { flex-shrink: 0; width: 2.4rem; height: 2.4rem; border-radius: .75rem; display: grid; place-items: center; font-size: 1.15rem; background: var(--brand-primary-light); color: var(--action-solid); }
+.doc-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .5rem .8rem; border-radius: 999px; border: 1.5px solid var(--border); font-size: .8rem; font-weight: 700; cursor: pointer; background: var(--surface-card, #fff); color: var(--text-primary); }
+.doc-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.doc-chip:has(input:checked) { border-color: var(--action-solid); background: var(--action-solid); color: var(--text-on-action, #fff); }
+.doc-chip:has(input:focus-visible) { outline: 3px solid var(--action-solid); outline-offset: 2px; }
 .doc-step-num { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 999px; font-size: .75rem; font-weight: 900; background: var(--action-solid); color: var(--text-on-action, #fff); flex-shrink: 0; }
 </style>
 
@@ -146,24 +174,29 @@ ob_start();
                 <h2 id="docStep1" class="mb-3 flex items-center gap-2 text-base font-black text-slate-900 dark:text-white">
                     <span class="doc-step-num" aria-hidden="true">1</span> <?= e(__('Piliin ang Dokumento (Choose Document)')) ?>
                 </h2>
-                <label for="document_type" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                    <?= e(__('Uri ng Dokumento')) ?> <span class="text-rose-500">*</span>
-                </label>
-                <select id="document_type" name="document_type" required onchange="onDocumentTypeChange()"
-                        class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                    <?php foreach ($types as $key => $label):
+                <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2" role="radiogroup" aria-label="<?= e(__('Uri ng Dokumento')) ?>" id="docTypePicker">
+                    <?php $__first = true; foreach ($types as $key => $label):
                         $f = $docFees[$key] ?? null;
                         if ($f === null || empty($f['is_active'])) { continue; } // disabled by the admin
-                        $isFree = $f['is_free'] || (float) $f['amount'] <= 0;
+                        $isFree  = $f['is_free'] || (float) $f['amount'] <= 0;
+                        $checked = $prefillType !== '' ? $prefillType === $key : $__first;
+                        $__first = false;
                     ?>
-                    <option value="<?= e($key) ?>"
-                            data-amount="<?= $isFree ? '0' : number_format((float) $f['amount'], 2, '.', '') ?>"
-                            data-requirements="<?= e((string) ($f['requirements'] ?? '')) ?>"
-                            data-description="<?= e((string) ($f['description'] ?? '')) ?>">
-                        <?= e($label) ?>
-                    </option>
+                    <label class="doc-pick">
+                        <input type="radio" name="document_type" value="<?= e($key) ?>" required <?= $checked ? 'checked' : '' ?>
+                               data-amount="<?= $isFree ? '0' : number_format((float) $f['amount'], 2, '.', '') ?>"
+                               data-requirements="<?= e((string) ($f['requirements'] ?? '')) ?>"
+                               data-description="<?= e((string) ($f['description'] ?? '')) ?>">
+                        <span class="doc-pick__icon" aria-hidden="true"><i class="bi <?= e($docIcons[$key] ?? 'bi-file-earmark-text') ?>"></i></span>
+                        <span class="min-w-0">
+                            <strong class="block text-sm text-slate-900 dark:text-white"><?= e($label) ?></strong>
+                            <span class="text-xs font-semibold <?= $isFree ? 'text-emerald-600' : 'text-slate-500' ?>">
+                                <?= $isFree ? e(__('LIBRE')) : '₱' . number_format((float) $f['amount'], 2) . ' · ' . e(__('pay at the hall')) ?>
+                            </span>
+                        </span>
+                    </label>
                     <?php endforeach; ?>
-                </select>
+                </div>
 
                 <div class="mt-3 rounded-2xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
                     <p class="mb-3 hidden text-sm text-slate-700 dark:text-slate-300" id="docDescription"></p>
@@ -229,24 +262,22 @@ ob_start();
                     <span class="doc-step-num" aria-hidden="true">3</span> <?= e(__('Layunin (Purpose)')) ?>
                 </h2>
                 <div>
-                    <label for="purpose" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                        <?= e(__('Layunin (Purpose)')) ?> <span class="text-rose-500">*</span>
-                    </label>
-                    <select id="purpose" name="purpose" required onchange="onPurposeChange(this.value)"
-                            class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                        <option value="Employment"><?= e(__('Employment (Paghahanapbuhay / Trabaho)')) ?></option>
-                        <option value="School"><?= e(__('School (Eskwela / Scholarship / Enrollment)')) ?></option>
-                        <option value="Business"><?= e(__('Business (Negosyo / Permit)')) ?></option>
-                        <option value="Government Requirement"><?= e(__('Government Requirement (SSS, PhilHealth, Pag-IBIG, ID)')) ?></option>
-                        <option value="Bank Requirement"><?= e(__('Bank Requirement (Pagbubukas ng Account / Loan)')) ?></option>
-                        <option value="Travel"><?= e(__('Travel (Lokal o Pang-ibayong Dagat)')) ?></option>
-                        <option value="Other"><?= e(__('Other (Iba pang layunin...)')) ?></option>
-                    </select>
-                    <div id="otherPurposeWrapper" class="mt-2.5 hidden">
+                    <p class="mb-2 text-xs text-slate-500 dark:text-slate-400"><?= e(__('Tap what the document is for.')) ?></p>
+                    <div class="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="docStep3" id="purposePicker">
+                        <?php foreach ($purposeOptions as $value => [$text, $icon]):
+                            $on = $purposeIsListed ? ($prefillPurpose !== '' ? $prefillPurpose === $value : $value === 'Employment') : $value === 'Other';
+                        ?>
+                        <label class="doc-chip">
+                            <input type="radio" name="purpose" value="<?= e($value) ?>" required <?= $on ? 'checked' : '' ?>>
+                            <i class="bi <?= e($icon) ?>" aria-hidden="true"></i> <?= e($text) ?>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <div id="otherPurposeWrapper" class="mt-2.5<?= $purposeIsListed ? ' hidden' : '' ?>">
                         <label for="purpose_other" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                             <?= e(__('Tukuyin ang ibang layunin:')) ?> <span class="text-rose-500">*</span>
                         </label>
-                        <input type="text" id="purpose_other" name="purpose_other" maxlength="150" minlength="3"
+                        <input type="text" id="purpose_other" name="purpose_other" maxlength="150" minlength="3" value="<?= e($purposeIsListed ? '' : $prefillPurpose) ?>"
                                placeholder="<?= e(__('Halimbawa: Police clearance requirement, scholarship application, atbp.')) ?>"
                                class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                     </div>
@@ -335,6 +366,8 @@ ob_start();
                 $isDone    = in_array($statusKey, ['released', 'completed'], true);
                 $canOpen   = $isDigital && !empty($r['document_file_name']) && empty($r['revoked_at'])
                              && DocumentRequest::isPaymentVerified($r);
+                $canCheck  = !$closed && empty($r['revoked_at']);
+                $myCheck   = (string) ($r['resident_check'] ?? '');
 
                 if ($isReady) {
                     $statusDisplay = $isDigital ? __('Available for Download') : __('Ready for Pickup');
@@ -371,6 +404,18 @@ ob_start();
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <?= status_badge($isReady ? ($isDigital ? 'available_for_download' : 'ready_for_pickup') : $statusKey, $statusDisplay) ?>
+                        <?php if ($canCheck): ?>
+                        <a href="<?= e(route('documents/' . $reqId . '/proof')) ?>"
+                           class="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold <?= $isReady && $myCheck === '' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200' ?>">
+                            <i class="bi bi-file-earmark-check" aria-hidden="true"></i> <?= e(__('Check details')) ?>
+                        </a>
+                        <?php endif; ?>
+                        <?php if ($isDone || $closed): ?>
+                        <a href="<?= e(route('documents') . '?type=' . rawurlencode((string) $r['document_type']) . '&purpose=' . rawurlencode((string) $r['purpose'])) ?>"
+                           class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <i class="bi bi-arrow-repeat" aria-hidden="true"></i> <?= e(__('Request again')) ?>
+                        </a>
+                        <?php endif; ?>
                         <?php if ($canOpen): ?>
                         <a href="<?= e(route('documents/' . $reqId . '/preview')) ?>" target="_blank" rel="noopener"
                            class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -388,8 +433,17 @@ ob_start();
                 <p class="mt-3 mb-0 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
                     <i class="bi bi-building-check me-1" aria-hidden="true"></i>
                     <?= e(__('Your document is ready. Pick it up at the Barangay Hall and bring a valid ID.')) ?>
+                    <?php if ($myCheck === ''): ?><?= e(__('Please check the details first.')) ?><?php endif; ?>
                     <?php if ($fee > 0): ?><?= e(__('Fee to pay at the hall:')) ?> <strong>₱<?= number_format($fee, 2) ?></strong><?php endif; ?>
                 </p>
+                <?php endif; ?>
+
+                <?php if ($canCheck && $myCheck === 'ok'): ?>
+                <p class="mt-2 mb-0 text-xs font-semibold text-emerald-700 dark:text-emerald-400"><i class="bi bi-check2-circle"></i> <?= e(__('You confirmed the details are correct.')) ?></p>
+                <?php elseif ($canCheck && $myCheck === 'issue'): ?>
+                <p class="mt-2 mb-0 text-xs font-semibold text-rose-700 dark:text-rose-400"><i class="bi bi-exclamation-circle"></i> <?= e(__('You reported a mistake — staff will correct it and notify you.')) ?></p>
+                <?php elseif ($canCheck && !$isReady): ?>
+                <p class="mt-2 mb-0 text-xs text-slate-500 dark:text-slate-400"><?= e(__('Tip: tap "Check details" to see how your document will read, so mistakes are fixed before it is printed.')) ?></p>
                 <?php endif; ?>
 
                 <?php if (!empty($r['staff_note']) && ($closed || $statusKey === 'needs_information')): ?>
@@ -431,12 +485,11 @@ function switchMainTab(tab) {
 }
 
 function onDocumentTypeChange() {
-    var sel = document.getElementById('document_type');
-    if (!sel || sel.selectedIndex < 0) { return; }
-    var opt = sel.options[sel.selectedIndex];
+    var opt = document.querySelector('#docTypePicker input:checked');
+    if (!opt) { return; }
     var amount = parseFloat(opt.getAttribute('data-amount') || '0');
 
-    var isBiz = sel.value === 'business';
+    var isBiz = opt.value === 'business';
     document.getElementById('businessFields').classList.toggle('hidden', !isBiz);
     document.getElementById('business_type').required = isBiz;
     document.getElementById('business_name').required = isBiz;
@@ -469,6 +522,12 @@ function onPurposeChange(val) {
 (function () {
     var form = document.getElementById('docRequestForm');
     if (form) {
+        document.querySelectorAll('#docTypePicker input').forEach(function (el) {
+            el.addEventListener('change', onDocumentTypeChange);
+        });
+        document.querySelectorAll('#purposePicker input').forEach(function (el) {
+            el.addEventListener('change', function () { onPurposeChange(el.value); });
+        });
         // One request per click: a double tap must not file it twice.
         form.addEventListener('submit', function () {
             document.getElementById('docSubmitBtn').disabled = true;

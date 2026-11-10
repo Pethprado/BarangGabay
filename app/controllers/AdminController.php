@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Models\Announcement;
 use App\Models\AuditLog;
+use App\Models\DocumentRequest;
 use App\Models\Event;
 use App\Models\Feedback;
 use App\Models\Ordinance;
@@ -179,7 +180,9 @@ class AdminController
             $mine->execute([$viewerId]);
             $staffKpi['events'] = (int) $mine->fetchColumn();
             $staffKpi['feedback']  = (int) Feedback::unreadCountAdmin();
-            $staffKpi['approvals'] = (int) $pdo->query("SELECT COUNT(*) FROM document_requests WHERE status = 'pending'")->fetchColumn();
+            $staffKpi['approvals'] = (int) $pdo->query(
+                'SELECT COUNT(*) FROM document_requests WHERE status IN (' . DocumentRequest::sqlList(DocumentRequest::OPEN_STATUSES) . ')'
+            )->fetchColumn();
 
             // Barangay-wide figures, so a card never reads a bare 0 that only
             // means "you have not posted yet" or "nothing is at this one step".
@@ -187,7 +190,8 @@ class AdminController
             $staffKpi['events_all']        = (int) $pdo->query('SELECT COUNT(*) FROM events')->fetchColumn();
             $staffKpi['feedback_all']      = (int) $pdo->query('SELECT COUNT(*) FROM feedbacks')->fetchColumn();
             $staffKpi['requests_open']     = (int) $pdo->query(
-                "SELECT COUNT(*) FROM document_requests WHERE status IN ('pending', 'processing', 'ready', 'awaiting_payment')"
+                'SELECT COUNT(*) FROM document_requests WHERE status IN ('
+                . DocumentRequest::sqlList(array_merge(DocumentRequest::OPEN_STATUSES, DocumentRequest::READY_STATUSES)) . ')'
             )->fetchColumn();
             $recentTasks = $pdo->query(
                 'SELECT dr.id, dr.reference_no, dr.document_type, dr.status, dr.requested_at, u.full_name

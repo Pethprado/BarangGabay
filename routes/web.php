@@ -212,6 +212,10 @@ return [
     ['GET',  '/documents/history',                'DocumentRequestController@history',      ['auth', 'verified']],
     ['GET',  '/documents/{id}/download',          'DocumentRequestController@download',     ['auth', 'verified']],
     ['GET',  '/documents/{id}/preview',           'DocumentRequestController@preview',      ['auth', 'verified']],
+    // View-only proof copy for the resident to check the details (no PDF,
+    // no print/download), and their "correct" / "something is wrong" answer.
+    ['GET',  '/documents/{id}/proof',             'DocumentRequestController@proof',        ['auth', 'verified']],
+    ['POST', '/documents/{id}/check',             'DocumentRequestController@residentCheck', ['auth', 'verified']],
     ['GET',  '/documents/{ref}/verify',           'DocumentRequestController@verifyPublic', []],
     ['POST', '/documents/{id}/print-request',     'DocumentTemplateController@requestPrint', ['auth', 'verified']],
     ['GET',  '/admin/documents',                  'DocumentRequestController@adminIndex',   ['auth', 'role:admin,staff']],
